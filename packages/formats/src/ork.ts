@@ -1,0 +1,874 @@
+/**
+ * Minimal reader for OpenRocket `.ork` design files (plan 0005).
+ *
+ * Scope: exactly the components and settings used by the reference rockets
+ * in reference/rockets, mapped onto the physics package's component records.
+ * The format has no published specification and OpenRocket's source may not
+ * be read (CLAUDE.md section 3); the structure, position methods and element
+ * meanings are taken from the files OpenRocket 24.12 wrote (format version
+ * 1.10) and fixed by the per-component positions and masses it reports for
+ * them (reference/rockets/components/*.csv). See docs/plans/0005-ork-reader.md
+ * for the mapping, the rejected inputs and the list of ignored elements.
+ *
+ * Every element is either read, on a documented ignore list, or rejected with
+ * an error naming it. Nothing is defaulted.
+ */
+import { XMLParser } from 'fast-xml-parser';
+import { SyntaxValidator } from 'fast-xml-validator';
+import { strFromU8, unzipSync } from 'fflate';
+import {
+  kilograms,
+  kilogramsPerCubicMetre,
+  metres,
+  seconds,
+  type Component,
+  type KilogramsPerCubicMetre,
+  type Metres,
+  type NoseShape,
+  type PlacedComponent,
+  type Seconds,
+  type Shoulder,
+} from '@lo-fi-rocket/physics';
+import { OrkParseError, OrkUnsupportedError } from './errors.js';
+
+// ---------------------------------------------------------------------------
+// Output types
+
+export interface OrkPlacedComponent extends PlacedComponent {
+  /** The component's name in the file (a label only). */
+  readonly name: string;
+  /** The element name in the file, e.g. "trapezoidfinset". */
+  readonly element: string;
+}
+
+export interface OrkMotorMount {
+  readonly designation: string;
+  readonly manufacturer: string;
+  readonly diameter: Metres;
+  readonly length: Metres;
+  /** Ejection delay as written in the file. */
+  readonly delay: Seconds;
+  /** Aft end of the motor from the nose tip: the mount's aft end plus the overhang. */
+  readonly aftEnd: Metres;
+  /** Index into `components` of the tube that is the mount. */
+  readonly mountComponent: number;
+}
+
+/** OpenRocket deployment events (DeploymentConfiguration.DeployEvent, from the jar's public signature). */
+export type OrkDeployEvent = 'launch' | 'ejection' | 'apogee' | 'altitude' | 'never';
+
+export interface OrkRecoveryDevice {
+  readonly name: string;
+  /** Index into `components` of the packed parachute. */
+  readonly component: number;
+  readonly diameter: Metres;
+  readonly dragCoefficient: number;
+  readonly deployEvent: OrkDeployEvent;
+  readonly deployAltitude: Metres;
+  readonly deployDelay: Seconds;
+}
+
+export interface OrkRocket {
+  readonly name: string;
+  /** The `version` attribute of the `<openrocket>` element, e.g. "1.10". */
+  readonly formatVersion: string;
+  readonly creator: string | undefined;
+  /** Components in file order; positions are forward ends from the nose tip. */
+  readonly components: readonly OrkPlacedComponent[];
+  /** Overall length: the aft end of the last external component. */
+  readonly length: Metres;
+  /** Largest external radius; the reference length is twice this (`referencetype` maximum). */
+  readonly maxBodyRadius: Metres;
+  readonly motorMount: OrkMotorMount | undefined;
+  readonly recoveryDevices: readonly OrkRecoveryDevice[];
+}
+
+// ---------------------------------------------------------------------------
+// XML tree
+
+interface XmlNode {
+  readonly name: string;
+  readonly attributes: Readonly<Record<string, string>>;
+  readonly children: readonly XmlNode[];
+  readonly text: string;
+}
+
+const ZIP_ENTRY = 'rocket.ork';
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** Convert fast-xml-parser's preserveOrder output to XmlNode[]. */
+function toNodes(raw: unknown, file: string | undefined): XmlNode[] {
+  if (!Array.isArray(raw)) throw new OrkParseError(file, 'document', 'unexpected parser output');
+  const nodes: XmlNode[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) continue;
+    const attributes: Record<string, string> = {};
+    const rawAttrs = item[':@'];
+    if (isRecord(rawAttrs)) {
+      for (const [k, v] of Object.entries(rawAttrs)) {
+        if (typeof v === 'string') attributes[k] = v;
+      }
+    }
+    for (const [key, value] of Object.entries(item)) {
+      if (key === ':@' || key === '#text') continue;
+      const children = toNodes(value, file);
+      const text = Array.isArray(value)
+        ? value
+            .filter(isRecord)
+            .map((c) => c['#text'])
+            .filter((t): t is string => typeof t === 'string')
+            .join('')
+        : '';
+      nodes.push({ name: key, attributes, children, text });
+    }
+  }
+  return nodes;
+}
+
+function parseXml(xml: string, file: string | undefined): XmlNode {
+  try {
+    SyntaxValidator.validate(xml);
+  } catch (error) {
+    // The validator throws a ValidationError carrying `line` and `message`.
+    const line = isRecord(error) && typeof error['line'] === 'number' ? error['line'] : undefined;
+    const message = error instanceof Error ? error.message : String(error);
+    throw new OrkParseError(
+      file,
+      line === undefined ? 'document' : `line ${String(line)}`,
+      `not well-formed XML: ${message}`,
+      { cause: error },
+    );
+  }
+  const parser = new XMLParser({
+    preserveOrder: true,
+    ignoreAttributes: false,
+    attributeNamePrefix: '',
+    parseTagValue: false,
+    parseAttributeValue: false,
+    trimValues: true,
+    ignoreDeclaration: true,
+    ignorePiTags: true,
+  });
+  const roots = toNodes(parser.parse(xml), file);
+  const root = roots.find((n) => n.name === 'openrocket');
+  if (root === undefined) {
+    throw new OrkParseError(file, 'document', 'root element is not <openrocket>');
+  }
+  return root;
+}
+
+/** Unwrap the zip container if present; otherwise treat the bytes as UTF-8 XML. */
+function toXmlText(data: Uint8Array | string, file: string | undefined): string {
+  if (typeof data === 'string') return data;
+  if (data.length >= 2 && data[0] === 0x50 && data[1] === 0x4b) {
+    let entries: Record<string, Uint8Array>;
+    try {
+      entries = unzipSync(data);
+    } catch (error) {
+      throw new OrkParseError(file, 'zip container', 'cannot be read as a zip archive', {
+        cause: error,
+      });
+    }
+    const entry = entries[ZIP_ENTRY];
+    if (entry === undefined) {
+      throw new OrkParseError(
+        file,
+        'zip container',
+        `has no "${ZIP_ENTRY}" entry (entries: ${Object.keys(entries).join(', ') || 'none'})`,
+      );
+    }
+    return strFromU8(entry);
+  }
+  return strFromU8(data);
+}
+
+// ---------------------------------------------------------------------------
+// Element access with use tracking
+
+const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
+class Element {
+  private readonly used = new Set<string>();
+
+  constructor(
+    readonly node: XmlNode,
+    readonly path: string,
+    readonly file: string | undefined,
+  ) {}
+
+  parseError(problem: string): OrkParseError {
+    return new OrkParseError(this.file, this.path, problem);
+  }
+  unsupported(feature: string): OrkUnsupportedError {
+    return new OrkUnsupportedError(this.file, this.path, feature);
+  }
+
+  attribute(name: string): string | undefined {
+    return this.node.attributes[name];
+  }
+
+  all(name: string): XmlNode[] {
+    this.used.add(name);
+    return this.node.children.filter((c) => c.name === name);
+  }
+
+  optional(name: string): XmlNode | undefined {
+    const found = this.all(name);
+    if (found.length > 1) throw this.parseError(`<${name}> appears ${String(found.length)} times`);
+    return found[0];
+  }
+
+  one(name: string): XmlNode {
+    const found = this.optional(name);
+    if (found === undefined) throw this.parseError(`missing <${name}>`);
+    return found;
+  }
+
+  has(name: string): boolean {
+    return this.node.children.some((c) => c.name === name);
+  }
+
+  text(name: string): string {
+    const n = this.one(name);
+    if (n.text === '') throw this.parseError(`<${name}> is empty`);
+    return n.text;
+  }
+
+  optionalText(name: string): string | undefined {
+    return this.optional(name)?.text;
+  }
+
+  private toNumber(name: string, text: string): number {
+    if (!NUMBER.test(text)) throw this.parseError(`<${name}> is not a number: "${text}"`);
+    const value = Number(text);
+    if (!Number.isFinite(value)) throw this.parseError(`<${name}> is not finite: "${text}"`);
+    return value;
+  }
+
+  number(name: string): number {
+    return this.toNumber(name, this.text(name));
+  }
+
+  optionalNumber(name: string): number | undefined {
+    const t = this.optionalText(name);
+    return t === undefined ? undefined : this.toNumber(name, t);
+  }
+
+  /** A length that may be "auto" in OpenRocket; auto is unsupported. */
+  length(name: string): number {
+    const t = this.text(name);
+    if (t === 'auto') throw this.unsupported(`<${name}> "auto"`);
+    return this.toNumber(name, t);
+  }
+
+  /** A wall thickness that may be "filled". */
+  thickness(name: string): number | 'filled' {
+    const t = this.text(name);
+    return t === 'filled' ? 'filled' : this.toNumber(name, t);
+  }
+
+  integer(name: string): number {
+    const v = this.number(name);
+    if (!Number.isInteger(v)) throw this.parseError(`<${name}> is not an integer: ${String(v)}`);
+    return v;
+  }
+
+  boolean(name: string): boolean {
+    const t = this.text(name);
+    if (t === 'true') return true;
+    if (t === 'false') return false;
+    throw this.parseError(`<${name}> is not true or false: "${t}"`);
+  }
+
+  /** Require an optional element, if present, to hold exactly `value`. */
+  requireValue(name: string, value: string, feature: string): void {
+    const t = this.optionalText(name);
+    if (t !== undefined && t !== value) throw this.unsupported(feature);
+  }
+
+  /** Require an optional numeric element, if present, to be exactly zero. */
+  requireZero(name: string, feature: string): void {
+    const v = this.optionalNumber(name);
+    if (v !== undefined && v !== 0) throw this.unsupported(feature);
+  }
+
+  child(name: string): Element {
+    return this.wrap(this.one(name));
+  }
+
+  optionalChild(name: string): Element | undefined {
+    const n = this.optional(name);
+    return n === undefined ? undefined : this.wrap(n);
+  }
+
+  wrap(n: XmlNode): Element {
+    const label = n.children.find((c) => c.name === 'name')?.text;
+    return new Element(
+      n,
+      `${this.path} > ${n.name}${label === undefined ? '' : ` "${label}"`}`,
+      this.file,
+    );
+  }
+
+  /** Bulk material density from `<material type="bulk" density="...">`. */
+  bulkDensity(): KilogramsPerCubicMetre {
+    const m = this.one('material');
+    const type = m.attributes['type'];
+    if (type !== 'bulk') throw this.unsupported(`material type "${type ?? ''}"`);
+    const text = m.attributes['density'];
+    if (text === undefined) throw this.parseError('<material> has no density attribute');
+    const density = this.toNumber('material density', text);
+    if (!(density > 0))
+      throw this.parseError(`material density must be greater than 0 kg/m³, got ${text}`);
+    return kilogramsPerCubicMetre(density);
+  }
+
+  /**
+   * Every child must have been read or be on the ignore list; anything else
+   * is rejected by name. Override elements get a specific message.
+   */
+  finish(ignored: readonly string[]): void {
+    for (const c of this.node.children) {
+      if (this.used.has(c.name) || ignored.includes(c.name)) continue;
+      if (c.name.startsWith('override')) {
+        throw this.unsupported(`mass or CG override (<${c.name}>)`);
+      }
+      throw this.unsupported(`element <${c.name}>`);
+    }
+  }
+}
+
+/** Cosmetic or bookkeeping elements that carry no geometry or mass. */
+const IGNORED_COMMON = [
+  'name',
+  'id',
+  'comment',
+  'preset',
+  'finish',
+  'appearance',
+  'color',
+  'linestyle',
+];
+/** Angular placement and radial direction: irrelevant to axisymmetric mass properties. */
+const IGNORED_ANGULAR = ['angleoffset', 'rotation', 'radialdirection', 'radiusoffset'];
+
+// ---------------------------------------------------------------------------
+// Positions
+
+interface Parent {
+  readonly position: number;
+  readonly length: number;
+  readonly radius: number;
+}
+
+/**
+ * Forward end of a child from its `<axialoffset method="...">` relative to the
+ * parent tube. Methods as fixed by reference/rockets/components/*.csv:
+ * top = parent forward end + v; bottom = parent aft end + v − own length;
+ * middle = parent centre + v − own length / 2; absolute = v from the nose tip.
+ */
+function axialPosition(el: Element, parent: Parent, ownLength: number): number {
+  const node = el.one('axialoffset');
+  const method = node.attributes['method'] ?? '';
+  const vText = node.text;
+  if (!NUMBER.test(vText)) throw el.parseError(`<axialoffset> is not a number: "${vText}"`);
+  const v = Number(vText);
+  // Legacy duplicate written by OpenRocket; it must agree.
+  const legacy = el.optional('position');
+  if (legacy !== undefined) {
+    const t = legacy.attributes['type'];
+    if (t !== method || !NUMBER.test(legacy.text) || Number(legacy.text) !== v) {
+      throw el.parseError(
+        `<position type="${t ?? ''}">${legacy.text} disagrees with <axialoffset method="${method}">${vText}`,
+      );
+    }
+  }
+  switch (method) {
+    case 'top':
+      return parent.position + v;
+    case 'bottom':
+      return parent.position + parent.length + v - ownLength;
+    case 'middle':
+      return parent.position + (parent.length - ownLength) / 2 + v;
+    case 'absolute':
+      return v;
+    default:
+      throw el.unsupported(`axial offset method "${method}"`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Components
+
+const SHAPES: Readonly<Record<string, NoseShape>> = {
+  conical: 'conical',
+  ogive: 'ogive',
+  ellipsoid: 'elliptical',
+  power: 'power',
+  parabolic: 'parabolic',
+  haack: 'haack',
+};
+
+function readShape(el: Element): { shape: NoseShape; shapeParameter: number | undefined } {
+  const name = el.text('shape');
+  const shape = SHAPES[name];
+  if (shape === undefined) throw el.unsupported(`shape "${name}"`);
+  const shapeParameter = el.optionalNumber('shapeparameter');
+  if (shapeParameter === undefined && shape !== 'conical' && shape !== 'elliptical') {
+    throw el.parseError(`shape "${name}" needs a <shapeparameter>`);
+  }
+  return { shape, shapeParameter };
+}
+
+function readShoulder(el: Element, prefix: 'fore' | 'aft'): Shoulder | undefined {
+  const radius = el.number(`${prefix}shoulderradius`);
+  const length = el.number(`${prefix}shoulderlength`);
+  const thickness = el.number(`${prefix}shoulderthickness`);
+  if (el.boolean(`${prefix}shouldercapped`)) throw el.unsupported(`capped ${prefix} shoulder`);
+  if (radius === 0 && length === 0) return undefined;
+  if (!(radius > 0 && length > 0 && thickness > 0)) {
+    throw el.parseError(
+      `${prefix} shoulder needs positive radius, length and thickness (got ${String(radius)}, ${String(length)}, ${String(thickness)})`,
+    );
+  }
+  return { radius: metres(radius), length: metres(length), wallThickness: metres(thickness) };
+}
+
+class Reader {
+  readonly components: OrkPlacedComponent[] = [];
+  readonly recoveryDevices: OrkRecoveryDevice[] = [];
+  motorMount: OrkMotorMount | undefined;
+  length = 0;
+  maxBodyRadius = 0;
+
+  private place(el: Element, component: Component, position: number): number {
+    this.components.push({
+      name: el.optionalText('name') ?? '',
+      element: el.node.name,
+      component,
+      position: metres(position),
+    });
+    return this.components.length - 1;
+  }
+
+  private readMotorMount(el: Element, mountIndex: number, aftEndOfMount: number): void {
+    const mount = el.optionalChild('motormount');
+    if (mount === undefined) return;
+    if (this.motorMount !== undefined) throw mount.unsupported('more than one motor mount');
+    const motors = mount.all('motor');
+    const [first] = motors;
+    if (first === undefined || motors.length !== 1) {
+      throw mount.unsupported(`${String(motors.length)} motor configurations`);
+    }
+    const overhang = mount.number('overhang');
+    const motor = mount.wrap(first);
+    motor.requireValue('type', 'single', 'motor type other than "single"');
+    this.motorMount = {
+      designation: motor.text('designation'),
+      manufacturer: motor.text('manufacturer'),
+      diameter: metres(motor.number('diameter')),
+      length: metres(motor.number('length')),
+      delay: seconds(motor.number('delay')),
+      aftEnd: metres(aftEndOfMount + overhang),
+      mountComponent: mountIndex,
+    };
+    motor.finish(['digest']);
+    mount.finish(['ignitionevent', 'ignitiondelay', 'ignitionconfiguration']);
+  }
+
+  /** Children of a body tube. */
+  private readInternal(subcomponents: Element, parent: Parent): void {
+    for (const node of subcomponents.node.children) {
+      const el = subcomponents.wrap(node);
+      switch (node.name) {
+        case 'trapezoidfinset':
+          this.readFinSet(el, parent);
+          break;
+        case 'launchlug':
+          this.readLaunchLug(el, parent);
+          break;
+        case 'railbutton':
+          this.readRailButton(el, parent);
+          break;
+        case 'innertube':
+          this.readInnerTube(el, parent);
+          break;
+        case 'centeringring':
+          this.readRing(el, parent, 'centeringRing');
+          break;
+        case 'bulkhead':
+          this.readRing(el, parent, 'bulkhead');
+          break;
+        case 'masscomponent':
+          this.readMassComponent(el, parent);
+          break;
+        case 'parachute':
+          this.readParachute(el, parent);
+          break;
+        default:
+          throw el.unsupported(`element <${node.name}>`);
+      }
+    }
+  }
+
+  private readFinSet(el: Element, parent: Parent): void {
+    const count = el.integer('fincount');
+    const instances = el.optionalNumber('instancecount');
+    if (instances !== undefined && instances !== count) {
+      throw el.parseError(
+        `<instancecount> ${String(instances)} differs from <fincount> ${String(count)}`,
+      );
+    }
+    el.requireZero('cant', 'canted fins');
+    el.requireZero('filletradius', 'fin fillets');
+    el.requireValue('crosssection', 'square', 'fin cross-section other than "square"');
+    const rootChord = el.number('rootchord');
+    const position = axialPosition(el, parent, rootChord);
+    this.place(
+      el,
+      {
+        kind: 'finSet',
+        count,
+        rootChord: metres(rootChord),
+        tipChord: metres(el.number('tipchord')),
+        sweep: metres(el.number('sweeplength')),
+        span: metres(el.number('height')),
+        thickness: metres(el.number('thickness')),
+        density: el.bulkDensity(),
+        bodyRadius: metres(parent.radius),
+      },
+      position,
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'filletmaterial']);
+  }
+
+  private readLaunchLug(el: Element, parent: Parent): void {
+    el.requireValue('instancecount', '1', 'more than one launch lug instance');
+    const length = el.number('length');
+    const radius = el.number('radius');
+    const position = axialPosition(el, parent, length);
+    this.place(
+      el,
+      {
+        kind: 'launchLug',
+        length: metres(length),
+        outerRadius: metres(radius),
+        wallThickness: metres(el.number('thickness')),
+        density: el.bulkDensity(),
+        radialOffset: metres(parent.radius + radius),
+      },
+      position,
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
+  }
+
+  private readRailButton(el: Element, parent: Parent): void {
+    const count = el.integer('instancecount');
+    el.requireZero('screwheight', 'rail button screw height');
+    const separation = el.optionalNumber('instanceseparation');
+    if (count > 1 && separation === undefined) {
+      throw el.parseError('<instanceseparation> is required for more than one button');
+    }
+    const position = axialPosition(el, parent, 0);
+    this.place(
+      el,
+      {
+        kind: 'railButton',
+        count,
+        outerDiameter: metres(el.number('outerdiameter')),
+        innerDiameter: metres(el.number('innerdiameter')),
+        totalHeight: metres(el.number('height')),
+        baseHeight: metres(el.number('baseheight')),
+        flangeHeight: metres(el.number('flangeheight')),
+        density: el.bulkDensity(),
+        bodyRadius: metres(parent.radius),
+        ...(count > 1 && separation !== undefined ? { separation: metres(separation) } : {}),
+      },
+      position,
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+  }
+
+  private readInnerTube(el: Element, parent: Parent): void {
+    el.requireZero('radialposition', 'radially offset inner tubes');
+    el.requireValue('clusterconfiguration', 'single', 'motor clusters');
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined && sub.node.children.length > 0) {
+      throw sub.unsupported('components inside an inner tube');
+    }
+    const length = el.number('length');
+    const position = axialPosition(el, parent, length);
+    const index = this.place(
+      el,
+      {
+        kind: 'innerTube',
+        length: metres(length),
+        outerRadius: metres(el.length('outerradius')),
+        wallThickness: metres(el.number('thickness')),
+        density: el.bulkDensity(),
+      },
+      position,
+    );
+    this.readMotorMount(el, index, position + length);
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'clusterscale', 'clusterrotation']);
+  }
+
+  private readRing(el: Element, parent: Parent, kind: 'centeringRing' | 'bulkhead'): void {
+    el.requireValue('instancecount', '1', `more than one ${kind} instance`);
+    el.requireZero('radialposition', `radially offset ${kind}`);
+    const length = el.number('length');
+    const position = axialPosition(el, parent, length);
+    this.place(
+      el,
+      {
+        kind,
+        length: metres(length),
+        outerRadius: metres(el.length('outerradius')),
+        innerRadius: metres(kind === 'centeringRing' ? el.length('innerradius') : 0),
+        density: el.bulkDensity(),
+      },
+      position,
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
+  }
+
+  private readMassComponent(el: Element, parent: Parent): void {
+    el.requireZero('radialposition', 'radially offset mass components');
+    const length = el.number('packedlength');
+    const position = axialPosition(el, parent, length);
+    this.place(
+      el,
+      {
+        kind: 'massComponent',
+        mass: kilograms(el.number('mass')),
+        length: metres(length),
+        radius: metres(el.number('packedradius')),
+      },
+      position,
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'masscomponenttype']);
+  }
+
+  private readParachute(el: Element, parent: Parent): void {
+    el.requireZero('radialposition', 'radially offset parachutes');
+    if (!el.has('overridemass')) {
+      throw el.unsupported('parachute mass from canopy and line materials (no <overridemass>)');
+    }
+    if (el.boolean('overridesubcomponentsmass')) {
+      throw el.unsupported('<overridesubcomponentsmass> true');
+    }
+    const length = el.number('packedlength');
+    const position = axialPosition(el, parent, length);
+    const index = this.place(
+      el,
+      {
+        kind: 'parachute',
+        mass: kilograms(el.number('overridemass')),
+        length: metres(length),
+        radius: metres(el.number('packedradius')),
+      },
+      position,
+    );
+    const event = el.text('deployevent');
+    if (!['launch', 'ejection', 'apogee', 'altitude', 'never'].includes(event)) {
+      throw el.unsupported(`deployment event "${event}"`);
+    }
+    const cdText = el.text('cd');
+    if (cdText === 'auto') throw el.unsupported('parachute drag coefficient "auto"');
+    this.recoveryDevices.push({
+      name: el.optionalText('name') ?? '',
+      component: index,
+      diameter: metres(el.number('diameter')),
+      dragCoefficient: el.number('cd'),
+      deployEvent: event as OrkDeployEvent,
+      deployAltitude: metres(el.number('deployaltitude')),
+      deployDelay: seconds(el.number('deploydelay')),
+    });
+    el.finish([
+      ...IGNORED_COMMON,
+      ...IGNORED_ANGULAR,
+      'material',
+      'linecount',
+      'linelength',
+      'linematerial',
+    ]);
+  }
+
+  /** External components in a stage: stacked from the nose tip in file order. */
+  private readStage(stage: Element): void {
+    const sub = stage.child('subcomponents');
+    let x = 0;
+    for (const node of sub.node.children) {
+      const el = sub.wrap(node);
+      const offset = el.optional('axialoffset');
+      if (
+        offset !== undefined &&
+        (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
+      ) {
+        throw el.unsupported(
+          'external components positioned other than stacked after the previous one',
+        );
+      }
+      el.optional('position');
+      switch (node.name) {
+        case 'nosecone':
+          x = this.readNoseCone(el, x);
+          break;
+        case 'bodytube':
+          x = this.readBodyTube(el, x);
+          break;
+        case 'transition':
+          x = this.readTransition(el, x);
+          break;
+        default:
+          throw el.unsupported(`element <${node.name}>`);
+      }
+    }
+    this.length = x;
+    stage.finish([...IGNORED_COMMON]);
+  }
+
+  private readNoseCone(el: Element, x: number): number {
+    if (el.boolean('isflipped')) throw el.unsupported('flipped nose cones');
+    // <shapeclipped> is written for clippable shapes. For a nose cone the fore
+    // radius is zero, so the clipped and non-clipped profiles of Niskanen
+    // Appendix A.7 (pp. 103 to 104) coincide and the flag has no effect.
+    if (el.has('shapeclipped')) el.boolean('shapeclipped');
+    const { shape, shapeParameter } = readShape(el);
+    const length = el.number('length');
+    const baseRadius = el.length('aftradius');
+    const thickness = el.thickness('thickness');
+    const aftShoulder = readShoulder(el, 'aft');
+    this.maxBodyRadius = Math.max(this.maxBodyRadius, baseRadius);
+    this.place(
+      el,
+      {
+        kind: 'noseCone',
+        shape,
+        length: metres(length),
+        baseRadius: metres(baseRadius),
+        ...(shapeParameter === undefined ? {} : { shapeParameter }),
+        ...(thickness === 'filled' ? {} : { wallThickness: metres(thickness) }),
+        density: el.bulkDensity(),
+        ...(aftShoulder === undefined ? {} : { aftShoulder }),
+      },
+      x,
+    );
+    el.finish([...IGNORED_COMMON]);
+    return x + length;
+  }
+
+  private readTransition(el: Element, x: number): number {
+    // Clipped transitions are not implemented in the physics package (plan 0003).
+    if (el.has('shapeclipped') && el.boolean('shapeclipped')) {
+      throw el.unsupported('clipped transitions');
+    }
+    const { shape, shapeParameter } = readShape(el);
+    const length = el.number('length');
+    const foreRadius = el.length('foreradius');
+    const aftRadius = el.length('aftradius');
+    const thickness = el.thickness('thickness');
+    for (const prefix of ['fore', 'aft'] as const) {
+      const fields = ['radius', 'length', 'thickness'].map((f) =>
+        el.number(`${prefix}shoulder${f}`),
+      );
+      if (fields.some((v) => v !== 0)) throw el.unsupported('transition shoulders');
+      if (el.boolean(`${prefix}shouldercapped`)) throw el.unsupported(`capped ${prefix} shoulder`);
+    }
+    this.maxBodyRadius = Math.max(this.maxBodyRadius, foreRadius, aftRadius);
+    this.place(
+      el,
+      {
+        kind: 'transition',
+        shape,
+        length: metres(length),
+        foreRadius: metres(foreRadius),
+        aftRadius: metres(aftRadius),
+        ...(shapeParameter === undefined ? {} : { shapeParameter }),
+        ...(thickness === 'filled' ? {} : { wallThickness: metres(thickness) }),
+        density: el.bulkDensity(),
+      },
+      x,
+    );
+    el.finish([...IGNORED_COMMON]);
+    return x + length;
+  }
+
+  private readBodyTube(el: Element, x: number): number {
+    const length = el.number('length');
+    const radius = el.length('radius');
+    this.maxBodyRadius = Math.max(this.maxBodyRadius, radius);
+    const index = this.place(
+      el,
+      {
+        kind: 'bodyTube',
+        length: metres(length),
+        outerRadius: metres(radius),
+        wallThickness: metres(el.number('thickness')),
+        density: el.bulkDensity(),
+      },
+      x,
+    );
+    this.readMotorMount(el, index, x + length);
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined) this.readInternal(sub, { position: x, length, radius });
+    el.finish([...IGNORED_COMMON]);
+    return x + length;
+  }
+
+  readRocket(root: Element): OrkRocket {
+    const version = root.attribute('version') ?? '';
+    if (!version.startsWith('1.')) throw root.unsupported(`format version "${version}"`);
+    const rocket = root.child('rocket');
+    root.finish(['simulations', 'photostudio', 'docprefs']);
+
+    rocket.requireValue(
+      'referencetype',
+      'maximum',
+      'reference length other than the maximum body diameter',
+    );
+    const configs = rocket.all('motorconfiguration');
+    if (configs.length > 1)
+      throw rocket.unsupported(`${String(configs.length)} motor configurations`);
+    const offset = rocket.optional('axialoffset');
+    if (offset !== undefined && Number(offset.text) !== 0) {
+      throw rocket.unsupported('a rocket axial offset');
+    }
+    rocket.optional('position');
+    const subcomponents = rocket.child('subcomponents');
+    const stages = subcomponents.all('stage');
+    const [stage] = stages;
+    if (stage === undefined || stages.length !== 1) {
+      throw rocket.unsupported(`${String(stages.length)} stages`);
+    }
+    this.readStage(subcomponents.wrap(stage));
+    subcomponents.finish([]);
+    rocket.finish([...IGNORED_COMMON, 'designtype', 'revision']);
+
+    if (this.components.length === 0) throw rocket.parseError('the rocket has no components');
+    return {
+      name: rocket.optionalText('name') ?? '',
+      formatVersion: version,
+      creator: root.attribute('creator'),
+      components: this.components,
+      length: metres(this.length),
+      maxBodyRadius: metres(this.maxBodyRadius),
+      motorMount: this.motorMount,
+      recoveryDevices: this.recoveryDevices,
+    };
+  }
+}
+
+/**
+ * Parse an OpenRocket design: the zip container (entry `rocket.ork`) or the
+ * bare XML. Throws `OrkParseError` for malformed input and
+ * `OrkUnsupportedError` for anything outside the minimal reader's scope.
+ */
+export function parseOrk(data: Uint8Array | string, fileName?: string): OrkRocket {
+  const xml = toXmlText(data, fileName);
+  const root = parseXml(xml, fileName);
+  return new Reader().readRocket(new Element(root, 'openrocket', fileName));
+}

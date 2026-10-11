@@ -1,0 +1,505 @@
+/**
+ * .ork reader tests (plan 0005). The reference files are the ones OpenRocket
+ * 24.12 wrote for reference/rockets; the expected components are the hand
+ * transcription in the physics package, the expected masses and CGs are
+ * OpenRocket's own per-component report (black-box reference), and the
+ * liftoff and burnout values are values.csv.
+ */
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import {
+  componentMassProperties,
+  kilograms,
+  R1_COMPONENTS,
+  R2_COMPONENTS,
+  R3_COMPONENTS,
+  R4_COMPONENTS,
+  R5_COMPONENTS,
+  REFERENCE_MOTORS,
+  rocketMassProperties,
+  type PlacedComponent,
+} from '@lo-fi-rocket/physics';
+import { describe, expect, it } from 'vitest';
+import { parseEng } from './eng.js';
+import { OrkParseError, OrkUnsupportedError } from './errors.js';
+import { parseOrk, type OrkRocket } from './ork.js';
+
+const REFERENCE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'reference');
+const ROCKETS = join(REFERENCE, 'rockets');
+
+const CASES = [
+  {
+    file: 'r1-three-fin-conical.ork',
+    motorFile: 'Estes_D12.eng',
+    components: R1_COMPONENTS,
+    motor: REFERENCE_MOTORS.r1,
+    liftoff: { mass: 0.190904, cg: 0.387022 },
+    burnout: { mass: 0.169804, cg: 0.364906 },
+    length: 0.6,
+    maxRadius: 0.025,
+  },
+  {
+    file: 'r2-ogive-boattail.ork',
+    motorFile: 'AeroTech_G80T.eng',
+    components: R2_COMPONENTS,
+    motor: REFERENCE_MOTORS.r2,
+    liftoff: { mass: 0.414484, cg: 0.484548 },
+    burnout: { mass: 0.345484, cg: 0.443897 },
+    length: 0.8,
+    maxRadius: 0.027,
+  },
+  {
+    file: 'r3-minimum-diameter-24.ork',
+    motorFile: 'AeroTech_F39T.eng',
+    components: R3_COMPONENTS,
+    motor: REFERENCE_MOTORS.r3,
+    liftoff: { mass: 0.171873, cg: 0.356248 },
+    burnout: { mass: 0.149173, cg: 0.332091 },
+    length: 0.55,
+    maxRadius: 0.0127,
+  },
+  {
+    file: 'r4-scratch-38mm.ork',
+    motorFile: 'AeroTech_H123W.eng',
+    components: R4_COMPONENTS,
+    motor: REFERENCE_MOTORS.r4,
+    liftoff: { mass: 1.365936, cg: 0.625038 },
+    burnout: { mass: 1.2396, cg: 0.594671 },
+    length: 1.0,
+    maxRadius: 0.033,
+  },
+  {
+    file: 'r5-transonic-min-dia-29.ork',
+    motorFile: 'AeroTech_H238T.eng',
+    components: R5_COMPONENTS,
+    motor: REFERENCE_MOTORS.r5,
+    liftoff: { mass: 0.450135, cg: 0.43553 },
+    burnout: { mass: 0.369495, cg: 0.403346 },
+    length: 0.68,
+    maxRadius: 0.016,
+  },
+] as const;
+
+const bytes = (file: string): Uint8Array => new Uint8Array(readFileSync(join(ROCKETS, file)));
+const xmlOf = (file: string): string => {
+  const entry = unzipSync(bytes(file))['rocket.ork'];
+  if (entry === undefined) throw new Error('no rocket.ork entry');
+  return strFromU8(entry);
+};
+
+/** Deep comparison with a relative tolerance on numbers (OpenRocket writes 5.000000000000004E-4 for 0.0005). */
+function expectClose(actual: unknown, expected: unknown, path: string): void {
+  if (typeof expected === 'number') {
+    expect(typeof actual, path).toBe('number');
+    const a = actual as number;
+    expect(
+      Math.abs(a - expected),
+      `${path}: ${String(a)} vs ${String(expected)}`,
+    ).toBeLessThanOrEqual(1e-12 * Math.max(1, Math.abs(expected)));
+    return;
+  }
+  if (typeof expected !== 'object' || expected === null) {
+    expect(actual, path).toBe(expected);
+    return;
+  }
+  expect(typeof actual, path).toBe('object');
+  const e = expected as Record<string, unknown>;
+  const a = actual as Record<string, unknown>;
+  expect(Object.keys(a).sort(), path).toEqual(Object.keys(e).sort());
+  for (const key of Object.keys(e)) expectClose(a[key], e[key], `${path}.${key}`);
+}
+
+/** Quote-aware CSV reader for reference/rockets/components/*.csv. */
+function readCsv(file: string): Record<string, string>[] {
+  const lines = readFileSync(file, 'utf8').trim().split(/\r?\n/);
+  const split = (line: string): string[] => {
+    const out: string[] = [];
+    let cur = '';
+    let quoted = false;
+    for (const ch of line) {
+      if (ch === '"') quoted = !quoted;
+      else if (ch === ',' && !quoted) {
+        out.push(cur);
+        cur = '';
+      } else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  };
+  const header = split(lines[0] ?? '');
+  return lines.slice(1).map((line) => {
+    const row: Record<string, string> = {};
+    split(line).forEach((v, i) => {
+      row[header[i] ?? String(i)] = v;
+    });
+    return row;
+  });
+}
+
+describe('reference rockets: parsed components equal the hand transcription', () => {
+  for (const c of CASES) {
+    it(`${c.file}: components, motor mount, length and radius`, () => {
+      const rocket = parseOrk(bytes(c.file), c.file);
+      expect(rocket.formatVersion).toBe('1.10');
+      expect(rocket.creator).toBe('OpenRocket 24.12');
+      expect(rocket.name).toBe(c.file.replace('.ork', ''));
+      const parsed: PlacedComponent[] = rocket.components.map((p) => ({
+        component: p.component,
+        position: p.position,
+      }));
+      expect(parsed.length).toBe(c.components.length);
+      parsed.forEach((p, i) => {
+        expectClose(p, c.components[i], `${c.file}[${String(i)}]`);
+      });
+      const mount = rocket.motorMount;
+      expect(mount).toBeDefined();
+      if (mount === undefined) return;
+      expect(mount.designation).toBe(c.motor.designation);
+      expect(mount.diameter).toBeCloseTo(c.motor.diameter, 12);
+      expect(mount.length).toBeCloseTo(c.motor.length, 12);
+      expect(mount.aftEnd).toBeCloseTo(c.motor.aftEnd, 12);
+      expect(rocket.components[mount.mountComponent]?.component.kind).toMatch(/bodyTube|innerTube/);
+      expect(rocket.length).toBeCloseTo(c.length, 12);
+      expect(rocket.maxBodyRadius).toBeCloseTo(c.maxRadius, 12);
+      expect(rocket.recoveryDevices.length).toBe(1);
+      expect(rocket.recoveryDevices[0]?.deployEvent).toBe('apogee');
+      expect(rocket.recoveryDevices[0]?.dragCoefficient).toBe(0.8);
+    });
+  }
+
+  it('R1 recovery device and motor delay are read as written', () => {
+    const r = parseOrk(bytes('r1-three-fin-conical.ork'));
+    expect(r.recoveryDevices[0]?.diameter).toBe(0.3);
+    expect(r.recoveryDevices[0]?.deployAltitude).toBe(200);
+    expect(r.recoveryDevices[0]?.deployDelay).toBe(0);
+    expect(r.recoveryDevices[0]?.component).toBe(8);
+    expect(r.motorMount?.delay).toBe(5);
+    expect(r.motorMount?.manufacturer).toBe('Estes');
+    expect(r.motorMount?.mountComponent).toBe(5);
+    expect(r.components.map((p) => p.element)).toEqual([
+      'nosecone',
+      'bodytube',
+      'trapezoidfinset',
+      'masscomponent',
+      'launchlug',
+      'innertube',
+      'centeringring',
+      'centeringring',
+      'parachute',
+    ]);
+  });
+});
+
+describe('per-component mass and CG against OpenRocket (components/*.csv)', () => {
+  for (const c of CASES) {
+    it(`${c.file}: every row within 0.05 % mass and 0.1 mm CG (plus the printed rounding)`, () => {
+      const rocket = parseOrk(bytes(c.file));
+      const rows = readCsv(join(ROCKETS, 'components', c.file.replace('.ork', '.csv'))).filter(
+        (r) => r['type'] !== 'Motor',
+      );
+      expect(rows.length).toBe(rocket.components.length);
+      rows.forEach((row, i) => {
+        const p = rocket.components[i];
+        if (p === undefined) throw new Error('missing component');
+        expect(p.name, `row ${String(i)}`).toBe(row['component']);
+        const props = componentMassProperties(p.component);
+        const mass = Number(row['mass_kg_all_instances']);
+        const cg = Number(row['cg_x_abs_m']);
+        // The CSV prints six decimals: allow half a printed unit on top of the model tolerance.
+        expect(Math.abs(props.mass - mass), `${p.name} mass`).toBeLessThan(5e-4 * mass + 0.5e-6);
+        expect(Math.abs(p.position + props.cgX - cg), `${p.name} CG`).toBeLessThan(1e-4 + 0.5e-6);
+        expect(Number(row['position_x_m']), `${p.name} position`).toBeCloseTo(p.position, 6);
+      });
+    });
+  }
+});
+
+describe('end to end: .ork plus .eng reproduce values.csv (mass 0.1 %, CG 1 %)', () => {
+  for (const c of CASES) {
+    it(`${c.file} with ${c.motorFile}`, () => {
+      const rocket = parseOrk(bytes(c.file));
+      const motors = parseEng(readFileSync(join(REFERENCE, 'motors', c.motorFile), 'utf8'));
+      const eng = motors[0];
+      const mount = rocket.motorMount;
+      if (eng === undefined || mount === undefined) throw new Error('missing motor');
+      expect(eng.designation).toBe(mount.designation);
+      expect(eng.diameter).toBeCloseTo(mount.diameter, 12);
+      expect(eng.length).toBeCloseTo(mount.length, 12);
+      const rel = (a: number, b: number): number => Math.abs(a - b) / Math.abs(b);
+      const at = (mass: number): { mass: number; cg: number } =>
+        rocketMassProperties(rocket.components, {
+          mass: kilograms(mass),
+          length: mount.length,
+          diameter: mount.diameter,
+          aftEnd: mount.aftEnd,
+        });
+      const lo = at(eng.totalMass);
+      const bo = at(eng.totalMass - eng.propellantMass);
+      expect(rel(lo.mass, c.liftoff.mass), 'liftoff mass').toBeLessThan(1e-3);
+      expect(rel(lo.cg, c.liftoff.cg), 'liftoff CG').toBeLessThan(1e-2);
+      expect(rel(bo.mass, c.burnout.mass), 'burnout mass').toBeLessThan(1e-3);
+      expect(rel(bo.cg, c.burnout.cg), 'burnout CG').toBeLessThan(1e-2);
+    });
+  }
+});
+
+describe('containers', () => {
+  it('the zip and the bare XML give the same rocket', () => {
+    const a = parseOrk(bytes('r2-ogive-boattail.ork'));
+    const b = parseOrk(xmlOf('r2-ogive-boattail.ork'));
+    expect(b).toEqual(a);
+    const c = parseOrk(strToU8(xmlOf('r2-ogive-boattail.ork')));
+    expect(c).toEqual(a);
+  });
+  it('a zip without rocket.ork, a broken zip and malformed XML are rejected', () => {
+    const noEntry = zipSync({ 'other.txt': strToU8('x') });
+    expect(() => parseOrk(noEntry, 'a.ork')).toThrow(/no "rocket.ork" entry/);
+    const broken = new Uint8Array([0x50, 0x4b, 1, 2, 3]);
+    expect(() => parseOrk(broken)).toThrow(OrkParseError);
+    expect(() => parseOrk('<openrocket version="1.10"><rocket></openrocket>')).toThrow(
+      /not well-formed XML/,
+    );
+    expect(() => parseOrk('<foo/>')).toThrow(/root element is not <openrocket>/);
+  });
+  it('every reference file in the folder parses', () => {
+    const files = readdirSync(ROCKETS).filter((f) => f.endsWith('.ork'));
+    expect(files.length).toBe(5);
+    for (const f of files) expect(parseOrk(bytes(f), f).components.length).toBeGreaterThan(0);
+  });
+});
+
+describe('rejected inputs name the element and component', () => {
+  const r1 = xmlOf('r1-three-fin-conical.ork');
+  const r2 = xmlOf('r2-ogive-boattail.ork');
+  const edit = (xml: string, from: string, to: string): string => {
+    if (!xml.includes(from)) throw new Error(`test edit target not found: ${from}`);
+    return xml.replace(from, to);
+  };
+  const unsupported = (xml: string, pattern: RegExp): void => {
+    expect(() => parseOrk(xml, 'edited.ork')).toThrow(OrkUnsupportedError);
+    expect(() => parseOrk(xml, 'edited.ork')).toThrow(pattern);
+  };
+  const malformed = (xml: string, pattern: RegExp): void => {
+    expect(() => parseOrk(xml, 'edited.ork')).toThrow(OrkParseError);
+    expect(() => parseOrk(xml, 'edited.ork')).toThrow(pattern);
+  };
+
+  it('unknown components', () => {
+    unsupported(
+      edit(r1, '<parachute>', '<streamer><name>S</name></streamer><parachute>'),
+      /streamer "S": element <streamer>/,
+    );
+    unsupported(
+      edit(r1, '</nosecone>', '</nosecone><podset><name>Pods</name></podset>'),
+      /podset "Pods": element <podset>/,
+    );
+  });
+
+  it('structure: stages, motors, mounts, version, reference type', () => {
+    unsupported(
+      edit(r1, '</stage>', '</stage><stage><name>Booster</name><subcomponents/></stage>'),
+      /2 stages/,
+    );
+    unsupported(edit(r1, 'version="1.10"', 'version="2.0"'), /format version "2.0"/);
+    unsupported(edit(r1, '<referencetype>maximum', '<referencetype>nose'), /reference length/);
+    unsupported(
+      edit(
+        r1,
+        '<delay>5.0</delay>\n                  </motor>',
+        '<delay>5.0</delay></motor><motor configid="b"><designation>X</designation></motor>',
+      ),
+      /2 motor configurations/,
+    );
+    unsupported(
+      edit(
+        r1,
+        '<subcomponents>\n              <trapezoidfinset>',
+        '<subcomponents><innertube><name>Second mount</name><axialoffset method="top">0.0</axialoffset><material type="bulk" density="700.0">p</material><length>0.05</length><outerradius>0.01</outerradius><thickness>0.001</thickness><motormount><overhang>0.0</overhang><motor><manufacturer>m</manufacturer><designation>d</designation><diameter>0.018</diameter><length>0.07</length><delay>3.0</delay></motor></motormount></innertube><trapezoidfinset>',
+      ),
+      /more than one motor mount/,
+    );
+    unsupported(
+      edit(r1, '<clusterconfiguration>single', '<clusterconfiguration>double'),
+      /motor clusters/,
+    );
+  });
+
+  it('nose cones and transitions', () => {
+    unsupported(edit(r1, '<isflipped>false', '<isflipped>true'), /flipped nose cones/);
+    unsupported(
+      edit(
+        r2,
+        '<aftshouldercapped>false</aftshouldercapped>\n            <isflipped>',
+        '<aftshouldercapped>true</aftshouldercapped>\n            <isflipped>',
+      ),
+      /capped aft shoulder/,
+    );
+    unsupported(
+      edit(
+        r1,
+        '<shape>conical</shape>\n            <aftradius>',
+        '<shape>bezier</shape>\n            <aftradius>',
+      ),
+      /shape "bezier"/,
+    );
+    malformed(edit(r2, '<shapeparameter>1.0</shapeparameter>', ''), /needs a <shapeparameter>/);
+    unsupported(
+      edit(r1, '<aftradius>0.025</aftradius>', '<aftradius>auto</aftradius>'),
+      /<aftradius> "auto"/,
+    );
+    unsupported(
+      edit(
+        r2,
+        '<foreshoulderradius>0.0</foreshoulderradius>\n            <foreshoulderlength>0.0',
+        '<foreshoulderradius>0.02</foreshoulderradius>\n            <foreshoulderlength>0.03',
+      ),
+      /transition shoulders/,
+    );
+    malformed(
+      edit(r2, '<aftshoulderthickness>0.002', '<aftshoulderthickness>0.0'),
+      /aft shoulder needs positive/,
+    );
+    unsupported(
+      edit(
+        r2,
+        '<shape>conical</shape>\n            <foreradius>',
+        '<shape>conical</shape><shapeclipped>true</shapeclipped>\n            <foreradius>',
+      ),
+      /clipped transitions/,
+    );
+    // A clipped flag on a nose cone has no effect (zero fore radius) and is accepted either way.
+    const r3 = xmlOf('r3-minimum-diameter-24.ork');
+    expect(parseOrk(edit(r3, '<shapeclipped>false', '<shapeclipped>true')).components[0]).toEqual(
+      parseOrk(r3).components[0],
+    );
+    unsupported(
+      edit(
+        r1,
+        '<material type="bulk" density="160.0" group="Custom">Reference balsa 160',
+        '<material type="surface" density="160.0" group="Custom">Reference balsa 160',
+      ),
+      /material type "surface"/,
+    );
+  });
+
+  it('fins, lugs, buttons, rings, inner tubes', () => {
+    unsupported(edit(r1, '<cant>0.0</cant>', '<cant>0.1</cant>'), /canted fins/);
+    unsupported(edit(r1, '<filletradius>0.0', '<filletradius>0.003'), /fin fillets/);
+    unsupported(edit(r1, '<crosssection>square', '<crosssection>airfoil'), /fin cross-section/);
+    malformed(
+      edit(r1, '<fincount>3</fincount>', '<fincount>4</fincount>'),
+      /<instancecount> 3 differs from <fincount> 4/,
+    );
+    unsupported(
+      edit(
+        r1,
+        '<instancecount>1</instancecount>\n                <instanceseparation>0.06',
+        '<instancecount>2</instancecount>\n                <instanceseparation>0.06',
+      ),
+      /more than one launch lug/,
+    );
+    unsupported(edit(r2, '<screwheight>0.0', '<screwheight>0.002'), /screw height/);
+    malformed(
+      edit(r2, '<instanceseparation>0.25</instanceseparation>', ''),
+      /<instanceseparation> is required/,
+    );
+    unsupported(
+      edit(
+        r1,
+        '<innerradius>0.0125</innerradius>\n              </centeringring>\n\n              <centeringring>',
+        '<innerradius>auto</innerradius>\n              </centeringring>\n\n              <centeringring>',
+      ),
+      /<innerradius> "auto"/,
+    );
+    unsupported(
+      edit(
+        r1,
+        '<radialposition>0.0</radialposition>\n                <radialdirection>0.0</radialdirection>\n                <outerradius>0.0125',
+        '<radialposition>0.01</radialposition>\n                <radialdirection>0.0</radialdirection>\n                <outerradius>0.0125',
+      ),
+      /radially offset inner tubes/,
+    );
+    unsupported(
+      edit(
+        r1,
+        '<clusterrotation>0.0</clusterrotation>',
+        '<clusterrotation>0.0</clusterrotation><subcomponents><engineblock/></subcomponents>',
+      ),
+      /components inside an inner tube/,
+    );
+  });
+
+  it('overrides, parachutes, positions, numbers', () => {
+    unsupported(
+      edit(r1, '<radius>0.025</radius>', '<radius>0.025</radius><overridemass>0.1</overridemass>'),
+      /mass or CG override \(<overridemass>\)/,
+    );
+    unsupported(edit(r1, '<overridemass>0.01</overridemass>', ''), /no <overridemass>/);
+    unsupported(
+      edit(r1, '<overridesubcomponentsmass>false', '<overridesubcomponentsmass>true'),
+      /overridesubcomponentsmass/,
+    );
+    unsupported(
+      edit(r1, '<deployevent>apogee', '<deployevent>lowerstageseparation'),
+      /deployment event/,
+    );
+    unsupported(edit(r1, '<cd>0.8</cd>', '<cd>auto</cd>'), /drag coefficient "auto"/);
+    unsupported(
+      edit(
+        r1,
+        '<axialoffset method="top">0.1</axialoffset>\n                <position type="top">0.1</position>',
+        '<axialoffset method="after">0.1</axialoffset>\n                <position type="after">0.1</position>',
+      ),
+      /axial offset method "after"/,
+    );
+    malformed(
+      edit(r1, '<position type="top">0.1</position>', '<position type="top">0.2</position>'),
+      /disagrees with <axialoffset/,
+    );
+    malformed(
+      edit(r1, '<length>0.5</length>', '<length>half</length>'),
+      /<length> is not a number: "half"/,
+    );
+    malformed(edit(r1, '<length>0.5</length>', '<length></length>'), /<length> is empty/);
+    malformed(edit(r1, '<length>0.5</length>', ''), /missing <length>/);
+    malformed(
+      edit(r1, '<length>0.5</length>', '<length>0.5</length><length>0.5</length>'),
+      /<length> appears 2 times/,
+    );
+    malformed(
+      edit(
+        r1,
+        'density="700.0" group="Custom">Reference paper 700</material>\n            <length>0.5',
+        'density="0" group="Custom">Reference paper 700</material>\n            <length>0.5',
+      ),
+      /density must be greater than 0/,
+    );
+    unsupported(
+      edit(r1, '<radius>0.025</radius>', '<radius>0.025</radius><customelement>1</customelement>'),
+      /element <customelement>/,
+    );
+  });
+
+  it('absolute, middle and bottom positions follow the documented rules', () => {
+    // Nose weight: top 0.0 in the tube at 0.1 → 0.1. Change to absolute 0.3, middle 0 and bottom 0.
+    const at = (method: string, value: string): number => {
+      const xml = edit(
+        r1,
+        '<axialoffset method="top">0.0</axialoffset>\n                <position type="top">0.0</position>\n                <packedlength>0.02',
+        `<axialoffset method="${method}">${value}</axialoffset>\n                <position type="${method}">${value}</position>\n                <packedlength>0.02`,
+      );
+      const r: OrkRocket = parseOrk(xml);
+      const w = r.components.find((p) => p.name === 'Nose weight');
+      if (w === undefined) throw new Error('nose weight missing');
+      return w.position;
+    };
+    expect(at('absolute', '0.3')).toBeCloseTo(0.3, 12);
+    // middle: parent centre 0.35, own length 0.02 → forward end 0.34
+    expect(at('middle', '0.0')).toBeCloseTo(0.34, 12);
+    // bottom: parent aft end 0.6 − 0.02 → 0.58; with −0.1 → 0.48
+    expect(at('bottom', '0.0')).toBeCloseTo(0.58, 12);
+    expect(at('bottom', '-0.1')).toBeCloseTo(0.48, 12);
+  });
+});

@@ -18,13 +18,15 @@ Prompt 1: autonomous mode and all of Phase 1 (CLAUDE.md section 11 now defines a
 
 - Phase 1 step 4: minimal RASP .eng reader in `packages/formats` (plan 0004): header, delays, data lines, mass model per the thrustcurve.org format notes; 22 tests over the eight reference motors and malformed inputs.
 
+- Phase 1 step 5: minimal OpenRocket .ork reader in `packages/formats` (plan 0005): zip or bare XML, the eleven element types of the reference rockets, position methods verified against OpenRocket's per-component report, every other feature rejected by name; 25 tests, including every component of the five files against `components/*.csv` and liftoff/burnout from the files alone against `values.csv`; decision D-026.
+
 ## In progress
 
-- Phase 1 step 5: minimal .ork reader (plan 0005, to be written next).
+- Phase 1 step 6: Barrowman stability with both modes and acceptance against `reference/rockets/values.csv` (plan 0006, to be written next).
 
 ## Next
 
-- Phase 1 step 6: Barrowman stability with both modes and acceptance against `reference/rockets/values.csv` (plan 0006).
+- Phase 1 final report (CLAUDE.md section 10 acceptance), then Phase 2.
 
 ## Open questions
 

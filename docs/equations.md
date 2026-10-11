@@ -4,7 +4,7 @@ Every physics equation implemented in this repository is listed here, per CLAUDE
 An equation that is not in this register must not be in the code.
 
 **Current phase:** Phase 1, physics core.
-**Current task:** Phase 1 step 4, minimal .eng reader (`docs/plans/0004-eng-reader.md`). Units (plan 0001 Part A), the U.S. Standard Atmosphere 1976 (plan 0001 Part B) and component geometry and mass (plan 0003) are implemented.
+**Current task:** Phase 1 step 6, Barrowman stability (`docs/plans/0006-barrowman-stability.md`, to be written). Units (plan 0001 Part A), the U.S. Standard Atmosphere 1976 (plan 0001 Part B), component geometry and mass (plan 0003), the minimal .eng reader (plan 0004) and the minimal .ork reader (plan 0005) are implemented. File readers contain no physics equations and have no register entries.
 
 Source abbreviations: **USSA76** = NOAA/NASA/USAF, _U.S. Standard Atmosphere, 1976_ (`reference/docs/ussa1976-nasa-ntrs-19770009539.pdf`; printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables).
 

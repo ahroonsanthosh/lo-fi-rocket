@@ -57,6 +57,14 @@ export {
   type TubeComponent,
 } from './geometry/components.js';
 export {
+  R1_COMPONENTS,
+  R2_COMPONENTS,
+  R3_COMPONENTS,
+  R4_COMPONENTS,
+  R5_COMPONENTS,
+  REFERENCE_MOTORS,
+} from './geometry/reference-rockets.js';
+export {
   rocketMassProperties,
   type MotorMass,
   type PlacedComponent,

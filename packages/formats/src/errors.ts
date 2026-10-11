@@ -14,3 +14,26 @@ export class EngParseError extends FormatError {
     this.line = line;
   }
 }
+
+/** An OpenRocket `.ork` file was malformed or inconsistent. `path` names the element. */
+export class OrkParseError extends FormatError {
+  readonly path: string;
+  constructor(fileName: string | undefined, path: string, problem: string, options?: ErrorOptions) {
+    super(`${fileName ?? '.ork file'}, ${path}: ${problem}`, options);
+    this.path = path;
+  }
+}
+
+/**
+ * A valid `.ork` feature that the minimal reader (plan 0005) does not model.
+ * Nothing is approximated or skipped: the file must be rejected as a whole.
+ */
+export class OrkUnsupportedError extends FormatError {
+  readonly path: string;
+  constructor(fileName: string | undefined, path: string, feature: string) {
+    super(
+      `${fileName ?? '.ork file'}, ${path}: ${feature} is not supported by the minimal .ork reader (docs/plans/0005-ork-reader.md)`,
+    );
+    this.path = path;
+  }
+}

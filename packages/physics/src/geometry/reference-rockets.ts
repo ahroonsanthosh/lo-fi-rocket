@@ -1,7 +1,9 @@
 /**
  * The five reference rockets of reference/rockets/README.md, written out in
  * plain numbers for tests (the .ork reader of plan 0005 must reproduce them).
- * Positions are the forward end of each component from the nose tip.
+ * Positions are the forward end of each component from the nose tip. The order
+ * is the depth-first order of the .ork files (external parts with their
+ * children in between), which the .ork reader tests rely on.
  */
 import { kilograms, kilogramsPerCubicMetre, metres } from '../units/si.js';
 import type { PlacedComponent } from './assembly.js';
@@ -97,15 +99,6 @@ export const R2_COMPONENTS: readonly PlacedComponent[] = [
     wallThickness: m(0.0015),
     density: PAPER,
   }),
-  put(0.75, {
-    kind: 'transition',
-    shape: 'conical',
-    length: m(0.05),
-    foreRadius: m(0.027),
-    aftRadius: m(0.018),
-    wallThickness: m(0.0015),
-    density: PLASTIC,
-  }),
   put(0.63, {
     kind: 'finSet',
     count: 3,
@@ -152,6 +145,15 @@ export const R2_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(0.3, { kind: 'parachute', mass: kilograms(0.03), length: m(0.06), radius: m(0.022) }),
   put(0.2, { kind: 'massComponent', mass: kilograms(0.05), length: m(0.05), radius: m(0.02) }),
+  put(0.75, {
+    kind: 'transition',
+    shape: 'conical',
+    length: m(0.05),
+    foreRadius: m(0.027),
+    aftRadius: m(0.018),
+    wallThickness: m(0.0015),
+    density: PLASTIC,
+  }),
 ];
 
 export const R3_COMPONENTS: readonly PlacedComponent[] = [
