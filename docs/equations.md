@@ -4,7 +4,7 @@ Every physics equation implemented in this repository is listed here, per CLAUDE
 An equation that is not in this register must not be in the code.
 
 **Current phase:** Phase 1, physics core.
-**Current task:** units system and U.S. Standard Atmosphere 1976. Plan: `docs/plans/0001-units-and-atmosphere.md` (awaiting approval). No equations are implemented yet.
+**Current task:** U.S. Standard Atmosphere 1976 (Part B of `docs/plans/0001-units-and-atmosphere.md`, approved). Part A (units) is implemented. Part B is blocked until `reference/ussa1976.pdf` is in the repository so every value can be checked against a page of the document.
 
 ## How to add an entry
 

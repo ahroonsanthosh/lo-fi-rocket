@@ -30,6 +30,9 @@ export default tseslint.config(
       ],
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
+      // Branded quantities are `number & { brand }`; this rule does not see
+      // through the intersection and would forbid `-force` on a Newtons value.
+      '@typescript-eslint/no-unsafe-unary-minus': 'off',
       // Numeric literals must be written in full; no implicit coercion tricks.
       'no-implicit-coercion': 'error',
       eqeqeq: ['error', 'always'],

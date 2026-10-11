@@ -6,10 +6,20 @@ This file is the single definition of units, coordinate frames, numeric rules, a
 
 - SI everywhere inside `packages/physics` and `packages/formats`: metre (m), kilogram (kg), second (s), newton (N), kelvin (K), pascal (Pa), radian (rad). Derived units follow: m/s, m/s², kg/m³, N·s, kg·m², Pa·s.
 - Conversions happen only at the boundaries: the UI (`packages/app`) and file parsers (`packages/formats`, where a file format defines its own units). Nothing inside `packages/physics` takes or returns a non-SI unit.
-- Quantities are branded TypeScript types (`Metres`, `Kilograms`, `Radians`, ...). A plain `number` is never passed where a physical quantity is expected. The branding design is specified in `docs/plans/0001-units-and-atmosphere.md` (pending approval) and will be copied here once approved.
+- Quantities are branded TypeScript types (`Metres`, `Kilograms`, `Radians`, ...) defined in `packages/physics/src/units/si.ts`. A plain `number` is never passed where a physical quantity is expected.
+  - `Quantity<Unit>` is `number & { [unitBrand]: Unit }`. A quantity is usable as a `number`; a `number` is not usable as a quantity; quantities of different units are not interchangeable. Wrong-quantity arguments fail to compile.
+  - Each quantity has exactly one constructor (`metres(x)`, `kelvin(x)`, ...). It accepts every finite float64 including zero and negatives, and throws `InvalidInputError` for NaN and ±Infinity. Sign and range checks belong to the function that consumes the value.
+  - Arithmetic on quantities yields a plain `number`. A function re-brands its result through the constructor when it returns it; that call is also the finiteness check required by CLAUDE.md section 8. The brand is therefore enforced at every function boundary and not through arithmetic (approved in plan 0001, question 6). Revisit with checked-arithmetic helpers only if a unit bug gets past this.
+  - Add a new quantity only when a function needs it.
+- Definitional conversions into SI (`millimetresToMetres`, `gramsToKilograms`, `degreesToRadians`, `celsiusToKelvin`, in `packages/physics/src/units/convert.ts`) are cited to the SI Brochure, 9th edition, as `UNIT-1` to `UNIT-4` in `docs/equations.md`. They take plain numbers (they are the boundary) and return quantities. Imperial conversions arrive with the UI in Phase 3 and will need an approved source.
 - Angles are radians. Degrees exist only in the UI and in file formats.
 - Temperatures are absolute (kelvin). Celsius exists only in the UI.
 - Mach number and other dimensionless ratios are still branded (`Mach`, `Dimensionless`) so they cannot be confused with dimensional values.
+
+## Gravity: two different constants
+
+- The U.S. Standard Atmosphere 1976 defines its own sea-level gravity constant g₀ = 9.80665 m/s² as part of the standard (it fixes the geopotential metre and appears in the pressure equations). It lives inside the atmosphere module's constants under a name that says what it is for (`ussa1976` constants, field `seaLevelGravityG0`), and nothing outside the atmosphere module reads it.
+- The flight simulator's gravity model (Phase 2) is a separate decision with its own source and its own definition. It must never import the atmosphere's g₀, and the atmosphere module must never expose a gravity function (plan 0001, question 3).
 
 ## Coordinate frames
 

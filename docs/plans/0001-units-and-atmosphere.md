@@ -1,6 +1,6 @@
 # Plan 0001: Units system and U.S. Standard Atmosphere 1976
 
-**Status:** awaiting approval. No code from this plan has been written.
+**Status:** approved 2026-10-11 with the answers recorded at the end of this file. Part A (units) is implemented. Part B (atmosphere) is blocked until `reference/ussa1976.pdf` is present in the repository: the approval requires every value below to be checked against a page of the document before it becomes a test expectation.
 **Phase:** 1 (physics core). This is the first physics task.
 
 ## Part A: Units system
@@ -225,3 +225,12 @@ The computation is at most seven chained evaluations of `pow` or `exp` on float6
 4. Lower bound of the domain: −5 000 m (recommended, if the tables confirm it) or 0 m?
 5. Molecular-weight ratio above 80 km: implement Table 8 (recommended if the document is available) or document the ≤ 0.08 K discrepancy?
 6. Branded types enforced at function boundaries only (recommended), or also helper functions for checked arithmetic?
+
+## Approval record (2026-10-11)
+
+1. SI Brochure (BIPM, 9th edition, 2019) approved as the source for `UNIT-*`; cite it anyway.
+2. The owner has a copy of the 1976 document for `reference/`. Every value in Part B is to be verified against a specific page, with the page number recorded next to each value, before it becomes a test expectation. As of this revision the file is not in the repository (not in the working tree, not on any remote branch).
+3. Gravity stays out of the atmosphere module. The standard's own g₀ = 9.80665 m/s² stays inside the atmosphere constants under the name `seaLevelGravityG0`; see `docs/conventions.md`, "Gravity: two different constants".
+4. Lower bound −5 000 m, provided the document's tables confirm it.
+5. Implement Table 8 (molecular-weight ratio, 80 to 86 km).
+6. Branding at function boundaries only (D-010).

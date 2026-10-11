@@ -53,3 +53,19 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Decision:** `.claude/hooks/session-start.sh`, registered in `.claude/settings.json`, runs `pnpm install --frozen-lockfile` synchronously at the start of every Claude Code cloud session (it exits immediately outside one).
 - **Why:** Cloud session containers start from a fresh clone. Without the hook, the first test or lint run in each session fails until dependencies are installed, which invites skipping the full-suite rule (CLAUDE.md rule 7).
 - **Consequences:** Session start waits for the install (a few seconds with a warm cache). Can be made asynchronous if that becomes annoying.
+
+## D-010 (2026-10-11): Branded quantities enforced at function boundaries only
+
+- **Decision:** `Quantity<Unit>` brands (plan 0001, Part A) are checked at function boundaries. Arithmetic yields plain `number`; functions re-brand on return through the validating constructor. No checked-arithmetic helpers.
+- **Why:** Catches the common mistake (wrong unit or wrong quantity passed to a function) with zero runtime cost beyond a finiteness check, and keeps formula code readable. TypeScript cannot express unit algebra through `+` and `*` legibly.
+- **Alternatives:** `add`/`mul`/`div` helpers with type-level unit algebra. Rejected for now; revisit if a unit bug escapes (approved by the project owner, plan 0001 question 6).
+
+## D-011 (2026-10-11): SI Brochure approved as the source for definitional conversions
+
+- **Decision:** BIPM, The International System of Units (SI), 9th edition (2019), is an approved source for unit definitions and definitional conversions (`UNIT-*` entries). Every such conversion cites its section and table.
+- **Why:** CLAUDE.md section 4 requires every constant to have a source; the owner asked that even definitional factors be cited so the rule has no exceptions.
+
+## D-012 (2026-10-11): Atmosphere g₀ stays in the atmosphere module under its own name
+
+- **Decision:** The 1976 standard's g₀ = 9.80665 m/s² is an atmosphere constant (`seaLevelGravityG0`) and is not exported as a gravity model. The simulator's gravity is defined separately in Phase 2.
+- **Why:** One place defines gravity for flight; the atmosphere's g₀ is a defining constant of the standard, not a model of the launch site. See `docs/conventions.md`, "Gravity: two different constants".

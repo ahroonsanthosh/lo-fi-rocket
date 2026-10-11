@@ -9,6 +9,15 @@
  * U.S. Standard Atmosphere 1976) is planned in docs/plans/0001-units-and-atmosphere.md
  * and awaits approval.
  */
+export type { Quantity, QuantityConstructor } from './units/quantity.js';
+export { defineQuantity } from './units/quantity.js';
+export * from './units/si.js';
+export {
+  celsiusToKelvin,
+  degreesToRadians,
+  gramsToKilograms,
+  millimetresToMetres,
+} from './units/convert.js';
 export {
   InvalidInputError,
   NonFiniteResultError,
