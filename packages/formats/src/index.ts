@@ -1,8 +1,9 @@
 /**
  * @lo-fi-rocket/formats
  *
- * Parsers and writers for motor and rocket design files. Scheduled for
- * Phase 2 (.eng, .rse) and Phase 4 (.ork, native format). Nothing is
- * implemented yet; see CLAUDE.md section 10.
+ * Parsers and writers for motor and rocket design files. Implemented: the
+ * minimal RASP .eng reader (plan 0004). Scheduled: .rse (Phase 2), the
+ * user-facing .ork importer and the native format (Phase 4).
  */
-export {};
+export { parseEng, type EngMotor, type ThrustPoint } from './eng.js';
+export { EngParseError, FormatError } from './errors.js';

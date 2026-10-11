@@ -15,7 +15,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@lo-fi-rocket/physics": "workspace:*"
+    "@lo-fi-rocket/physics": "workspace:*",
+    "fast-xml-parser": "^5.11.2",
+    "fflate": "^0.8.3"
   },
   "sideEffects": false
 }
