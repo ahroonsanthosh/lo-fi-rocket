@@ -4,7 +4,9 @@ Every physics equation implemented in this repository is listed here, per CLAUDE
 An equation that is not in this register must not be in the code.
 
 **Current phase:** Phase 1, physics core.
-**Current task:** U.S. Standard Atmosphere 1976 (Part B of `docs/plans/0001-units-and-atmosphere.md`, approved). Part A (units) is implemented. Part B is blocked until `reference/ussa1976.pdf` is in the repository so every value can be checked against a page of the document.
+**Current task:** Phase 1 step 3, component geometry and mass (`docs/plans/0003-geometry-and-mass.md`). Units (plan 0001 Part A) and the U.S. Standard Atmosphere 1976 (plan 0001 Part B) are implemented.
+
+Source abbreviations: **USSA76** = NOAA/NASA/USAF, _U.S. Standard Atmosphere, 1976_ (`reference/docs/ussa1976-nasa-ntrs-19770009539.pdf`; printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables).
 
 ## How to add an entry
 

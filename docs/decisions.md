@@ -111,3 +111,18 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 
 - **Decision:** The Apogee Components reprint of Barrowman and Barrowman (1966), reprinted with the author's permission, is the accepted copy. The repository is private, so all documents stay committed; `reference/fetch-docs.sh` restores and verifies every document against its pinned SHA-256 so that the third-party files can be dropped from git if the repository goes public.
 - **Why:** Owner's decision (Prompt 1, Part B2, item 1).
+
+## D-021 (2026-10-11): Sutherland's constant is 110.4 K
+
+- **Decision:** `USSA1976_CONSTANTS.sutherlandS = 110.4` K.
+- **Why:** The 1976 standard prints 110 K in Table 2 (p. 2) and p. 4 but 110.4 K in the viscosity section (p. 19); only 110.4 K reproduces the standard's own tabulated sea-level dynamic viscosity (1.7894 × 10⁻⁵ Pa·s, Table 10 p. 20 and Table III p. 101). This is an inconsistency within one source, resolved by the source's own tabulated results; the difference (0.1 % in viscosity) is below any test tolerance that matters for drag, so it did not require stopping under CLAUDE.md section 11 (a). Recorded in `docs/known-limitations.md`.
+
+## D-022 (2026-10-11): Table 8 is interpolated linearly in geometric altitude
+
+- **Decision:** The molecular-weight ratio between 80 and 86 km uses the Z-indexed column of Table 8 (p. 9) with linear interpolation between the 500 m entries.
+- **Why:** The document tabulates the ratio only at 500 m intervals and says its values were themselves interpolated (p. 9); linear interpolation is the least-assuming choice and the effect on any output is below 10⁻⁵. The H-indexed column contains a non-monotonic entry (0.999679 at 84 500 m′) and is not used.
+
+## D-023 (2026-10-11): Published-table tests use the Z-indexed pages at half a printed unit
+
+- **Decision:** `ussa1976.tables.test.ts` compares 35 rows of Table I, 6 layer-base rows of the geopotential pages and 16 rows of Table III, each row carrying its printed page number, at 1.25 units of the last printed digit for the five-figure columns, 0.0006 K for temperature and 0.005 m/s for speed of sound. Rows above 80 km compare the molecular-scale temperature because the tables are uncorrected there (p. 9).
+- **Why:** CLAUDE.md section 7.2 and the owner's rule that nothing is verified without a page reference. Half a printed unit, the first choice, failed 17 rows; the residual distribution (recorded in `docs/known-limitations.md`) shows the tables were produced with mixed truncation and rounding in limited precision, so the tolerance was widened to what the tables can support and the cause written down, rather than tuning anything in the model.

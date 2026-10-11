@@ -1,7 +1,17 @@
 # Plan 0001: Units system and U.S. Standard Atmosphere 1976
 
-**Status:** approved 2026-10-11 with the answers recorded at the end of this file. Part A (units) is implemented. Part B (atmosphere) is blocked until `reference/ussa1976.pdf` is present in the repository: the approval requires every value below to be checked against a page of the document before it becomes a test expectation.
-**Phase:** 1 (physics core). This is the first physics task.
+**Status:** approved 2026-10-11 with the answers recorded at the end of this file. Part A (units) and Part B (atmosphere) are implemented. Every value in Part B was verified against `reference/docs/ussa1976-nasa-ntrs-19770009539.pdf` on 2026-10-11; the verification record follows.
+
+## Verification record for Part B (printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables)
+
+- Constants: Table 2 p. 2 (k, N_A, R* = 8.31432 × 10³, g₀ = 9.80665 m/s², g₀′ = 9.80665 m²/(s²·m′), P₀ = 1.013250 × 10⁵ Pa, T₀ = 288.15 K, β = 1.458 × 10⁻⁶, γ = 1.40, σ); r₀ = 6 356 766 m on p. 4 and p. 8; M₀ = 28.9644 kg/kmol on p. 9. **Correction:** Sutherland's constant is printed as 110 K in Table 2 and on p. 4 but as 110.4 K on p. 19; 110.4 K is used (D-021). The plan's recollection of all other constants was exact.
+- Layer table: Table 4 p. 3, exactly as planned (H_b 0, 11, 20, 32, 47, 51, 71, top 84.8520 km′; L_M,b −6.5, 0, +1.0, +2.8, 0, −2.8, −2.0 K/km′).
+- Equations: eq. (17) g(Z) p. 8 (not implemented, D-012); eqs. (18) and (19) p. 8 with Γ = g₀/g₀′ = 1 m′/m; eq. (22) T_M = T·M₀/M p. 9; eq. (23) p. 10; eqs. (33a) and (33b) p. 12; eq. (42) p. 15; eq. (50) p. 18; eqs. (51) and (52) p. 19. Equation numbers as planned.
+- Domain: Table I begins at Z = −5 000 m (p. 51); p. 12 confirms eq. (33a) with b = 0 down to −5 km′. Lower bound −5 000 m geometric adopted (owner's answer 4).
+- Table 8 (M/M₀, 80 to 86 km): transcribed from a 300 dpi crop of p. 9, Z-indexed column, 13 entries; p. 10 confirms 0.9995788 at 86 km and T = 186.8673 K there.
+- Sea-level values: Table 10 p. 20 (ρ₀ = 1.2250, C_s = 340.294, μ₀ = 1.7894 × 10⁻⁵, η₀ = 1.4607 × 10⁻⁵, M₀ = 28.9644).
+- Published rows: Table I pp. 51, 53, 57, 59, 61, 63, 65, 67, 68 and geopotential pp. 58, 62, 64, 66; Table III pp. 101, 105, 107, 113, 115. All transcribed from 200 dpi crops; each row's page is in `ussa1976.tables.test.ts`.
+  **Phase:** 1 (physics core). This is the first physics task.
 
 ## Part A: Units system
 

@@ -89,6 +89,9 @@ export default tseslint.config(
       // Tests legitimately use magic numbers from hand calculations and may need
       // non-null assertions on fixture data.
       '@typescript-eslint/no-non-null-assertion': 'off',
+      // Golden-file tests read and write fixtures; the purity rules apply to
+      // the library code, not to its tests.
+      'no-restricted-imports': 'off',
     },
   },
 );
