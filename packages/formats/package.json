@@ -1,0 +1,21 @@
+{
+  "name": "@lo-fi-rocket/formats",
+  "version": "0.0.0",
+  "private": true,
+  "description": "File import and export: RASP .eng, RockSim .rse, OpenRocket .ork, and the app's own format.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lo-fi-rocket/physics": "workspace:*"
+  },
+  "sideEffects": false
+}

@@ -1,0 +1,7 @@
+packages:
+  - packages/*
+
+# pnpm 10 refuses to run install scripts unless the package is listed here.
+# esbuild needs its postinstall to place the native binary.
+onlyBuiltDependencies:
+  - esbuild
