@@ -16,6 +16,15 @@ This file is the single definition of units, coordinate frames, numeric rules, a
 - Temperatures are absolute (kelvin). Celsius exists only in the UI.
 - Mach number and other dimensionless ratios are still branded (`Mach`, `Dimensionless`) so they cannot be confused with dimensional values.
 
+## Component geometry and mass
+
+- A component's position is the x of its forward end in the body frame. Its own profile r(x) is given for x ∈ [0, L] from that forward end.
+- Hollow nose cones and transitions are shells of uniform wall thickness t measured normal to the outer surface, to first order: r_inner(x) = max(0, r(x) − t·√(1 + r′(x)²)) over the same x range, ends open (GEO-9, D-024). A nose cone's aft shoulder is a tube of the shoulder radius and wall, starting at the nose base.
+- Tubes (body tubes, inner tubes, launch lugs) are hollow cylinders; rings and bulkheads are cylinders with explicit inner and outer radii; mass components and packed parachutes are solid cylinders of the given mass; rail buttons are base, shaft and flange cylinders stacked radially on the body, treated as point masses for inertia.
+- Fins are thin flat trapezoidal plates: root chord, tip chord, leading-edge sweep length, span, thickness; the CG is at the planform centroid, measured aft of the root leading edge; the root is at the body radius.
+- Moments of inertia: the rotational inertia is about the rocket axis; the longitudinal inertia is the mean of the two transverse moments about the CG (exact for axisymmetric parts and symmetric fin sets), per Niskanen §4.2.3. Off-axis parts contribute m d² to the rotational and m d²/2 to the longitudinal inertia.
+- Motors (Phase 1): cylinders of the RASP header mass, length and diameter, aft end flush with the mount's aft end, CG at mid-length.
+
 ## Gravity: two different constants
 
 - The U.S. Standard Atmosphere 1976 defines its own sea-level gravity constant g₀ = 9.80665 m/s² as part of the standard (it fixes the geopotential metre and appears in the pressure equations). It lives inside the atmosphere module's constants under a name that says what it is for (`ussa1976` constants, field `seaLevelGravityG0`), and nothing outside the atmosphere module reads it.

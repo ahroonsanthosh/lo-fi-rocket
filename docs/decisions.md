@@ -126,3 +126,14 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 
 - **Decision:** `ussa1976.tables.test.ts` compares 35 rows of Table I, 6 layer-base rows of the geopotential pages and 16 rows of Table III, each row carrying its printed page number, at 1.25 units of the last printed digit for the five-figure columns, 0.0006 K for temperature and 0.005 m/s for speed of sound. Rows above 80 km compare the molecular-scale temperature because the tables are uncorrected there (p. 9).
 - **Why:** CLAUDE.md section 7.2 and the owner's rule that nothing is verified without a page reference. Half a printed unit, the first choice, failed 17 rows; the residual distribution (recorded in `docs/known-limitations.md`) shows the tables were produced with mixed truncation and rounding in limited precision, so the tolerance was widened to what the tables can support and the cause written down, rather than tuning anything in the model.
+
+## D-024 (2026-10-11): Hollow shells have uniform wall thickness measured normal to the surface
+
+- **Decision:** A hollow nose cone or transition of wall thickness t has inner profile r_inner = max(0, r − t·√(1 + r′²)): the outer surface offset inward by t along its normal, to first order, over the same axial range (GEO-9).
+- **Why:** It is the physical model of a part moulded or laid up to a uniform wall. Checked as a black box against OpenRocket's component masses for the five hollow parts of the reference rockets (two tangent ogives, two Von Kármán noses, one conical boat tail), it agrees to better than 0.01 %; the alternatives (radial offset by t, or a similar inner shape) miss by 1 to 15 %. No OpenRocket source was read for this; the agreement is an observation recorded in `docs/plans/0003-geometry-and-mass.md`.
+- **Consequences:** The wall must be thin compared with the radius of curvature; very thick walls or very blunt tips are outside the first-order model (`docs/known-limitations.md`).
+
+## D-025 (2026-10-11): Mass properties come from numerical integration of the definitions
+
+- **Decision:** Volume, CG and both moments of inertia of bodies of revolution and fin plates are computed by composite Gauss–Legendre quadrature of the defining integrals (GEO-8, GEO-10), not from a table of formulae for special shapes. Closed forms for the cylinder, tube and cone are used as test oracles only.
+- **Why:** Niskanen §4.2.3 cites only "standard formulae" (a web list) for inertia, which is not an approved source; the definitions need no citation and one integrator covers every shape, including shells. The quadrature error is documented and tested (1e-6 relative at worst at the default 512 panels).
