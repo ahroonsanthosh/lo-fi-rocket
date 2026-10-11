@@ -23,9 +23,11 @@ Prompt 1: autonomous mode and all of Phase 1 (CLAUDE.md section 11 now defines a
 - Phase 1 step 6: Barrowman normal force, CP, interference and stability margin (plan 0006, BAR-1 to BAR-9): both modes of D-016, worst-case roll angle, Mach 0.5 limit (D-027); R1 by hand, closed-form noses and boat tail, R1 to R5 CP within 0.04 % of OpenRocket in the OpenRocket-equivalent mode; CP from the `.ork` files in the formats tests.
 - The equations register `docs/equations.md` was found empty (only IDs in code and plans) and was filled with UNIT-1 to 4, ATM-C, ATM-L, ATM-1 to 10, GEO-1 to 12 and BAR-1 to 9.
 
+- Phase 1 acceptance report: `docs/reports/phase-1-acceptance.md` (all five rockets: CG within 0.0004 %, CP within 0.035 %, 269 tests, checks clean). **Phase 1 is complete.**
+
 ## In progress
 
-- Phase 1 final report (`docs/reports/phase-1-acceptance.md`).
+- Nothing. Phase 2 starts with plan 0007 on the next "continue".
 
 ## Next
 
