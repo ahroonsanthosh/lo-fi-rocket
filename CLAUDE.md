@@ -50,6 +50,7 @@ Use these, in this order of preference. If you need a source not on this list, a
 3. U.S. Standard Atmosphere, 1976 (NOAA/NASA/USAF). Atmospheric temperature, pressure, density, and speed of sound versus altitude. Also accept the ISO International Standard Atmosphere, which matches it in the troposphere and lower stratosphere.
 4. Hoerner, S. F. (1965). Fluid-Dynamic Drag. Only where Niskanen refers to it or for drag data Niskanen does not cover.
 5. RASP .eng and RockSim .rse motor file format specifications, and the ThrustCurve.org API documentation.
+6. Measured validation data only (never as a source of equations): NACA RM A53D02, NASA TR R-100, NASA TN D-4013 and NASA TN D-4014 (see Section 6.7).
 
 For each equation, record in a central file `docs/equations.md`: the equation, its source and location, its validity range, the symbols and units, and which function implements it.
 
@@ -108,6 +109,16 @@ Implement in this order. Each item needs its source cited and tests passing befo
 - Search and download from the ThrustCurve.org API, with local caching so the app works offline.
 - Custom thrust curves entered by the user or imported from CSV, with propellant mass and total mass.
 - Interpolate thrust linearly between data points. Mass during burn must follow the source format's rules; document which.
+
+### 6.7 RASAero II and wind tunnel validation
+
+RASAero II is closed-source freeware. Do not attempt to reproduce or reverse-engineer its methods. Use it only in these ways:
+
+1. Wind tunnel validation data (Phase 2). The RASAero website (rasaero.com) hosts original NACA and NASA reports with wind tunnel and free-flight data, including NACA RM A53D02, NASA TR R-100, and NASA TN D-4013 and TN D-4014 (ARCAS sounding rocket CP and drag data, Mach 0.6 to 4.5). These are downloaded into reference/docs/ with the same verification and provenance rules as the other sources, preferring NASA NTRS copies where they exist. In Phase 2, build test cases from these configurations and compare the app's predicted CD and CP against the measured data across Mach number, reporting the error by Mach regime. Do not tune constants to fit. If the app is outside a reasonable error in the transonic or supersonic regime, report it and propose, with sources, whether public USAF DATCOM methods should be added as an approved source.
+2. Drag curve import (Phase 4). Let users import a CD versus Mach table from a RASAero II aero plots CSV export, or any CSV, and use it in place of computed drag. Clearly label results that use an imported drag curve.
+3. .CDX1 import (Phase 4). Build an importer for RASAero II design files. The format is undocumented, so ask for sample files when you reach this task, and throw clearly on anything the importer does not understand.
+
+Do not use RASAero II as an automated reference simulator; it is Windows-only and cannot be run headlessly.
 
 ## 7. Verification and testing requirements
 
@@ -186,12 +197,19 @@ Do not start a phase until the previous one passes all its acceptance criteria.
 
 ## 11. How to work with me
 
-- At the start of each session, read this file and `docs/equations.md`, and summarise the current phase and next task.
-- Before writing code for a task: show the plan, the equations with sources, and the tests you will add. Wait for approval.
-- After each task: show the test results, list any assumptions you made, and list anything you are unsure about.
-- Keep a `docs/decisions.md` log of every significant design decision and why it was made.
-- Keep a `docs/known-limitations.md` listing every model limitation and validity range.
-- Commit in small, focused commits with clear messages.
+Autonomous mode. You work through a whole phase without asking for approval at each task. You still write a plan for each task into docs/plans/ before implementing it, and you still follow every rule in Section 1, except that rule 6 ('wait for my approval') is replaced by this section.
+
+Stop and ask me ONLY if:
+(a) two approved sources conflict and the difference changes a result by more than its test tolerance,
+(b) a required value cannot be verified against a document in reference/,
+(c) a reference comparison fails and you cannot find the cause after a genuine investigation,
+(d) a decision would be expensive to reverse later and is not covered by this file.
+
+For anything else, choose the most conservative, best-sourced option, record it in docs/decisions.md, and continue.
+
+Keep docs/progress.md updated after every commit: what is done, what is next, and any open questions. If I send 'continue', read CLAUDE.md, docs/progress.md and the latest plan, and resume.
+
+Never mark a value as verified unless you have checked it against a specific page of a document in reference/. Record the document and page next to the value.
 
 ## 12. First task
 

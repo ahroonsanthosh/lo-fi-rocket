@@ -3,7 +3,7 @@
 # Downloads the pinned OpenRocket release jar if it is missing, verifies its
 # SHA-256, compiles the harness against it, and runs it headlessly.
 #
-# Usage: ./build.sh [output-dir]   (default: ../../reference/rockets)
+# Usage: ./build.sh [output-dir]   (default: ../../reference/rockets; time step 0.001 s)
 set -euo pipefail
 cd "$(dirname "$0")"
 

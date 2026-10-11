@@ -91,8 +91,9 @@ public final class ReferenceHarness {
     static final double SITE_ALTITUDE = 0.0;       // m
     static final double SITE_LATITUDE = 45.0;      // degrees
     static final double SITE_LONGITUDE = 0.0;      // degrees
-    static final double TIME_STEP = Double.parseDouble(System.getProperty("harness.timeStep", "0.01")); // s (OpenRocket GUI default is 0.05)
+    static final double TIME_STEP = Double.parseDouble(System.getProperty("harness.timeStep", "0.001")); // s, OpenRocket's minimum (GUI default is 0.05)
     static final double MAX_SIM_TIME = 600.0;      // s
+    static final double TIMESERIES_INTERVAL = 0.01; // s, output decimation only
     static final double WIND_DIRECTION = Math.PI / 2; // radians, OpenRocket default
     static final double WIND_TURBULENCE = 0.0;
     static final int RANDOM_SEED = 1;
@@ -620,6 +621,20 @@ public final class ReferenceHarness {
         System.out.printf("  mass: launch %.6f kg, burnout %.6f kg, structure %.6f kg, motor %.6f kg at x=%.6f m%n",
                 launch.getMass(), burnout.getMass(), structure.getMass(), motorBody.getMass(), motorBody.getCM().x);
         System.out.println("  CP warnings: " + warnings);
+        // Roll-angle probe: CP at fixed roll angles versus the worst case, to confirm by
+        // observation how OpenRocket treats the roll-angle dependence of fin normal force.
+        StringBuilder probe = new StringBuilder("  CP vs roll angle (deg:CP m):");
+        for (double deg : new double[] {0, 15, 30, 45, 60, 90, 120}) {
+            FlightConditions fc = new FlightConditions(config);
+            fc.setMach(STABILITY_MACH);
+            fc.setAOA(STABILITY_AOA);
+            fc.setRollRate(0.0);
+            fc.setTheta(Math.toRadians(deg));
+            Coordinate cpTheta = aero.getCP(config, fc, new WarningSet());
+            probe.append(String.format(Locale.US, " %.0f:%.6f", deg, cpTheta.x));
+        }
+        probe.append(String.format(Locale.US, " worst:%.6f", cp.x));
+        System.out.println(probe);
 
         writeComponents(spec, config, outDir, motorBody);
 
@@ -715,9 +730,16 @@ public final class ReferenceHarness {
         List<List<Double>> cols = new ArrayList<>();
         for (FlightDataType t : types) cols.add(branch.get(t));
         int n = cols.get(0).size();
+        // The time series is written at most every TIMESERIES_INTERVAL seconds (plus the
+        // final row) to keep the files small; the simulation itself used TIME_STEP.
+        List<Double> time = cols.get(0);
+        double nextWrite = Double.NEGATIVE_INFINITY;
         try (PrintWriter w = new PrintWriter(f)) {
             w.println(String.join(",", names));
             for (int i = 0; i < n; i++) {
+                double t = time.get(i);
+                if (t < nextWrite && i != n - 1) continue;
+                nextWrite = t + TIMESERIES_INTERVAL;
                 StringBuilder sb = new StringBuilder();
                 for (int k = 0; k < cols.size(); k++) {
                     if (k > 0) sb.append(',');

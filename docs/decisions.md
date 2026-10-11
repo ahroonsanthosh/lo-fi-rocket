@@ -85,3 +85,29 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 
 - **Decision:** CG, CP and stability in `values.csv` are computed exactly as the OpenRocket design window does: CG from the launch mass (motor loaded, full propellant), CP from the Barrowman calculator at Mach 0.3, zero angle of attack, zero roll rate, taking the worst case over roll angle, and stability in calibers as (CP − CG) divided by the reference length, which is the maximum body diameter.
 - **Why:** These are the numbers a user compares against, and CLAUDE.md section 7.4 names them as the comparison targets.
+
+## D-016 (2026-10-11): Displayed stability uses Niskanen's roll-angle reduction; OpenRocket-equivalent mode for comparisons only
+
+- **Decision:** The app's displayed CP and stability use Niskanen (2009) eq. (3.54) including the roll-angle reduction of fin normal force (15 % for three fins, 6 % for four fins), taking the worst case over roll angle. A separate OpenRocket-equivalent mode omits the reduction and is used only for comparisons against `reference/rockets/values.csv`; the Phase 1 CP acceptance test runs in that mode. Results must show which figure they are.
+- **Why:** Project owner's decision (Prompt 1, Part B2, item 2): overstating stability is the unsafe direction. OpenRocket 24.12 applies no roll-angle dependence, confirmed by running the harness at seven roll angles (`reference/rockets/settings.md`), not by reading its source.
+- **Consequences:** R1's displayed stability is 1.84 calibers where OpenRocket shows 2.00; documented with numbers in `docs/known-limitations.md`.
+
+## D-017 (2026-10-11): Reference values regenerated at 0.001 s; the app finds events by root finding
+
+- **Decision:** `values.csv` is generated at OpenRocket's minimum step of 0.001 s, where rail-exit velocity has converged to within 0.15 % (replaces D-014's 0.01 s). In Phase 2 the app locates rail exit, burnout, apogee and deployment at the exact crossing using event detection with root finding, never at the next integration step.
+- **Why:** Owner's decision (Prompt 1, Part B2, item 3). OpenRocket's rail-exit velocity is sampled one step late, which is a 2 % effect at 0.01 s.
+
+## D-018 (2026-10-11): Phase 2 gravity must support OpenRocket's WGS latitude-dependent value
+
+- **Decision:** The simulator's gravity model (Phase 2) must be able to reproduce the latitude-dependent value OpenRocket used for the references, 9.8061992 m/s² at 45° and 0 m (`reference/rockets/settings.md`), with its formula cited to a source, so comparisons are like-for-like. The atmosphere's g₀ stays separate (D-012).
+- **Why:** Owner's decision (Prompt 1, Part B2, item 4).
+
+## D-019 (2026-10-11): No tolerance is widened in advance for the transonic rocket
+
+- **Decision:** R5 flies at Mach 1.09 in OpenRocket. Phase 2 keeps the standard tolerances; if R5 falls outside them, the cause is investigated and reported before anything changes.
+- **Why:** Owner's decision (Prompt 1, Part B2, item 5).
+
+## D-020 (2026-10-11): Barrowman 1966 is used from a permissioned reprint; copyrighted PDFs stay in git while the repository is private
+
+- **Decision:** The Apogee Components reprint of Barrowman and Barrowman (1966), reprinted with the author's permission, is the accepted copy. The repository is private, so all documents stay committed; `reference/fetch-docs.sh` restores and verifies every document against its pinned SHA-256 so that the third-party files can be dropped from git if the repository goes public.
+- **Why:** Owner's decision (Prompt 1, Part B2, item 1).

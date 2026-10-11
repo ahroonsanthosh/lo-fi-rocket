@@ -11,7 +11,7 @@ OpenRocket 24.12 (`reference/SOURCES.md`), driven headlessly by `tools/openrocke
 | Mach number for CP | 0.3 | OpenRocket design-window default |
 | Angle of attack | 0 rad | |
 | Roll rate | 0 rad/s | |
-| Roll angle | worst case over roll angle (`getWorstCP`) | the design window uses this when no roll angle is selected |
+| Roll angle | worst case over roll angle (`getWorstCP`) | the design window uses this when no roll angle is selected. Probe: `getCP` at roll angles 0°, 15°, 30°, 45°, 60°, 90° and 120° returns the identical CP for every reference rocket (three- and four-fin), equal to the worst case, so OpenRocket 24.12 applies no roll-angle dependence to the fin normal force (observed, not read from source; the harness prints the probe) |
 | Aerodynamic calculator | `BarrowmanCalculator` | OpenRocket's only calculator |
 | Reference length | maximum body diameter (`ReferenceType.MAXIMUM`, OpenRocket default) | `ref_diameter_m` column |
 | Stability margin | (CP − CG) / reference length, calibers | |
@@ -23,7 +23,7 @@ OpenRocket 24.12 (`reference/SOURCES.md`), driven headlessly by `tools/openrocke
 | Setting | Value | Note |
 | --- | --- | --- |
 | Integrator | OpenRocket `RK4SimulationStepper` (4th-order Runge-Kutta with OpenRocket's own step control) | only stepper in 24.12 |
-| Time step | 0.01 s | GUI default is 0.05 s; see sensitivity below. OpenRocket may use smaller internal steps on the rail and around events, as seen in the time series |
+| Time step | 0.001 s (OpenRocket's minimum, `AbstractSimulationStepper.MIN_TIME_STEP`) | GUI default is 0.05 s; see sensitivity below. Smaller values are clamped by OpenRocket |
 | Maximum step angle | 3° (`RK4SimulationStepper.RECOMMENDED_ANGLE_STEP`, default) | OpenRocket shortens a step when the rocket would rotate more than this |
 | Maximum simulation time | 600 s | |
 | Random seed | 1 | irrelevant with turbulence 0, pinned anyway |
@@ -49,17 +49,17 @@ OpenRocket 24.12 (`reference/SOURCES.md`), driven headlessly by `tools/openrocke
 
 Each simulation is run twice in the same process; apogee, maximum velocity, rail-exit velocity, time to apogee and flight time are compared for exact equality and the harness aborts on any difference. All ten runs were identical on 2026-10-11.
 
-## Time-step sensitivity (zero wind; 0.01 s is what `values.csv` records)
+## Time-step sensitivity (zero wind; 0.001 s is what `values.csv` records)
 
-| Rocket | Apogee 0.01 s | Apogee 0.05 s | Max v 0.01 s | Max v 0.05 s | Rail exit 0.01 s | Rail exit 0.05 s |
-| --- | --- | --- | --- | --- | --- | --- |
-| R1 | 167.045 | 167.041 | 61.967 | 61.968 | 18.594 | 18.999 |
-| R2 | 820.807 | 820.825 | 245.821 | 245.823 | 26.964 | 27.212 |
-| R3 | 832.932 | 832.956 | 233.975 | 233.969 | 32.239 | 33.165 |
-| R4 | 692.685 | 692.682 | 136.121 | 136.117 | 17.007 | 17.568 |
-| R5 | 1560.533 | 1560.563 | 369.487 | 369.490 | 36.592 | 37.617 |
+| Rocket | Apogee 0.05 | 0.01 | 0.002 | 0.001 | Max v 0.05 | 0.01 | 0.002 | 0.001 | Rail exit 0.05 | 0.01 | 0.002 | 0.001 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| R1 | 167.041 | 167.045 | 167.045 | 167.045 | 61.968 | 61.967 | 61.972 | 61.972 | 18.999 | 18.594 | 18.484 | 18.456 |
+| R2 | 820.825 | 820.807 | 820.806 | 820.806 | 245.823 | 245.821 | 245.820 | 245.821 | 27.212 | 26.964 | 26.611 | 26.611 |
+| R3 | 832.956 | 832.932 | 832.929 | 832.929 | 233.969 | 233.975 | 233.975 | 233.975 | 33.165 | 32.239 | 31.639 | 31.639 |
+| R4 | 692.682 | 692.685 | 692.685 | 692.685 | 136.117 | 136.121 | 136.122 | 136.122 | 17.568 | 17.007 | 16.825 | 16.825 |
+| R5 | 1560.563 | 1560.533 | 1560.531 | 1560.531 | 369.490 | 369.487 | 369.486 | 369.487 | 37.617 | 36.592 | 36.685 | 36.684 |
 
-Apogee and maximum velocity change by less than 0.01 % between the two steps. Rail-exit velocity changes by 1 % to 3 % because OpenRocket reports the velocity at the first integration step after the rail is cleared, so it depends on the step size. Both runs used the final geometry.
+Apogee and maximum velocity are converged to better than 0.01 % at 0.001 s. Rail-exit velocity converges to within 0.15 % (R1) and 0.01 % or better (R2 to R5) between 0.002 s and 0.001 s; OpenRocket detects rail departure at the first integration step whose position exceeds the rail length and reports the velocity there, so the residual is one step of acceleration. OpenRocket refuses steps below 0.001 s. The time series files are decimated to 0.01 s intervals for storage; the simulation itself ran at 0.001 s.
 
 ## What Phase 2 must reproduce or account for
 
@@ -67,5 +67,5 @@ Apogee and maximum velocity change by less than 0.01 % between the two steps. Ra
 - Flat Earth, no Coriolis.
 - ISA atmosphere from sea level.
 - Motor CG fixed at mid-length; mass tracks burnt impulse.
-- Rail-exit velocity sampled at the first step after rail departure (compare with the 0.01 s row, and expect step-size sensitivity).
+- Rail-exit velocity sampled at the first step after rail departure at 0.001 s; the app must instead locate rail exit, burnout, apogee and deployment at the exact crossing by root finding (Prompt 1, Part B2, item 3).
 - The design-window CP at Mach 0.3 uses the unreduced three-fin normal force (see `hand-checks.md`).

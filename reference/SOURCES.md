@@ -38,7 +38,13 @@ Everything in `reference/` with its provenance. Downloaded 2026-10-11 from insid
 ### 4. Barrowman and Barrowman (1966), The Theoretical Prediction of the Center of Pressure
 
 - **Citation:** Barrowman, James S. and Barrowman, Judith A. _The Theoretical Prediction of the Center of Pressure_. NARAM-8 Research and Development Project, National Association of Rocketry, 18 August 1966.
-- **Status: NOT OBTAINED.** No copy was found on an original-publisher, government, university or author-hosted site. The only online copies are a vendor reprint, https://www.apogeerockets.com/downloads/PDFs/barrowman_report.pdf (its first page states it is "reprinted here on the Apogee Components web site with permission of James S. Barrowman"), and mirrors of that reprint. The physical report is held by The Museum of Flight archives, Seattle (collection "James S. and Judith A. Barrowman Report", https://archives.museumofflight.org/repositories/2/resources/579), available by appointment. Awaiting the project owner's decision; see the Prompt 0 report.
+- **File:** `docs/barrowman-1966-theoretical-prediction-cp-apogee-reprint.pdf`
+- **Provenance: permissioned reprint.** No original-publisher, government or university copy exists online. This is the Apogee Components reprint, whose first page states "This report was reprinted here on the Apogee Components web site with permission of James S. Barrowman." Accepted by the project owner on 2026-10-11 on that basis (Prompt 1, Part B2, item 1).
+- **URL:** https://www.apogeerockets.com/downloads/PDFs/barrowman_report.pdf
+- **Downloaded:** 2026-10-11
+- **SHA-256:** `321c9eaac9b3b89664b9170d0e4f1bf021d4087bad5561c7f6e7e98818fe7a7e`
+- **Pages:** 43 (scan; PDF metadata author "Tim Van Milligan", the Apogee reprint's producer)
+- **Verified:** page 1 carries the title, both authors, "NARAM-8 R&D Project" and the permission statement. The physical original is held by The Museum of Flight archives, Seattle (collection "James S. and Judith A. Barrowman Report").
 
 ### 5. RASP `.eng` and RockSim `.rse` motor file formats
 
@@ -66,6 +72,23 @@ Everything in `reference/` with its provenance. Downloaded 2026-10-11 from insid
 - **Downloaded:** 2026-10-11
 - **SHA-256:** `221e4814360f7f7c1b27f2b2747dff67d9ab5452d644ee5e38865a8594aa8f6f` (api.html), `566009abab4e993283230061c98d47737df139649a70c887b9b6435c5ca04f8d` (swagger.json)
 - **Verified:** the OpenAPI document defines the `/api/v1/search.json`, `/api/v1/download.json` and related endpoints used below; the guide page is the publisher's own description of the same API.
+
+### 8. Wind tunnel and free-flight validation data (CLAUDE.md section 6.7)
+
+Measured data only, never a source of equations. All four are U.S. government works; the NASA NTRS record for each carries the copyright determination `GOV_PUBLIC_USE_PERMITTED` and distribution `PUBLIC`, which is why they are committed to this repository.
+
+| File                                       | Citation                                                                                                                                                                                                   | NTRS record and URL                                                                    | Pages | SHA-256                                                            |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------ |
+| `docs/naca-rm-a53d02-ntrs-19930087740.pdf` | James, Carlton S. and Carros, Robert J. _Experimental Investigation of the Zero-lift Drag of a Fin-stabilized Body of Fineness Ratio 10 at Mach Numbers Between 0.6 and 10_. NACA RM A53D02, 11 June 1953. | 19930087740, https://ntrs.nasa.gov/api/citations/19930087740/downloads/19930087740.pdf | 40    | `76ded4490acbe271b94f49d7cc2e588724feb034425186f97d0f722427819247` |
+| `docs/nasa-tr-r-100-ntrs-19630004995.pdf`  | Stoney, William E., Jr. _Collection of Zero-lift Drag Data on Bodies of Revolution from Free-flight Investigations_. NASA TR R-100, 1961.                                                                  | 19630004995, https://ntrs.nasa.gov/api/citations/19630004995/downloads/19630004995.pdf | 194   | `44c9ac6046b83db16d156cbc26a608d632fbb844854eff568d50ad6ec99be51e` |
+| `docs/nasa-tn-d-4013-ntrs-19670020050.pdf` | Ferris, James C. _Static Stability Investigation of a Single-Stage Sounding Rocket at Mach Numbers from 0.60 to 1.20_. NASA TN D-4013, July 1967.                                                          | 19670020050, https://ntrs.nasa.gov/api/citations/19670020050/downloads/19670020050.pdf | 64    | `44dc62a4131cf31b88fab20566f2a4b934a16be17388e099192d25236f08324a` |
+| `docs/nasa-tn-d-4014-ntrs-19670020031.pdf` | Babb, C. Donald and Fuller, Dennis E. _Static Stability Investigation of a Sounding-Rocket Vehicle at Mach Numbers from 1.50 to 4.63_. NASA TN D-4014, June 1967.                                          | 19670020031, https://ntrs.nasa.gov/api/citations/19670020031/downloads/19670020031.pdf | 79    | `d698b06798ad806a4fd6463f02f4c9e2624cd944d7a7902f2c015dbb5a351064` |
+
+Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports; NTRS copies were preferred as the government archive). Titles, report numbers, authors and dates were taken from the NTRS records and the first pages. Detailed verification of title pages is done when Phase 2 builds test cases from them.
+
+## Copyright status and the fetch script
+
+This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014) may stay committed.
 
 ## Reference motors (`reference/motors/`)
 
