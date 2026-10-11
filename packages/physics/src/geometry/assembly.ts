@@ -1,6 +1,6 @@
 /**
  * Whole-rocket mass properties from placed components and a motor.
- * Niskanen (2009) section 4.2.3, p. 64: component masses, CGs and the two
+ * GEO-12. Niskanen (2009) section 4.2.3, p. 64: component masses, CGs and the two
  * moments of inertia are combined; the parallel axis theorem moves each
  * longitudinal inertia to the rocket CG.
  */

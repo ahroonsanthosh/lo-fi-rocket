@@ -5,7 +5,7 @@
  * bulk density or an explicit mass. `componentMassProperties` returns volume,
  * mass, CG along the component's own x axis (from its forward end), and the
  * rotational and longitudinal moments of inertia about the component's CG,
- * per Niskanen (2009) section 4.2.3, p. 64, computed from the definitions
+ * per Niskanen (2009) section 4.2.3, p. 64 (GEO-10 fins, GEO-11 cylinders, GEO-12 combination in docs/equations.md), computed from the definitions
  * listed in docs/plans/0003-geometry-and-mass.md.
  *
  * Conventions (docs/conventions.md): x along the axis, positive aft; the

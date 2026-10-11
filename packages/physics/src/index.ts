@@ -71,6 +71,25 @@ export {
   type RocketMassProperties,
 } from './geometry/assembly.js';
 export {
+  bodyTerm,
+  centreOfPressure,
+  finRollFactor,
+  finSetTerm,
+  maximumBodyDiameter,
+  noseConeTerm,
+  prandtlBeta,
+  rocketStability,
+  stabilityMargin,
+  transitionTerm,
+  type AerodynamicTerm,
+  type CentreOfPressureOptions,
+  type CentreOfPressureResult,
+  type ComponentContribution,
+  type FinSetTerm,
+  type RollAngle,
+  type StabilityResult,
+} from './stability/barrowman.js';
+export {
   InvalidInputError,
   NonFiniteResultError,
   NotImplementedError,

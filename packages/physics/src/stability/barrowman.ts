@@ -1,0 +1,395 @@
+/**
+ * Barrowman normal force coefficient derivatives, centre of pressure and
+ * stability margin (plan 0006; register entries BAR-1 to BAR-9 in
+ * docs/equations.md).
+ *
+ * Source: Niskanen, S. (2009), Development of an Open Source model rocket
+ * simulation software, chapter 3 (printed page = PDF page − 10). Every
+ * function cites its equation. Assumptions of the method (p. 21): angle of
+ * attack very close to zero, steady irrotational flow, rigid body, sharp
+ * nose tip, flat-plate fins, axially symmetric body.
+ *
+ * Conventions (docs/conventions.md): positions from the nose tip, positive
+ * aft; C_Nα referred to the reference area π d²/4 with d the reference
+ * diameter (the maximum body diameter unless given).
+ */
+import { InvalidInputError, NotImplementedError } from '../errors.js';
+import type { PlacedComponent } from '../geometry/assembly.js';
+import { rocketMassProperties, type MotorMass } from '../geometry/assembly.js';
+import type {
+  Component,
+  NoseConeComponent,
+  TransitionComponent,
+  TrapezoidFinSetComponent,
+} from '../geometry/components.js';
+import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
+import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
+import { finiteResult } from '../numerics/finite.js';
+import {
+  metres,
+  squareMetres,
+  type Mach,
+  type Metres,
+  type Radians,
+  type SquareMetres,
+} from '../units/si.js';
+
+/** One component's contribution: C_Nα (referred to A_ref) and CP from the component's forward end. */
+export interface AerodynamicTerm {
+  readonly cnAlpha: number;
+  /** Centre of pressure from the component's forward end, metres. NaN only when cnAlpha is 0 (unused). */
+  readonly cpX: number;
+}
+
+export interface FinSetTerm extends AerodynamicTerm {
+  /** (C_Nα)₁ of a single fin, eq. (3.40). */
+  readonly cnAlphaSingleFin: number;
+  /** Multiplier of (C_Nα)₁ for the fin count and roll angle, eq. (3.54). */
+  readonly finCountFactor: number;
+  /** K_T(B), eq. (3.56). */
+  readonly interferenceFactor: number;
+  /** Roll angle actually used (the worst case when requested), radians. */
+  readonly rollAngle: number;
+}
+
+export type RollAngle = Radians | 'worst';
+
+export interface CentreOfPressureOptions {
+  readonly mach: Mach;
+  /** Roll angle θ of eq. (3.54), or 'worst' for the most forward CP over θ. */
+  readonly rollAngle: RollAngle;
+  /**
+   * true: eq. (3.54) as written, with the empirical roll-angle reductions for
+   * three and four fins (the displayed figure, D-016).
+   * false: OpenRocket-equivalent, the bracketed reductions removed (1.50 and
+   * 2.00); for reference comparisons only.
+   */
+  readonly finRollReduction: boolean;
+  /** Reference diameter d; defaults to the maximum body diameter (BAR-9). */
+  readonly referenceDiameter?: Metres;
+}
+
+export interface ComponentContribution {
+  readonly index: number;
+  readonly kind: Component['kind'];
+  readonly cnAlpha: number;
+  /** CP from the nose tip. */
+  readonly cp: Metres;
+}
+
+export interface CentreOfPressureResult {
+  readonly cp: Metres;
+  readonly cnAlpha: number;
+  readonly mach: Mach;
+  readonly rollAngle: RollAngle;
+  readonly finRollReduction: boolean;
+  readonly referenceDiameter: Metres;
+  readonly referenceArea: SquareMetres;
+  readonly contributions: readonly ComponentContribution[];
+}
+
+function requireMach(mach: number): void {
+  if (!Number.isFinite(mach) || mach < 0) {
+    throw new InvalidInputError('Mach number', mach, 'must be a finite number of 0 or greater');
+  }
+}
+
+/**
+ * BAR-1. Niskanen eq. (3.13), p. 20, subsonic branch: β = √(1 − M²) for
+ * M < 1. The supersonic branch (√(M² − 1)) belongs to the Phase 2 fin model
+ * (eqs. 3.41 to 3.49) and is not implemented.
+ */
+export function prandtlBeta(mach: Mach): number {
+  const M: number = mach;
+  requireMach(M);
+  if (M >= 1) {
+    throw new NotImplementedError(
+      `fin normal force at Mach ${String(M)}: supersonic fins (Niskanen eqs. 3.41 to 3.49) are Phase 2`,
+    );
+  }
+  return Math.sqrt(1 - M * M);
+}
+
+/**
+ * BAR-2 and BAR-3. Niskanen eq. (3.19), p. 22: C_Nα = (2/A_ref)[A(l) − A(0)]
+ * with sin α/α → 1 as α → 0; eq. (3.28), p. 24: X_B = [l A(l) − V]/[A(l) − A(0)].
+ * C_Nα is taken as independent of Mach (p. 22). When A(l) = A(0) the
+ * component produces no normal force and its CP is undefined (NaN, unused
+ * in the moment sum).
+ */
+export function bodyTerm(
+  foreArea: number,
+  aftArea: number,
+  volume: number,
+  length: number,
+  referenceArea: number,
+): AerodynamicTerm {
+  const dA = aftArea - foreArea;
+  const cnAlpha = (2 * dA) / referenceArea;
+  if (dA === 0) return { cnAlpha: 0, cpX: Number.NaN };
+  return { cnAlpha, cpX: (length * aftArea - volume) / dA };
+}
+
+/** Volume of the outer profile: ∫ π r(x)² dx (plan 0003 integrator). */
+function profileVolume(profile: Profile): number {
+  return integrate((x) => Math.PI * profile.radius(x) ** 2, profile.length, DEFAULT_PANELS);
+}
+
+/** BAR-2, BAR-3 for a nose cone: A(0) = 0, A(l) = π R². The shoulder is inside the tube and ignored. */
+export function noseConeTerm(c: NoseConeComponent, referenceArea: SquareMetres): AerodynamicTerm {
+  const profile = noseProfile(c.shape, c.length, c.baseRadius, c.shapeParameter);
+  const R: number = c.baseRadius;
+  return bodyTerm(0, Math.PI * R * R, profileVolume(profile), profile.length, referenceArea);
+}
+
+/** BAR-2, BAR-3 for a shoulder or boat tail: A(0) = π r_f², A(l) = π r_a². */
+export function transitionTerm(
+  c: TransitionComponent,
+  referenceArea: SquareMetres,
+): AerodynamicTerm {
+  const profile = transitionProfile(c.shape, c.length, c.foreRadius, c.aftRadius, c.shapeParameter);
+  const rf: number = c.foreRadius;
+  const ra: number = c.aftRadius;
+  return bodyTerm(
+    Math.PI * rf * rf,
+    Math.PI * ra * ra,
+    profileVolume(profile),
+    profile.length,
+    referenceArea,
+  );
+}
+
+/** Roll angle at which each fin count gives its minimum normal force (BAR-7). */
+function worstRollAngle(count: number): number {
+  switch (count) {
+    case 1:
+    case 2:
+      return 0; // Σ sin²(2πk/N + θ) = 0: the fins are edge-on to the lateral airflow
+    case 3:
+      return 0; // cos²(3θ/2) = 1
+    case 4:
+      return Math.PI / 4; // sin²(2θ) = 1
+    default:
+      return 0; // no dependence for N ≥ 5
+  }
+}
+
+/**
+ * BAR-7. Niskanen eq. (3.54), p. 34: the multiplier of (C_Nα)₁ for N
+ * equally spaced fins at roll angle θ, where θ = 0 has one fin pointing into
+ * the lateral airflow. N = 1, 2: Σ_k sin²Λ_k with Λ_k = 2πk/N + θ (eq. 3.53,
+ * p. 32). N = 3: 1.50[1 − 0.15 cos²(3θ/2)]; N = 4: 2.00[1 − 0.06 sin²(2θ)];
+ * N = 5 to 8: 2.37, 2.74, 2.99, 3.24. With `reduction` false the bracketed
+ * empirical factors for N = 3 and 4 are omitted (D-016).
+ */
+export function finRollFactor(count: number, rollAngle: RollAngle, reduction: boolean): number {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new InvalidInputError('fin count', count, 'must be a whole number of 1 or more');
+  }
+  if (count > 8) {
+    throw new NotImplementedError(
+      `${String(count)} fins: Niskanen eq. (3.54) gives factors for 1 to 8 fins only`,
+    );
+  }
+  const theta: number = rollAngle === 'worst' ? worstRollAngle(count) : rollAngle;
+  if (!Number.isFinite(theta)) {
+    throw new InvalidInputError('roll angle', theta, 'must be a finite angle in radians');
+  }
+  switch (count) {
+    case 1:
+    case 2: {
+      let sum = 0;
+      for (let k = 1; k <= count; k++) sum += Math.sin((2 * Math.PI * k) / count + theta) ** 2;
+      return sum;
+    }
+    case 3:
+      return 1.5 * (reduction ? 1 - 0.15 * Math.cos(1.5 * theta) ** 2 : 1);
+    case 4:
+      return 2.0 * (reduction ? 1 - 0.06 * Math.sin(2 * theta) ** 2 : 1);
+    case 5:
+      return 2.37;
+    case 6:
+      return 2.74;
+    case 7:
+      return 2.99;
+    default:
+      return 3.24;
+  }
+}
+
+/**
+ * BAR-5, BAR-6, BAR-7, BAR-8 for a trapezoidal fin set.
+ *
+ * Eq. (3.34), p. 27: X_f from the root leading edge (valid below Mach 0.5,
+ * p. 27; the rearward shift of eqs. 3.35 and 3.36 is Phase 2).
+ * Eq. (3.40), p. 29: (C_Nα)₁ = 2π s²/A_ref / (1 + √(1 + (β s²/(A_fin cos Γ_c))²)),
+ * Γ_c the mid-chord sweep angle (Figure 3.2(a), p. 26): tan Γ_c = (x_t + c_t/2 − c_r/2)/s.
+ * Eq. (3.54): fin count and roll angle; eqs. (3.55), (3.56): K_T(B) = 1 + r_t/(s + r_t).
+ */
+export function finSetTerm(
+  c: TrapezoidFinSetComponent,
+  referenceArea: SquareMetres,
+  mach: Mach,
+  rollAngle: RollAngle,
+  finRollReduction: boolean,
+): FinSetTerm {
+  const M: number = mach;
+  requireMach(M);
+  if (M >= 0.5) {
+    throw new NotImplementedError(
+      `fin centre of pressure at Mach ${String(M)}: the shift above Mach 0.5 (Niskanen eqs. 3.35, 3.36) is Phase 2`,
+    );
+  }
+  const cr: number = c.rootChord;
+  const ct: number = c.tipChord;
+  const xt: number = c.sweep;
+  const s: number = c.span;
+  const rt: number = c.bodyRadius;
+  if (!(cr > 0)) throw new InvalidInputError('fin root chord', cr, 'must be greater than 0 m');
+  if (!(ct >= 0)) throw new InvalidInputError('fin tip chord', ct, 'must be 0 m or greater');
+  if (!(s > 0)) throw new InvalidInputError('fin span', s, 'must be greater than 0 m');
+  if (!(rt >= 0))
+    throw new InvalidInputError('body radius at the fins', rt, 'must be 0 m or greater');
+  if (!Number.isFinite(xt)) throw new InvalidInputError('fin sweep', xt, 'must be finite');
+  const Aref: number = referenceArea;
+  const beta = prandtlBeta(mach);
+  const Afin = ((cr + ct) / 2) * s;
+  // eq. (3.34)
+  const cpX =
+    ((xt / 3) * (cr + 2 * ct)) / (cr + ct) + (cr * cr + ct * ct + cr * ct) / (6 * (cr + ct));
+  // eq. (3.40)
+  const gammaC = Math.atan((xt + ct / 2 - cr / 2) / s);
+  const cnAlphaSingleFin =
+    (2 * Math.PI * s * s) /
+    Aref /
+    (1 + Math.sqrt(1 + ((beta * s * s) / (Afin * Math.cos(gammaC))) ** 2));
+  // eq. (3.54)
+  const finCountFactor = finRollFactor(c.count, rollAngle, finRollReduction);
+  // eqs. (3.55), (3.56)
+  const interferenceFactor = 1 + rt / (s + rt);
+  return {
+    cnAlpha: interferenceFactor * finCountFactor * cnAlphaSingleFin,
+    cpX,
+    cnAlphaSingleFin,
+    finCountFactor,
+    interferenceFactor,
+    rollAngle: rollAngle === 'worst' ? worstRollAngle(c.count) : rollAngle,
+  };
+}
+
+/** BAR-9. The maximum body diameter (Niskanen p. 20: the caliber) over nose cones, body tubes and transitions. */
+export function maximumBodyDiameter(components: readonly PlacedComponent[]): Metres {
+  let r = 0;
+  for (const { component: c } of components) {
+    if (c.kind === 'noseCone') r = Math.max(r, c.baseRadius);
+    else if (c.kind === 'bodyTube') r = Math.max(r, c.outerRadius);
+    else if (c.kind === 'transition') r = Math.max(r, c.foreRadius, c.aftRadius);
+  }
+  if (!(r > 0)) {
+    throw new InvalidInputError(
+      'reference diameter',
+      2 * r,
+      'the rocket needs a nose cone, body tube or transition with a positive radius',
+    );
+  }
+  return metres(2 * r);
+}
+
+/**
+ * BAR-4. Niskanen eq. (3.29), p. 25: X = Σ X_i (C_Nα)_i / Σ (C_Nα)_i over the
+ * aerodynamic components (nose cones, transitions, fin sets); body tubes
+ * and internal parts contribute nothing (p. 23).
+ */
+export function centreOfPressure(
+  components: readonly PlacedComponent[],
+  options: CentreOfPressureOptions,
+): CentreOfPressureResult {
+  requireMach(options.mach);
+  const referenceDiameter = options.referenceDiameter ?? maximumBodyDiameter(components);
+  const d: number = referenceDiameter;
+  if (!(d > 0)) {
+    throw new InvalidInputError('reference diameter', d, 'must be greater than 0 m');
+  }
+  const referenceArea = squareMetres((Math.PI * d * d) / 4);
+  const contributions: ComponentContribution[] = [];
+  let sumCn = 0;
+  let sumMoment = 0;
+  components.forEach(({ component: c, position }, index) => {
+    let term: AerodynamicTerm | undefined;
+    if (c.kind === 'noseCone') term = noseConeTerm(c, referenceArea);
+    else if (c.kind === 'transition') term = transitionTerm(c, referenceArea);
+    else if (c.kind === 'finSet') {
+      term = finSetTerm(
+        c,
+        referenceArea,
+        options.mach,
+        options.rollAngle,
+        options.finRollReduction,
+      );
+    }
+    if (term === undefined || term.cnAlpha === 0) return;
+    const cp = (position as number) + term.cpX;
+    contributions.push({ index, kind: c.kind, cnAlpha: term.cnAlpha, cp: metres(cp) });
+    sumCn += term.cnAlpha;
+    sumMoment += term.cnAlpha * cp;
+  });
+  if (contributions.length === 0) {
+    throw new InvalidInputError(
+      'components',
+      components.length,
+      'at least one nose cone, transition or fin set is needed to define a centre of pressure',
+    );
+  }
+  if (!(sumCn > 0)) {
+    throw new InvalidInputError(
+      'total normal force coefficient derivative',
+      sumCn,
+      'must be greater than 0 for the centre of pressure to be defined (Niskanen eq. 3.29)',
+    );
+  }
+  return {
+    cp: metres(finiteResult('centre of pressure', sumMoment / sumCn)),
+    cnAlpha: finiteResult('total normal force coefficient derivative', sumCn),
+    mach: options.mach,
+    rollAngle: options.rollAngle,
+    finRollReduction: options.finRollReduction,
+    referenceDiameter,
+    referenceArea,
+    contributions,
+  };
+}
+
+/** BAR-9. Stability margin in calibers: (X_CP − X_CG)/d. Positive means the CP is aft of the CG. */
+export function stabilityMargin(cp: Metres, cg: Metres, referenceDiameter: Metres): number {
+  const d: number = referenceDiameter;
+  if (!(d > 0)) throw new InvalidInputError('reference diameter', d, 'must be greater than 0 m');
+  return finiteResult('stability margin', ((cp as number) - (cg as number)) / d);
+}
+
+export interface StabilityResult {
+  readonly centreOfPressure: CentreOfPressureResult;
+  readonly cgLiftoff: Metres;
+  readonly cgBurnout: Metres;
+  /** Calibers, at the liftoff and burnout CG (the CP is the same at both: the motor is not aerodynamic). */
+  readonly marginLiftoff: number;
+  readonly marginBurnout: number;
+}
+
+/** CP, CG and margins at liftoff and burnout (CLAUDE.md 6.2). The motor masses come from the motor file. */
+export function rocketStability(
+  components: readonly PlacedComponent[],
+  motorLiftoff: MotorMass,
+  motorBurnout: MotorMass,
+  options: CentreOfPressureOptions,
+): StabilityResult {
+  const cpResult = centreOfPressure(components, options);
+  const cgLiftoff = rocketMassProperties(components, motorLiftoff).cg;
+  const cgBurnout = rocketMassProperties(components, motorBurnout).cg;
+  return {
+    centreOfPressure: cpResult,
+    cgLiftoff,
+    cgBurnout,
+    marginLiftoff: stabilityMargin(cpResult.cp, cgLiftoff, cpResult.referenceDiameter),
+    marginBurnout: stabilityMargin(cpResult.cp, cgBurnout, cpResult.referenceDiameter),
+  };
+}

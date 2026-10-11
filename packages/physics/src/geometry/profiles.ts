@@ -70,7 +70,7 @@ export function noseProfile(
   }
 }
 
-/** Eq. (A.1), p. 100: r(x) = (x/L) R. */
+/** GEO-1. Eq. (A.1), p. 100: r(x) = (x/L) R. */
 function conical(L: number, R: number): Profile {
   return {
     length: L,
@@ -80,7 +80,7 @@ function conical(L: number, R: number): Profile {
 }
 
 /**
- * Eqs. (A.2) to (A.5), p. 101. The nose is an arc of a circle of radius ρ
+ * GEO-2. Eqs. (A.2) to (A.5), p. 101. The nose is an arc of a circle of radius ρ
  * whose centre lies at axial position L/κ (the base of the full tangent
  * ogive of which this is the forward part) and at distance c below the axis:
  *   r(x) = √(ρ² − (L/κ − x)²) − √(ρ² − (L/κ)²)                      (A.5)
@@ -108,7 +108,7 @@ function ogive(L: number, R: number, kappa: number): Profile {
   };
 }
 
-/** Eq. (A.6), p. 101: r(x) = R √(1 − (1 − x/L)²). Vertical at the tip. */
+/** GEO-3. Eq. (A.6), p. 101: r(x) = R √(1 − (1 − x/L)²). Vertical at the tip. */
 function elliptical(L: number, R: number): Profile {
   return {
     length: L,
@@ -124,7 +124,7 @@ function elliptical(L: number, R: number): Profile {
   };
 }
 
-/** Eq. (A.7), p. 102: r(x) = R (x/L)(2 − κ x/L)/(2 − κ), 0 ≤ κ ≤ 1 (κ = 0 cone, κ = 1 full parabola). */
+/** GEO-4. Eq. (A.7), p. 102: r(x) = R (x/L)(2 − κ x/L)/(2 − κ), 0 ≤ κ ≤ 1 (κ = 0 cone, κ = 1 full parabola). */
 function parabolic(L: number, R: number, kappa: number): Profile {
   if (!(kappa >= 0 && kappa <= 1)) {
     throw new InvalidInputError('parabolic shape parameter', kappa, 'must be between 0 and 1');
@@ -142,7 +142,7 @@ function parabolic(L: number, R: number, kappa: number): Profile {
   };
 }
 
-/** Eq. (A.8), p. 102: r(x) = R (x/L)^κ, 0 < κ ≤ 1 (κ = 1 cone, 0.5 ellipsoid-like). Vertical at the tip for κ < 1. */
+/** GEO-5. Eq. (A.8), p. 102: r(x) = R (x/L)^κ, 0 < κ ≤ 1 (κ = 1 cone, 0.5 ellipsoid-like). Vertical at the tip for κ < 1. */
 function power(L: number, R: number, kappa: number): Profile {
   if (!(kappa > 0 && kappa <= 1)) {
     throw new InvalidInputError(
@@ -163,7 +163,7 @@ function power(L: number, R: number, kappa: number): Profile {
 }
 
 /**
- * Eqs. (A.9) and (A.10), p. 103:
+ * GEO-6. Eqs. (A.9) and (A.10), p. 103:
  *   r(x) = (R/√π) √(θ − sin(2θ)/2 + κ sin³θ),  θ = arccos(1 − 2x/L),
  * κ = 0 LD-Haack (Von Kármán), κ = 1/3 LV-Haack; the software limits κ to
  * 0 ≤ κ ≤ 1/3 (p. 103). The slope follows by differentiation:
@@ -193,7 +193,7 @@ function haack(L: number, R: number, kappa: number): Profile {
 
 /**
  * Transition profile between a fore radius R₁ and an aft radius R₂ over
- * length L (Appendix A.7, pp. 103 to 104). Conical transitions are linear.
+ * length L (GEO-7, Appendix A.7, pp. 103 to 104). Conical transitions are linear.
  * The other shapes are the "non-clipped" adaptation: the profile is a nose
  * cone of base radius |R₂ − R₁| and length L added to the smaller radius,
  * oriented so the radius grows from the narrower end. The "clipped"

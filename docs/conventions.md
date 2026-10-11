@@ -39,6 +39,7 @@ This file is the single definition of units, coordinate frames, numeric rules, a
 - y and z axes: perpendicular to x, forming a right-handed system (x, y, z). The orientation of y and z around the axis is fixed by fin set placement: the first fin of a fin set lies in the +y half-plane unless rotated.
 - CG, CP and stability margin are all reported as x coordinates in this frame, in metres from the nose tip. A larger x is further aft. "CP aft of CG" means x_CP > x_CG.
 - Stability margin in calibers = (x_CP − x_CG) / d_ref where d_ref is the reference diameter (the maximum body diameter unless the user overrides it).
+- The CP is computed at a stated Mach number (the design condition is 0.3), zero angle of attack, and either a stated roll angle θ (θ = 0: one fin pointing into the lateral airflow, Niskanen p. 34) or the worst case over θ. Every CP result records the Mach number, the roll angle and whether Niskanen's roll-angle reduction was applied (D-016, D-027). The motor is not aerodynamic, so the CP is the same at liftoff and burnout; only the CG moves.
 
 ### Flight frame (proposed, not yet approved)
 

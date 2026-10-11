@@ -6,7 +6,7 @@
  *   I_x (about the axis of symmetry) = ½ π ρ ∫ (r_o⁴ − r_i⁴) dx
  *   I_y (about a transverse axis through x = 0) = π ρ ∫ [(r_o² − r_i²) x² + (r_o⁴ − r_i⁴)/4] dx,
  *   then I_y,cg = I_y − m x̄² (parallel axis theorem).
- * Approach per Niskanen (2009) section 4.2.3, p. 64: mass from volume and
+ * GEO-8 and GEO-9 in docs/equations.md. Approach per Niskanen (2009) section 4.2.3, p. 64: mass from volume and
  * density; only the rotational and longitudinal moments are kept.
  *
  * Quadrature: composite 5-point Gauss–Legendre on `panels` equal panels.

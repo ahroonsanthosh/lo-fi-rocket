@@ -10,8 +10,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import {
+  centreOfPressure,
   componentMassProperties,
   kilograms,
+  mach,
   R1_COMPONENTS,
   R2_COMPONENTS,
   R3_COMPONENTS,
@@ -37,6 +39,7 @@ const CASES = [
     motor: REFERENCE_MOTORS.r1,
     liftoff: { mass: 0.190904, cg: 0.387022 },
     burnout: { mass: 0.169804, cg: 0.364906 },
+    cp: 0.487149,
     length: 0.6,
     maxRadius: 0.025,
   },
@@ -47,6 +50,7 @@ const CASES = [
     motor: REFERENCE_MOTORS.r2,
     liftoff: { mass: 0.414484, cg: 0.484548 },
     burnout: { mass: 0.345484, cg: 0.443897 },
+    cp: 0.571037,
     length: 0.8,
     maxRadius: 0.027,
   },
@@ -57,6 +61,7 @@ const CASES = [
     motor: REFERENCE_MOTORS.r3,
     liftoff: { mass: 0.171873, cg: 0.356248 },
     burnout: { mass: 0.149173, cg: 0.332091 },
+    cp: 0.449111,
     length: 0.55,
     maxRadius: 0.0127,
   },
@@ -67,6 +72,7 @@ const CASES = [
     motor: REFERENCE_MOTORS.r4,
     liftoff: { mass: 1.365936, cg: 0.625038 },
     burnout: { mass: 1.2396, cg: 0.594671 },
+    cp: 0.807795,
     length: 1.0,
     maxRadius: 0.033,
   },
@@ -77,6 +83,7 @@ const CASES = [
     motor: REFERENCE_MOTORS.r5,
     liftoff: { mass: 0.450135, cg: 0.43553 },
     burnout: { mass: 0.369495, cg: 0.403346 },
+    cp: 0.526894,
     length: 0.68,
     maxRadius: 0.016,
   },
@@ -241,6 +248,21 @@ describe('end to end: .ork plus .eng reproduce values.csv (mass 0.1 %, CG 1 %)',
       expect(rel(lo.cg, c.liftoff.cg), 'liftoff CG').toBeLessThan(1e-2);
       expect(rel(bo.mass, c.burnout.mass), 'burnout mass').toBeLessThan(1e-3);
       expect(rel(bo.cg, c.burnout.cg), 'burnout CG').toBeLessThan(1e-2);
+    });
+  }
+});
+
+describe('end to end: centre of pressure from the .ork file against values.csv (CP 2 %, OpenRocket-equivalent mode)', () => {
+  for (const c of CASES) {
+    it(`${c.file}: CP ${String(c.cp)} m`, () => {
+      const rocket = parseOrk(bytes(c.file));
+      const r = centreOfPressure(rocket.components, {
+        mach: mach(0.3),
+        rollAngle: 'worst',
+        finRollReduction: false,
+      });
+      expect(r.referenceDiameter).toBeCloseTo(2 * rocket.maxBodyRadius, 12);
+      expect(Math.abs(r.cp - c.cp) / c.cp).toBeLessThan(0.02);
     });
   }
 });
