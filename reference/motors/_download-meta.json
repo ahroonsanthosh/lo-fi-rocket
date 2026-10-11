@@ -1,0 +1,82 @@
+{
+  "Estes_C6": {
+    "motorId": "5f4294d20002310000000015",
+    "simfileId": "69eb2379c7d63000021d8c29",
+    "source": "cert",
+    "license": null,
+    "infoUrl": "/simfiles/69eb2379c7d63000021d8c29/",
+    "dataUrl": "/simfiles/69eb2379c7d63000021d8c29/download/data.eng",
+    "sha256": "79a06a45ab643ca0effb535fb7ecb8fb5d6a5eee7dc474a21d314fffbb3c49ac",
+    "bytes": 762
+  },
+  "Estes_D12": {
+    "motorId": "5f4294d20002310000000020",
+    "simfileId": "5f4294d20002e900000004ea",
+    "source": "user",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e900000004ea/",
+    "dataUrl": "/simfiles/5f4294d20002e900000004ea/download/data.eng",
+    "sha256": "a39e5118880b08261650905901772f9019bc60d25dbaeefb593f4fbe529c4f05",
+    "bytes": 684
+  },
+  "Estes_E16": {
+    "motorId": "5f4294d200023100000003f8",
+    "simfileId": "5f4294d20002e900000007e6",
+    "source": "cert",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e900000007e6/",
+    "dataUrl": "/simfiles/5f4294d20002e900000007e6/download/data.eng",
+    "sha256": "fa899e050defa15f38e70de2561473cf585f86c24c90a05a42e68bb1ed82ff95",
+    "bytes": 783
+  },
+  "AeroTech_F39T": {
+    "motorId": "5f4294d20002310000000046",
+    "simfileId": "5f4294d20002e90000000287",
+    "source": "cert",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e90000000287/",
+    "dataUrl": "/simfiles/5f4294d20002e90000000287/download/data.eng",
+    "sha256": "92a29f8af663de9962da3eff4057768c3e31d1c69e5e08195142d845555c00c5",
+    "bytes": 1105
+  },
+  "AeroTech_G80T": {
+    "motorId": "5f4294d20002310000000068",
+    "simfileId": "5f4294d20002e900000007dd",
+    "source": "cert",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e900000007dd/",
+    "dataUrl": "/simfiles/5f4294d20002e900000007dd/download/data.eng",
+    "sha256": "95cc224985c6c0aa8a074c09f2b0ae47240a9eb77898754c2ed49d75e548240a",
+    "bytes": 541
+  },
+  "AeroTech_H128W": {
+    "motorId": "5f4294d20002310000000083",
+    "simfileId": "5f4294d20002e9000000000d",
+    "source": "cert",
+    "license": "PD",
+    "infoUrl": "/simfiles/5f4294d20002e9000000000d/",
+    "dataUrl": "/simfiles/5f4294d20002e9000000000d/download/data.eng",
+    "sha256": "feb3cbb6cac33995551d4b2d4e9520eec44cd7cd13799113d9980e7bb35208c4",
+    "bytes": 595
+  },
+  "AeroTech_H238T": {
+    "motorId": "5f4294d20002310000000090",
+    "simfileId": "5f4294d20002e90000000017",
+    "source": "cert",
+    "license": "PD",
+    "infoUrl": "/simfiles/5f4294d20002e90000000017/",
+    "dataUrl": "/simfiles/5f4294d20002e90000000017/download/data.eng",
+    "sha256": "4cb830751f14397b9f36ef09784eab3a5cef047fb57bc6eab48f22462575db02",
+    "bytes": 595
+  },
+  "AeroTech_H123W": {
+    "motorId": "5f4294d20002310000000080",
+    "simfileId": "5f4294d20002e90000000009",
+    "source": "cert",
+    "license": "PD",
+    "infoUrl": "/simfiles/5f4294d20002e90000000009/",
+    "dataUrl": "/simfiles/5f4294d20002e90000000009/download/data.eng",
+    "sha256": "91528fe6a4b62b6764f5f92bfc986bddb20b0d019b7985317391483b5db1063c",
+    "bytes": 591
+  }
+}

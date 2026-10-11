@@ -1,0 +1,8 @@
+component,type,mass_kg_all_instances,length_m,position_x_m,cg_x_abs_m,cg_x_rel_m,instances
+"Nose cone (Von Karman, LD-Haack)",NoseCone,0.035815,0.130000,0.000000,0.094665,0.094665,1
+"Body tube (motor mount)",BodyTube,0.146243,0.550000,0.130000,0.405000,0.275000,1
+"Fins (3)",TrapezoidFinSet,0.019425,0.075000,0.605000,0.652917,0.047917,3
+"Rail buttons (2)",RailButton,0.000491,0.000000,0.380000,0.505000,0.125000,2
+"Nose weight",MassComponent,0.040000,0.040000,0.130000,0.150000,0.020000,1
+"Parachute",Parachute,0.020000,0.100000,0.190000,0.240000,0.050000,1
+"Motor (H238T) at launch",Motor,0.188160,,,0.583000,,1

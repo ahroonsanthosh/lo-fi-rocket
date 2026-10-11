@@ -69,3 +69,19 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 
 - **Decision:** The 1976 standard's g₀ = 9.80665 m/s² is an atmosphere constant (`seaLevelGravityG0`) and is not exported as a gravity model. The simulator's gravity is defined separately in Phase 2.
 - **Why:** One place defines gravity for flight; the atmosphere's g₀ is a defining constant of the standard, not a model of the launch site. See `docs/conventions.md`, "Gravity: two different constants".
+
+## D-013 (2026-10-11): OpenRocket is used only as an isolated GPLv3 black box
+
+- **Decision:** Everything that links to OpenRocket lives in `tools/openrocket-harness/`, which is licensed GPLv3 (its own `LICENSE` file). It builds the reference rockets with OpenRocket's public classes, asks OpenRocket for CG, CP, stability and flight results, and writes `.ork` files and CSVs into `reference/rockets/`. Nothing under `packages/` imports, bundles, or links the harness or OpenRocket, and no OpenRocket source is copied anywhere in this repository. The OpenRocket jar is downloaded by `build.sh` against a pinned SHA-256 and is git-ignored.
+- **Why:** CLAUDE.md section 3: OpenRocket is GPLv3 and may be used only as a black box to produce reference outputs. Keeping the GPL boundary at a directory makes it auditable.
+- **Consequences:** The OpenRocket source tree was read only to learn how OpenRocket's own tests bootstrap it headlessly (dependency injection, component setters, simulation options). Physics in `packages/physics` comes from the documents in `reference/docs/`, never from OpenRocket code.
+
+## D-014 (2026-10-11): Reference simulations use a 0.01 s time step, not OpenRocket's 0.05 s default
+
+- **Decision:** `reference/rockets/values.csv` is generated with OpenRocket's RK4 stepper at a 0.01 s time step. A sensitivity run at the GUI default of 0.05 s is recorded in `reference/rockets/settings.md`.
+- **Why:** The reference values should be as converged as OpenRocket can make them; apogee and maximum velocity move by less than 0.01 % between the two steps, but the rail-exit velocity moves by about 2 % because OpenRocket reports it at the first step after the rail. The tolerances in CLAUDE.md section 7.4 are meant for model differences, not integration noise.
+
+## D-015 (2026-10-11): Reference rockets use the design-window stability figures
+
+- **Decision:** CG, CP and stability in `values.csv` are computed exactly as the OpenRocket design window does: CG from the launch mass (motor loaded, full propellant), CP from the Barrowman calculator at Mach 0.3, zero angle of attack, zero roll rate, taking the worst case over roll angle, and stability in calibers as (CP − CG) divided by the reference length, which is the maximum body diameter.
+- **Why:** These are the numbers a user compares against, and CLAUDE.md section 7.4 names them as the comparison targets.

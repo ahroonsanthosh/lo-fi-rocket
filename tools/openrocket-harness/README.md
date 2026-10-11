@@ -1,0 +1,20 @@
+# OpenRocket reference harness
+
+**Licence: GPLv3** (see `LICENSE`). This directory links against OpenRocket, which is GPLv3, so everything here is GPLv3. Nothing in `packages/` may import, bundle or depend on this directory (CLAUDE.md section 3; `docs/decisions.md` D-013).
+
+Purpose: use OpenRocket as a black box to generate the reference rockets and values in `reference/rockets/`. The harness builds five rockets with OpenRocket's public classes, computes CG, CP and stability exactly as the OpenRocket design window does, runs each flight twice at zero and 5 m/s wind to prove determinism, and writes `.ork` files, `values.csv`, per-component mass tables and flight time series.
+
+## Run
+
+```
+./build.sh                # writes to ../../reference/rockets
+./build.sh /some/dir      # writes elsewhere
+```
+
+`build.sh` downloads `OpenRocket-24.12.jar` into `lib/` if missing, verifies its SHA-256 (pinned in the script and in `reference/SOURCES.md`), compiles `src/ReferenceHarness.java` with the JDK's `javac` (Java 17 or newer), and runs it headlessly. No Gradle, no network beyond the one download.
+
+Sensitivity runs: `-Dharness.timeStep=0.05` (pass through `java` directly; see `reference/rockets/settings.md`).
+
+## What it pins
+
+Every OpenRocket option that affects the results is set explicitly in `ReferenceHarness.java` and documented in `reference/rockets/settings.md`. If OpenRocket is upgraded, update the version, URL and hash in `build.sh` and `reference/SOURCES.md`, regenerate, and explain any changed value in the commit message.

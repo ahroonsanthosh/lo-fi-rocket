@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="title" content="ThrustCurve Hobby Rocket Motor Data">
+    <meta name="description" content="Model and high-power hobby rocket motor data for flight simulation and reference.">
+    <title>ThrustCurve API • ThrustCurve</title>
+    <link rel="canonical" href="https://www.thrustcurve.org/info/api.html" />
+    <link rel="shortcut icon" href="/favicon.ico" type="image/vnd.microsoft.icon" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" type="image/png" />
+    <link rel="stylesheet" href="/stylesheets/bootstrap.min.css" />
+    <link rel="stylesheet" href="/stylesheets/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="/stylesheets/dataTables.bootstrap.min.css" />
+    <link rel="stylesheet" href="/stylesheets/dataTables.fontAwesome.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="/stylesheets/main.css" />
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="/javascripts/bootstrap.min.js"></script>
+    <script src="/javascripts/underscore-min.js"></script>
+    <script src="/javascripts/jquery.dataTables.min.js"></script>
+    <script src="/javascripts/dataTables.bootstrap.min.js"></script>
+    <script src="/javascripts/bootstrap-validator.min.js"></script>
+    <script src="/javascripts/ckeditor/ckeditor.js"></script>
+    <script type="text/javascript">window.$tcprefs = {};</script>
+    <script src="/javascripts/main.js"></script>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/"><b>thrust</b>curve.org
+          </a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="dropdown" title="find rocket motors">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Motors <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/motors/search.html">Attribute Search</a></li>
+                <li><a href="/motors/guide.html">Match a Rocket</a></li>
+                <li><a href="/motors/browser.html">Browse by Type</a></li>
+                <li><a href="/motors/popular.html">Most Popular</a></li>
+                <li><a href="/motors/recent.html">Recently Viewed</a></li>
+              </ul>
+            </li>
+            <li class="dropdown" title="rocket motor information">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Info <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/info/contribute.html">Contribute</a></li>
+                <li><a href="/info/background.html">Site Background</a></li>
+                <li><a href="/motors/updates.html">Latest Updates</a></li>
+                <li><a href="/info/simulation.html">Flight Simulation</a></li>
+                <li><a href="/info/simulators.html">Popular Simulators</a></li>
+                <li><a href="/info/motorstats.html">Motor Statistics</a></li>
+                <li><a href="/info/certification.html">Motor Certification</a></li>
+                <li><a href="/manufacturers/">Motor Manufacturers</a></li>
+                <li><a href="/info/glossary.html">Glossary</a></li>
+                <li><a href="/outbox/filesets/">Mfr. File Sets</a></li>
+              </ul>
+            </li>
+            <li class="dropdown" title="external interfaces">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Tools <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/info/tctracer.html">Create Motor Files</a></li>
+                <li><a href="/info/api.html">Search/Download API</a></li>
+              </ul>
+            </li>
+            <li><a href="/mystuff/login.html">Log In</a></li>
+          </ul>
+          <form class="navbar-form navbar-right" method="get" action="/motors/search.html">
+            <input type="hidden" name="availability" value="all">
+            <input type="text" name="text" class="form-control" placeholder="motor">
+          </form>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container" style="padding: 0;">
+    <row>
+  <div class="col-md-8 main">
+    <h1>ThrustCurve API</h1>
+
+<style type="text/css">
+table.endpoint {
+  margin-bottom: 1em;
+  border: 1px solid #69718c;
+  border-left: 1em solid #69718c;
+}
+table.endpoint th {
+  font-weight: normal;
+  font-style: italic;
+  padding: 2pt 1em;
+}
+table.endpoint th:after {
+  content: " endpoint:";
+}
+table.endpoint td {
+  font-family: Menlo,Monaco,Consolas,"Courier New",monospace;
+  padding: 2pt 0.5em;
+}
+a.copy {
+  margin: 0 0.5em;
+}
+</style>
+
+<p>
+This site provides a UI for searching for motors and downloading data right within any web browser.
+However, for those intrepid souls who would like to integerate the data provided by this site into programs
+(such as flight simulators), an API is provided.
+<br/>
+<i>Normal users of the site can just ignore this page.</i>
+</p>
+
+<p>
+The API described on this page provides basic database access through REST endpoints.
+Inputs can be specified as XML, JSON or form data and results can be returned as XML or JSON.
+The v1 API, described on this page, is a superset of the XML-only API supported by the v2 site.
+The "compatible endpoints" listed are those that were supported by the v2 site.
+</p>
+
+<p>
+There are six actions supported:
+</p>
+<ul>
+<li><a href="#metadata">metadata</a>: get search criteria</li>
+<li><a href="#search">search</a>: find matching motors</li>
+<li><a href="#download">download</a>: retrieve simulator data files</li>
+<li><a href="#getrockets">getrockets</a>: retrieve user's saved rockets</li>
+<li><a href="#saverockets">saverockets</a>: store user's saved rockets</li>
+<li><a href="#motorguide">motorguide</a>: find motors that work for a rocket</li>
+</ul>
+
+<p>
+Each action supports multiple endpoints:
+</p>
+<ul>
+<li>JSON: request is query string (GET) or JSON object (POST), response is a JSON object
+<li>XML: request is query string (GET) or XML element (POST), response is an XML element
+<li>compatible: request (POST) and response are XML elements (deprecated)
+</ul>
+
+<p>
+The compatible endpoints are a legacy of the previous version of this site and have not changed (nor will they
+change in future).
+The XML endpoint is close to the compatible endpoint, but has some changes
+(the 2020 XML schema versions include those changes).
+The JSON and XML endpoints are versioned and new versions may be introduced over time.
+</p>
+
+<p>
+While useful for web mashups, the API was designed to be used by
+<a href="simulators.html">rocket simulator programs</a>
+so it does not require being called from a browser nor does it require any headers to be sent.
+</p>
+
+<p>
+For those updating their code from the compatible (<code>/servlets</code>) to the newer
+(<code>/api/v1</code>) endpoints, the main difference is that IDs are not integers.
+In the newer APIs they are 24-digit hexadecimal numbers (such as "5f81c94736f9725a10f26a56"),
+but if your code treats the IDs as strings there is no real difference.
+Note that there are often more fields in the newer responses.
+</p>
+
+<p>
+Finally, all measurements in this API use
+<a href="https://en.wikipedia.org/wiki/International_System_of_Units" target="_blank">SI (MKS) units</a>,
+except for motor mount tubes which are in millimeters.
+Note that while the web site offers a choice of units in user preferences,
+internally it operates in SI for simplicity.
+</p>
+
+<p>
+There is a <a href="/api/v1/swagger.json">OpenAPI (Swagger) spec</a> for the JSON API and you can use
+<a class="url" href="https://swagger.io/tools/swagger-inspector/" target="_blank">Swagger Inspector</a>
+to explore the API with it.
+You can
+<a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3" target="_blank">Browse the hosted documentation</a>
+or point Swagger Insector (or similar OpenAPI tool) at <code>https://www.thrustcurve.org/api/v1/swagger.json</code>
+.
+</p>
+
+<p>
+Each API is described in its own section below. The JSON and XML endpoints support both GET and POST and the
+compatible endpoints support only POST (and only XML).
+</p>
+
+<p>
+For an example of using the API, see <a href="apidemo.html">the API demo page</a>.
+</p>
+
+
+<a name="metadata"></a>
+<h2>Metadata</h2>
+
+<table class="endpoint">
+<tr><th>JSON</th><td class="url">/api/v1/metadata.json</td></tr>
+<tr><th>XML</th><td class="url">/api/v1/metadata.xml</td></tr>
+<tr><th>compatible</th><td class="url">/servlets/metadata</td></tr>
+</table>
+
+<p>
+The metadata API doesn't return stats or data on individual motors, but instead is used to find out what actual criteria exist for doing a search.
+</p>
+
+<ul>
+<li><a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3#/metadata" target="_blank">Swagger documentation for the JSON API</a></li>
+<li><a href="/2014/metadata-request.xsd" target="_blank">XSD for the XML API request</a>
+<li><a href="/2008/metadata-response.xsd" target="_blank">XSD for the XML API response</a>
+</ul>
+
+</p>
+This is useful for building interactive programs that want to populate a set of combo boxes with valid search criteria,
+without hard-coding the actual values into the program.
+The simplest case is to return metadata encompasing all motors in the database using no input at all:
+<a href="/api/v1/metadata.json">/api/v1/metadata.<b>json</b></a>
+(or <a href="/api/v1/metadata.xml">metadata.<b>xml</b></a>).
+</p>
+
+<p>
+However, its usually desirable to get metadata only for the motors that the user of the API is actually interested in.
+For example, if you don't care about motors that are out of production, restricting the metadata to available motors
+makes more sense:
+<a href="/api/v1/metadata.json?availability=available">/api/v1/metadata.json?availability=available</a>.
+This endpoint accepts the same query as the <b>search</b> endpoint below.
+</p>
+
+
+<a name="search"></a>
+<h2>Search</h2>
+
+<table class="endpoint">
+<tr><th>JSON</th><td class="url">/api/v1/search.json</td></tr>
+<tr><th>XML</th><td class="url">/api/v1/search.xml</td></tr>
+<tr><th>compatible</th><td class="url">/servlets/search</td></tr>
+</table>
+
+<p>
+The search API is where it starts to get more interesting. This is the first API that requires inputs and
+returns data on specific motors in the the database. This API could be used to drive you own search front-end.
+</p>
+
+<ul>
+<li><a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3#/search" target="_blank">Swagger documentation for the JSON API</a></li>
+<li><a href="/2020/search-request.xsd" target="_blank">XSD for the XML API request</a>
+<li><a href="/2025/search-response.xsd" target="_blank">XSD for the XML API response</a>
+</ul>
+
+<p>
+Search is useful for finding motors that match one or more criteria.
+You can specify a wide range of filters and retrieve all the data on the motors that match.
+Among other data is the unique ID of the motor which can be used to download data files.
+</p>
+
+
+<a name="download"></a>
+<h2>Download</h2>
+
+<table class="endpoint">
+<tr><th>JSON</th><td class="url">/api/v1/download.json</td></tr>
+<tr><th>XML</th><td class="url">/api/v1/download.xml</td></tr>
+<tr><th>compatible</th><td class="url">/servlets/download</td></tr>
+</table>
+
+<p>
+The download API is used to pull data files for motors you've previously found via search.
+The request specifies one or more motors and may also specify criteria for the simulator files.
+</p>
+
+<ul>
+<li><a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3#/download" target="_blank">Swagger documentation for the JSON API</a></li>
+<li><a href="/2020/download-request.xsd" target="_blank">XSD for the XML API request</a>
+<li><a href="/2020/download-response.xsd" target="_blank">XSD for the XML API response</a>
+</ul>
+
+<p>
+Download is useful for retrieving the simulator data files uploaded to ThrustCurve.org.
+Once you have one or more motors found via search (above), you can use download to get their data files.
+You can specify a few criteria for the data files as well, such as the format.
+</p>
+
+<p>
+There is also a feature to access the parsed data points in a standard format if you want to consume the data
+directly. In the request, specify <code>data=samples</code> to get the parsed data points instead of the file.
+</p>
+
+
+<a name="getrockets"></a>
+<h2>Get Rockets</h2>
+
+<table class="endpoint">
+<tr><th>JSON</th><td class="url">/api/v1/getrockets.json</td></tr>
+<tr><th>XML</th><td class="url">/api/v1/getrockets.xml</td></tr>
+<tr><th>compatible</th><td class="url">/servlets/getrockets</td></tr>
+</table>
+
+<p>
+The getrockets API is used to pull saved rockets from your account in ThrustCurve.org.
+The request specifies the email address and password in the POST body, or using browser
+authentication for the GET method.
+Note that if a password is not specified, you can download the <i>public</i> rockets for
+any user whose email address you know.
+</p>
+
+<ul>
+<li><a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3#/account/post_getrockets_json" target="_blank">Swagger documentation for the JSON API</a></li>
+<li><a href="/2015/getrockets-request.xsd" target="_blank">XSD for the XML API request</a>
+<li><a href="/2020/getrockets-response.xsd" target="_blank">XSD for the XML API response</a>
+</ul>
+
+
+<a name="saverockets"></a>
+<h2>Save Rockets</h2>
+
+<table class="endpoint">
+<tr><th>JSON</th><td class="url">/api/v1/saverockets.json</td></tr>
+<tr><th>XML</th><td class="url">/api/v1/saverockets.xml</td></tr>
+</table>
+
+<p>
+The saverockets API is used to save rocket definitions into your account in ThrustCurve.org.
+The request specifies the email address and password in the POST body, along with a list
+of rockets to save.
+</p>
+
+<ul>
+<li><a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3#/account/post_saverockets_json" target="_blank">Swagger documentation for the JSON API</a></li>
+<li><a href="/2020/saverockets-request.xsd" target="_blank">XSD for the XML API request</a>
+<li><a href="/2020/saverockets-response.xsd" target="_blank">XSD for the XML API response</a>
+</ul>
+
+
+<a name="motorguide"></a>
+<h2>Motor Guide</h2>
+
+<table class="endpoint">
+<tr><th>JSON</th><td class="url">/api/v1/motorguide.json</td></tr>
+<tr><th>XML</th><td class="url">/api/v1/motorguide.xml</td></tr>
+<tr><th>compatible</th><td class="url">/servlets/motorguide</td></tr>
+</table>
+
+<p>
+The motorguide API is used to find motors that will work for a rocket.
+The request specifies key information on the rocket (same the info entered into the motor
+guide page).
+</p>
+
+<ul>
+<li><a href="https://app.swaggerhub.com/apis/JCSW7/thrust-curve_org_api/1.0.3#/account/post_motorguide_json" target="_blank">Swagger documentation for the JSON API</a></li>
+<li><a href="/2014/motorguide-request.xsd" target="_blank">XSD for the XML API request</a>
+<li><a href="/2020/motorguide-response.xsd" target="_blank">XSD for the XML API response</a>
+</ul>
+
+
+<a name="clients"></a>
+<h2>Clients</h2>
+<ul>
+<li>
+<a href="https://www.npmjs.com/package/@thrustcurve/api1">@thrustcurve/api1</a> TypeScript
+</li>
+</ul>
+
+
+
+<textarea id="copy" style="width: 0; height: 0; border: none; outline: none; margin: 0; resize: none;"></textarea>
+<script type="text/javascript">
+$(document).ready(function() {
+  try {
+    if (!document.queryCommandSupported('copy'))
+      return;
+  } catch (e) {
+    return;
+  }
+
+  $('table.endpoint td.url').each(function(i, td) {
+    let path = td.innerText;
+    let link = $('<a class="copy" href="#" title="copy URL"><i class="fa fa-copy"/></a>');
+    link.on('click', function(e) {
+      e.preventDefault();
+      let textarea = document.querySelector('#copy');
+      $(textarea).val('https://www.thrustcurve.org' + path);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+    });
+    link.appendTo(td);
+  });
+});
+</script>
+
+  </div>
+  <div class="col-md-3 col-md-offset-1 sidebar sidebar-right hidden-xs hidden-sm">
+    <h2>Information</h2>
+    <ul class="links">
+      <li><a href="/info/background.html">About this Site</a></li>
+      <li><a href="/info/privacy.html">Privacy Policy</a></li>
+      <li><a href="/info/certification.html">Motor Certification</a></li>
+      <li><a href="/info/glossary.html">Rocket Motor Jargon</a></li>
+      <li><a href="/info/motorstats.html">Motor Statistics</a></li>
+      <li><a href="/info/simulation.html">Flight Simulation</a></li>
+      <li><a href="/info/simulators.html">Flight Simulators</a></li>
+      <li><a href="/info/raspformat.html">RASP File Format</a></li>
+      <li><a href="/info/contribute.html">Contribute Data</a></li>
+      <li><a href="/info/tctracer.html">Thust Curve Tracer</a></li>
+      <li><a href="/info/api.html">ThrustCurve API</a></li>
+    </ul>
+  </div>
+</row>
+
+    </div>
+
+    <nav class="navbar navbar-default navbar-footer navbar-fixed-bottom hidden-xs hidden-sm">
+      <div class="container">
+        <div id="footernav">
+          <img class="navbar-brand" src="/images/footer-logo.png" alt="thrustcurve.org motor rocket motor performance data" />
+          <ul class="nav navbar-nav">
+            <li><a href="/motors/search.html">Search</a></li>
+            <li><a href="/motors/guide.html">Guide</a></li>
+            <li><a href="/motors/browser.html">Browser</a></li>
+            <li><a href="/manufacturers/">Manufacturers</a></li>
+            <li><a href="/info/glossary.html">Glossary</a></li>
+            <li><a href="/info/motorstats.html">Statistics</a></li>
+            <li><a href="/info/contribute.html">Contribute</a></li>
+            <li><a href="/motors/updates.html">Updates</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="print-footer">
+      <img class="navbar-brand" src="/images/footer-logo.png">
+    </div>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-751016-2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'UA-751016-2');
+    </script>
+  </body>
+</html>

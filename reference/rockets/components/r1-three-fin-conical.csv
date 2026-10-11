@@ -1,0 +1,11 @@
+component,type,mass_kg_all_instances,length_m,position_x_m,cg_x_abs_m,cg_x_rel_m,instances
+"Nose cone (conical, solid balsa)",NoseCone,0.010472,0.100000,0.000000,0.075000,0.075000,1
+"Body tube",BodyTube,0.053878,0.500000,0.100000,0.350000,0.250000,1
+"Fins (3)",TrapezoidFinSet,0.032400,0.100000,0.500000,0.561111,0.061111,3
+"Nose weight",MassComponent,0.030000,0.020000,0.100000,0.110000,0.010000,1
+"Launch lug",LaunchLug,0.000302,0.050000,0.350000,0.375000,0.025000,1
+"Motor mount tube (24 mm)",InnerTube,0.002020,0.075000,0.525000,0.562500,0.037500,1
+"Centering ring at 0.43",CenteringRing,0.004615,0.005000,0.530000,0.532500,0.002500,1
+"Centering ring at 0.49",CenteringRing,0.004615,0.005000,0.590000,0.592500,0.002500,1
+"Parachute",Parachute,0.010000,0.050000,0.200000,0.225000,0.025000,1
+"Motor (D12) at launch",Motor,0.042600,,,0.565000,,1

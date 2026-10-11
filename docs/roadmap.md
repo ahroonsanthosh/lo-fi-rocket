@@ -1,0 +1,13 @@
+# Roadmap: the major prompts
+
+The project owner drives the project with five prompts, each run as a whole phase in autonomous mode. This file records them so a resumed session knows where it is. The live status is in `docs/progress.md`.
+
+| Prompt | Scope                                                                                                                                                                                                                                     | Status                                               |
+| ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 0      | Gather all reference material: source documents, reference motors, OpenRocket reference rockets and values, hand cross-check (`docs/plans/0002-reference-gathering.md`)                                                                   | done except the 1966 NARAM-8 report (awaiting owner) |
+| 1      | Autonomous mode in CLAUDE.md section 11, answers to plan 0001 questions, all of Phase 1 (units, atmosphere, geometry and mass, minimal .eng and .ork readers, Barrowman stability) with acceptance against `reference/rockets/values.csv` | not started                                          |
+| 2      | All of Phase 2: frames, gravity, full motor system, Niskanen drag, 6DOF aerodynamics, environment, RK4 and RK45, flight events, NaN detection, summary outputs                                                                            | not started                                          |
+| 3      | Phases 3 and 4: React application, file format, autosave, .ork import, ThrustCurve integration, flight data comparison, Playwright end-to-end tests                                                                                       | not started                                          |
+| 4      | Phase 5 (Monte Carlo, wind profiles, liquid-engine mass profiles) and the final audit (`docs/audit.md`)                                                                                                                                   | not started                                          |
+
+If a session ends partway through a prompt, the owner sends `continue`: read `CLAUDE.md`, `docs/progress.md` and the latest plan in `docs/plans/`, then resume.

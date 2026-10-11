@@ -1,0 +1,12 @@
+component,type,mass_kg_all_instances,length_m,position_x_m,cg_x_abs_m,cg_x_rel_m,instances
+"Nose cone (tangent ogive)",NoseCone,0.047206,0.150000,0.000000,0.114915,0.114915,1
+"Body tube",BodyTube,0.103908,0.600000,0.150000,0.450000,0.300000,1
+"Fins (3)",TrapezoidFinSet,0.030240,0.120000,0.630000,0.706667,0.076667,3
+"Rail buttons (2)",RailButton,0.001113,0.000000,0.450000,0.575000,0.125000,2
+"Motor mount tube (29 mm)",InnerTube,0.004360,0.130000,0.620000,0.685000,0.065000,1
+"Centering ring at 0.475",CenteringRing,0.003864,0.005000,0.625000,0.627500,0.002500,1
+"Centering ring at 0.59",CenteringRing,0.003864,0.005000,0.740000,0.742500,0.002500,1
+"Parachute",Parachute,0.030000,0.060000,0.300000,0.330000,0.030000,1
+"Payload mass",MassComponent,0.050000,0.050000,0.200000,0.225000,0.025000,1
+"Boat tail (conical)",Transition,0.010929,0.050000,0.750000,0.773275,0.023275,1
+"Motor (G80NBT) at launch",Motor,0.129000,,,0.688088,,1

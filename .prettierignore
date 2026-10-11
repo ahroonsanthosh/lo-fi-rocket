@@ -2,3 +2,9 @@ node_modules/
 dist/
 coverage/
 pnpm-lock.yaml
+# Downloaded reference material must stay byte-identical to its recorded hash.
+reference/docs/
+reference/motors/
+reference/rockets/
+# GPLv3 harness (Java); not part of the TypeScript toolchain.
+tools/openrocket-harness/

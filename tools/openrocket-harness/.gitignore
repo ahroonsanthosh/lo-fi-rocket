@@ -1,0 +1,3 @@
+# The OpenRocket jar is GPLv3 software downloaded by build.sh (SHA-256 pinned there).
+lib/
+out/
