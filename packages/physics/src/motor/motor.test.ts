@@ -12,6 +12,7 @@ import { kilograms, metres, newtons, seconds } from '../units/si.js';
 import {
   burnTime,
   impulseTo,
+  motorCgAt,
   motorMassAt,
   motorStateAt,
   propellantRemainingAt,
@@ -247,5 +248,62 @@ describe('properties (CLAUDE.md 7.3: mass never negative, never increases during
   });
   it('is deterministic', () => {
     expect(motorStateAt(D12, seconds(0.4))).toEqual(motorStateAt(D12, seconds(0.4)));
+  });
+});
+
+describe('MOT-6 propellant CG profile (plan 0018)', () => {
+  const tank: MotorDefinition = {
+    ...D12,
+    length: metres(0.1),
+    massRule: 'mass-profile',
+    sourceFormat: 'custom',
+    massProfile: [
+      { time: seconds(0), propellantRemaining: kilograms(0.0211), cgFromForeEnd: metres(0.05) },
+      { time: seconds(2), propellantRemaining: kilograms(0), cgFromForeEnd: metres(0.03) },
+    ],
+  };
+  it('interpolates the CG: 0.05 at 0 s, 0.04 at 1 s, 0.03 at 2 s and beyond; mid-length without a profile CG', () => {
+    expect(ok(tank)).toBe(true);
+    expect(motorCgAt(tank, seconds(0))).toBe(0.05);
+    expect(motorCgAt(tank, seconds(1))).toBeCloseTo(0.04, 12);
+    expect(motorCgAt(tank, seconds(2))).toBe(0.03);
+    expect(motorCgAt(tank, seconds(5))).toBe(0.03);
+    expect(motorStateAt(tank, seconds(1)).cgFromForeEnd).toBeCloseTo(0.04, 12);
+    expect(motorCgAt(D12, seconds(1))).toBe(0.035);
+  });
+  it('the rocket CG follows it: with the motor aft end at 0.6 m, the motor CG is at 0.55 m at ignition and 0.53 m at burnout', () => {
+    const lo = motorMassAt(tank, seconds(0), metres(0.6));
+    const bo = motorMassAt(tank, seconds(2), metres(0.6));
+    expect(lo.cgFromForeEnd).toBe(0.05);
+    expect(bo.cgFromForeEnd).toBe(0.03);
+    // Structure 0.148304 kg at 0.34...: moving the 0.0215 kg casing 20 mm forward moves the rocket CG forward by 0.0215 × 0.02 / 0.169804 = 0.00253 m
+    const structureOnly = rocketMassProperties(R1_COMPONENTS);
+    const withMid = rocketMassProperties(R1_COMPONENTS, { ...bo, cgFromForeEnd: metres(0.05) });
+    const withProfile = rocketMassProperties(R1_COMPONENTS, bo);
+    expect(withMid.cg - withProfile.cg).toBeCloseTo((0.0215 * 0.02) / 0.169804, 6);
+    expect(structureOnly.mass).toBeCloseTo(0.169804 - 0.0215, 6);
+  });
+  it('rejects a CG outside the motor, a CG on only some points, and a CG with another rule', () => {
+    expect(() =>
+      ok({
+        ...tank,
+        massProfile: [
+          { ...tank.massProfile![0]!, cgFromForeEnd: metres(0.2) },
+          tank.massProfile![1]!,
+        ],
+      }),
+    ).toThrow(/CG from the fore end.*between 0 and the motor length/);
+    expect(() =>
+      ok({
+        ...tank,
+        massProfile: [
+          tank.massProfile![0]!,
+          { time: seconds(2), propellantRemaining: kilograms(0) },
+        ],
+      }),
+    ).toThrow(/must be given on every point or on none/);
+    expect(() => ok({ ...tank, massRule: 'linear-in-time' })).toThrow(
+      /is not used by the linear-in-time rule/,
+    );
   });
 });

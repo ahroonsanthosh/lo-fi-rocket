@@ -51,3 +51,14 @@ describe('custom thrust curve CSV (plan 0013, D-044)', () => {
     );
   });
 });
+
+describe('four columns: the CG from the fore end (MOT-6, plan 0018)', () => {
+  it('reads the CG column and rejects one outside the motor', () => {
+    const m = parseThrustCurveCsv('t,f,m,cg\n0,0,0.04,0.06\n1,10,0.02,0.05\n2,0,0,0.04\n', META);
+    expect(m.massRule).toBe('mass-profile');
+    expect(m.massProfile?.[1]?.cgFromForeEnd).toBe(0.05);
+    expect(() => parseThrustCurveCsv('0,0,0.04,0.2\n1,0,0,0.1\n', META, 'g.csv')).toThrow(
+      /g\.csv, line 1: CG from the fore end 0\.2 m lies outside the motor \(0 to 0\.1 m\)/,
+    );
+  });
+});

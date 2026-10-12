@@ -178,6 +178,7 @@ export {
 export {
   burnTime,
   impulseTo,
+  motorCgAt,
   motorMassAt,
   motorStateAt,
   propellantRemainingAt,

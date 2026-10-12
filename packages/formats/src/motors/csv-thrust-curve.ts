@@ -3,9 +3,10 @@
  * published specification for such files, so the rules are the project's
  * own and are stated here and in docs/decisions.md (D-044):
  *
- * - Columns: time (s), thrust (N) and optionally propellant remaining (kg),
- *   separated by commas, semicolons, tabs or spaces; a header line of
- *   non-numeric words is allowed and ignored; blank lines and lines
+ * - Columns: time (s), thrust (N), optionally propellant remaining (kg) and,
+ *   for engines with tanks, the motor's CG from its fore end (m) (MOT-6,
+ *   plan 0018), separated by commas, semicolons, tabs or spaces; a header
+ *   line of non-numeric words is allowed and ignored; blank lines and lines
  *   starting with # or ; are ignored.
  * - Times strictly increase; the first point is at 0 s (a curve that does
  *   not start at zero is rejected rather than extended); thrust is never
@@ -16,6 +17,7 @@
  */
 import {
   kilograms,
+  metres,
   newtons,
   seconds,
   validateMotor,
@@ -62,11 +64,11 @@ export function parseThrustCurveCsv(
       if (rows.length === 0 && fields.every((f) => !NUMBER.test(f))) return; // header line
       throw new CsvThrustCurveError(fileName, line, `expected numbers, found "${trimmed}"`);
     }
-    if (fields.length < 2 || fields.length > 3) {
+    if (fields.length < 2 || fields.length > 4) {
       throw new CsvThrustCurveError(
         fileName,
         line,
-        `expected 2 or 3 columns (time, thrust[, propellant remaining]), found ${String(fields.length)}`,
+        `expected 2 to 4 columns (time, thrust[, propellant remaining[, CG from the fore end]]), found ${String(fields.length)}`,
       );
     }
     columns ??= fields.length;
@@ -92,7 +94,7 @@ export function parseThrustCurveCsv(
   }
   let previous = -1;
   for (const r of rows) {
-    const [t, f, m] = r.values;
+    const [t, f, m, cg] = r.values;
     if (t === undefined || f === undefined)
       throw new CsvThrustCurveError(fileName, r.line, 'missing value');
     if (!(t > previous)) {
@@ -110,6 +112,13 @@ export function parseThrustCurveCsv(
         `propellant remaining ${String(m)} kg is negative`,
       );
     }
+    if (cg !== undefined && (cg < 0 || cg > meta.length)) {
+      throw new CsvThrustCurveError(
+        fileName,
+        r.line,
+        `CG from the fore end ${String(cg)} m lies outside the motor (0 to ${String(meta.length)} m)`,
+      );
+    }
     previous = t;
   }
   const last = rows[rows.length - 1];
@@ -125,7 +134,7 @@ export function parseThrustCurveCsv(
     thrust: newtons(r.values[1] ?? 0),
   }));
   const def: MotorDefinition =
-    columns === 3
+    columns === 3 || columns === 4
       ? {
           ...meta,
           points,
@@ -133,6 +142,7 @@ export function parseThrustCurveCsv(
           massProfile: rows.map((r) => ({
             time: seconds(r.values[0] ?? 0),
             propellantRemaining: kilograms(r.values[2] ?? 0),
+            ...(columns === 4 ? { cgFromForeEnd: metres(r.values[3] ?? 0) } : {}),
           })),
           sourceFormat: 'custom',
         }

@@ -339,7 +339,18 @@ function motorDefinition(c: Ctx, path: string, v: unknown): MotorDefinition {
     'massProfile' in o && o['massProfile'] !== undefined
       ? c.array(`${path}.massProfile`, o['massProfile']).map((p, i) => {
           const pp = c.object(`${path}.massProfile[${String(i)}]`, p);
-          c.keys(`${path}.massProfile[${String(i)}]`, pp, ['time', 'propellantRemaining']);
+          c.keys(
+            `${path}.massProfile[${String(i)}]`,
+            pp,
+            ['time', 'propellantRemaining'],
+            ['cgFromForeEnd'],
+          );
+          const cg =
+            'cgFromForeEnd' in pp && pp['cgFromForeEnd'] !== undefined
+              ? metres(
+                  c.number(`${path}.massProfile[${String(i)}].cgFromForeEnd`, pp['cgFromForeEnd']),
+                )
+              : undefined;
           return {
             time: seconds(c.number(`${path}.massProfile[${String(i)}].time`, pp['time'])),
             propellantRemaining: kilograms(
@@ -348,6 +359,7 @@ function motorDefinition(c: Ctx, path: string, v: unknown): MotorDefinition {
                 pp['propellantRemaining'],
               ),
             ),
+            ...(cg === undefined ? {} : { cgFromForeEnd: cg }),
           };
         })
       : undefined;

@@ -36,6 +36,12 @@ export interface MotorMassProfilePoint {
   readonly time: Seconds;
   /** Propellant (consumables) remaining at `time`. */
   readonly propellantRemaining: Kilograms;
+  /**
+   * MOT-6 (plan 0018): the whole motor's CG from its fore end at `time`, for
+   * engines whose propellant does not burn about the mid-length (tanks).
+   * Either every point has it or none; mid-length is used when absent.
+   */
+  readonly cgFromForeEnd?: Metres;
 }
 
 /**
@@ -72,7 +78,7 @@ export interface MotorState {
   readonly propellantRemaining: Kilograms;
   /** Casing plus remaining propellant. */
   readonly mass: Kilograms;
-  /** CG from the motor's forward end: mid-length (plan 0004 convention, D-029). */
+  /** CG from the motor's forward end: mid-length (plan 0004 convention, D-029) or the profile's (MOT-6). */
   readonly cgFromForeEnd: Metres;
   readonly massRule: MotorMassRule;
   readonly burning: boolean;
@@ -163,6 +169,24 @@ export function validateMotor(def: MotorDefinition): void {
       }
       last = m;
       lastT = t;
+    }
+    const withCg = prof.filter((q) => q.cgFromForeEnd !== undefined).length;
+    if (withCg !== 0 && withCg !== prof.length) {
+      throw new InvalidInputError(
+        'mass profile CG',
+        withCg,
+        `must be given on every point or on none (given on ${String(withCg)} of ${String(prof.length)})`,
+      );
+    }
+    for (const [i, q] of prof.entries()) {
+      const cg = q.cgFromForeEnd;
+      if (cg !== undefined && (!Number.isFinite(cg) || cg < 0 || cg > l)) {
+        throw new InvalidInputError(
+          `mass profile point ${String(i)} CG from the fore end`,
+          cg,
+          `must lie between 0 and the motor length ${String(l)} m`,
+        );
+      }
     }
   } else if (def.massProfile !== undefined) {
     throw new InvalidInputError(
@@ -308,6 +332,33 @@ export function propellantRemainingAt(def: MotorDefinition, time: Seconds): Kilo
 }
 
 /** Thrust, impulse, mass and CG at `time` (CLAUDE.md 6.6). */
+/** MOT-6: the motor CG from the profile (linear in time, ends held), or mid-length. */
+export function motorCgAt(def: MotorDefinition, time: Seconds): Metres {
+  const prof = def.massProfile;
+  const first = prof?.[0];
+  if (def.massRule !== 'mass-profile' || prof === undefined || first?.cgFromForeEnd === undefined) {
+    return metres((def.length as number) / 2);
+  }
+  const t: number = time;
+  const last = prof[prof.length - 1];
+  if (t <= (first.time as number)) return first.cgFromForeEnd;
+  if (last?.cgFromForeEnd !== undefined && t >= (last.time as number)) return last.cgFromForeEnd;
+  for (let i = 1; i < prof.length; i++) {
+    const a = prof[i - 1];
+    const b = prof[i];
+    if (a?.cgFromForeEnd === undefined || b?.cgFromForeEnd === undefined) continue;
+    const ta: number = a.time;
+    const tb: number = b.time;
+    if (t <= tb) {
+      const f = tb === ta ? 1 : (t - ta) / (tb - ta);
+      return metres(
+        finiteResult('motor CG', a.cgFromForeEnd + f * (b.cgFromForeEnd - a.cgFromForeEnd)),
+      );
+    }
+  }
+  return metres((def.length as number) / 2);
+}
+
 export function motorStateAt(def: MotorDefinition, time: Seconds): MotorState {
   const remaining = propellantRemainingAt(def, time);
   const casing = (def.totalMass as number) - (def.propellantMass as number);
@@ -318,7 +369,7 @@ export function motorStateAt(def: MotorDefinition, time: Seconds): MotorState {
     impulseDelivered: impulseTo(def, time),
     propellantRemaining: remaining,
     mass: kilograms(finiteResult('motor mass', casing + (remaining as number))),
-    cgFromForeEnd: metres((def.length as number) / 2),
+    cgFromForeEnd: motorCgAt(def, time),
     massRule: def.massRule,
     burning: t >= 0 && t < (burnTime(def) as number),
   };

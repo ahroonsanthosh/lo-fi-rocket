@@ -51,13 +51,15 @@ Prompt 4 (roadmap): Phase 5 and the final audit, started on the owner's "continu
 
 - Prompt 4 step 2 (plan 0017): Monte Carlo dispersion (D-051): seeded sampling of wind speed and direction, rail angle and azimuth, thrust-curve and structural-mass scales with user-entered standard deviations (zero by default), turbulence seeds per run, rank-based statistics and a 95 % containment radius, failed and unlanded runs counted; the batch runs in the worker with progress; the dispersion panel with the settings, the summary table and the landing scatter plot; the settings stored in the design file. Tests: statistics by hand, zero variations reproduce the deterministic flight, determinism per seed, a wind spread, failed runs reported, the panel end to end.
 
+- Prompt 4 step 3 (plan 0018): propellant CG profiles for liquid engines (MOT-6, D-052): mass-profile points carry an optional CG from the fore end, interpolated linearly and validated, the CSV reader's fourth column, the design file's optional field; tests by hand including the rocket CG shift.
+
 ## In progress
 
-- Prompt 4 step 3 (plan 0018): propellant mass and CG profiles for liquid engines.
+- Prompt 4 step 4: the final audit (`docs/audit.md`) and the Phase 5 acceptance report.
 
 ## Next
 
-- Prompt 4 step 4: the final audit (`docs/audit.md`) and the Phase 5 acceptance report.
+- Nothing after the audit; the owner's next prompt.
 
 ## Open questions
 
