@@ -38,14 +38,14 @@ describe('BAR-10 fin CP fraction, eqs. (3.35), (3.36)', () => {
     expect(finChordFraction(mach(1.2), A)).toBeGreaterThan(0.25);
     expect(finChordFraction(mach(3), A)).toBeGreaterThan(finChordFraction(mach(2), A));
   });
-  it('finSetTerm moves the CP aft above Mach 0.5 and throws in the transonic band (D-039)', () => {
+  it('finSetTerm moves the CP aft above Mach 0.5 and interpolates in the transonic band (BAR-12, D-056)', () => {
     const aRef = squareMetres(Math.PI * 0.025 ** 2);
     const slow = finSetTerm(fins, aRef, mach(0.3), 'worst', false);
     const fast = finSetTerm(fins, aRef, mach(0.7), 'worst', false);
     expect(fast.cpX).toBeGreaterThan(slow.cpX);
     expect(slow.chordFraction).toBe(0.25);
-    expect(() => finSetTerm(fins, aRef, mach(0.9), 'worst', false)).toThrow(NotImplementedError);
-    expect(() => finSetTerm(fins, aRef, mach(1.1), 'worst', false)).toThrow(NotImplementedError);
+    expect(finSetTerm(fins, aRef, mach(0.9), 'worst', false).regime).toBe('transonic');
+    expect(finSetTerm(fins, aRef, mach(1.1), 'worst', false).regime).toBe('transonic');
     expect(finSetTerm(fins, aRef, mach(1.5), 'worst', false).regime).toBe('supersonic');
   });
 });

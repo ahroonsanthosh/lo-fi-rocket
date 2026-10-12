@@ -46,8 +46,8 @@ export interface FinSetTerm extends AerodynamicTerm {
   readonly cnAlphaSingleFin: number;
   /** Fraction of the mean aerodynamic chord at which the CP lies, 0.25 below Mach 0.5 (BAR-10). */
   readonly chordFraction: number;
-  /** 'subsonic' (3.40) or 'supersonic' (3.49). */
-  readonly regime: 'subsonic' | 'supersonic';
+  /** 'subsonic' (3.40), 'transonic' (BAR-12 interpolation) or 'supersonic' (3.49). */
+  readonly regime: 'subsonic' | 'transonic' | 'supersonic';
   /** Multiplier of (C_Nα)₁ for the fin count and roll angle, eq. (3.54). */
   readonly finCountFactor: number;
   /** K_T(B), eq. (3.56). */
@@ -57,6 +57,23 @@ export interface FinSetTerm extends AerodynamicTerm {
 }
 
 export type RollAngle = Radians | 'worst';
+
+/**
+ * BAR-12. The interpolation of the single-fin normal force derivative across
+ * the transonic band 0.8 < M < 1.2, where the thesis gives no formula
+ * (p. 19: "some suitable interpolation function that corresponds reasonably
+ * to actual measurements"). The candidates were compared against the
+ * held-out ARCAS wind tunnel data (D-056); `DEFAULT_TRANSONIC_FIN_INTERPOLATION`
+ * is the one chosen. Every candidate joins eq. (3.40) at Mach 0.8 and
+ * eq. (3.49) at Mach 1.2:
+ * - 'linear': a straight line between the two end values;
+ * - 'cubic-hermite': the cubic matching the end values and the end slopes of
+ *   both formulas (continuous derivative at both ends);
+ * - 'quadratic-subsonic': the parabola matching the subsonic value and slope
+ *   at 0.8 and the supersonic value at 1.2.
+ */
+export type TransonicFinInterpolation = 'linear' | 'cubic-hermite' | 'quadratic-subsonic';
+export const DEFAULT_TRANSONIC_FIN_INTERPOLATION: TransonicFinInterpolation = 'cubic-hermite';
 
 export interface CentreOfPressureOptions {
   readonly mach: Mach;
@@ -71,6 +88,8 @@ export interface CentreOfPressureOptions {
   readonly finRollReduction: boolean;
   /** Reference diameter d; defaults to the maximum body diameter (BAR-9). */
   readonly referenceDiameter?: Metres;
+  /** BAR-12 candidate; defaults to `DEFAULT_TRANSONIC_FIN_INTERPOLATION` (D-056). */
+  readonly transonicFinInterpolation?: TransonicFinInterpolation;
 }
 
 export interface ComponentContribution {
@@ -368,14 +387,10 @@ export function finSetTerm(
   rollAngle: RollAngle,
   finRollReduction: boolean,
   angleOfAttack = 0,
+  transonic: TransonicFinInterpolation = DEFAULT_TRANSONIC_FIN_INTERPOLATION,
 ): FinSetTerm {
   const M: number = mach;
   requireMach(M);
-  if (M > 0.8 && M < 1.2) {
-    throw new NotImplementedError(
-      `fin normal force at Mach ${String(M)}: the thesis gives the subsonic (3.40) and supersonic (3.49) formulas and only says the transonic region uses "some suitable interpolation function" (p. 19), which it does not specify (D-039)`,
-    );
-  }
   const cr: number = c.rootChord;
   const ct: number = c.tipChord;
   const xt: number = c.sweep;
@@ -396,20 +411,30 @@ export function finSetTerm(
   // BAR-10: the CP moves aft of the quarter chord above Mach 0.5 (eqs. 3.35, 3.36).
   const chordFraction = finChordFraction(mach, aspectRatio(s, Afin));
   const cpX = quarterChord + (chordFraction - 0.25) * mac;
+  // eq. (3.40): (C_Nα)₁ = C/(1 + √(1 + (β k)²)), C = 2π s²/A_ref, k = s²/(A_fin cos Γ_c).
+  const gammaC = Math.atan((xt + ct / 2 - cr / 2) / s);
+  const k = (s * s) / (Afin * Math.cos(gammaC));
+  const C = (2 * Math.PI * s * s) / Aref;
+  const subsonic = (m: number): number => C / (1 + Math.sqrt(1 + (Math.sqrt(1 - m * m) * k) ** 2));
   let cnAlphaSingleFin: number;
-  let regime: 'subsonic' | 'supersonic';
-  if (M < 1) {
-    // eq. (3.40)
-    const beta = prandtlBeta(mach);
-    const gammaC = Math.atan((xt + ct / 2 - cr / 2) / s);
-    cnAlphaSingleFin =
-      (2 * Math.PI * s * s) /
-      Aref /
-      (1 + Math.sqrt(1 + ((beta * s * s) / (Afin * Math.cos(gammaC))) ** 2));
+  let regime: 'subsonic' | 'transonic' | 'supersonic';
+  if (M <= 0.8) {
+    cnAlphaSingleFin = subsonic(M);
     regime = 'subsonic';
-  } else {
+  } else if (M >= 1.2) {
     cnAlphaSingleFin = supersonicFinCnAlpha(mach, Afin, Aref, angleOfAttack);
     regime = 'supersonic';
+  } else {
+    cnAlphaSingleFin = transonicSingleFin(
+      transonic,
+      M,
+      subsonic,
+      k,
+      C,
+      supersonicFinCnAlpha(mach_(1.2), Afin, Aref, angleOfAttack),
+      Afin / Aref,
+    );
+    regime = 'transonic';
   }
   // eq. (3.54)
   const finCountFactor = finRollFactor(c.count, rollAngle, finRollReduction);
@@ -425,6 +450,57 @@ export function finSetTerm(
     interferenceFactor,
     rollAngle: rollAngle === 'worst' ? worstRollAngle(c.count) : rollAngle,
   };
+}
+
+const mach_ = (m: number): Mach => m as Mach;
+
+/**
+ * BAR-12. The transonic band value of (C_Nα)₁ for one candidate. The end
+ * slopes are those of the formulas at α = 0: eq. (3.40) with β = √(1 − M²),
+ * dβ/dM = −M/β, gives d(C_Nα)₁/dM = −C (u/√(1 + u²)) (du/dM)/(1 + √(1 + u²))²
+ * with u = β k, du/dM = −k M/β; eq. (3.49) at α = 0 is (A_fin/A_ref) 2/β with
+ * β = √(M² − 1), slope −(A_fin/A_ref) 2M/β³. The supersonic end value keeps
+ * the α terms of eq. (3.49) as `finSetTerm` evaluates them.
+ */
+function transonicSingleFin(
+  candidate: TransonicFinInterpolation,
+  M: number,
+  subsonic: (m: number) => number,
+  k: number,
+  C: number,
+  supersonicAt12: number,
+  areaRatio: number,
+): number {
+  const m0 = 0.8;
+  const m1 = 1.2;
+  const lo = subsonic(m0);
+  const hi = supersonicAt12;
+  const beta0 = Math.sqrt(1 - m0 * m0);
+  const u = beta0 * k;
+  const root = Math.sqrt(1 + u * u);
+  const loSlope = (-C * ((u / root) * ((-k * m0) / beta0))) / (1 + root) ** 2;
+  const beta1 = Math.sqrt(m1 * m1 - 1);
+  const hiSlope = (-areaRatio * 2 * m1) / beta1 ** 3;
+  const h = m1 - m0;
+  const t = (M - m0) / h;
+  switch (candidate) {
+    case 'linear':
+      return lo + (hi - lo) * t;
+    case 'cubic-hermite': {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      return (
+        (2 * t3 - 3 * t2 + 1) * lo +
+        (t3 - 2 * t2 + t) * h * loSlope +
+        (-2 * t3 + 3 * t2) * hi +
+        (t3 - t2) * h * hiSlope
+      );
+    }
+    case 'quadratic-subsonic': {
+      const c = (hi - lo - loSlope * h) / (h * h);
+      return lo + loSlope * (M - m0) + c * (M - m0) ** 2;
+    }
+  }
 }
 
 /** BAR-9. The maximum body diameter (Niskanen p. 20: the caliber) over nose cones, body tubes and transitions. */
@@ -475,6 +551,8 @@ export function centreOfPressure(
         options.mach,
         options.rollAngle,
         options.finRollReduction,
+        0,
+        options.transonicFinInterpolation ?? DEFAULT_TRANSONIC_FIN_INTERPOLATION,
       );
     }
     if (term === undefined || term.cnAlpha === 0) return;

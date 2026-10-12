@@ -37,6 +37,8 @@ import {
   stabilityMargin,
   transitionTerm,
   type CentreOfPressureOptions,
+  DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+  type TransonicFinInterpolation,
 } from './barrowman.js';
 
 const OR_MODE: CentreOfPressureOptions = {
@@ -190,9 +192,9 @@ describe('BAR-5, BAR-6, BAR-8 fin set, eqs. (3.34), (3.40), (3.55), (3.56): R1 b
     expect(display.cnAlpha).toBeCloseTo(13.133, 3);
     expect(display.rollAngle).toBe(0);
   });
-  it('the transonic band is not implemented (D-039); invalid geometry throws', () => {
+  it('the transonic band uses the BAR-12 interpolation (D-056); invalid geometry throws', () => {
     expect(finSetTerm(fins, Aref, mach(0.5), 'worst', false).chordFraction).toBe(0.25);
-    expect(() => finSetTerm(fins, Aref, mach(0.9), 'worst', false)).toThrow(NotImplementedError);
+    expect(finSetTerm(fins, Aref, mach(0.9), 'worst', false).regime).toBe('transonic');
     expect(() => finSetTerm({ ...fins, span: metres(0) }, Aref, mach(0.3), 'worst', false)).toThrow(
       InvalidInputError,
     );
@@ -304,9 +306,7 @@ describe('validation', () => {
     expect(() =>
       centreOfPressure(R1_COMPONENTS, { ...OR_MODE, referenceDiameter: metres(0) }),
     ).toThrow(InvalidInputError);
-    expect(() => centreOfPressure(R1_COMPONENTS, { ...OR_MODE, mach: mach(1.0) })).toThrow(
-      NotImplementedError,
-    );
+    expect(centreOfPressure(R1_COMPONENTS, { ...OR_MODE, mach: mach(1.0) }).cp).toBeGreaterThan(0);
     expect(() => stabilityMargin(metres(0.5), metres(0.4), metres(0))).toThrow(InvalidInputError);
     expect(maximumBodyDiameter(R2_COMPONENTS)).toBe(0.054);
   });
@@ -394,5 +394,61 @@ describe('properties', () => {
     const a = centreOfPressure(R2_COMPONENTS, DISPLAY_MODE);
     const b = centreOfPressure(R2_COMPONENTS, DISPLAY_MODE);
     expect(b).toEqual(a);
+  });
+});
+
+describe('BAR-12 transonic fin interpolation candidates (D-056)', () => {
+  // Fin s = 0.05, c_r = 0.1, c_t = 0.05, x_t = 0.03, A_ref = π 0.025² = 1.963495e-3, A_fin = 3.75e-3.
+  // tan Γ_c = (0.03 + 0.025 − 0.05)/0.05 = 0.1, cos Γ_c = 0.995037; k = s²/(A_fin cos Γ_c) = 0.669992; C = 2π s²/A_ref = 8.
+  // Mach 0.8: β = 0.6, u = 0.401995, √(1 + u²) = 1.077750: (3.40) = 8/2.077750 = 3.850272;
+  //   slope = −8 (u/√(1+u²)) (−k·0.8/β)/(1 + √(1+u²))² = −8 × 0.372996 × (−0.893323)/4.317044 = 0.617438.
+  // Mach 1.2: β = 0.663325, (3.49) at α = 0 = (A_fin/A_ref) 2/β = 1.909859 × 3.015113 = 5.758443; slope = −1.909859 × 2.4/β³ = −15.704843.
+  // Mach 1.0 (t = 0.5): linear 4.804357; cubic 0.5 × 3.850272 + 0.125 × 0.4 × 0.617438 + 0.5 × 5.758443 − 0.125 × 0.4 × (−15.704843) = 5.620471;
+  //   quadratic c = (5.758443 − 3.850272 − 0.246975)/0.16 = 10.382475, value 3.850272 + 0.123488 + 0.415299 = 4.389058.
+  const fin: TrapezoidFinSetComponent = {
+    kind: 'finSet',
+    count: 1,
+    rootChord: metres(0.1),
+    tipChord: metres(0.05),
+    sweep: metres(0.03),
+    span: metres(0.05),
+    thickness: metres(0.002),
+    density: kilogramsPerCubicMetre(1000),
+    bodyRadius: metres(0),
+  };
+  const aRef = squareMetres(Math.PI * 0.025 ** 2);
+  const one = (m: number, c: TransonicFinInterpolation): number =>
+    finSetTerm(fin, aRef, mach(m), radians(Math.PI / 2), false, 0, c).cnAlphaSingleFin;
+  it('end values: (3.40) at 0.8 = 3.850272, (3.49) at 1.2 = 5.758443', () => {
+    expect(one(0.8, 'linear')).toBeCloseTo(3.850272, 5);
+    expect(one(1.2, 'linear')).toBeCloseTo(5.758443, 5);
+  });
+  it('Mach 1.0: linear 4.804357, cubic Hermite 5.620471, quadratic 4.389058', () => {
+    expect(one(1.0, 'linear')).toBeCloseTo(4.804357, 5);
+    expect(one(1.0, 'cubic-hermite')).toBeCloseTo(5.620471, 5);
+    expect(one(1.0, 'quadratic-subsonic')).toBeCloseTo(4.389058, 5);
+  });
+  it('every candidate is continuous at both ends; the cubic matches both end slopes and the quadratic the subsonic one', () => {
+    const h = 1e-6;
+    for (const c of ['linear', 'cubic-hermite', 'quadratic-subsonic'] as const) {
+      expect(Math.abs(one(0.8 + h, c) - one(0.8, c))).toBeLessThan(1e-4);
+      expect(Math.abs(one(1.2 - h, c) - one(1.2, c))).toBeLessThan(1e-4);
+    }
+    const slope = (m: number, c: TransonicFinInterpolation, side: 1 | -1): number =>
+      (one(m + side * h, c) - one(m, c)) / (side * h);
+    expect(slope(0.8, 'cubic-hermite', 1)).toBeCloseTo(0.617438, 3);
+    expect(slope(1.2, 'cubic-hermite', -1)).toBeCloseTo(-15.704843, 2);
+    expect(slope(0.8, 'quadratic-subsonic', 1)).toBeCloseTo(0.617438, 3);
+    expect(slope(0.8, 'linear', 1)).toBeCloseTo((5.758443 - 3.850272) / 0.4, 3);
+  });
+  it('the default candidate is the one chosen in D-056 and is what centreOfPressure uses', () => {
+    const viaDefault = finSetTerm(
+      fin,
+      aRef,
+      mach(1.0),
+      radians(Math.PI / 2),
+      false,
+    ).cnAlphaSingleFin;
+    expect(viaDefault).toBeCloseTo(one(1.0, DEFAULT_TRANSONIC_FIN_INTERPOLATION), 12);
   });
 });

@@ -59,9 +59,11 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 
 - Prompt 5 step 2 part 1 (plan 0020): NASA TR R-100 Figure 12 digitised twice (`reference/digitised/`, merged with the disagreement and a per-curve uncertainty; the panel (b) curve identities corrected from the report's text, D-055); the transonic and supersonic nose pressure drag of Appendix B.3 for the elliptical, parabolic, power-series and Haack noses (DRAG-15 to DRAG-17): data curves linear in Mach, the (B.9) fineness-ratio scaling with its analytic slope, parameter interpolation between curves, the (3.87) join, held values and late data starts flagged. Every nose shape now has a drag model across all Mach regimes; R5 still stops at the fins (D-039). 604 tests.
 
+- Prompt 5 step 2 part 2 (plan 0021): the three transonic fin candidates (BAR-12) compared against the held-out ARCAS CP data, the cubic Hermite chosen (D-056); the wind tunnel validation of CLAUDE.md 6.7 item 1 against TN D-4013, TN D-4014 and NACA RM A53D02 with the errors by Mach regime (D-057, `docs/reports/wind-tunnel-validation.md`): CP within 3.5 % of body length subsonic, rms 5 % transonic, conservative by up to 27 % supersonic; drag over-predicted 15 to 20 % subsonic, the transonic rise too early, supersonic within 9 % for thin sharp fins and up to twofold for thick rounded-section fins. DATCOM proposed as an additional source. **Prompt 5 step 2 is complete.**
+
 ## In progress
 
-- Prompt 5 step 2 part 2 (plan 0021): the fin transonic interpolation candidates compared against the held-out ARCAS data (TN D-4013, TN D-4014), the supersonic roll damping gap, the wind tunnel validation report by Mach regime (CD and CP), then R5.
+- Prompt 5 step 3: the supersonic roll damping (eq. 3.72) so that R5 can fly through the band with a roll rate; R5 against the Phase 2 tolerances; the regime warnings naming the validation status.
 
 ## Next
 

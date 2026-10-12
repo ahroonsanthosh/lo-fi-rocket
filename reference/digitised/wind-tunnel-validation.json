@@ -1,0 +1,875 @@
+{
+  "purpose": "Held-out validation data (CLAUDE.md 6.7 item 1, D-053): never used to build or tune the model. Digitised by Claude on 2026-10-12.",
+  "method": {
+    "pass1": "values read by eye against the printed grid from a 250 dpi render of the figure page (ARCAS) or a 250 dpi render (NACA), before pass 2",
+    "pass2": "pixel coordinates of the gridlines and of the curve at fixed Mach columns transcribed from the same render with a 50 px ruler overlay; converted by the axis calibration recorded here, not read as values",
+    "single_pass": "C_A at alpha = 0 from TN D-4014 figure 5(b), the chamber axial-force coefficient from figure 4, and the normal-force slopes from TN D-4013 figure 7(b) and TN D-4014 figure 5(b) were read once (secant slope between alpha = 0 and 4 degrees); their stated uncertainty is a judgement of the reading, not a disagreement between passes",
+    "uncertainty": "larger of half the worst disagreement and the reading floor (0.5 % body length for CP, 0.01 for a force coefficient)"
+  },
+  "arcas": {
+    "source": [
+      "NASA TN D-4013 (Ferris 1967), half-scale short model (fineness ratio 18.2, configuration representative of the Arcas Robin), fins on, delta_F = 0, phi = 0, Reynolds number 9.8e6 per metre, Langley 8-foot transonic pressure tunnel; figure 11 printed p. 60 (PDF page 62): x_cp in percent body length for -2 <= alpha <= 2 deg and C_A,corr (axial force corrected to free-stream conditions at the model base, i.e. without base drag) at alpha ~ 0",
+      "NASA TN D-4014 (Babb and Fuller 1967), the same model (configuration 1), fins on, delta_F = 0, Reynolds number 9.84e6 per metre (test conditions table, printed p. 4, PDF page 6); figure 7 printed p. 41 (PDF page 43): x_cp in percent body length at low angles of attack; figure 5(b) (PDF pages 28 to 30): C_A, C_m, C_N against alpha; figure 4(a) (PDF page 23): chamber axial-force coefficient"
+    ],
+    "reference": "coefficients on the maximum body cross-sectional area; body length 40.95 in = 104.013 cm (TN D-4014 figure 1, station of the base)",
+    "calibration": {
+      "tn_d_4013_figure_11": {
+        "image": "page 62 at 250 dpi cropped to 15-80 % width, 12-70 % height (1283 x 1500 px)",
+        "x_px_per_mach": {
+          "0.6": 338,
+          "1.2": 1074
+        },
+        "x_cp_px": {
+          "90": 107,
+          "70": 349
+        },
+        "c_a_px": {
+          "0.8": 471,
+          "0": 1430
+        }
+      },
+      "tn_d_4014_figure_7": {
+        "image": "page 43 at 250 dpi cropped to 28-90 % width, 18-76 % height (1238 x 1479 px)",
+        "x_px_per_mach": {
+          "1": 135,
+          "5": 1143
+        },
+        "x_cp_px": {
+          "100": 100,
+          "0": 1305
+        }
+      }
+    },
+    "cp_percent_transonic": {
+      "worst_disagreement": 1.124,
+      "uncertainty": 0.562,
+      "points": [
+        {
+          "mach": 0.6,
+          "pass1": 75.0,
+          "pass2": 74.876,
+          "value": 74.938,
+          "disagreement": 0.124
+        },
+        {
+          "mach": 0.7,
+          "pass1": 72.5,
+          "pass2": 72.8099,
+          "value": 72.655,
+          "disagreement": 0.3099
+        },
+        {
+          "mach": 0.8,
+          "pass1": 71.0,
+          "pass2": 71.3223,
+          "value": 71.1612,
+          "disagreement": 0.3223
+        },
+        {
+          "mach": 0.85,
+          "pass1": 70.5,
+          "pass2": 70.7438,
+          "value": 70.6219,
+          "disagreement": 0.2438
+        },
+        {
+          "mach": 0.9,
+          "pass1": 71.5,
+          "pass2": 71.157,
+          "value": 71.3285,
+          "disagreement": 0.343
+        },
+        {
+          "mach": 0.95,
+          "pass1": 76.0,
+          "pass2": 74.876,
+          "value": 75.438,
+          "disagreement": 1.124
+        },
+        {
+          "mach": 1.0,
+          "pass1": 83.0,
+          "pass2": 83.1405,
+          "value": 83.0702,
+          "disagreement": 0.1405
+        },
+        {
+          "mach": 1.05,
+          "pass1": 86.0,
+          "pass2": 86.4463,
+          "value": 86.2231,
+          "disagreement": 0.4463
+        },
+        {
+          "mach": 1.1,
+          "pass1": 87.0,
+          "pass2": 87.2727,
+          "value": 87.1364,
+          "disagreement": 0.2727
+        },
+        {
+          "mach": 1.15,
+          "pass1": null,
+          "pass2": 86.6116,
+          "value": 86.6116,
+          "disagreement": null
+        },
+        {
+          "mach": 1.2,
+          "pass1": 85.0,
+          "pass2": 85.2066,
+          "value": 85.1033,
+          "disagreement": 0.2066
+        }
+      ]
+    },
+    "ca_corr_transonic": {
+      "worst_disagreement": 0.0528,
+      "uncertainty": 0.0264,
+      "points": [
+        {
+          "mach": 0.6,
+          "pass1": 0.3,
+          "pass2": 0.302,
+          "value": 0.301,
+          "disagreement": 0.002
+        },
+        {
+          "mach": 0.7,
+          "pass1": 0.31,
+          "pass2": 0.3103,
+          "value": 0.3102,
+          "disagreement": 0.0003
+        },
+        {
+          "mach": 0.8,
+          "pass1": 0.325,
+          "pass2": 0.3253,
+          "value": 0.3252,
+          "disagreement": 0.0003
+        },
+        {
+          "mach": 0.85,
+          "pass1": 0.345,
+          "pass2": 0.342,
+          "value": 0.3435,
+          "disagreement": 0.003
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.39,
+          "pass2": 0.3796,
+          "value": 0.3848,
+          "disagreement": 0.0104
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.52,
+          "pass2": 0.4672,
+          "value": 0.4936,
+          "disagreement": 0.0528
+        },
+        {
+          "mach": 0.975,
+          "pass1": null,
+          "pass2": 0.5589,
+          "value": 0.5589,
+          "disagreement": null
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.655,
+          "pass2": 0.659,
+          "value": 0.657,
+          "disagreement": 0.004
+        },
+        {
+          "mach": 1.025,
+          "pass1": null,
+          "pass2": 0.6924,
+          "value": 0.6924,
+          "disagreement": null
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.69,
+          "pass2": 0.6949,
+          "value": 0.6924,
+          "disagreement": 0.0049
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.675,
+          "pass2": 0.6757,
+          "value": 0.6754,
+          "disagreement": 0.0007
+        },
+        {
+          "mach": 1.15,
+          "pass1": null,
+          "pass2": 0.6423,
+          "value": 0.6423,
+          "disagreement": null
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.6,
+          "pass2": 0.6006,
+          "value": 0.6003,
+          "disagreement": 0.0006
+        }
+      ]
+    },
+    "ca_corr_fins_off_transonic": {
+      "worst_disagreement": 0.0221,
+      "uncertainty": 0.0111,
+      "points": [
+        {
+          "mach": 0.6,
+          "pass1": 0.225,
+          "pass2": 0.2252,
+          "value": 0.2251,
+          "disagreement": 0.0002
+        },
+        {
+          "mach": 0.8,
+          "pass1": 0.235,
+          "pass2": 0.2336,
+          "value": 0.2343,
+          "disagreement": 0.0014
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.265,
+          "pass2": 0.2544,
+          "value": 0.2597,
+          "disagreement": 0.0106
+        },
+        {
+          "mach": 0.95,
+          "pass1": null,
+          "pass2": 0.3003,
+          "value": 0.3003,
+          "disagreement": null
+        },
+        {
+          "mach": 0.975,
+          "pass1": null,
+          "pass2": 0.3712,
+          "value": 0.3712,
+          "disagreement": null
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.41,
+          "pass2": 0.4321,
+          "value": 0.4211,
+          "disagreement": 0.0221
+        },
+        {
+          "mach": 1.05,
+          "pass1": null,
+          "pass2": 0.438,
+          "value": 0.438,
+          "disagreement": null
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.435,
+          "pass2": 0.438,
+          "value": 0.4365,
+          "disagreement": 0.003
+        }
+      ]
+    },
+    "cp_percent_supersonic": {
+      "worst_disagreement": 1.5394,
+      "uncertainty": 0.7697,
+      "points": [
+        {
+          "mach": 1.5,
+          "pass1": 78.5,
+          "pass2": 78.2573,
+          "value": 78.3786,
+          "disagreement": 0.2427
+        },
+        {
+          "mach": 2.0,
+          "pass1": 73.5,
+          "pass2": 74.6888,
+          "value": 74.0944,
+          "disagreement": 1.1888
+        },
+        {
+          "mach": 2.5,
+          "pass1": 69.0,
+          "pass2": 70.5394,
+          "value": 69.7697,
+          "disagreement": 1.5394
+        },
+        {
+          "mach": 3.0,
+          "pass1": 65.5,
+          "pass2": 66.805,
+          "value": 66.1525,
+          "disagreement": 1.305
+        },
+        {
+          "mach": 3.5,
+          "pass1": 63.0,
+          "pass2": 63.4855,
+          "value": 63.2427,
+          "disagreement": 0.4855
+        },
+        {
+          "mach": 4.0,
+          "pass1": 60.0,
+          "pass2": 60.332,
+          "value": 60.166,
+          "disagreement": 0.332
+        },
+        {
+          "mach": 4.63,
+          "pass1": 57.0,
+          "pass2": 56.8465,
+          "value": 56.9232,
+          "disagreement": 0.1535
+        }
+      ]
+    },
+    "ca_supersonic_single_pass": {
+      "note": "C_A at alpha = 0 (figure 5(b)) is not corrected for the base; C_A,c (figure 4(a), delta_F = 0, alpha ~ 0) is the chamber axial-force coefficient; the forebody value is C_A - C_A,c",
+      "uncertainty_ca": 0.01,
+      "uncertainty_cac": 0.01,
+      "points": [
+        {
+          "mach": 1.5,
+          "ca": 0.535,
+          "ca_chamber": 0.035,
+          "ca_forebody": 0.5
+        },
+        {
+          "mach": 1.8,
+          "ca": 0.47,
+          "ca_chamber": 0.03,
+          "ca_forebody": 0.44
+        },
+        {
+          "mach": 2.3,
+          "ca": 0.38,
+          "ca_chamber": 0.035,
+          "ca_forebody": 0.345
+        },
+        {
+          "mach": 2.96,
+          "ca": 0.305,
+          "ca_chamber": 0.03,
+          "ca_forebody": 0.275
+        },
+        {
+          "mach": 3.96,
+          "ca": 0.225,
+          "ca_chamber": 0.02,
+          "ca_forebody": 0.205
+        },
+        {
+          "mach": 4.63,
+          "ca": 0.2,
+          "ca_chamber": 0.015,
+          "ca_forebody": 0.185
+        }
+      ]
+    },
+    "cn_alpha_per_rad_single_pass": {
+      "note": "secant slopes of C_N from the printed curves (fins on, phi = 0), read once: between alpha = 0 and 4 deg (the curves are flat near zero and concave upward, so this is a lower bracket) and between 0 and 8 deg (closer to a linear fit over the usual range); low confidence, about +-15 % each. Niskanen's own comparison (thesis Figure 6.7(b)) read the derivative from the same figures with 3 % error bars and found the experimental values above his simulated ones.",
+      "transonic": [
+        {
+          "mach": 0.6,
+          "cn_at_4deg": 0.45,
+          "cn_at_8deg": 1.5,
+          "cn_alpha_0_to_8": 10.74,
+          "cn_alpha_0_to_4": 6.45
+        },
+        {
+          "mach": 0.8,
+          "cn_at_4deg": 0.5,
+          "cn_at_8deg": 1.6,
+          "cn_alpha_0_to_8": 11.46,
+          "cn_alpha_0_to_4": 7.16
+        },
+        {
+          "mach": 0.9,
+          "cn_at_4deg": 0.5,
+          "cn_at_8deg": 1.6,
+          "cn_alpha_0_to_8": 11.46,
+          "cn_alpha_0_to_4": 7.16
+        },
+        {
+          "mach": 0.95,
+          "cn_at_4deg": 0.55,
+          "cn_at_8deg": 1.7,
+          "cn_alpha_0_to_8": 12.18,
+          "cn_alpha_0_to_4": 7.88
+        },
+        {
+          "mach": 1.0,
+          "cn_at_4deg": 0.6,
+          "cn_at_8deg": 1.6,
+          "cn_alpha_0_to_8": 11.46,
+          "cn_alpha_0_to_4": 8.59
+        },
+        {
+          "mach": 1.2,
+          "cn_at_4deg": 0.55,
+          "cn_at_8deg": 1.5,
+          "cn_alpha_0_to_8": 10.74,
+          "cn_alpha_0_to_4": 7.88
+        }
+      ],
+      "supersonic": [
+        {
+          "mach": 1.5,
+          "cn_at_4deg": 0.5,
+          "cn_at_8deg": 1.5,
+          "cn_alpha_0_to_8": 10.74,
+          "cn_alpha_0_to_4": 7.16
+        },
+        {
+          "mach": 1.8,
+          "cn_at_4deg": 0.4,
+          "cn_at_8deg": 1.25,
+          "cn_alpha_0_to_8": 8.95,
+          "cn_alpha_0_to_4": 5.73
+        },
+        {
+          "mach": 2.3,
+          "cn_at_4deg": 0.35,
+          "cn_at_8deg": 1.0,
+          "cn_alpha_0_to_8": 7.16,
+          "cn_alpha_0_to_4": 5.01
+        },
+        {
+          "mach": 2.96,
+          "cn_at_4deg": 0.3,
+          "cn_at_8deg": 0.85,
+          "cn_alpha_0_to_8": 6.09,
+          "cn_alpha_0_to_4": 4.3
+        },
+        {
+          "mach": 3.96,
+          "cn_at_4deg": 0.25,
+          "cn_at_8deg": 0.65,
+          "cn_alpha_0_to_8": 4.66,
+          "cn_alpha_0_to_4": 3.58
+        },
+        {
+          "mach": 4.63,
+          "cn_at_4deg": 0.2,
+          "cn_at_8deg": 0.55,
+          "cn_alpha_0_to_8": 3.94,
+          "cn_alpha_0_to_4": 2.86
+        }
+      ]
+    }
+  },
+  "naca_rm_a53d02": {
+    "source": "NACA RM A53D02 (James and Carros 1953), fin-stabilised body of fineness ratio 10, basic configuration (figure 1(a), PDF page 23), free flight in the Ames supersonic free-flight wind tunnel; figure 11 (PDF page 33): experimental zero-lift drag coefficient against Mach number, data points and faired curve; Table I (PDF pages 20 to 21): Mach number and Reynolds number (on body length) of each round",
+    "reference": "C_D on the body cross-sectional area A_B (symbols, PDF page 5); model length 2.50 in",
+    "calibration": {
+      "image": "page 33 at 250 dpi cropped to 10-95 % width, 8-80 % height (2196 x 1415 px), read at 2000 px display width (scale 1.098)",
+      "x_px_display": {
+        "0": 195,
+        "10": 1905
+      },
+      "cd_px_display": {
+        "0.6": 103,
+        "0": 1128
+      }
+    },
+    "cd_points_pass2": [
+      {
+        "mach": 0.6,
+        "cd": 0.358
+      },
+      {
+        "mach": 0.91,
+        "cd": 0.363
+      },
+      {
+        "mach": 1.04,
+        "cd": 0.536
+      },
+      {
+        "mach": 1.3,
+        "cd": 0.512
+      },
+      {
+        "mach": 1.47,
+        "cd": 0.492
+      },
+      {
+        "mach": 1.53,
+        "cd": 0.492
+      },
+      {
+        "mach": 1.45,
+        "cd": 0.474
+      },
+      {
+        "mach": 1.46,
+        "cd": 0.458
+      },
+      {
+        "mach": 1.56,
+        "cd": 0.455
+      },
+      {
+        "mach": 1.58,
+        "cd": 0.443
+      },
+      {
+        "mach": 1.94,
+        "cd": 0.447
+      },
+      {
+        "mach": 2.09,
+        "cd": 0.423
+      },
+      {
+        "mach": 2.32,
+        "cd": 0.39
+      },
+      {
+        "mach": 2.56,
+        "cd": 0.378
+      },
+      {
+        "mach": 2.89,
+        "cd": 0.322
+      },
+      {
+        "mach": 3.3,
+        "cd": 0.296
+      },
+      {
+        "mach": 3.99,
+        "cd": 0.241
+      },
+      {
+        "mach": 4.02,
+        "cd": 0.217
+      },
+      {
+        "mach": 4.58,
+        "cd": 0.207
+      },
+      {
+        "mach": 4.59,
+        "cd": 0.193
+      },
+      {
+        "mach": 4.67,
+        "cd": 0.187
+      },
+      {
+        "mach": 4.75,
+        "cd": 0.191
+      },
+      {
+        "mach": 5.34,
+        "cd": 0.152
+      },
+      {
+        "mach": 5.43,
+        "cd": 0.156
+      },
+      {
+        "mach": 5.49,
+        "cd": 0.164
+      },
+      {
+        "mach": 7.16,
+        "cd": 0.163
+      },
+      {
+        "mach": 7.22,
+        "cd": 0.151
+      },
+      {
+        "mach": 7.18,
+        "cd": 0.138
+      },
+      {
+        "mach": 10.0,
+        "cd": 0.107
+      },
+      {
+        "mach": 10.0,
+        "cd": 0.097
+      }
+    ],
+    "cd_curve_pass1": [
+      {
+        "mach": 0.6,
+        "cd": 0.36
+      },
+      {
+        "mach": 0.9,
+        "cd": 0.365
+      },
+      {
+        "mach": 1.06,
+        "cd": 0.54
+      },
+      {
+        "mach": 1.3,
+        "cd": 0.52
+      },
+      {
+        "mach": 1.5,
+        "cd": 0.49
+      },
+      {
+        "mach": 1.6,
+        "cd": 0.47
+      },
+      {
+        "mach": 1.95,
+        "cd": 0.45
+      },
+      {
+        "mach": 2.1,
+        "cd": 0.42
+      },
+      {
+        "mach": 2.3,
+        "cd": 0.39
+      },
+      {
+        "mach": 2.56,
+        "cd": 0.38
+      },
+      {
+        "mach": 2.9,
+        "cd": 0.33
+      },
+      {
+        "mach": 3.3,
+        "cd": 0.3
+      },
+      {
+        "mach": 4.0,
+        "cd": 0.24
+      },
+      {
+        "mach": 4.6,
+        "cd": 0.19
+      },
+      {
+        "mach": 5.4,
+        "cd": 0.155
+      },
+      {
+        "mach": 7.2,
+        "cd": 0.14
+      },
+      {
+        "mach": 10.0,
+        "cd": 0.105
+      }
+    ],
+    "table1_rounds": [
+      {
+        "mach": 0.598,
+        "reynolds_millions": 0.86
+      },
+      {
+        "mach": 0.901,
+        "reynolds_millions": 1.28
+      },
+      {
+        "mach": 1.06,
+        "reynolds_millions": 1.54
+      },
+      {
+        "mach": 1.32,
+        "reynolds_millions": 1.9
+      },
+      {
+        "mach": 1.46,
+        "reynolds_millions": 2.2
+      },
+      {
+        "mach": 1.48,
+        "reynolds_millions": 2.1
+      },
+      {
+        "mach": 1.53,
+        "reynolds_millions": 2.2
+      },
+      {
+        "mach": 1.57,
+        "reynolds_millions": 2.3
+      },
+      {
+        "mach": 1.58,
+        "reynolds_millions": 2.3
+      },
+      {
+        "mach": 1.95,
+        "reynolds_millions": 2.9
+      },
+      {
+        "mach": 2.09,
+        "reynolds_millions": 3.2
+      },
+      {
+        "mach": 2.3,
+        "reynolds_millions": 3.5
+      },
+      {
+        "mach": 2.56,
+        "reynolds_millions": 3.8
+      },
+      {
+        "mach": 2.91,
+        "reynolds_millions": 4.3
+      },
+      {
+        "mach": 3.29,
+        "reynolds_millions": 4.9
+      },
+      {
+        "mach": 3.99,
+        "reynolds_millions": 6.6
+      },
+      {
+        "mach": 4.04,
+        "reynolds_millions": 6.8
+      },
+      {
+        "mach": 4.57,
+        "reynolds_millions": 7.5
+      },
+      {
+        "mach": 4.57,
+        "reynolds_millions": 6.9
+      },
+      {
+        "mach": 4.64,
+        "reynolds_millions": 4.2
+      },
+      {
+        "mach": 4.68,
+        "reynolds_millions": 4.2
+      },
+      {
+        "mach": 4.72,
+        "reynolds_millions": 4.3
+      },
+      {
+        "mach": 5.33,
+        "reynolds_millions": 6.7
+      },
+      {
+        "mach": 5.43,
+        "reynolds_millions": 7.0
+      },
+      {
+        "mach": 5.49,
+        "reynolds_millions": 7.0
+      },
+      {
+        "mach": 7.18,
+        "reynolds_millions": 7.1
+      },
+      {
+        "mach": 7.19,
+        "reynolds_millions": 7.3
+      },
+      {
+        "mach": 7.21,
+        "reynolds_millions": 15.0
+      },
+      {
+        "mach": 7.29,
+        "reynolds_millions": 15.6
+      },
+      {
+        "mach": 10.0,
+        "reynolds_millions": 15.9
+      },
+      {
+        "mach": 10.0,
+        "reynolds_millions": 16.0
+      }
+    ],
+    "note": "pass 1 read the faired curve at round Mach numbers; pass 2 read the plotted data points. The comparison uses the points (pass 2), each with the Reynolds number of the Table I round nearest in Mach (Table I lists both pages, PDF pages 20 and 21), and reports the pass-1 curve as the check: where both exist at the same Mach they agree within 0.01."
+  },
+  "geometry": {
+    "arcas_half_scale_model": {
+      "source": "TN D-4014 figure 1 (PDF page 10): stations in inches (cm) for configuration 1: nose tip 0, nose end 10.600 (26.924), moment centre 25.950, cylinder end 37.300 (94.742), base 40.950 (104.013); nose coordinate table x, R in inches; detail A: boattail 15 deg half-angle, reflexed lip 0.030 R, minimum diameter 1.470 (3.734); fin detail: root chord 3.380 (8.585), tip chord 2.165 (5.499), span 2.103 (5.342), leading edge 30 deg from the normal to the root line, trailing edge unswept, thickness 0.150 (0.381) at the root and 0.096 (0.244) at the tip, double wedge; TN D-4013 figure 1 (PDF pages 11 to 12): all dimensions in d = 5.72 cm (2.25 in): length 18.20 d, fin span tip to tip 2.91 d, base diameter 0.65 d, fin root leading edge 1.78 d forward of the base, moment reference centre 12.75 d",
+      "transcription": {
+        "diameter_m": 0.05715,
+        "nose": {
+          "shape": "ogive",
+          "length_in": 9.375,
+          "note": "the coordinate table reaches the full radius at x = 9.375 in and is cylindrical to 10.6 in; the table fits Niskanen's secant ogive (GEO-2) with shape parameter 0.726 to within 0.006 in (a tangent ogive misses by 0.027 in, a cone by 0.16 in): fitted by least maximum error over the table",
+          "shape_parameter": 0.726
+        },
+        "cylinder": {
+          "from_in": 9.375,
+          "to_in": 39.42,
+          "note": "the 15 deg boattail from 1.00 d to 0.65 d is 0.653 d = 1.47 in long and ends at the lip; its start is placed 1.47 + 0.06 in ahead of the base (the lip's 0.06 in height is not modelled)"
+        },
+        "boattail": {
+          "length_in": 1.47,
+          "fore_radius_in": 1.125,
+          "aft_radius_in": 0.73125,
+          "shape": "conical"
+        },
+        "fins": {
+          "count": 4,
+          "root_chord_in": 3.38,
+          "tip_chord_in": 2.165,
+          "span_in": 2.103,
+          "sweep_in": 1.214,
+          "thickness_in": 0.123,
+          "cross_section": "rounded",
+          "root_leading_edge_in": 36.945,
+          "note": "sweep = span x tan 30 deg = 1.214 in, which makes the trailing edge unswept (root - tip = 1.215 in); thickness is the mean of root and tip; the double-wedge section has no exact counterpart in Niskanen's fin drag (rounded, square or airfoil), 'rounded' is used as the thesis used 'airfoil' for the same comparison (p. 89); the fin root straddles the cylinder end and the boattail, the body radius at the fins is taken as the cylinder's"
+        },
+        "body_length_in": 40.95,
+        "reynolds": {
+          "tn_d_4013": 9800000.0,
+          "tn_d_4014": 9840000.0,
+          "unit": "per metre, times the body length 1.04013 m"
+        },
+        "roughness": "polished metal model with carborundum transition strips: the smallest Table 3.2 value is used (the model is fully turbulent, DRAG-2)"
+      }
+    },
+    "naca_a53d02_model": {
+      "source": "figure 1(a) (PDF page 23), inches: length 2.50, nose 1.00 long with a 4 1/16 in radius (a tangent ogive of fineness 4: rho = (R^2 + L^2)/(2R) = 4.0625 in exactly for R = 0.125, L = 1), body diameter 0.250 (text: fineness ratio 10; cross-section view .250), fins: root chord 0.75 with the trailing edge at the base and unswept, tip chord 0.375, span tip to tip 0.500 at the base, root thickness 0.030 and tip thickness 0.015 (text: thickness ratio 0.04 of the local chord), asymmetric 20 deg wedge leading edge (section A-A), blunt trailing edge",
+      "note": "the exposed semispan is (0.500 - 0.250)/2 = 0.125 in from the tip-to-tip dimension; with it the aspect ratio of the exposed fins joined, (2s)^2/(2 A_fin) = 0.444, is close to the report's 0.426 (the 3/16 dimension of the cross-section view is not used). The sharp wedge leading edge with a blunt trailing edge is not representable in Niskanen's fin drag model: 'square' (stagnation leading edge, full base trailing edge) overestimates the leading edge, 'rounded' underestimates the trailing edge; both are reported.",
+      "transcription": {
+        "diameter_in": 0.25,
+        "length_in": 2.5,
+        "nose_length_in": 1.0,
+        "nose": "tangent ogive",
+        "fins": {
+          "count": 4,
+          "root_chord_in": 0.75,
+          "tip_chord_in": 0.375,
+          "span_in": 0.125,
+          "sweep_in": 0.375,
+          "thickness_in": 0.0225,
+          "cross_section": "square",
+          "root_leading_edge_in": 1.75,
+          "note": "see note above; thickness is the mean of root and tip (0.0225 in)"
+        },
+        "roughness": "polished (jeweler's rouge), smallest Table 3.2 value",
+        "base": "free flight, no sting: the base drag is included in the measured C_D"
+      }
+    }
+  }
+}

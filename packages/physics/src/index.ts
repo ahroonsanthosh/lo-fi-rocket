@@ -174,6 +174,8 @@ export {
   type FinSetTerm,
   type RollAngle,
   type StabilityResult,
+  DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+  type TransonicFinInterpolation,
 } from './stability/barrowman.js';
 export {
   burnTime,
@@ -276,3 +278,12 @@ export {
   PhysicsError,
   SimulationStalledError,
 } from './errors.js';
+export {
+  ARCAS_BODY_LENGTH_INCHES,
+  ARCAS_COMPONENTS,
+  ARCAS_DIAMETER_INCHES,
+  ARCAS_REYNOLDS,
+  NACA_A53D02_DIAMETER_INCHES,
+  NACA_A53D02_LENGTH_INCHES,
+  nacaA53d02Components,
+} from './validation/wind-tunnel-models.js';

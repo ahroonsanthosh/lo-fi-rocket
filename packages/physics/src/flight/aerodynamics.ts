@@ -23,6 +23,8 @@ import {
   prandtlBeta,
   transitionTerm,
   type AerodynamicTerm,
+  DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+  type TransonicFinInterpolation,
 } from '../stability/barrowman.js';
 import {
   metres,
@@ -42,6 +44,8 @@ export interface AeroModeOptions {
   /** Niskanen eq. (3.54) roll reduction on (displayed) or off (OpenRocket-equivalent, D-016). */
   readonly finRollReduction: boolean;
   readonly referenceDiameter?: Metres;
+  /** BAR-12 candidate; defaults to the chosen one (D-056). */
+  readonly transonicFinInterpolation?: TransonicFinInterpolation;
 }
 
 export interface AeroInputs {
@@ -278,6 +282,7 @@ export function normalForceAtAngle(
           lateralAirflowAngle,
           options.finRollReduction,
           a,
+          options.transonicFinInterpolation ?? DEFAULT_TRANSONIC_FIN_INTERPOLATION,
         );
         push(
           index,
