@@ -32,6 +32,8 @@ export interface MotorMass {
   readonly length: Metres;
   readonly diameter: Metres;
   readonly aftEnd: Metres;
+  /** CG from the motor's forward end; mid-length when absent (plan 0004 convention, MOT-3). */
+  readonly cgFromForeEnd?: Metres;
 }
 
 export interface RocketMassProperties {
@@ -64,7 +66,7 @@ export function rocketMassProperties(
     parts.push({
       volume: Math.PI * r * r * l,
       mass: m,
-      cgX: (motor.aftEnd as number) - l / 2,
+      cgX: (motor.aftEnd as number) - l + (motor.cgFromForeEnd ?? l / 2),
       inertiaRotational: 0.5 * m * r * r,
       inertiaLongitudinal: (m * (3 * r * r + l * l)) / 12,
     });

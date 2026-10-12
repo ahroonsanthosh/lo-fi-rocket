@@ -26,6 +26,8 @@ fetch nasa-tn-d-4014-ntrs-19670020031.pdf "https://ntrs.nasa.gov/api/citations/1
 mkdir -p thrustcurve-api
 fetch thrustcurve-api/api.html "https://www.thrustcurve.org/info/api.html" 221e4814360f7f7c1b27f2b2747dff67d9ab5452d644ee5e38865a8594aa8f6f
 fetch thrustcurve-api/raspformat.html "https://www.thrustcurve.org/info/raspformat.html" 69573e9fc644c467fd2c8f5e4d0b2af99831a5a4bc554d15b56027ee640c626e
-fetch thrustcurve-api/rocksimformat.html "https://www.thrustcurve.org/info/rocksimformat.html" 0bff975b363f7226b8c0cee920e1bafd2f26eec78ff096478b4813d72083d67a
+fetch apogee-rocksim-engine-file-format.pdf "https://www.thrustcurve.org/thirdparty/RockSim%20Engine%20File%20Format.pdf" c47a04f4d58f26219d70b2529654e6a4ed376310bb8a312c103be25647f85f95
+fetch thrustcurve-api/motorstats.html "https://www.thrustcurve.org/info/motorstats.html" 8cfaacf3319bef69d2a7f1dff46f4ad2566a2496f2c21b53cca9a8612e6a1ec8
+fetch thrustcurve-api/glossary.html "https://www.thrustcurve.org/info/glossary.html" 1702cc6e5b957f49af6f60090490c2fc0b9e4edfd83c93a719287f1e3855e287
 fetch thrustcurve-api/swagger.json "https://www.thrustcurve.org/api/v1/swagger.json" 566009abab4e993283230061c98d47737df139649a70c887b9b6435c5ca04f8d
 echo "All reference documents verified."

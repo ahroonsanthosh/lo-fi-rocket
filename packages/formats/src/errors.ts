@@ -37,3 +37,28 @@ export class OrkUnsupportedError extends FormatError {
     this.path = path;
   }
 }
+
+/** A RockSim `.rse` file was malformed or inconsistent. `where` names the engine or point. */
+export class RseParseError extends FormatError {
+  readonly where: string;
+  constructor(
+    fileName: string | undefined,
+    where: string,
+    problem: string,
+    options?: ErrorOptions,
+  ) {
+    super(`${fileName ?? '.rse file'}, ${where}: ${problem}`, options);
+    this.where = where;
+  }
+}
+
+/** A valid `.rse` feature whose meaning is not documented well enough to model (plan 0007, D-029). */
+export class RseUnsupportedError extends FormatError {
+  readonly where: string;
+  constructor(fileName: string | undefined, where: string, feature: string) {
+    super(
+      `${fileName ?? '.rse file'}, ${where}: ${feature} is not supported by the .rse reader (docs/plans/0007-motor-model.md)`,
+    );
+    this.where = where;
+  }
+}

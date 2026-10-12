@@ -1,0 +1,79 @@
+{
+  "AeroTech_F39T": {
+    "motorId": "5f4294d20002310000000046",
+    "simfileId": "5f4294d20002e90000000385",
+    "format": "RockSim",
+    "source": "user",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e90000000385/",
+    "dataUrl": "/simfiles/5f4294d20002e90000000385/download/data.rse",
+    "sha256": "cf99deb83ba29469173a3cb5c60ba00a179860775ceb5f28693f6b029803fe60",
+    "bytes": 2662
+  },
+  "AeroTech_G80T": {
+    "motorId": "5f4294d20002310000000068",
+    "simfileId": "5f9241441bca580004171726",
+    "format": "RockSim",
+    "source": "user",
+    "license": "PD",
+    "infoUrl": "/simfiles/5f9241441bca580004171726/",
+    "dataUrl": "/simfiles/5f9241441bca580004171726/download/data.rse",
+    "sha256": "6763107b3e587078fc9143256aa4f3eab3f730fc900ccf9b02da51c21d0b07c1",
+    "bytes": 2875
+  },
+  "AeroTech_H128W": {
+    "motorId": "5f4294d20002310000000083",
+    "simfileId": "5f4294d20002e90000000397",
+    "format": "RockSim",
+    "source": "user",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e90000000397/",
+    "dataUrl": "/simfiles/5f4294d20002e90000000397/download/data.rse",
+    "sha256": "57a4ee1593205a43b56f9fdcd57ee72c327fdd60c0ab44014a60829b61abe5f3",
+    "bytes": 1139
+  },
+  "AeroTech_H238T": {
+    "motorId": "5f4294d20002310000000090",
+    "simfileId": "6ab556c184e29c0002a65271",
+    "format": "RockSim",
+    "source": "user",
+    "license": "PD",
+    "infoUrl": "/simfiles/6ab556c184e29c0002a65271/",
+    "dataUrl": "/simfiles/6ab556c184e29c0002a65271/download/data.rse",
+    "sha256": "b36af96979cf20a3958c6cb932623027cfb5a79882747a8ee8aa6d2596252f95",
+    "bytes": 2346
+  },
+  "Estes_C6": {
+    "motorId": "5f4294d20002310000000015",
+    "simfileId": "5f4294d20002e9000000036d",
+    "format": "RockSim",
+    "source": "user",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e9000000036d/",
+    "dataUrl": "/simfiles/5f4294d20002e9000000036d/download/data.rse",
+    "sha256": "14937c1ae15e1dd7fde5bec6a6d5a0664e5a0e8ff16fafb2e209f9760f4ba70a",
+    "bytes": 2217
+  },
+  "Estes_D12": {
+    "motorId": "5f4294d20002310000000020",
+    "simfileId": "5f4294d20002e90000000370",
+    "format": "RockSim",
+    "source": "user",
+    "license": null,
+    "infoUrl": "/simfiles/5f4294d20002e90000000370/",
+    "dataUrl": "/simfiles/5f4294d20002e90000000370/download/data.rse",
+    "sha256": "0cb0d288a118fcf7f37f76e7848dfef41178ac54b845e4c2b5151a5373636d2d",
+    "bytes": 2014
+  },
+  "Estes_E16": {
+    "motorId": "5f4294d200023100000003f8",
+    "simfileId": "5f923e8e1bca580004171651",
+    "format": "RockSim",
+    "source": "user",
+    "license": "PD",
+    "infoUrl": "/simfiles/5f923e8e1bca580004171651/",
+    "dataUrl": "/simfiles/5f923e8e1bca580004171651/download/data.rse",
+    "sha256": "9dbd772e70437b84e07ec2f27ab1ce18b49b7cae72f6f814b758072143aeeb99",
+    "bytes": 2735
+  }
+}

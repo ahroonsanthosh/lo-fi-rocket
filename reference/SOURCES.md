@@ -48,12 +48,11 @@ Everything in `reference/` with its provenance. Downloaded 2026-10-11 from insid
 
 ### 5. RASP `.eng` and RockSim `.rse` motor file formats
 
-- **Files:** `docs/thrustcurve-api/raspformat.html`, `docs/thrustcurve-api/rocksimformat.html`
-- **URLs:** https://www.thrustcurve.org/info/raspformat.html and https://www.thrustcurve.org/info/rocksimformat.html
-- **Downloaded:** 2026-10-11
-- **SHA-256:** `69573e9fc644c467fd2c8f5e4d0b2af99831a5a4bc554d15b56027ee640c626e` (RASP), `0bff975b363f7226b8c0cee920e1bafd2f26eec78ff096478b4813d72083d67a` (RockSim)
-- **Verified:** saved pages carry the ThrustCurve.org page titles "RASP Motor File Format" and "RockSim Motor File Format" (check with a browser or `grep '<title>'`).
-- **Provenance note:** neither format has a formal standards document. The RASP format originated with the RASP simulator and the RockSim format with Apogee Components' RockSim; ThrustCurve.org, which the project owner named as the source for these formats and whose API the app will use, publishes the de facto specifications. These pages are used as the specification. Flagged in the Prompt 0 report as a judgment call.
+- **RASP file:** `docs/thrustcurve-api/raspformat.html`, from https://www.thrustcurve.org/info/raspformat.html, downloaded 2026-10-11, SHA-256 `69573e9fc644c467fd2c8f5e4d0b2af99831a5a4bc554d15b56027ee640c626e`. Verified: the saved page carries the ThrustCurve.org title "RASP File Format" and the header-line and data-point rules quoted in `docs/plans/0004-eng-reader.md`.
+- **RockSim file:** `docs/apogee-rocksim-engine-file-format.pdf`, Apogee Components, _RockSim & EngEdit – Engine File (.rse) Format Guide_ (3 pages; PDF metadata author Aakash Patwardhan, created 8 May 2025), from https://www.thrustcurve.org/thirdparty/RockSim%20Engine%20File%20Format.pdf (linked as "Apogee has published a brief description" on https://www.thrustcurve.org/info/contribute.html), downloaded 2026-10-12, SHA-256 `c47a04f4d58f26219d70b2529654e6a4ed376310bb8a312c103be25647f85f95`. Verified: page 1 carries the title and the attribute table (`mfg`, `code`, `type`, `dia`, `len`, `initWt`, `propWt`, `burn-time`, `Itot`, `avgThrust`, `peakThrust`, `delays`, `auto-calc-mass`, `auto-calc-cg`, `<data>` points `t`, `f`, `m`, `cg`), the auto-calculation rules (m(t) = initMass − (propMass / burnTime)·t; CG fixed at the engine centre) and the unit conventions (length mm, mass "g or kg", thrust N, time s).
+- **Correction (2026-10-12):** the Prompt 0 record listed `docs/thrustcurve-api/rocksimformat.html` from https://www.thrustcurve.org/info/rocksimformat.html as the RockSim specification, "verified" by its page title. That file was in fact ThrustCurve's "Page Not Found" page (HTTP 404; the saved page's title was "Page Not Found"); the verification claim was wrong. The file has been deleted and the Apogee guide above replaces it.
+- **ThrustCurve.org motor statistics and glossary:** `docs/thrustcurve-api/motorstats.html` (https://www.thrustcurve.org/info/motorstats.html, SHA-256 `8cfaacf3319bef69d2a7f1dff46f4ad2566a2496f2c21b53cca9a8612e6a1ec8`) and `docs/thrustcurve-api/glossary.html` (https://www.thrustcurve.org/info/glossary.html, SHA-256 `1702cc6e5b957f49af6f60090490c2fc0b9e4edfd83c93a719287f1e3855e287`), downloaded 2026-10-12. They define the quantities the API and the `.rse` attributes carry: total impulse (thrust × time over the burn, N·s), average thrust (total impulse over the normalised burn time), burn time (ends of the curve below 5 % of the maximum excluded, per NFPA 1125) and specific impulse ("the total impulse over the weight of the propellant", expressed in seconds). Used by the `.rse` reader's unit check (D-029). Judgment call: these pages are the publisher's documentation of the API's data fields, so they are taken as part of source 5; recorded here so the owner can object.
+- **Provenance note:** neither format has a formal standards document. The RASP format originated with the RASP simulator and the RockSim format with Apogee Components' RockSim; ThrustCurve.org, which the project owner named as the source for these formats and whose API the app will use, publishes the RASP description and hosts Apogee's RockSim guide. Flagged in the Prompt 0 report as a judgment call.
 
 ### 6. BIPM SI Brochure, 9th edition (2019)
 
@@ -64,6 +63,7 @@ Everything in `reference/` with its provenance. Downloaded 2026-10-11 from insid
 - **SHA-256:** `5442eea2c680caf77a9d96879205a97f57c7c270b98a0bd0126c18fefe47e02c`
 - **Pages:** 102
 - **Verified:** page 1 is the BIPM title page "The International System of Units (SI), 9th edition 2019, V4.01 June 2026"; page 2 states the Creative Commons Attribution 4.0 licence and the ISBN. PDF metadata title "SI Brochure - 9th ed./version 4.01 EN", author BIPM.
+- **Also used for:** the standard acceleration due to gravity g_n = 980.665 cm/s² = 9.80665 m/s², Appendix 1, 3rd CGPM (1901), declaration 3, printed page 154 (PDF page 44); used only to convert a specific impulse in seconds to an impulse per propellant mass in the `.rse` unit check (D-029), never as the simulator's gravity.
 
 ### 7. ThrustCurve.org API documentation
 
@@ -106,6 +106,20 @@ All files were fetched from the ThrustCurve.org API `POST /api/v1/download.json`
 | `AeroTech_H123W.eng` | AeroTech H123W                                                                               | H, 38 mm        | TRA           | https://www.thrustcurve.org/motors/AeroTech/H123W/ | 5f4294d20002e90000000009, cert (TMT test stand data 1999), public domain      | `91528fe6a4b62b6764f5f92bfc986bddb20b0d019b7985317391483b5db1063c` |
 
 Downloaded 2026-10-11. Eight motors, C to H, 18 mm to 38 mm. The 38 mm H123W was added because the reference scratch-build rocket uses a 38 mm mount. The G80T file has three certification-sourced versions on ThrustCurve (the pre-2006 116 N·s motor, a 2007 NAR S&T digitisation with a non-standard header, and the current formulation); the current one was taken, and its header designation reads `G80NBT`.
+
+### RockSim `.rse` versions
+
+Fetched 2026-10-12 from the same endpoint with `format: "RockSim"`. ThrustCurve holds no RockSim file for the H123W. `_download-meta-rse.json` holds the raw API metadata. Observed in all seven files (plan 0007): masses in grams (`initWt`, `propWt` equal to the RASP header values × 1000), a `<data>` column `m` running from `propWt` to 0 (propellant remaining, proportional to the impulse delivered so far, to 0.02 g) and a constant `cg` within 0.5 mm of half the length.
+
+| File                 | Data file (simfile id, source, licence)  | SHA-256                                                            |
+| -------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
+| `Estes_C6.rse`       | 5f4294d20002e9000000036d, user, unstated | `14937c1ae15e1dd7fde5bec6a6d5a0664e5a0e8ff16fafb2e209f9760f4ba70a` |
+| `Estes_D12.rse`      | 5f4294d20002e90000000370, user, unstated | `0cb0d288a118fcf7f37f76e7848dfef41178ac54b845e4c2b5151a5373636d2d` |
+| `Estes_E16.rse`      | 5f923e8e1bca580004171651, user, PD       | `9dbd772e70437b84e07ec2f27ab1ce18b49b7cae72f6f814b758072143aeeb99` |
+| `AeroTech_F39T.rse`  | 5f4294d20002e90000000385, user, unstated | `cf99deb83ba29469173a3cb5c60ba00a179860775ceb5f28693f6b029803fe60` |
+| `AeroTech_G80T.rse`  | 5f9241441bca580004171726, user, PD       | `6763107b3e587078fc9143256aa4f3eab3f730fc900ccf9b02da51c21d0b07c1` |
+| `AeroTech_H128W.rse` | 5f4294d20002e90000000397, user, unstated | `57a4ee1593205a43b56f9fdcd57ee72c327fdd60c0ab44014a60829b61abe5f3` |
+| `AeroTech_H238T.rse` | 6ab556c184e29c0002a65271, user, PD       | `b36af96979cf20a3958c6cb932623027cfb5a79882747a8ee8aa6d2596252f95` |
 
 ## OpenRocket (`tools/openrocket-harness/`)
 

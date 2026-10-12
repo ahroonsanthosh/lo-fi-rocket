@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="title" content="ThrustCurve Hobby Rocket Motor Data">
+    <meta name="description" content="Model and high-power hobby rocket motor data for flight simulation and reference.">
+    <title>Motor Statistics • ThrustCurve</title>
+    <link rel="canonical" href="https://www.thrustcurve.org/info/motorstats.html" />
+    <link rel="shortcut icon" href="/favicon.ico" type="image/vnd.microsoft.icon" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" type="image/png" />
+    <link rel="stylesheet" href="/stylesheets/bootstrap.min.css" />
+    <link rel="stylesheet" href="/stylesheets/bootstrap-theme.min.css" />
+    <link rel="stylesheet" href="/stylesheets/dataTables.bootstrap.min.css" />
+    <link rel="stylesheet" href="/stylesheets/dataTables.fontAwesome.css" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" href="/stylesheets/main.css" />
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="/javascripts/bootstrap.min.js"></script>
+    <script src="/javascripts/underscore-min.js"></script>
+    <script src="/javascripts/jquery.dataTables.min.js"></script>
+    <script src="/javascripts/dataTables.bootstrap.min.js"></script>
+    <script src="/javascripts/bootstrap-validator.min.js"></script>
+    <script src="/javascripts/ckeditor/ckeditor.js"></script>
+    <script type="text/javascript">window.$tcprefs = {};</script>
+    <script src="/javascripts/main.js"></script>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/"><b>thrust</b>curve.org
+          </a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="dropdown" title="find rocket motors">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Motors <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/motors/search.html">Attribute Search</a></li>
+                <li><a href="/motors/guide.html">Match a Rocket</a></li>
+                <li><a href="/motors/browser.html">Browse by Type</a></li>
+                <li><a href="/motors/popular.html">Most Popular</a></li>
+                <li><a href="/motors/recent.html">Recently Viewed</a></li>
+              </ul>
+            </li>
+            <li class="dropdown" title="rocket motor information">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Info <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/info/contribute.html">Contribute</a></li>
+                <li><a href="/info/background.html">Site Background</a></li>
+                <li><a href="/motors/updates.html">Latest Updates</a></li>
+                <li><a href="/info/simulation.html">Flight Simulation</a></li>
+                <li><a href="/info/simulators.html">Popular Simulators</a></li>
+                <li><a href="/info/motorstats.html">Motor Statistics</a></li>
+                <li><a href="/info/certification.html">Motor Certification</a></li>
+                <li><a href="/manufacturers/">Motor Manufacturers</a></li>
+                <li><a href="/info/glossary.html">Glossary</a></li>
+                <li><a href="/outbox/filesets/">Mfr. File Sets</a></li>
+              </ul>
+            </li>
+            <li class="dropdown" title="external interfaces">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Tools <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="/info/tctracer.html">Create Motor Files</a></li>
+                <li><a href="/info/api.html">Search/Download API</a></li>
+              </ul>
+            </li>
+            <li><a href="/mystuff/login.html">Log In</a></li>
+          </ul>
+          <form class="navbar-form navbar-right" method="get" action="/motors/search.html">
+            <input type="hidden" name="availability" value="all">
+            <input type="text" name="text" class="form-control" placeholder="motor">
+          </form>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container" style="padding: 0;">
+    <row>
+  <div class="col-md-8 main">
+    <h1>Motor Statistics</h1>
+
+<p>
+Several important characteristics of the performance of a motor are used commonly when
+describing it, both on these pages and in general hobby parlance.
+For illustration purposes, here is the thrust curve of an AeroTech G80
+(original graph from the NAR data sheet).
+</p>
+
+<p class="img">
+<img width="460" height="190" src="/images/info/motorstats/G80stats.gif" alt="AeroTech G80">
+</p>
+
+<p>
+<b>Total impulse</b> is the product of thrust times duration over the motor burn time,
+and is measured in Newton-seconds (Ns).
+This measures the total amount of momentum imparted to the rocket by the motor.
+The total impulse (along with such factors as rocket mass and air drag)
+determines how high the motor can propel your rocket.
+(Thanks to Greg Lyzenga for this description.)
+</p>
+
+<p>
+The <b>impulse class</b> is a letter code assigned to a range of total impulse with
+each letter being twice as powerful as the previous.
+For example, the "AeroTech G80" shown above has a total impulse of 120Ns
+making it a 'G' class motor.
+</p>
+
+<p>
+<b>Average thrust</b> is the average instantanous force the motor produces
+during its burn and is measured in Newtons (N).
+Note that because most thrust curves are not flat, most of the time the
+motor is not producing the average thrust.
+The average thrust tells you how heavy a rocket the motor can lift,
+although since different motors produce different shaped thrust curves, it can be misleading.
+(Average thrust is determined by dividing the total impulse over the normalized
+burn time&mdash;within the 5% threshold.)
+</p>
+
+<p>
+<b>Initial thrust</b> is the average force the motor produces for the first &frac12; second
+and is measured in Newtons (N).
+This estimates the thrust produced during the time the rocket is lifting off,
+which is more useful than the average thrust for determining how heavy a rocket the
+motor can safely lift, especially for long-burn motors.
+Note that initial thrust is estimated from the simulator data files since it is not
+published by the certification organizations.
+</p>
+
+<p>
+<b>Maximum thrust</b> is the maximum amount of force produced by the motor
+during its burn.  Like average thrust, this is measured in Newtons (N).
+Generally, there is a small spike near the beginning which has the highest thrust, although
+the shape of the curve varies with the motor design and propellant mixture.
+</p>
+
+<p>
+<b>Burn time</b> is the number of seconds for which the motor produces thrust.
+This tells you how long the motor will keep pushing your rocket.
+Burn time is determined by chopping off the ends of the curve when the
+thrust is below 5% of the maximum; see <a href="#burn-time">Burn Time Normalization</a> below.
+</p>
+
+
+<a name="motor-comparison"></a>
+<h2>How a Motor Compares</h2>
+
+<p>
+When looking at a motor page, the statistics give you absolute values, but can be hard to put into context.
+The top section has two columns: the statistics and a set of graphs comparing this
+motor with others in the same impulse class (letter).
+Here are the comparison graphs for the <a href="/motors/AeroTech/K550W/">Aerotech K550</a>:
+</p>
+
+<div class="row">
+  <div class="col-md-1">&nbsp;</div>
+  <div class="col-md-4">
+    <p>Compared with all 161 <b>K</b> motors:</p>
+    <img class="compare" src="/motors/AeroTech/K550W/compare.svg?stat=totalImpulse">
+    <p class="compare-legend">Total Impulse</p>
+    <img class="compare" src="/motors/AeroTech/K550W/compare.svg?stat=avgThrust">
+    <p class="compare-legend">Average Thrust</p>
+  </div>
+  <div class="col-md-2">&nbsp;</div>
+  <div class="col-md-4">
+    <p>&nbsp;</p>
+    <img class="compare" src="/motors/AeroTech/K550W/compare.svg?stat=maxThrust">
+    <p class="compare-legend">Maximum Thrust</p>
+    <img class="compare" src="/motors/AeroTech/K550W/compare.svg?stat=burnTime">
+    <p class="compare-legend">Burn Time</p>
+  </div>
+  <div class="col-md-1">&nbsp;</div>
+</div>
+
+<p>
+First of all, the gray bars represent a histogram of all the motors in that impulse class.
+The height of the bar indicates the number of motors falling into that tenth of the range of values.
+For example, total impulse tends to cluster to the lower end of the range (the "baby Ks"),
+but there are a lot of motors right near the top (the "full Ks").
+</p>
+
+<p>
+The motor being viewed is indicated with a red line, which makes it easy to see where it fits.
+This makes it clear that the AT K550 is a standard "baby K" (a 20% K).
+</p>
+
+<p>
+The same goes for the other statistics, and we can see that the K550 is typical among K motors.
+For an example of a less-typical motor, take a look at the <a href="/motors/AeroTech/M750W/">AT M750</a>.
+Being a long-burn motor, it has lower thrust and much longer burn time than average.
+</p>
+
+<h2>Other Information</h2>
+
+<p>
+The <b>common name</b> of the motor is formed from the total impulse,
+represented by the impulse class, and the average thrust.
+For example, the "AeroTech G80" shown above
+is a 'G' class motor and has an average thrust of 77.5N
+(rounded to 80 in this case).
+</p>
+
+<p>
+Another interesting number is the <b>specific impulse</b>, 
+or <b>I<small><sub>SP</sub></small></b>.
+This number is the total impulse over the weight of the propellant,
+which gives you a measure of the motor's efficiency for lifting since the higher
+this number is, the more impulse you get for the propellant's weight.
+Think of this number as the quality measure of the propellant formulation.
+Isp may be expressed in "seconds" and intuitively, it means something like
+"how many seconds this propellant can accelerate its initial mass at 1 gee".
+<br/>
+(Thanks to Robert J. Kelley for this description.)
+</p>
+
+<p>
+The mechanical properties of the motor are also interesting for motor selection.
+Of course, the <b>diameter</b> tells you whether it will fit in your motor mount tube.
+The <b>length</b> gives you an idea of how much space you need in the rocket for the
+motor casing.
+The <b>total weight</b> is very helpful when testing your rocket's stability.
+When measuring the center of gravity, if you don't have the motor and casing yet,
+you can make up a dummy of the same weight using shot, dirt or whatever you have handy.
+</p>
+
+<p>
+Note that on this site, statistics listed on the motor page are from the certification
+organization (as published on their web sites) or derived from them and/or the thrust curve.
+For more information on these organizations, see the
+<a href="/info/certification.html">Certification page</a>.
+</p>
+
+<p>
+The <a href="/info/glossary.html">glossary page</a> has information on many terms used
+on this site and elsewhere.
+</p>
+
+
+<a name="burn-time"></a>
+<h2>Burn Time Normalization</h2>
+
+<p>
+Based on NFPA 1125:
+</p>
+<ul>
+  <li>The burn time is from 5% of peak thrust, at both the beginning and end of the curve.</li>
+  <li>Average thrust is the total impulse during the 5%-defined burn time, divided by the burn time.</li>
+  <li>The total impulse is measured over the whole thrust curve (not the 5%-defined burn time).</li>
+</ul>
+
+<p>
+This means that the letter for the motor class is based on the area under the whole curve,
+but the value after the letter is based on the average thrust during the truncated burn time.
+</p>
+
+<p>
+A common error is to measure average thrust by dividing Total Impulse by the "last action" burn time.
+This gives a different value than the correct NFPA 1125 method.
+For motors with long tails, the correct method gives a better indication of the useful average thrust.
+<br/>
+(Thanks to John DeMar for this succinct explanation.)
+</p>
+
+  </div>
+  <div class="col-md-3 col-md-offset-1 sidebar sidebar-right hidden-xs hidden-sm">
+    <h2>Information</h2>
+    <ul class="links">
+      <li><a href="/info/background.html">About this Site</a></li>
+      <li><a href="/info/privacy.html">Privacy Policy</a></li>
+      <li><a href="/info/certification.html">Motor Certification</a></li>
+      <li><a href="/info/glossary.html">Rocket Motor Jargon</a></li>
+      <li><a href="/info/motorstats.html">Motor Statistics</a></li>
+      <li><a href="/info/simulation.html">Flight Simulation</a></li>
+      <li><a href="/info/simulators.html">Flight Simulators</a></li>
+      <li><a href="/info/raspformat.html">RASP File Format</a></li>
+      <li><a href="/info/contribute.html">Contribute Data</a></li>
+      <li><a href="/info/tctracer.html">Thust Curve Tracer</a></li>
+      <li><a href="/info/api.html">ThrustCurve API</a></li>
+    </ul>
+  </div>
+</row>
+
+    </div>
+
+    <nav class="navbar navbar-default navbar-footer navbar-fixed-bottom hidden-xs hidden-sm">
+      <div class="container">
+        <div id="footernav">
+          <img class="navbar-brand" src="/images/footer-logo.png" alt="thrustcurve.org motor rocket motor performance data" />
+          <ul class="nav navbar-nav">
+            <li><a href="/motors/search.html">Search</a></li>
+            <li><a href="/motors/guide.html">Guide</a></li>
+            <li><a href="/motors/browser.html">Browser</a></li>
+            <li><a href="/manufacturers/">Manufacturers</a></li>
+            <li><a href="/info/glossary.html">Glossary</a></li>
+            <li><a href="/info/motorstats.html">Statistics</a></li>
+            <li><a href="/info/contribute.html">Contribute</a></li>
+            <li><a href="/motors/updates.html">Updates</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="print-footer">
+      <img class="navbar-brand" src="/images/footer-logo.png">
+    </div>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-751016-2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'UA-751016-2');
+    </script>
+  </body>
+</html>

@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 1: autonomous mode and all of Phase 1 (CLAUDE.md section 11 now defines autonomous mode).
+Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the Phase 1 report. Phase 1 (Prompt 1) is complete.
 
 ## Done
 
@@ -25,13 +25,15 @@ Prompt 1: autonomous mode and all of Phase 1 (CLAUDE.md section 11 now defines a
 
 - Phase 1 acceptance report: `docs/reports/phase-1-acceptance.md` (all five rockets: CG within 0.0004 %, CP within 0.035 %, 269 tests, checks clean). **Phase 1 is complete.**
 
+- Phase 2 step 1: motor thrust and mass model (plan 0007, MOT-1 to MOT-5): format-independent `MotorDefinition` with three mass rules, RockSim `.rse` reader with the unit and column checks of D-029, `motorFromEng`/`motorFromRse`; Apogee's `.rse` format guide and the seven ThrustCurve `.rse` files added to `reference/` (the Prompt 0 "RockSim format page" was a saved 404 and its verification claim was corrected in `reference/SOURCES.md`); decisions D-028, D-029.
+
 ## In progress
 
-- Nothing. Phase 2 starts with plan 0007 on the next "continue".
+- Phase 2 step 2: frames, gravity and environment (plan 0008, to be written next).
 
 ## Next
 
-- Phase 2 (simulation): plan 0007 motor thrust and mass model, then drag, then 6DOF.
+- Phase 2 steps 3 and 4: drag model across Mach (plan 0009), 6DOF simulation with RK4 and RK45, events and recovery (plan 0010), then the Phase 2 acceptance report.
 
 ## Open questions
 

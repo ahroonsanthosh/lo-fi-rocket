@@ -90,6 +90,21 @@ export {
   type StabilityResult,
 } from './stability/barrowman.js';
 export {
+  burnTime,
+  impulseTo,
+  motorMassAt,
+  motorStateAt,
+  propellantRemainingAt,
+  thrustAt,
+  totalImpulse,
+  validateMotor,
+  type MotorDefinition,
+  type MotorMassProfilePoint,
+  type MotorMassRule,
+  type MotorState,
+  type MotorThrustPoint,
+} from './motor/motor.js';
+export {
   InvalidInputError,
   NonFiniteResultError,
   NotImplementedError,

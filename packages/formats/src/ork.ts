@@ -13,8 +13,6 @@
  * Every element is either read, on a documented ignore list, or rejected with
  * an error naming it. Nothing is defaulted.
  */
-import { XMLParser } from 'fast-xml-parser';
-import { SyntaxValidator } from 'fast-xml-validator';
 import { strFromU8, unzipSync } from 'fflate';
 import {
   kilograms,
@@ -30,6 +28,7 @@ import {
   type Shoulder,
 } from '@lo-fi-rocket/physics';
 import { OrkParseError, OrkUnsupportedError } from './errors.js';
+import { NUMBER, parseXmlRoots, XmlSyntaxError, type XmlNode } from './xml.js';
 
 // ---------------------------------------------------------------------------
 // Output types
@@ -84,75 +83,25 @@ export interface OrkRocket {
 }
 
 // ---------------------------------------------------------------------------
-// XML tree
-
-interface XmlNode {
-  readonly name: string;
-  readonly attributes: Readonly<Record<string, string>>;
-  readonly children: readonly XmlNode[];
-  readonly text: string;
-}
+// Container and document
 
 const ZIP_ENTRY = 'rocket.ork';
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
-/** Convert fast-xml-parser's preserveOrder output to XmlNode[]. */
-function toNodes(raw: unknown, file: string | undefined): XmlNode[] {
-  if (!Array.isArray(raw)) throw new OrkParseError(file, 'document', 'unexpected parser output');
-  const nodes: XmlNode[] = [];
-  for (const item of raw) {
-    if (!isRecord(item)) continue;
-    const attributes: Record<string, string> = {};
-    const rawAttrs = item[':@'];
-    if (isRecord(rawAttrs)) {
-      for (const [k, v] of Object.entries(rawAttrs)) {
-        if (typeof v === 'string') attributes[k] = v;
-      }
-    }
-    for (const [key, value] of Object.entries(item)) {
-      if (key === ':@' || key === '#text') continue;
-      const children = toNodes(value, file);
-      const text = Array.isArray(value)
-        ? value
-            .filter(isRecord)
-            .map((c) => c['#text'])
-            .filter((t): t is string => typeof t === 'string')
-            .join('')
-        : '';
-      nodes.push({ name: key, attributes, children, text });
-    }
-  }
-  return nodes;
-}
-
 function parseXml(xml: string, file: string | undefined): XmlNode {
+  let roots: XmlNode[];
   try {
-    SyntaxValidator.validate(xml);
+    roots = parseXmlRoots(xml);
   } catch (error) {
-    // The validator throws a ValidationError carrying `line` and `message`.
-    const line = isRecord(error) && typeof error['line'] === 'number' ? error['line'] : undefined;
-    const message = error instanceof Error ? error.message : String(error);
-    throw new OrkParseError(
-      file,
-      line === undefined ? 'document' : `line ${String(line)}`,
-      `not well-formed XML: ${message}`,
-      { cause: error },
-    );
+    if (error instanceof XmlSyntaxError) {
+      throw new OrkParseError(
+        file,
+        error.line === undefined ? 'document' : `line ${String(error.line)}`,
+        error.message,
+        { cause: error },
+      );
+    }
+    throw error;
   }
-  const parser = new XMLParser({
-    preserveOrder: true,
-    ignoreAttributes: false,
-    attributeNamePrefix: '',
-    parseTagValue: false,
-    parseAttributeValue: false,
-    trimValues: true,
-    ignoreDeclaration: true,
-    ignorePiTags: true,
-  });
-  const roots = toNodes(parser.parse(xml), file);
   const root = roots.find((n) => n.name === 'openrocket');
   if (root === undefined) {
     throw new OrkParseError(file, 'document', 'root element is not <openrocket>');
@@ -187,8 +136,6 @@ function toXmlText(data: Uint8Array | string, file: string | undefined): string 
 
 // ---------------------------------------------------------------------------
 // Element access with use tracking
-
-const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 
 class Element {
   private readonly used = new Set<string>();
