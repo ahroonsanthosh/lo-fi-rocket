@@ -132,9 +132,42 @@ Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports
 - **Verified:** Table 3.1 (printed p. 3-5, PDF p. 32) a = 6378137.0 m, 1/f = 298.257223563; Table 3.5 "WGS 84 Ellipsoid Derived Geometric Constants" (printed p. 3-8, PDF p. 35) e² = 6.694379990141 × 10⁻³; Table 3.6 "WGS 84 Derived Physical Constants" (printed p. 3-9, PDF p. 36) γ_e = 9.7803253359 m/s², γ_p = 9.8321849379 m/s², k = 1.931852652458 × 10⁻³, m = 3.449786506841 × 10⁻³; section 4.2 eq. (4-1) (printed p. 4-1, PDF p. 37) γ = γ_e (1 + k sin²φ)/√(1 − e² sin²φ), k = bγ_p/(aγ_e) − 1; section 4.3 eq. (4-3) (printed p. 4-3, PDF p. 39) γ_h = γ [1 − (2/a)(1 + f + m − 2f sin²φ) h + (3/a²) h²], m = ω²a²b/GM, "when the geodetic height (h) is small", with the ellipsoidal method recommended "at moderate and high geodetic heights".
 - **Used for:** GRAV-2 and GRAV-3 (D-060). The pre-approved substitute (Moritz, Geodetic Reference System 1980) was not needed; its constants give the OpenRocket value at 45° (D-060).
 
+### 13. USAF Stability and Control DATCOM (1978 revision), sections 4.1 to 4.3
+
+- **Citation:** Finck, R. D. (McDonnell Douglas Corporation), with D. E. Hoak et al. _USAF Stability and Control DATCOM_. Air Force Flight Dynamics Laboratory, Wright-Patterson Air Force Base, April 1978 revision (AFWAL-TR-83-3048, DTIC accession ADB072483). U.S. Government work. DTIC cover sheet: "NEW LIMITATION CHANGE TO Approved for public release, distribution unlimited" (authority AFWAL-DOOS W-PAFB letter), superseding the 1982 limitation printed in block 16 of the report documentation page.
+- **Files:** `docs/usaf-datcom-1978-dtic-adb072483-pp0495-0920.pdf` (PDF pages 495 to 920 of the DTIC scan: sections 4.1.3 to 4.2.2) and `docs/usaf-datcom-1978-dtic-adb072483-pp0921-1350.pdf` (pages 921 to 1350: sections 4.2.3 to 4.5), extracted with `pdfseparate`/`pdfunite` because the full 119 MB scan exceeds GitHub's file limit; page numbers in citations are the full scan's PDF pages and the printed section-page numbers (for example 4.2.3.1-5).
+- **URL:** DTIC https://apps.dtic.mil/sti/pdfs/ADB072483.pdf was "Under Maintenance" on 2026-10-12 (every request returned the maintenance page); the identical DTIC file was obtained from the Internet Archive's DTIC mirror item `DTIC_ADB072483`, https://archive.org/download/DTIC_ADB072483/DTIC_ADB072483.pdf, whose metadata lists the file as the original with MD5 `6481c0738615dddb6a0ca1df5b381d87` and SHA-1 `129019714888e00f30105ec47237f87b9e0c457b`. To be re-verified against DTIC when it returns.
+- **Downloaded:** 2026-10-12
+- **SHA-256 (full scan, 3134 pages):** `9b7b5e0f12bcabdf7f9e0054590977b2c79fdb51a319ff3982b0909495afbbfa` (MD5 matches the archive metadata)
+- **SHA-256 (extracts):** `4d00a99b45a03c6dbf7b1f5c79af673c3007a66ce2f24fb671a808047f66e870` (pp. 495 to 920), `b22197f617b35da1c05ac01f35d1042e87456fb2e30683036b15654d5fe2fc83` (pp. 921 to 1350)
+- **Verified:** the cover sheet and the report documentation page (PDF pp. 1 to 6: title, author, AFWAL-TR-83-3048, abstract); section 4.2.1.1 Body lift-curve slope (PDF p. 815 ff., "Revised June 1969"): subsonic eq. 4.2.1.1-a, transonic fairing, supersonic design charts 4.2.1.1-21a/b and the increments 4.2.1.1-22a/b; section 4.2.2.1 Body pitching-moment-curve slope (PDF p. 885 ff., "Revised February 1972"): eq. 4.2.2.1-c and -d, charts 4.2.2.1-23a/b; section 4.2.3.1 Body zero-lift drag (PDF p. 939 ff.): the transonic procedure (steps 1 to 6, eq. 4.2.3.1-c to -e, PDF pp. 942 to 943), figures 4.2.3.1-24 to -26 (PDF pp. 962 to 964); section 4.1.5.1 Wing zero-lift drag (PDF p. 722 ff.): eq. 4.1.5.1-a/-b, the transonic procedure (PDF pp. 728 ff.). The pages used by each register entry are cited there.
+- **Used for:** approved by the owner in the completion prompt (Part A item 2, D-059) for transonic and supersonic body and fin aerodynamics and large-angle forces.
+
+### 14. Missile DATCOM User Manual, 2014 revision
+
+- **Citation:** Rosema, Christopher; Doyle, Joshua (U.S. Army AMRDEC); Blake, William B. (AFRL). _Missile Data Compendium (DATCOM) User Manual, 2014 Revision_. AFRL-RQ-WP-TR-2014-0281, Air Force Research Laboratory, December 2014 (DTIC accession AD1000581). "Approved for public release; distribution unlimited", cleared by 88 ABW Public Affairs (notice page).
+- **File:** `docs/missile-datcom-user-manual-2014-dtic-ad1000581.pdf`
+- **URL:** DTIC unreachable on 2026-10-12; obtained from the Internet Archive DTIC mirror item `DTIC_AD1000581` (MD5 `6bc20165a4a5970de1665921d29db5b4` as downloaded).
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `20157ba7c1ee56b87115d239d36363eabf433d52c60fd0e8fbac8d9032b8d3c0`
+- **Pages:** 116
+- **Verified:** title, notice and signature pages (PDF pp. 1 to 2).
+- **Used for:** background on the methods Missile DATCOM applies (a user manual; it gives no equations itself), consulted but not a source of equations.
+
+### 15. The USAF Stability and Control Digital DATCOM, Volume II, Implementation of DATCOM Methods (1979)
+
+- **Citation:** Williams, J. E. and Vukelich, S. R. (McDonnell Douglas Astronautics Company). _The USAF Stability and Control Digital DATCOM. Volume II. Implementation of Datcom Methods_. AFFDL-TR-79-3032, Volume II, Air Force Flight Dynamics Laboratory, April 1979 (DTIC accession ADA086558).
+- **File:** `docs/digital-datcom-vol2-dtic-ada086558.pdf`
+- **URL:** DTIC unreachable on 2026-10-12; obtained from the Internet Archive DTIC mirror item `DTIC_ADA086558` (MD5 `845a91e08092a6f2bccc4d231513e785` as downloaded).
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `c4d06a551f298ea227bad797d496af206437dcbb9fd3ccb939e13697991fbb79`
+- **Pages:** 161
+- **Verified:** front matter (PDF pp. 1 to 3): "Approved for public release; distribution unlimited" on the cover and in block 10 of the report documentation page; "releasable to the National Technical Information Service (NTIS) ... available to the general public, including foreign nations".
+- **Used for:** confirming how the DATCOM charts are tabulated in the Digital DATCOM where a chart reading needed a cross-check; not a source of equations.
+
 ## Copyright status and the fetch script
 
-This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811) may stay committed; the arXiv paper is redistributable under its arXiv licence.
+This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811, NACA TN 4197, NGA.STND.0036, the DATCOM documents) may stay committed; the arXiv paper is redistributable under its arXiv licence.
 
 ## Reference motors (`reference/motors/`)
 
