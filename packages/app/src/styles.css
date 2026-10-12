@@ -387,3 +387,51 @@ button.danger {
 .motor-summary {
   margin: 8px 0;
 }
+
+h3 {
+  font-size: 14px;
+  margin: 12px 0 6px;
+}
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.ok {
+  color: var(--typical);
+  margin: 4px 0;
+}
+.warnings {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+.events {
+  padding-left: 0;
+  list-style: none;
+  margin: 4px 0;
+  font-size: 13px;
+}
+.event-time {
+  display: inline-block;
+  min-width: 70px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.plots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.settings {
+  margin-top: 12px;
+}
+.settings summary {
+  cursor: pointer;
+  font-weight: 600;
+}

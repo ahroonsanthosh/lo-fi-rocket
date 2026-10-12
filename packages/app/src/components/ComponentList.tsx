@@ -2,6 +2,7 @@ import type { JSX, KeyboardEvent } from 'react';
 import { newId } from '@lo-fi-rocket/formats';
 import { COMPONENT_LABELS, type ComponentKind } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
+import { FLIGHT_SELECTION_ID } from './FlightPanel.js';
 import { MOTOR_SELECTION_ID } from './MotorPanel.js';
 
 const ADD_ORDER: readonly ComponentKind[] = [
@@ -106,6 +107,22 @@ export function ComponentList(): JSX.Element {
                 ? 'plugged'
                 : `delay ${String(motor.ejectionDelay)} s`}
           </span>
+        </li>
+      </ul>
+      <div className="list-header">
+        <h2>Flight</h2>
+      </div>
+      <ul role="listbox" aria-label="Flight" tabIndex={0}>
+        <li
+          role="option"
+          aria-selected={selected === FLIGHT_SELECTION_ID}
+          className={selected === FLIGHT_SELECTION_ID ? 'selected' : ''}
+          onClick={() => {
+            dispatch({ type: 'select', id: FLIGHT_SELECTION_ID });
+          }}
+        >
+          <span className="item-name">Launch and flight</span>
+          <span className="item-kind">conditions, simulate</span>
         </li>
       </ul>
       <div className="list-header">

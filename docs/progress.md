@@ -43,13 +43,15 @@ Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the 
 
 - Prompt 3 step 3 (plan 0013): ThrustCurve.org client against `swagger.json` (metadata, search, download with RASP preferred and RockSim fallback, every field checked) with an injected transport; offline motor cache in local storage validated on read; custom thrust-curve CSV reader (D-044); the app's motor library (the eight bundled reference motors as build-time text, imported and downloaded motors), the motor panel (mount tube and overhang, figures labelled by their definitions, delay list from the RASP file, thrust-curve plot, diameter warning) and the picker tabs (library filtered to the mount, ThrustCurve search and download, `.eng`/`.rse` import, CSV import); `LinePlot` SVG chart (D-045). Tests: client fixtures, cache offline, CSV rules, picker flows in jsdom with injected transport and stores.
 
+- Prompt 3 step 4 (plan 0014): the simulation UI: launch editor (site, optional temperature and pressure overrides, rail, wind, with the NAR warning live), simulation settings (integrator, tolerances or step, maximum time, recording interval), the simulator in a Web Worker with a synchronous runner for tests, the flight panel (summary values of CLAUDE.md 6.5, events, the thresholds and launch warnings with their reasons, modes used, stale-flight notice), four plots with event markers, CSV export with a modes comment line. Found and fixed while testing a ballistic flight: the fin normal force law applied past 90° angle of attack gave a spurious force in an undefined direction (RK4 tumbled, Dormand–Prince crawled); a six-degree-of-freedom flight now ends with the explicit reason "model-limit" at 90° (D-046) and the adaptive integrator throws `SimulationStalledError` instead of crawling.
+
 ## In progress
 
-- Prompt 3 step 4 (plan 0014, to be written): the simulation UI (launch conditions, worker, results, warnings, plots, CSV export).
+- Prompt 3 step 5 (plan 0015, to be written): files and interoperability (save and load, `.ork` import, altimeter overlay, imported drag curve, Playwright end-to-end tests, Phase 3 and 4 acceptance report).
 
 ## Next
 
-- Step 5 of plan 0011: files and interoperability with the Playwright tests and the Phase 3 and 4 acceptance report.
+- The Phase 3 and 4 acceptance report, then Prompt 4 on the owner's next "continue".
 
 ## Open questions
 
@@ -58,6 +60,7 @@ Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the 
 
 - Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
 
+- Fin normal force at large angles of attack (D-046): a six-degree-of-freedom flight now ends with an explicit "model-limit" reason when the angle of attack reaches 90°, because the fin term is a small-angle flat-plate law and no approved source gives a large-angle law. Ballistic flights and ejection-charge deployments after the turn-over therefore stop at the turn-over with the apogee reported. Approve a source for the large-angle fin force (for example Hoerner, Fluid-Dynamic Lift) if those flights must be simulated to landing.
 - Customary units source (D-040): NIST SP 811 was added to `reference/` for the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and Fahrenheit behind the units toggle. Say if another source is preferred; the factors are definitional and would not change.
 - Deployment speed warning threshold (D-042): no default is given in CLAUDE.md; 20 m/s is a user-editable placeholder labelled as a rule of thumb. Please state the figure you want.
 - `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive.

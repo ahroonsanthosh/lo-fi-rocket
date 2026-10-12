@@ -75,3 +75,16 @@ function formatValue(value: unknown): string {
   }
   return Object.prototype.toString.call(value);
 }
+
+/**
+ * Thrown when the adaptive integrator cannot meet its tolerance even at its
+ * minimum step: the state is changing discontinuously and continuing would
+ * either crawl or produce an unchecked result (CLAUDE.md section 8).
+ */
+export class SimulationStalledError extends PhysicsError {
+  readonly time: number;
+  constructor(time: number, detail: string) {
+    super(`The simulation stalled at t = ${time.toFixed(4)} s: ${detail}`);
+    this.time = time;
+  }
+}

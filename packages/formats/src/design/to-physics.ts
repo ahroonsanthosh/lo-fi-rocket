@@ -232,6 +232,7 @@ export interface DesignWarning {
     | 'transonic'
     | 'no-recovery'
     | 'max-time'
+    | 'model-limit'
     | 'model';
   /** What happened and why it matters, in one or two sentences. */
   readonly message: string;
@@ -288,6 +289,12 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
     out.push({
       code: 'max-time',
       message: `The simulation stopped at the maximum time of ${String(design.simulation.maxTime)} s before landing: increase the maximum time to see the full descent.`,
+    });
+  }
+  if (s.endReason === 'model-limit') {
+    out.push({
+      code: 'model-limit',
+      message: `The flight ended at ${s.flightTime.toFixed(2)} s, before landing, because the rocket turned past 90° angle of attack (flying backwards or tumbling), which the aerodynamic model does not cover (D-046). The apogee and the ascent are valid; a recovery device deploying at apogee lets the descent be simulated.`,
     });
   }
   for (const w of result.warnings) out.push({ code: 'model', message: w });

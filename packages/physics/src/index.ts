@@ -256,4 +256,5 @@ export {
   NonFiniteResultError,
   NotImplementedError,
   PhysicsError,
+  SimulationStalledError,
 } from './errors.js';

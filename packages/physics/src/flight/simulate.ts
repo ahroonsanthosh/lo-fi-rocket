@@ -14,7 +14,7 @@ import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/uss
 import { dragCoefficient } from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
 import { windVelocity } from '../environment/wind.js';
-import { InvalidInputError, NonFiniteResultError } from '../errors.js';
+import { InvalidInputError, NonFiniteResultError, SimulationStalledError } from '../errors.js';
 import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
 import type { MassProperties } from '../geometry/revolution.js';
 import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.js';
@@ -54,7 +54,8 @@ export type FlightEventKind =
   | 'deployment'
   | 'altitude'
   | 'landing'
-  | 'max-time';
+  | 'max-time'
+  | 'model-limit';
 
 export interface FlightEvent {
   readonly kind: FlightEventKind;
@@ -106,8 +107,17 @@ export interface FlightSummary {
   /** Bearing of the landing point from the pad, clockwise from north, radians. */
   readonly landingDirection: number | undefined;
   readonly flightTime: number;
-  readonly endReason: 'landing' | 'max-time';
+  /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
+  readonly endReason: 'landing' | 'max-time' | 'model-limit';
 }
+
+/**
+ * D-046: the normal force model of Niskanen chapter 3 (Barrowman's fins as
+ * flat plates at small angles, p. 26; body terms with sin α) is applied up
+ * to 90°, the limit of the thesis's own angle-of-attack drag scaling
+ * (p. 53). Beyond it a six-degree-of-freedom flight is not continued.
+ */
+export const AERO_MAX_ANGLE_OF_ATTACK = Math.PI / 2;
 
 export interface FlightResult {
   readonly samples: readonly FlightSample[];
@@ -183,6 +193,15 @@ function thrustNow(ctx: Context, t: number): number {
   const m = ctx.vehicle.motor;
   if (m.kind === 'ideal') return t >= 0 && t <= m.burnTime ? m.thrust : 0;
   return thrustAt(m.definition, seconds(Math.max(0, t)));
+}
+
+function sampleFlight(
+  ctx: Context,
+  phase: FlightPhase,
+  t: number,
+  y: readonly number[],
+): FlightParameters | undefined {
+  return derive(ctx, phase, t, y).derived.flight;
 }
 
 /** Everything the equations of motion need at (t, y), for a given phase. */
@@ -542,12 +561,13 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let apogee: { t: number; z: number } | undefined;
   let deployment: { t: number; v: number } | undefined;
   let landing: { t: number; vz: number; speed: number; x: number; y: number } | undefined;
-  let endReason: 'landing' | 'max-time' = 'max-time';
+  let endReason: 'landing' | 'max-time' | 'model-limit' = 'max-time';
+  let stopped = false;
   let maxVelocity = 0;
   let maxMach = 0;
   let steps = 0;
 
-  while (phase !== 'landed' && t < maxTime) {
+  while (phase !== 'landed' && !stopped && t < maxTime) {
     steps++;
     if (steps > 50_000_000)
       throw new InvalidInputError(
@@ -589,6 +609,13 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         attempt = stepOnce(hTry);
         tries++;
       }
+      if (attempt.errorNorm > 1) {
+        const f = derive(ctx, phase, t, y).derived.flight;
+        throw new SimulationStalledError(
+          t,
+          `the Dormand–Prince error estimate is ${attempt.errorNorm.toExponential(2)} times the tolerance even at the minimum step of 1e-9 s (phase ${phase}${f === undefined ? '' : `, angle of attack ${(((f.angleOfAttack as number) * 180) / Math.PI).toFixed(1)}°`}); the state is changing discontinuously. Use the RK4 integrator with a fixed step or loosen the tolerance.`,
+        );
+      }
       h = nextStepSize(hTry, attempt.errorNorm, o);
     }
     let yNext = normaliseOrientation(attempt.yNext);
@@ -614,6 +641,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       candidates.push({ kind: 'apogee', g: verticalVelocity, direction: 'down' });
     if (phase !== 'on-rail')
       candidates.push({ kind: 'landing', g: altitudeAbovePad, direction: 'down' });
+
     if (apogeeReached) {
       for (const device of vehicle.recovery) {
         if (
@@ -657,6 +685,39 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         fired = c;
       } else {
         fired = c;
+      }
+    }
+    // D-046: the angle-of-attack limit of the aerodynamic model, checked after the other events of the
+    // step (apogee and a deployment at apogee take precedence, and a descent is drag-only).
+    if (
+      fired === undefined &&
+      (phase === 'powered' || phase === 'coast') &&
+      options.degreesOfFreedom === 6
+    ) {
+      const aoa = (yy: readonly number[]): number => {
+        const f = sampleFlight(ctx, phase, t, yy);
+        return f === undefined ? 0 : f.angleOfAttack;
+      };
+      if (aoa(y) > AERO_MAX_ANGLE_OF_ATTACK) {
+        // Already beyond the limit at the start of the step (a rocket falling tail-first from apogee).
+        yNext = y;
+        tNext = t;
+        fired = { kind: 'model-limit', g: aoa };
+      } else if (aoa(yNext) > AERO_MAX_ANGLE_OF_ATTACK) {
+        let lo = 0;
+        let hi = hTry;
+        let yHi = yNext;
+        for (let i = 0; i < 80 && hi - lo > 1e-10; i++) {
+          const mid = (lo + hi) / 2;
+          const yMid = normaliseOrientation(stepOnce(mid).yNext);
+          if (aoa(yMid) > AERO_MAX_ANGLE_OF_ATTACK) {
+            hi = mid;
+            yHi = yMid;
+          } else lo = mid;
+        }
+        yNext = yHi;
+        tNext = t + hi;
+        fired = { kind: 'model-limit', g: aoa };
       }
     }
     y = yNext;
@@ -733,6 +794,21 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
             detail: `landing at ${speed.toFixed(3)} m/s, ${Math.hypot(s.position.x, s.position.y).toFixed(2)} m from the pad`,
           });
           break;
+        case 'model-limit': {
+          stopped = true;
+          endReason = 'model-limit';
+          const f = sampleFlight(ctx, phase, t, y);
+          const deg = f === undefined ? Number.NaN : ((f.angleOfAttack as number) * 180) / Math.PI;
+          events.push({
+            kind: 'model-limit',
+            time: seconds(t),
+            detail: `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
+          });
+          warnings.add(
+            `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is a model for small angles of attack and is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
+          );
+          break;
+        }
         case 'burnout':
         case 'deployment':
         case 'ejection-charge':
@@ -748,7 +824,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     maxAcceleration = Math.max(maxAcceleration, norm(sample.accelerationWorld));
     record(fired !== undefined);
   }
-  if (phase !== 'landed')
+  if (phase !== 'landed' && !stopped)
     events.push({
       kind: 'max-time',
       time: seconds(t),
