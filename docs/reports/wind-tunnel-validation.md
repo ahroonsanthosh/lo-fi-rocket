@@ -1,6 +1,6 @@
 # Wind tunnel validation (CLAUDE.md 6.7 item 1, plan 0021)
 
-**Date:** 2026-10-12. **Status:** regenerated after Part C item 4 (plan 0029, D-066: ARCAS fins now 'double-wedge', the NACA fins reported as 'wedge' and 'square') and item 3 (plan 0028, D-065; before it the ARCAS supersonic CP rms was 16.95 % L, now 1.95); no constant was tuned. The ARCAS CP data were used to choose the fin interpolation (D-056) and no longer count as held out (D-061). The tables below are printed by `packages/formats/src/wind-tunnel.validation.test.ts`, which pins the reported errors as regression values (a physics change that moves them fails the test and must be explained in the commit message, CLAUDE.md 7.6).
+**Date:** 2026-10-12. **Status:** regenerated after Part C item 7 (plan 0032, D-069: DATCOM body base drag; the RM A53D02 free-flight drag with square fins moved from +23 % to −4 % subsonic and from +35 % to +6 % transonic), item 4 (plan 0029, D-066: ARCAS fins now 'double-wedge', the NACA fins reported as 'wedge' and 'square') and item 3 (plan 0028, D-065; before it the ARCAS supersonic CP rms was 16.95 % L, now 1.95); no constant was tuned. The ARCAS CP data were used to choose the fin interpolation (D-056) and no longer count as held out (D-061). The tables below are printed by `packages/formats/src/wind-tunnel.validation.test.ts`, which pins the reported errors as regression values (a physics change that moves them fails the test and must be explained in the commit message, CLAUDE.md 7.6).
 
 ## What was compared
 
@@ -92,19 +92,19 @@ Lowest rms: cubic-hermite; default in code: cubic-hermite.
 
 | Mach  | regime     | measured | predicted forebody | predicted total | error |
 | ----- | ---------- | -------- | ------------------ | --------------- | ----- |
-| 0.6   | subsonic   | 0.301    | 0.280              | 0.351           | -7 %  |
-| 0.7   | subsonic   | 0.310    | 0.283              | 0.361           | -9 %  |
-| 0.8   | transonic  | 0.325    | 0.290              | 0.376           | -11 % |
-| 0.85  | transonic  | 0.344    | 0.298              | 0.389           | -13 % |
-| 0.9   | transonic  | 0.385    | 0.313              | 0.408           | -19 % |
-| 0.95  | transonic  | 0.494    | 0.342              | 0.443           | -31 % |
-| 0.975 | transonic  | 0.559    | 0.366              | 0.469           | -35 % |
-| 1     | transonic  | 0.657    | 0.405              | 0.510           | -38 % |
-| 1.025 | transonic  | 0.692    | 0.437              | 0.540           | -37 % |
-| 1.05  | transonic  | 0.692    | 0.460              | 0.560           | -34 % |
-| 1.1   | transonic  | 0.675    | 0.470              | 0.566           | -30 % |
-| 1.15  | transonic  | 0.642    | 0.455              | 0.547           | -29 % |
-| 1.2   | transonic  | 0.600    | 0.427              | 0.515           | -29 % |
+| 0.6   | subsonic   | 0.301    | 0.280              | 0.298           | -7 %  |
+| 0.7   | subsonic   | 0.310    | 0.283              | 0.302           | -9 %  |
+| 0.8   | transonic  | 0.325    | 0.290              | 0.310           | -11 % |
+| 0.85  | transonic  | 0.344    | 0.298              | 0.319           | -13 % |
+| 0.9   | transonic  | 0.385    | 0.313              | 0.336           | -19 % |
+| 0.95  | transonic  | 0.494    | 0.342              | 0.372           | -31 % |
+| 0.975 | transonic  | 0.559    | 0.366              | 0.404           | -35 % |
+| 1     | transonic  | 0.657    | 0.405              | 0.449           | -38 % |
+| 1.025 | transonic  | 0.692    | 0.437              | 0.474           | -37 % |
+| 1.05  | transonic  | 0.692    | 0.460              | 0.483           | -34 % |
+| 1.1   | transonic  | 0.675    | 0.470              | 0.483           | -30 % |
+| 1.15  | transonic  | 0.642    | 0.455              | 0.466           | -29 % |
+| 1.2   | transonic  | 0.600    | 0.427              | 0.439           | -29 % |
 | 1.5   | supersonic | 0.500    | 0.361              | 0.432           | -28 % |
 | 1.8   | supersonic | 0.440    | 0.319              | 0.378           | -28 % |
 | 2.3   | supersonic | 0.345    | 0.272              | 0.318           | -21 % |
@@ -125,21 +125,21 @@ Lowest rms: cubic-hermite; default in code: cubic-hermite.
 | boat tail pressure (γ = 1.867)                     | 0.055 | 0.074 | 0.078  | 0.055 | 0.028  | 0.018  |
 | fin pressure (double-wedge, LE 0.0000 + TE 0.0000) | 0.000 | 0.000 | 0.000  | 0.000 | 0.000  | 0.000  |
 | fin wave drag (DATCOM transonic-chart)             | 0.000 | 0.000 | 0.021  | 0.040 | 0.016  | 0.010  |
-| base (full)                                        | 0.070 | 0.095 | 0.101  | 0.070 | 0.036  | 0.023  |
-| total C_D0                                         | 0.351 | 0.408 | 0.560  | 0.432 | 0.266  | 0.188  |
+| base (full), DATCOM 4.2.3.1                        | 0.018 | 0.023 | 0.023  | 0.070 | 0.036  | 0.023  |
+| total C_D0                                         | 0.298 | 0.336 | 0.483  | 0.432 | 0.266  | 0.188  |
 
 ## NACA RM A53D02 C_D at zero lift (free flight, base included; digitisation ±0.01)
 
 | Mach | regime     | Re      | measured | square fins | wedge fins | error (square) | error (wedge) |
 | ---- | ---------- | ------- | -------- | ----------- | ---------- | -------------- | ------------- |
-| 0.6  | subsonic   | 8.60e+5 | 0.358    | 0.439       | 0.417      | 23 %           | 17 %          |
-| 0.91 | transonic  | 1.28e+6 | 0.363    | 0.528       | 0.504      | 45 %           | 39 %          |
-| 1.04 | transonic  | 1.54e+6 | 0.536    | 0.672       | 0.646      | 25 %           | 21 %          |
-| 1.3  | supersonic | 1.90e+6 | 0.512    | 0.537       | 0.510      | 5 %            | -0 %          |
-| 1.47 | supersonic | 2.20e+6 | 0.492    | 0.485       | 0.458      | -1 %           | -7 %          |
+| 0.6  | subsonic   | 8.60e+5 | 0.358    | 0.344       | 0.322      | -4 %           | -10 %         |
+| 0.91 | transonic  | 1.28e+6 | 0.363    | 0.391       | 0.367      | 8 %            | 1 %           |
+| 1.04 | transonic  | 1.54e+6 | 0.536    | 0.558       | 0.532      | 4 %            | -1 %          |
+| 1.3  | supersonic | 1.90e+6 | 0.512    | 0.410       | 0.383      | -20 %          | -25 %         |
+| 1.47 | supersonic | 2.20e+6 | 0.492    | 0.466       | 0.440      | -5 %           | -11 %         |
 | 1.53 | supersonic | 2.20e+6 | 0.492    | 0.471       | 0.444      | -4 %           | -10 %         |
-| 1.45 | supersonic | 2.20e+6 | 0.474    | 0.490       | 0.463      | 3 %            | -2 %          |
-| 1.46 | supersonic | 2.20e+6 | 0.458    | 0.487       | 0.460      | 6 %            | 1 %           |
+| 1.45 | supersonic | 2.20e+6 | 0.474    | 0.459       | 0.432      | -3 %           | -9 %          |
+| 1.46 | supersonic | 2.20e+6 | 0.458    | 0.463       | 0.436      | 1 %            | -5 %          |
 | 1.56 | supersonic | 2.30e+6 | 0.455    | 0.464       | 0.436      | 2 %            | -4 %          |
 | 1.58 | supersonic | 2.30e+6 | 0.443    | 0.460       | 0.432      | 4 %            | -3 %          |
 | 1.94 | supersonic | 2.90e+6 | 0.447    | 0.395       | 0.366      | -12 %          | -18 %         |
@@ -164,12 +164,12 @@ Lowest rms: cubic-hermite; default in code: cubic-hermite.
 | 10   | hypersonic | 1.59e+7 | 0.097    | 0.131       | 0.096      | 35 %           | -1 %          |
 
 - square fins:
-  - subsonic: n=1 rms 22.55 % max 22.55 % mean +22.55 %
-  - transonic: n=2 rms 36.81 % max 45.48 % mean +35.40 %
-  - supersonic: n=19 rms 8.70 % max 16.25 % mean -0.15 %
+  - subsonic: n=1 rms 4.04 % max 4.04 % mean -4.04 %
+  - transonic: n=2 rms 6.20 % max 7.76 % mean +5.92 %
+  - supersonic: n=19 rms 9.71 % max 19.89 % mean -2.27 %
   - hypersonic: n=8 rms 21.43 % max 35.36 % mean +18.29 %
 - wedge fins:
-  - subsonic: n=1 rms 16.60 % max 16.60 % mean +16.60 %
-  - transonic: n=2 rms 31.13 % max 38.91 % mean +29.74 %
-  - supersonic: n=19 rms 12.43 % max 22.36 % mean -10.00 %
+  - subsonic: n=1 rms 9.98 % max 9.98 % mean -9.98 %
+  - transonic: n=2 rms 0.97 % max 1.19 % mean +0.26 %
+  - supersonic: n=19 rms 14.00 % max 25.15 % mean -12.13 %
   - hypersonic: n=8 rms 11.37 % max 21.54 % mean -6.91 %

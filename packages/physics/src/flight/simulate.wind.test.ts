@@ -32,6 +32,7 @@ const base: SimulationOptions = {
   aerodynamics: 'niskanen',
   finRollReduction: false,
   baseDragMotorRule: 'always',
+  baseDragMethod: 'niskanen',
   integrator: { kind: 'rk4', timeStep: seconds(0.005) },
   maxTime: seconds(60),
   degreesOfFreedom: 6,

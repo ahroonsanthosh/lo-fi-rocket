@@ -8,6 +8,7 @@ import type { WindModel } from '../environment/wind.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import type { Metres, Newtons, Seconds } from '../units/si.js';
+import type { BaseDragMethod } from '../drag/drag.js';
 import type { GravityModel } from './gravity.js';
 
 /** A recovery device and when it deploys (Niskanen Table 4.2 p. 69; events with optional delays). */
@@ -86,6 +87,8 @@ export interface SimulationOptions {
   readonly finRollReduction: boolean;
   /** Base drag motor area rule (D-035). */
   readonly baseDragMotorRule: 'while-thrusting' | 'always';
+  /** Body base drag method (D-069); defaults to the drag model's default. */
+  readonly baseDragMethod?: BaseDragMethod;
   readonly integrator: IntegratorOptions;
   readonly maxTime: Seconds;
   /** 6: the main simulator; 3: the point-mass cross-check (velocity-aligned axis, zero angle of attack). */

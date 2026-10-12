@@ -40,6 +40,7 @@ const OR: SimulationOptions = {
   aerodynamics: 'niskanen',
   finRollReduction: false,
   baseDragMotorRule: 'always',
+  baseDragMethod: 'niskanen',
   integrator: { kind: 'rk4', timeStep: seconds(0.001) },
   maxTime: seconds(120),
   degreesOfFreedom: 6,

@@ -384,3 +384,9 @@ Status: nothing physical is implemented yet. Entries below are placeholders for 
 - **Empirical criterion:** TN 4197's formula was "adjusted until a reasonable coherence" with the data of its figure 3, and the boundary between safe and unsafe wings is a shaded band; a ratio V_f/V near 1 is uncertain either way (R2 is at 1.10). It covers bending-torsion flutter of thin solid panels; it does not cover fin-can or root-joint flexibility, composite lay-ups (whose effective G_E must be measured, eq. 12), or stall flutter. Flights affected: every flight; the margin is a screening value, not a guarantee.
 - **Materials:** only wood, magnesium, aluminium, titanium and steel have sourced moduli (TN 4197 figure 3, read at about ±5 %); plywood is taken as wood; fibreglass, carbon and balsa need a user-entered value, without which the flight carries a "not checked" note.
 - **Constant thickness ratio:** the formula assumes constant t/c; model rocket fins have constant thickness, so t/c is evaluated on the mid-span chord.
+
+## Body base drag (plan 0032, D-069)
+
+- **Fins and stings at the base:** the DATCOM correlation is for an isolated body and notes that fins and stings change the base pressure; the sting-mounted Blue Scout's measured base force is 58 % to 68 % above it (subsonic and transonic). Flights affected: rockets with large blunt fin trailing edges at the base; their drag may be under-predicted (apogee over-predicted).
+- **Supersonic base drag:** above Mach 1.295 the DATCOM guide ends; the base drag is faired to Niskanen's eq. (3.94) at Mach 1.5 and follows it above. The DATCOM supersonic base-pressure charts (figures 4.2.3.1-50, -55 and -60) are not implemented. The RM-10 flight drag is 7.6 % low on average with the fairing.
+- **Guide-curve range:** a subsonic base drag above 0.12 or below −0.19 (on the base area) is outside figure 4.2.3.1-24; eq. (3.94) is used with a warning.

@@ -57,9 +57,10 @@ describe('FlightPanel (plan 0014)', () => {
     const results = await screen.findByRole('region', { name: 'Flight' });
     const dd = (label: string): string =>
       within(results).getByText(label).nextElementSibling?.textContent ?? '';
-    // docs/reports/phase-2-acceptance.md, displayed modes: apogee 167.33 m, maximum velocity 62.26 m/s, rail exit 18.45 m/s
-    expect(dd('Apogee')).toBe('167.33 m');
-    expect(dd('Maximum velocity')).toBe('62.3 m/s');
+    // Displayed modes with the DATCOM base drag (D-069): apogee 172.94 m, maximum velocity 63.0 m/s (167.33 m, 62.3 m/s in
+    // docs/reports/phase-2-acceptance.md with Niskanen's base drag), rail exit 18.45 m/s.
+    expect(dd('Apogee')).toBe('172.94 m');
+    expect(dd('Maximum velocity')).toBe('63.0 m/s');
     expect(dd('Rail exit velocity')).toMatch(/^18\.5 m\/s at 0\.29\d s$/);
     expect(within(results).getByText('No warnings.')).toBeInTheDocument();
     const events = within(results).getByRole('list', { name: 'Events' });
@@ -150,7 +151,7 @@ describe('FlightPanel (plan 0014)', () => {
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const warnings = await screen.findByRole('list', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/transonic|supersonic/);
-    expect(warnings).toHaveTextContent(/wind-tunnel-validation/);
+    expect(warnings).toHaveTextContent(/held-out-validation/);
   });
 
   it('exports the CSV through the save service', async () => {

@@ -238,6 +238,7 @@ export function designSimulationOptions(
     aerodynamics: 'niskanen',
     finRollReduction: mode === 'displayed',
     baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'always',
+    baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
     integrator: design.simulation.integrator,
     maxTime: design.simulation.maxTime,
     degreesOfFreedom: 6,

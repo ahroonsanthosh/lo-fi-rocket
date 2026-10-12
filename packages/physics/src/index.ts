@@ -394,3 +394,17 @@ export {
   type WingChartCurve,
   type WingChartPanel,
 } from './stability/datcom-fin-data.js';
+export {
+  DATCOM_BASE_GUIDE_END,
+  DATCOM_BASE_SUBSONIC_MACH,
+  DATCOM_FIGURE_4231_24,
+  datcomBaseDragAtMach,
+  datcomSubsonicBaseDrag,
+  type BaseDragGuideCurve,
+  type DatcomBodyBaseInput,
+} from './drag/datcom-base-drag.js';
+export {
+  DATCOM_BASE_FAIRING_END,
+  DEFAULT_BASE_DRAG_METHOD,
+  type BaseDragMethod,
+} from './drag/drag.js';

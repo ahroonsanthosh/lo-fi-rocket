@@ -87,6 +87,7 @@ function options(setting: Setting, integrator: SimulationOptions['integrator']):
     aerodynamics: 'niskanen',
     finRollReduction: displayed,
     baseDragMotorRule: displayed ? 'while-thrusting' : 'always',
+    baseDragMethod: displayed ? 'datcom' : 'niskanen',
     integrator,
     maxTime: seconds(600),
     degreesOfFreedom: 6,

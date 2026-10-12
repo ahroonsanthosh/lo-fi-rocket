@@ -419,3 +419,10 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** Completion prompt Part C item 6 ("material shear moduli (sourced)").
 - **Open question for the owner:** a sourced shear modulus for fibreglass (G10/FR-4) and carbon laminates would let R3, R5 and most high-power designs be checked by default (they need 0.18 and 0.42 GPa respectively).
 - **Results:** R1 V_f/V 3.41, R2 1.10, R4 2.37 (plywood as wood); R3 and R5 not evaluated.
+
+## D-069 (2026-10-12): Body base drag from the DATCOM (eq. 4.2.3.1-b and figure 4.2.3.1-24) by default; Niskanen's in the OpenRocket-equivalent mode
+
+- **Decision:** The default base drag is the DATCOM's (DRAG-21, DRAG-22) to Mach 1.295, faired to Niskanen's eq. (3.94) at Mach 1.5 and eq. (3.94) above. Niskanen's eq. (3.94) remains selectable (`baseDragMethod: 'niskanen'`) and is what the OpenRocket-equivalent mode uses, as OpenRocket does.
+- **Why:** Completion prompt Part C item 7. The subsonic over-prediction was the base term: eq. (3.94) charges a blunt cylinder's base pressure on every base. On the held-out data the DATCOM method brings subsonic C_D from 34.7 % to 7.1 % rms (target 7 %) and transonic from 36.8 % to 21.3 %; the free-flight NACA RM A53D02 (cylindrical base) improves from +23/+35 % to −4/+6 %.
+- **Conflict recorded for the owner (CLAUDE.md 11 (a)):** the Blue Scout's directly measured base axial force (sting-mounted, wedge fins with blunt bases at the base) agrees with eq. (3.94) (+9 %) and not with the DATCOM (−58 %). The DATCOM states that fins and stings change the base pressure and gives no correction. The free-flight evidence was taken as deciding; if the owner prefers eq. (3.94) for cylindrical bases, it is one option away.
+- **Consequences:** displayed-mode apogees rise by up to 4.6 % on the reference rockets (R5), within the Phase 2 tolerance against OpenRocket; the OpenRocket-equivalent comparisons and the golden series (which use that mode) are unchanged. The supersonic base charts of the DATCOM are future work.

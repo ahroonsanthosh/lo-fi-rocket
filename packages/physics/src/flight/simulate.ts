@@ -411,6 +411,9 @@ function derive(
           ? {}
           : { motor: { diameter: metres(ctx.motorDiameter), thrusting } }),
         baseDragMotorRule: ctx.options.baseDragMotorRule,
+        ...(ctx.options.baseDragMethod === undefined
+          ? {}
+          : { baseDragMethod: ctx.options.baseDragMethod }),
         referenceDiameter: metres(ctx.referenceDiameter),
       });
       cd0 = drag.cd0;

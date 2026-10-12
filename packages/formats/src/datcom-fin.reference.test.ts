@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  DATCOM_FIGURE_4231_24,
   DATCOM_FIGURE_4132_56,
   DATCOM_FIGURE_4132_56G_LEFT,
   DATCOM_FIGURE_4132_60,
@@ -103,5 +104,18 @@ describe('DATCOM fin charts against the digitised files', () => {
     const f = load('datcom-figure-4-3-2-2-37.json') as Fig37;
     expect(plain(DATCOM_FIGURE_4322_37A)).toEqual(f.panels['a']?.points);
     expect(plain(DATCOM_FIGURE_4322_37B)).toEqual(f.panels['b']?.points);
+  });
+});
+
+describe('DATCOM figure 4.2.3.1-24 against the digitised file (D-069)', () => {
+  it('six guide curves', () => {
+    const f = load('datcom-figure-4-2-3-1-24.json') as {
+      curves: Record<string, { start: number; points: number[][] }>;
+    };
+    const curves = Object.values(f.curves);
+    expect(DATCOM_FIGURE_4231_24.map((c) => c.start)).toEqual(curves.map((c) => c.start));
+    curves.forEach((c, i) => {
+      expect(plain(DATCOM_FIGURE_4231_24[i]?.points ?? [])).toEqual(c.points);
+    });
   });
 });
