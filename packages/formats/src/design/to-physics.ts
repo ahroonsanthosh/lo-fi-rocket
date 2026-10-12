@@ -239,6 +239,7 @@ export function designSimulationOptions(
     finRollReduction: mode === 'displayed',
     baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'always',
     baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
+    largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,
     maxTime: design.simulation.maxTime,
     degreesOfFreedom: 6,

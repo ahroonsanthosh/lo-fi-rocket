@@ -28,6 +28,7 @@ const OR: SimulationOptions = {
   finRollReduction: false,
   baseDragMotorRule: 'always',
   baseDragMethod: 'niskanen',
+  largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(60),
   degreesOfFreedom: 6,
@@ -44,12 +45,20 @@ describe('angle-of-attack limit of the aerodynamic model (D-046)', () => {
     const last = r.events.at(-1);
     expect(last?.kind).toBe('model-limit');
     expect(last?.detail).toMatch(/angle of attack .* 90°/);
-    expect(r.warnings.some((w) => w.includes('small angles of attack'))).toBe(true);
+    expect(r.warnings.some((w) => w.includes('small-angle normal force model'))).toBe(true);
     // Every moving sample before the limit point stays within the model; at the bisected apogee the
     // velocity is ~0 and its direction (hence the angle) is not meaningful, and the last sample is the limit state.
     for (const s of r.samples.slice(0, -1)) {
       if (s.speed > 1e-6) expect(s.angleOfAttack).toBeLessThanOrEqual(Math.PI / 2 + 1e-6);
     }
+  });
+  it('with the DATCOM large-angle model (D-070) the same ballistic R1 flies on through apogee and lands', () => {
+    const r = simulateFlight(BALLISTIC, { ...OR, largeAngleMethod: 'datcom' });
+    expect(r.modes.largeAngleMethod).toBe('datcom');
+    expect(r.summary.endReason).toBe('landing');
+    expect(r.summary.apogee).toBeCloseTo(168.866, 1);
+    expect(r.summary.groundHitVelocity).toBeGreaterThan(0);
+    expect(r.warnings.some((w) => w.includes('above 60°'))).toBe(true);
   });
   it('the adaptive integrator reaches the same limit quickly instead of stalling', () => {
     const start = performance.now();

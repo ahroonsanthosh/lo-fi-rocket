@@ -9,6 +9,7 @@ import type { PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import type { Metres, Newtons, Seconds } from '../units/si.js';
 import type { BaseDragMethod } from '../drag/drag.js';
+import type { LargeAngleMethod } from './aerodynamics.js';
 import type { GravityModel } from './gravity.js';
 
 /** A recovery device and when it deploys (Niskanen Table 4.2 p. 69; events with optional delays). */
@@ -89,6 +90,11 @@ export interface SimulationOptions {
   readonly baseDragMotorRule: 'while-thrusting' | 'always';
   /** Body base drag method (D-069); defaults to the drag model's default. */
   readonly baseDragMethod?: BaseDragMethod;
+  /**
+   * Normal force at large angles of attack (D-070): 'datcom' continues a flight through 180° (HA-1 to HA-10);
+   * 'linear' keeps the small-angle model and ends the flight at 90° (D-046). Defaults to 'datcom'.
+   */
+  readonly largeAngleMethod?: LargeAngleMethod;
   readonly integrator: IntegratorOptions;
   readonly maxTime: Seconds;
   /** 6: the main simulator; 3: the point-mass cross-check (velocity-aligned axis, zero angle of attack). */

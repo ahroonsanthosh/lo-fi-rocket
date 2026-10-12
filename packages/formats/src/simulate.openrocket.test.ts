@@ -5,7 +5,7 @@
  * against reference/rockets/values.csv: apogee within 5 %, maximum
  * velocity within 3 %. The tighter bounds are the observed agreement.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -183,6 +183,7 @@ const options = (windX: number): SimulationOptions => ({
   finRollReduction: false,
   baseDragMotorRule: 'always',
   baseDragMethod: 'niskanen',
+  largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(200),
   degreesOfFreedom: 6,
@@ -218,4 +219,46 @@ describe('reference flights against OpenRocket (apogee 5 %, maximum velocity 3 %
       });
     }
   }
+});
+
+/**
+ * The displayed mode (roll reduction, the base drag motor rule while thrusting, DATCOM base drag D-069, the
+ * DATCOM large-angle model D-070) against the same OpenRocket references, within the Phase 2 tolerances. The
+ * table (REFERENCE_REPORT=<path>) also shows the displayed mode with the small-angle model, to isolate D-070.
+ */
+const displayed = (windX: number, largeAngleMethod: 'datcom' | 'linear'): SimulationOptions => ({
+  ...options(windX),
+  finRollReduction: true,
+  baseDragMotorRule: 'while-thrusting',
+  baseDragMethod: 'datcom',
+  largeAngleMethod,
+});
+const displayedRows: string[] = [
+  '| rocket | wind | OpenRocket apogee | displayed apogee | difference | with the small-angle model | OpenRocket max velocity | displayed | difference |',
+  '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+];
+describe('displayed mode against OpenRocket (Phase 2 tolerances: apogee 5 %, maximum velocity 3 %)', () => {
+  for (const c of CASES) {
+    for (const [wind, expected] of [
+      [0, c.wind0],
+      [5, c.wind5],
+    ] as const) {
+      it(`${c.file}, wind ${String(wind)} m/s`, () => {
+        const s = simulateFlight(vehicleFor(c), displayed(wind, 'datcom')).summary;
+        const lin = simulateFlight(vehicleFor(c), displayed(wind, 'linear')).summary;
+        expect(s.endReason).toBe('landing');
+        expect(rel(s.apogee, expected.apogee), 'apogee').toBeLessThan(0.05);
+        expect(rel(s.maxVelocity, expected.maxVelocity), 'max velocity').toBeLessThan(0.03);
+        const pct = (a: number, b: number): string => `${(((a - b) / b) * 100).toFixed(2)} %`;
+        displayedRows.push(
+          `| ${c.file} | ${String(wind)} | ${expected.apogee.toFixed(1)} m | ${s.apogee.toFixed(1)} m | ${pct(s.apogee, expected.apogee)} | ${lin.apogee.toFixed(1)} m (${pct(lin.apogee, expected.apogee)}) | ${expected.maxVelocity.toFixed(1)} m/s | ${s.maxVelocity.toFixed(1)} m/s | ${pct(s.maxVelocity, expected.maxVelocity)} |`,
+        );
+      });
+    }
+  }
+  it('writes the table', () => {
+    const path = process.env['REFERENCE_REPORT'];
+    if (path !== undefined && path !== '') writeFileSync(path, `${displayedRows.join('\n')}\n`);
+    expect(displayedRows.length).toBe(2 + 2 * CASES.length);
+  });
 });

@@ -27,7 +27,13 @@ import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.j
 import { finiteResult } from '../numerics/finite.js';
 import { maximumBodyDiameter } from '../stability/barrowman.js';
 import { dimensionless, metres, seconds, type Metres, type Seconds } from '../units/si.js';
-import { aerodynamicForcesAndMoments } from './aerodynamics.js';
+import {
+  aerodynamicForcesAndMoments,
+  normalForceAtAngle,
+  DEFAULT_LARGE_ANGLE_METHOD,
+  type LargeAngleMethod,
+} from './aerodynamics.js';
+import { finLargeAngleAvailability } from '../stability/datcom-large-angle.js';
 import {
   bodyToWorld,
   flightParameters,
@@ -150,6 +156,7 @@ export interface FlightSample {
   readonly cg: number;
   /** CP at the current angle of attack; NaN when no aerodynamics. */
   readonly cp: number;
+  /** (CP − CG)/d with the CP of the in-flight margin: with the DATCOM model the more forward of its CP and the small-angle model's (D-070). */
   readonly stabilityCalibers: number;
 }
 
@@ -210,13 +217,17 @@ export interface StabilityPoint {
   readonly angleOfAttack: number;
   readonly cp: number;
   readonly cg: number;
+  /** The normal force model whose CP gave this margin, the more forward of the two (D-070). */
+  readonly model: LargeAngleMethod;
 }
 
 /**
- * D-046: the normal force model of Niskanen chapter 3 (Barrowman's fins as
- * flat plates at small angles, p. 26; body terms with sin α) is applied up
- * to 90°, the limit of the thesis's own angle-of-attack drag scaling
- * (p. 53). Beyond it a six-degree-of-freedom flight is not continued.
+ * D-046: the small-angle normal force model of Niskanen chapter 3 (Barrowman's
+ * fins as flat plates at small angles, p. 26; body terms with sin α) is
+ * applied up to 90°, the limit of the thesis's own angle-of-attack drag
+ * scaling (p. 53); beyond it a six-degree-of-freedom flight is not continued.
+ * With the DATCOM large-angle model (D-070) the limit applies only at Mach 1
+ * and above.
  */
 export const AERO_MAX_ANGLE_OF_ATTACK = Math.PI / 2;
 
@@ -236,6 +247,8 @@ export interface FlightResult {
     readonly windSeed: number | undefined;
     /** The label of the imported drag curve when one replaced the drag model (D-047). */
     readonly dragCurve: string | undefined;
+    /** The large-angle method in effect (D-070). */
+    readonly largeAngleMethod: LargeAngleMethod;
   };
   /** Present for fixed-step RK4 runs: the stability and accuracy check that every step passed (D-063). */
   readonly stepCheck: StepCheck | undefined;
@@ -305,6 +318,8 @@ interface Context {
   readonly deployedArea: { area: number }; // Σ C_D A of deployed devices (mutable through the run)
   /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
   readonly motorState: { burnedOut: boolean };
+  /** The large-angle method in effect (D-070): the requested one, or 'linear' when a fin set is not covered. */
+  readonly largeAngleMethod: LargeAngleMethod;
 }
 
 function unpack(y: readonly number[]): {
@@ -452,6 +467,7 @@ function derive(
         options: {
           finRollReduction: ctx.options.finRollReduction,
           referenceDiameter: metres(ctx.referenceDiameter),
+          largeAngleMethod: ctx.largeAngleMethod,
         },
       });
       warnings.push(...aero.warnings);
@@ -599,6 +615,32 @@ interface PendingTimed {
   readonly action: () => void;
 }
 
+/**
+ * D-070: the large-angle method in effect for a flight. 'datcom' needs every
+ * fin set to be covered by the DATCOM charts (HA-5, HA-6); otherwise the
+ * small-angle model and the 90° limit (D-046) apply, with a warning naming
+ * the reason.
+ */
+function effectiveLargeAngleMethod(
+  vehicle: FlightVehicle,
+  options: SimulationOptions,
+  warnings: Set<string>,
+): LargeAngleMethod {
+  const requested = options.largeAngleMethod ?? DEFAULT_LARGE_ANGLE_METHOD;
+  if (requested === 'linear') return 'linear';
+  for (const p of vehicle.components) {
+    if (p.component.kind !== 'finSet') continue;
+    const av = finLargeAngleAvailability(p.component);
+    if (!av.available) {
+      warnings.add(
+        `The large-angle model (DATCOM, D-070) does not cover this fin set: ${av.reason}. The small-angle model is used instead, and the flight ends if the angle of attack passes 90° (D-046).`,
+      );
+      return 'linear';
+    }
+  }
+  return 'datcom';
+}
+
 /** Run the simulation. */
 export function simulateFlight(vehicle: FlightVehicle, options: SimulationOptions): FlightResult {
   const launch = validateLaunch(options.site, options.rail);
@@ -636,6 +678,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     deployedArea: { area: 0 },
     motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
+    largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, warnings),
   };
 
   const events: FlightEvent[] = [];
@@ -739,17 +782,52 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (!recordNow && phase !== 'powered' && phase !== 'coast') return;
     const { derived } = derive(ctx, phase, t, y);
     // Plan 0030: the in-flight margin at every accepted step of powered flight and coast.
-    if ((phase === 'powered' || phase === 'coast') && Number.isFinite(derived.cp)) {
-      const calibers = (derived.cp - derived.cg) / referenceDiameter;
+    // D-070: the margin uses the more forward of the DATCOM CP and the small-angle model's CP (the conservative
+    // choice: they differ at moderate angles, see the decision); the minimum covers nose-forward flight (α ≤ 90°).
+    const f = derived.flight;
+    let cp = derived.cp;
+    let model: StabilityPoint['model'] = ctx.largeAngleMethod;
+    if (
+      ctx.largeAngleMethod === 'datcom' &&
+      f !== undefined &&
+      options.degreesOfFreedom === 6 &&
+      phase !== 'descent' &&
+      phase !== 'landed' &&
+      Number.isFinite(cp) &&
+      (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK
+    ) {
+      const linear = normalForceAtAngle(
+        vehicle.components,
+        f.mach,
+        f.angleOfAttack,
+        f.lateralAirflowAngle,
+        {
+          finRollReduction: options.finRollReduction,
+          referenceDiameter: metres(ctx.referenceDiameter),
+          largeAngleMethod: 'linear',
+        },
+      ).cp;
+      if (linear < cp) {
+        cp = linear;
+        model = 'linear';
+      }
+    }
+    if (
+      (phase === 'powered' || phase === 'coast') &&
+      Number.isFinite(cp) &&
+      (f === undefined || (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK)
+    ) {
+      const calibers = (cp - derived.cg) / referenceDiameter;
       const current = lowest[phase];
       if (current === undefined || calibers < current.calibers) {
         lowest[phase] = {
           calibers,
           time: t,
-          mach: derived.flight?.mach ?? Number.NaN,
-          angleOfAttack: derived.flight?.angleOfAttack ?? Number.NaN,
-          cp: derived.cp,
+          mach: f?.mach ?? Number.NaN,
+          angleOfAttack: f?.angleOfAttack ?? Number.NaN,
+          cp,
           cg: derived.cg,
+          model,
         };
       }
     }
@@ -796,9 +874,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       mass: derived.mass,
       cg: derived.cg,
       cp: derived.cp,
-      stabilityCalibers: Number.isNaN(derived.cp)
-        ? Number.NaN
-        : (derived.cp - derived.cg) / referenceDiameter,
+      stabilityCalibers: Number.isNaN(cp) ? Number.NaN : (cp - derived.cg) / referenceDiameter,
     });
     for (const w of derived.warnings) warnings.add(w);
     lastRecorded = t;
@@ -1034,19 +1110,25 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         const f = sampleFlight(ctx, phase, t, yy);
         return f === undefined ? 0 : f.angleOfAttack;
       };
-      if (aoa(y) > AERO_MAX_ANGLE_OF_ATTACK) {
+      // D-070: the DATCOM model continues through 180° below Mach 1; the 90° limit remains otherwise.
+      const beyond = (yy: readonly number[]): boolean => {
+        const f = sampleFlight(ctx, phase, t, yy);
+        if (f === undefined || f.angleOfAttack <= AERO_MAX_ANGLE_OF_ATTACK) return false;
+        return ctx.largeAngleMethod === 'linear' || (f.mach as number) >= 1;
+      };
+      if (beyond(y)) {
         // Already beyond the limit at the start of the step (a rocket falling tail-first from apogee).
         yNext = y;
         tNext = t;
         fired = { kind: 'model-limit', g: aoa };
-      } else if (aoa(yNext) > AERO_MAX_ANGLE_OF_ATTACK) {
+      } else if (beyond(yNext)) {
         let lo = 0;
         let hi = hTry;
         let yHi = yNext;
         for (let i = 0; i < 80 && hi - lo > 1e-10; i++) {
           const mid = (lo + hi) / 2;
           const yMid = normaliseOrientation(stepOnce(mid).yNext);
-          if (aoa(yMid) > AERO_MAX_ANGLE_OF_ATTACK) {
+          if (beyond(yMid)) {
             hi = mid;
             yHi = yMid;
           } else lo = mid;
@@ -1137,13 +1219,18 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           endReason = 'model-limit';
           const f = sampleFlight(ctx, phase, t, y);
           const deg = f === undefined ? Number.NaN : ((f.angleOfAttack as number) * 180) / Math.PI;
+          const supersonic = ctx.largeAngleMethod === 'datcom';
           events.push({
             kind: 'model-limit',
             time: seconds(t),
-            detail: `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
+            detail: supersonic
+              ? `angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above, beyond the large-angle model (D-070); the flight is not continued`
+              : `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
           });
           warnings.add(
-            `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is a model for small angles of attack and is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
+            supersonic
+              ? `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above: the large-angle model (DATCOM, D-070) covers fins beyond 90° only below Mach 1, and the DATCOM supersonic high-angle charts are not implemented. The rocket was flying backwards or tumbling at supersonic speed.`
+              : `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
           );
           break;
         }
@@ -1248,6 +1335,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       degreesOfFreedom: options.degreesOfFreedom,
       gravitySeaLevel: seaLevelGravity(options.gravity),
       windSeed: options.wind.kind === 'turbulent' ? options.wind.seed : undefined,
+      largeAngleMethod: ctx.largeAngleMethod,
     },
     stepCheck,
   };

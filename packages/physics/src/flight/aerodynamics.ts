@@ -10,7 +10,7 @@
  * §3.4.7 p. 53 (axial drag at angle of attack, DRAG-14).
  */
 import { axialDragScaling } from '../drag/drag.js';
-import { InvalidInputError } from '../errors.js';
+import { InvalidInputError, NotImplementedError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
@@ -18,6 +18,11 @@ import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
 import { datcomBodyAssembly, noseCylinderTermAtMach } from '../stability/datcom-body.js';
 import { finAfterbodyLength } from '../stability/datcom-fin.js';
+import {
+  finLargeAngle,
+  jorgensenPotentialFactor,
+  jorgensenViscousFactor,
+} from '../stability/datcom-large-angle.js';
 import {
   busemannCoefficients,
   finSetTerm,
@@ -60,7 +65,17 @@ export interface AeroModeOptions {
   readonly transonicFinInterpolation?: TransonicFinInterpolation;
   /** Supersonic fin method; defaults to `DEFAULT_SUPERSONIC_FIN_METHOD` (D-065). */
   readonly supersonicFinMethod?: SupersonicFinMethod;
+  /**
+   * Normal force at large angles of attack (D-070): 'datcom' (HA-1 to HA-10, 0 to 180°, the displayed
+   * mode) or 'linear' (Niskanen's small-angle terms with the 90° limit of D-046, the OpenRocket-equivalent
+   * mode); defaults to `DEFAULT_LARGE_ANGLE_METHOD`.
+   */
+  readonly largeAngleMethod?: LargeAngleMethod;
 }
+
+/** D-070. */
+export type LargeAngleMethod = 'datcom' | 'linear';
+export const DEFAULT_LARGE_ANGLE_METHOD: LargeAngleMethod = 'datcom';
 
 export interface AeroInputs {
   readonly components: readonly PlacedComponent[];
@@ -224,8 +239,16 @@ export function normalForceAtAngle(
   angleOfAttack: Radians,
   lateralAirflowAngle: Radians,
   options: AeroModeOptions,
-): {
+): NormalForceResult {
+  return (options.largeAngleMethod ?? DEFAULT_LARGE_ANGLE_METHOD) === 'datcom'
+    ? normalForceLargeAngle(components, mach, angleOfAttack, lateralAirflowAngle, options)
+    : normalForceLinear(components, mach, angleOfAttack, lateralAirflowAngle, options);
+}
+
+export interface NormalForceResult {
+  /** C_N at α, on A_ref. */
   cn: number;
+  /** C_N/α (eq. 3.8), or the slope at α = 0. */
   cnAlpha: number;
   cp: number;
   contributions: AeroContribution[];
@@ -234,7 +257,16 @@ export function normalForceAtAngle(
   referenceDiameter: number;
   bodyPieces: BodyPiece[];
   finCps: { fin: TrapezoidFinSetComponent; cp: number }[];
-} {
+}
+
+/** The small-angle model (the 'linear' large-angle method, D-046). */
+function normalForceLinear(
+  components: readonly PlacedComponent[],
+  mach: Mach,
+  angleOfAttack: Radians,
+  lateralAirflowAngle: Radians,
+  options: AeroModeOptions,
+): NormalForceResult {
   const a: number = angleOfAttack;
   if (!(a >= 0 && a <= Math.PI))
     throw new InvalidInputError('angle of attack', a, 'must be between 0 and 180 degrees');
@@ -373,6 +405,290 @@ export function normalForceAtAngle(
     finCps,
   };
 }
+
+/** DRAG-14 beyond 90° (D-033); a constant string because warnings are deduplicated per flight. */
+export const AXIAL_DRAG_MIRRORED_WARNING =
+  'angle of attack beyond 90°: the axial drag scaling of Niskanen p. 53 covers 0 to 90° and is mirrored for backward flight (D-033)';
+
+/** Warnings of the large-angle model (constant strings: warnings are deduplicated per flight). */
+export const LARGE_ANGLE_UNVERIFIED_WARNING =
+  'angle of attack above 60°: the DATCOM body method has no test verification there at subsonic speeds (DATCOM p. 4.2.1.2-6) and the fin method is an empirical correlation; the tumbling or backward-flying part of this flight is approximate (D-070)';
+export const LARGE_ANGLE_TRANSITION_WARNING =
+  'flying backwards (angle of attack above 90°) with a transition on the body: the DATCOM substantiates the reverse-flow body method only for bodies of constant cross section (D-070)';
+export const CROSSFLOW_CHART_HELD_WARNING =
+  'body fineness ratio or cross-flow Mach number outside DATCOM figure 4.2.1.2-35 (fineness 2 to 28, cross-flow Mach to 9): the end value of the chart was used (D-070)';
+export const SUPERSONIC_LARGE_ANGLE_ERROR =
+  'fin normal force beyond 90° angle of attack at Mach 1 or above: the DATCOM supersonic high-angle charts (section 4.1.3.3 C) are not implemented';
+
+/**
+ * AERO-1, AERO-2 with the large-angle model of D-070 (HA-1 to HA-10). Body:
+ * Jorgensen (DATCOM eq. 4.2.1.2-c). Up to 90° each nose cone and transition
+ * keeps its zero-angle slope and CP (Barrowman, or DATCOM BAR-13/14 above
+ * Mach 0.8) times sin 2α cos(α/2)/2, the per-component form of the potential
+ * term (the slopes sum to 2S_b/S with the combined CP ℓ_B − V_B/S_b, eq.
+ * 4.2.2.2-b); beyond 90° the potential term is (S_b/S) sin 2α′ cos(α′/2) at
+ * V_B/S_b (eqs. 4.2.1.2-c, 4.2.2.2-c). The viscous term η c_dc (S_p/S) sin²α′
+ * is applied to every body component at its planform centroid. Fins below
+ * Mach 1: the fin set's slope (and its body carry-over) times the DATCOM wing
+ * normal-force shape C′_N/C_Nα (HA-7, HA-9), the panel CP from HA-8; beyond
+ * 90° the reversed wing (HA-10). Fins at Mach 1 and above keep Niskanen's
+ * eq. (3.49) and are applied up to 90° only.
+ */
+function normalForceLargeAngle(
+  components: readonly PlacedComponent[],
+  mach: Mach,
+  angleOfAttack: Radians,
+  lateralAirflowAngle: Radians,
+  options: AeroModeOptions,
+): NormalForceResult {
+  const a: number = angleOfAttack;
+  if (!(a >= 0 && a <= Math.PI))
+    throw new InvalidInputError('angle of attack', a, 'must be between 0 and 180 degrees');
+  const M: number = mach;
+  const reverse = a > Math.PI / 2;
+  const aPrime = reverse ? Math.PI - a : a;
+  const d = options.referenceDiameter ?? maximumBodyDiameter(components);
+  const aRef = (Math.PI * d * d) / 4;
+  const contributions: AeroContribution[] = [];
+  const warnings: string[] = [];
+  const bodyPieces: BodyPiece[] = [];
+  const finCps: { fin: TrapezoidFinSetComponent; cp: number }[] = [];
+  // At α′ = 0 every term vanishes and the CP is the limit, weighted by the slopes; otherwise by C_N.
+  let sumCn = 0;
+  let sumWeight = 0;
+  let sumMoment = 0;
+  const push = (index: number, source: string, slope: number, cn: number, cp: number): void => {
+    if (slope === 0 && cn === 0) return;
+    const weight = aPrime === 0 ? slope : cn;
+    contributions.push({ index, source, cn, cp });
+    sumCn += cn;
+    sumWeight += weight;
+    sumMoment += weight * cp;
+  };
+  const statics = staticAero(components, aRef);
+  const assembly = datcomBodyAssembly(components);
+  const bodyLength = statics.reduce(
+    (l, st) => (st.piece === undefined ? l : Math.max(l, st.end)),
+    0,
+  );
+  const hasTransition = components.some((p) => p.component.kind === 'transition');
+  if (!(bodyLength > 0))
+    throw new InvalidInputError(
+      'components',
+      components.length,
+      'at least one external component is needed',
+    );
+  const potential = jorgensenPotentialFactor(a);
+  const viscous = jorgensenViscousFactor(a, M, bodyLength / maximumBodyDiameter(components));
+  if (viscous.eta.held || viscous.cdc.held) warnings.push(CROSSFLOW_CHART_HELD_WARNING);
+  const viscousLabel = 'cross-flow (DATCOM 4.2.1.2 Jorgensen)';
+  components.forEach(({ component: c, position }, index) => {
+    const pos: number = position;
+    const st = statics[index];
+    if (st === undefined) return;
+    switch (c.kind) {
+      case 'noseCone':
+      case 'transition': {
+        if (st.piece !== undefined) bodyPieces.push(st.piece);
+        if (st.term !== undefined && !reverse) {
+          let term = { cnAlpha: st.term.cnAlpha, cp: pos + st.term.cpX };
+          let label = c.kind === 'noseCone' ? 'nose cone' : 'transition';
+          if (c.kind === 'noseCone' && assembly?.noseIndex === index && M > 0.8) {
+            const m = noseCylinderTermAtMach(assembly, term, aRef, mach);
+            term = { cnAlpha: m.cnAlpha, cp: m.cp };
+            label = `nose-cylinder body (DATCOM ${m.method})`;
+            warnings.push(...m.warnings);
+          }
+          push(
+            index,
+            `${label} potential (DATCOM 4.2.1.2-c)`,
+            term.cnAlpha,
+            term.cnAlpha * potential,
+            term.cp,
+          );
+        }
+        push(
+          index,
+          viscousLabel,
+          0,
+          (viscous.factor * st.planformArea) / aRef,
+          st.planformCentroid,
+        );
+        break;
+      }
+      case 'bodyTube': {
+        if (st.piece !== undefined) bodyPieces.push(st.piece);
+        push(
+          index,
+          viscousLabel,
+          0,
+          (viscous.factor * st.planformArea) / aRef,
+          st.planformCentroid,
+        );
+        break;
+      }
+      case 'finSet': {
+        const supersonic = {
+          method: options.supersonicFinMethod ?? DEFAULT_SUPERSONIC_FIN_METHOD,
+          afterbodyLength: finAfterbodyLength(components, index),
+        };
+        const transonic = options.transonicFinInterpolation ?? DEFAULT_TRANSONIC_FIN_INTERPOLATION;
+        const t = finSetTerm(
+          c,
+          squareMetres(aRef),
+          mach,
+          lateralAirflowAngle,
+          options.finRollReduction,
+          aPrime,
+          transonic,
+          supersonic,
+        );
+        warnings.push(...t.warnings);
+        const cr: number = c.rootChord;
+        const carry = t.carryOver.cnAlpha;
+        const finSlope = t.cnAlpha - carry;
+        const forwardCp =
+          carry > 0 ? (t.cnAlpha * t.cpX - carry * t.carryOver.cpX) / finSlope : t.cpX;
+        const label = `fins (${t.regime}, ${String(c.count)} fins, K ${t.interferenceFactor.toFixed(4)})`;
+        let shape: number;
+        let finCp: number;
+        let carryCp = t.carryOver.cpX;
+        if (M >= 1) {
+          if (reverse) throw new NotImplementedError(SUPERSONIC_LARGE_ANGLE_ERROR);
+          shape = aPrime;
+          finCp = forwardCp;
+        } else if (!reverse) {
+          const la = finLargeAngle(c, M, aPrime, false, forwardCp / cr);
+          warnings.push(...la.warnings);
+          shape = la.shape;
+          finCp = la.cpOverRoot * cr;
+        } else {
+          // HA-10: the reversed wing; its apex is the old root trailing edge.
+          const reversed = reversedFin(c);
+          const r = finSetTerm(
+            reversed,
+            squareMetres(aRef),
+            mach,
+            lateralAirflowAngle,
+            options.finRollReduction,
+            0,
+            transonic,
+            supersonic,
+          );
+          const la = finLargeAngle(c, M, aPrime, true, r.cpX / cr);
+          warnings.push(...la.warnings);
+          shape = la.shape;
+          finCp = cr - la.cpOverRoot * cr;
+          carryCp = cr - t.carryOver.cpX;
+        }
+        push(
+          index,
+          `${label} large-angle (DATCOM 4.1.3.3)`,
+          finSlope,
+          finSlope * shape,
+          pos + finCp,
+        );
+        if (carry > 0)
+          push(
+            index,
+            `fin-body carry-over (DATCOM, K_B(W) ${t.carryOverFactor.toFixed(4)})`,
+            carry,
+            carry * shape,
+            pos + carryCp,
+          );
+        finCps.push({ fin: c, cp: pos + finCp });
+        break;
+      }
+      case 'innerTube':
+      case 'centeringRing':
+      case 'bulkhead':
+      case 'massComponent':
+      case 'parachute':
+      case 'launchLug':
+      case 'railButton':
+        break;
+    }
+  });
+  if (reverse) {
+    // Eqs. 4.2.1.2-c and 4.2.2.2-c: (S_b/S) sin 2α′ cos(α′/2) at V_B/S_b from the nose tip.
+    const { sBase, volume } = bodyVolumeAndBase(components, bodyPieces);
+    if (sBase > 0) {
+      const slope = (2 * sBase) / aRef;
+      push(
+        -1,
+        'body potential, reverse flow (DATCOM 4.2.1.2-c, 4.2.2.2-c)',
+        slope,
+        slope * potential,
+        volume / sBase,
+      );
+    }
+    if (hasTransition) warnings.push(LARGE_ANGLE_TRANSITION_WARNING);
+  }
+  if (M >= 0.8 && M <= 1.2) warnings.push(TRANSONIC_CP_WARNING);
+  else if (M > 1.2 && M <= 2) warnings.push(SUPERSONIC_CP_WARNING);
+  else if (M > 2) warnings.push(OUTSIDE_VALIDATED_WARNING);
+  if (a > Math.PI / 3) warnings.push(LARGE_ANGLE_UNVERIFIED_WARNING);
+  if (!(sumWeight > 0))
+    throw new InvalidInputError(
+      'total normal force coefficient',
+      sumWeight,
+      'must be greater than 0 (Niskanen eq. 3.29)',
+    );
+  return {
+    cn: finiteResult('normal force coefficient', sumCn),
+    cnAlpha: a === 0 ? sumWeight : sumCn / a,
+    cp: finiteResult('centre of pressure', sumMoment / sumWeight),
+    contributions,
+    warnings,
+    referenceArea: aRef,
+    referenceDiameter: d,
+    bodyPieces,
+    finCps,
+  };
+}
+
+/** V_B and S_b of eq. 4.2.2.2-c (the external body's volume and its aft-end area), once per design. */
+function bodyVolumeAndBase(
+  components: readonly PlacedComponent[],
+  pieces: readonly BodyPiece[],
+): { sBase: number; volume: number } {
+  const cached = BODY_VOLUME_CACHE.get(components);
+  if (cached !== undefined) return cached;
+  const last = pieces.reduce<BodyPiece | undefined>(
+    (best, p) =>
+      best === undefined || p.start + p.profile.length > best.start + best.profile.length
+        ? p
+        : best,
+    undefined,
+  );
+  const rBase = last === undefined ? 0 : last.profile.radius(last.profile.length);
+  const volume = pieces.reduce(
+    (v, p) =>
+      v + integrate((xx) => Math.PI * p.profile.radius(xx) ** 2, p.profile.length, DEFAULT_PANELS),
+    0,
+  );
+  const r = { sBase: Math.PI * rBase * rBase, volume };
+  BODY_VOLUME_CACHE.set(components, r);
+  return r;
+}
+const BODY_VOLUME_CACHE = new WeakMap<
+  readonly PlacedComponent[],
+  { sBase: number; volume: number }
+>();
+
+/** HA-10: the planform seen in reverse flow, its leading edge the old trailing edge (tan Λ′ = (c_r − x_t − c_t)/s). */
+export function reversedFin(c: TrapezoidFinSetComponent): TrapezoidFinSetComponent {
+  const cached = REVERSED_FIN_CACHE.get(c);
+  if (cached !== undefined) return cached;
+  const r = {
+    ...c,
+    sweep: metres((c.rootChord as number) - (c.sweep as number) - (c.tipChord as number)),
+  };
+  REVERSED_FIN_CACHE.set(c, r);
+  return r;
+}
+/** One reversed planform object per fin set, so the per-component caches of `finSetTerm` keep working. */
+const REVERSED_FIN_CACHE = new WeakMap<TrapezoidFinSetComponent, TrapezoidFinSetComponent>();
 
 /**
  * AERO-4. Niskanen eqs. (3.57) to (3.60): the pitch damping moment, written
@@ -560,10 +876,7 @@ export function aerodynamicForcesAndMoments(input: AeroInputs): AeroResult {
   );
   const rollDampingCoefficient = rollDampingMoment(fins, input.mach, q, input.airspeed, 1);
   const warnings = [...nf.warnings];
-  if (scaling.beyondSource)
-    warnings.push(
-      `angle of attack ${(((input.angleOfAttack as number) * 180) / Math.PI).toFixed(1)}° is beyond the 90° the drag scaling covers; mirrored (D-033)`,
-    );
+  if (scaling.beyondSource) warnings.push(AXIAL_DRAG_MIRRORED_WARNING);
   const forceBody: Vec3 = {
     x: finiteResult('aerodynamic force x', fN.x + fA.x),
     y: finiteResult('aerodynamic force y', fN.y + fA.y),

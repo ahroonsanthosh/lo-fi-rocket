@@ -426,3 +426,43 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** Completion prompt Part C item 7. The subsonic over-prediction was the base term: eq. (3.94) charges a blunt cylinder's base pressure on every base. On the held-out data the DATCOM method brings subsonic C_D from 34.7 % to 7.1 % rms (target 7 %) and transonic from 36.8 % to 21.3 %; the free-flight NACA RM A53D02 (cylindrical base) improves from +23/+35 % to −4/+6 %.
 - **Conflict recorded for the owner (CLAUDE.md 11 (a)):** the Blue Scout's directly measured base axial force (sting-mounted, wedge fins with blunt bases at the base) agrees with eq. (3.94) (+9 %) and not with the DATCOM (−58 %). The DATCOM states that fins and stings change the base pressure and gives no correction. The free-flight evidence was taken as deciding; if the owner prefers eq. (3.94) for cylindrical bases, it is one option away.
 - **Consequences:** displayed-mode apogees rise by up to 4.6 % on the reference rockets (R5), within the Phase 2 tolerance against OpenRocket; the OpenRocket-equivalent comparisons and the golden series (which use that mode) are unchanged. The supersonic base charts of the DATCOM are future work.
+
+## D-070 (2026-10-12): Fin and body normal force from 0 to 180° from the DATCOM in the displayed mode; the 90° limit stays in the OpenRocket-equivalent mode
+
+- **Decision:** The displayed mode (`largeAngleMethod: 'datcom'`, the default) uses the large-angle model of plan 0033 (HA-1 to HA-10):
+  - **Bodies:** Jorgensen's method from DATCOM 4.2.1.2 Method 3 and 4.2.2.2 Method 2.
+  - **Fins:** the subsonic wing normal force from DATCOM 4.1.3.3, with maximum lift from 4.1.3.4 Method 3 and the centre of pressure from 4.1.4.3 Method 1.
+  - **Combination:** fins and body combine by eq. 4.3.1.3-a without the body-vortex term.
+  - **Reverse flow:** 90 to 180° uses α′ = 180° − α on the reversed wing.
+
+  The OpenRocket-equivalent mode (`'linear'`) keeps the small-angle model and the 90° limit of D-046, so the OpenRocket comparisons and the golden series are unchanged. In the displayed mode a flight is continued past 90° below Mach 1. At Mach 1 and above the 90° limit remains, because the DATCOM's supersonic high-angle charts (4.1.3.3 C) are not implemented.
+
+- **Choices inside the method** (plan 0033 gives the reasons):
+  1. **Body potential term.** Below 90° each nose and transition keeps its validated zero-angle slope times sin 2α cos(α/2)/2. The DATCOM says "the lift-curve slope at zero angle of attack is used for the potential-flow term", and the per-component slopes sum to Jorgensen's 2S_b/S at CP ℓ_B − V_B/S_b. Beyond 90°, eq. 4.2.1.2-c and eq. 4.2.2.2-c are used as printed.
+  2. **Viscous term.** η c_dc replaces Niskanen's K = 1.1 on the same planform areas and centroids.
+  3. **Interference.** The fin set's linear slope (interference, roll, carry-over) multiplies the DATCOM wing's normal-force shape.
+  4. **Δy.** Computed from the section shape by the DATCOM's own definition (p. 4.1.3.2-19). The position of maximum thickness selects figure 23a or 23b. Single wedges (maximum thickness at the trailing edge) are not covered: such a rocket keeps the small-angle model and the 90° limit, with a warning naming the reason.
+  5. **Fin charts above Mach 0.6.** From Mach 0.6 to 1 the fin charts are read at Mach 0.6 with the actual C_Nα. This is the DATCOM's transonic guidance (4.1.3.3 B), and a warning is given beyond the stall.
+  6. **Values below the drawn range.** ΔC_Naa and the figure 23(a)/24b increments below tan α/tan α_CLmax = 0.2 are held at the 0.2 curve. They multiply sin²α or sin α there.
+  7. **Step 5 of 4.1.4.3.** Read as linear in α.
+  8. **Reverse flow.** The reversed wing's leading edge is the old trailing edge. A forward-swept reversed edge is evaluated as unswept, with a warning. The carry-over CP is mirrored along the root chord.
+  9. **Figures 23a, 23b, 22a and 25b.** Each label set applies where its curves are drawn. Where a curve is not drawn, the nearest drawn curve is used and a warning is given when it matters (beyond the stall). In figure 23(a) the near-vertical rises through stability index 0 are hidden under the gridline and are interpolated linearly. Δ₃ for a stability index within ±0.3 of 0 is therefore uncertain by up to about ±0.2 root chords. None of the reference rockets is in that band.
+- **Conservative in-flight margin:** the reported in-flight stability margin (plan 0030) uses the more forward of the two models' CPs at each sample, and covers nose-forward flight only (α ≤ 90°). The reason is the following comparison.
+  - **Measured:** NASA TN D-1958 figure 7 shows Blue Scout's CP moving forward by about 0.13 body lengths between 0 and 6° at Mach 0.6.
+  - **Small-angle model:** 0.062 body lengths. Its body lift is K sin²α with K = 1.1.
+  - **DATCOM model:** 0.054 body lengths, evaluated with the fins as square-edged for this comparison only.
+  - **Consequence:** both models under-predict the forward shift, and the DATCOM's smaller cross-flow factor (η c_dc ≈ 0.84 against 1.1) and its low-aspect-ratio fin lift make it the less conservative of the two at moderate angles. The dynamics use the DATCOM model, the approved large-angle source (D-053), and the reported margin uses whichever CP is more forward.
+  - **Effect on the reference rockets:** the powered-flight minima are identical to item 5's. The coast minima are 0.05 to 0.36 calibers higher than before, because the trajectory near apogee differs (smaller angles of attack).
+- **Why:** completion prompt Part C item 8; D-053 named the DATCOM as the source. The 90° limit was the last place where a flight ended because of a missing model rather than physics.
+- **Validation:**
+  - **DATCOM sample problems:** the wing normal-force table (pp. 4.1.3.3-16 to -18) is reproduced within 0.045 at every angle, and the maximum lift (p. 4.1.3.4-9) within 0.02 in C_Lmax and 0.5° in α_CLmax.
+  - **Unchanged static results:** the held-out and wind-tunnel CP and C_Nα are static (α → 0) and do not change.
+  - **Reference rockets (displayed mode):** within the Phase 2 tolerances against OpenRocket. Apogee is −3.6 to +3.5 %; D-070 alone moves the in-wind apogees by at most 0.8 %.
+  - **Ballistic flip test (item 9):** with a 0.1° launch tilt every reference rocket turns nose-down 2.5 to 4.4 s after apogee and lands nose-first. Exactly vertical, R1 keeps the tail-first equilibrium to the ground, and R2 to R5 leave it from round-off. Tail-first is an unstable equilibrium: the CP stays aft of the CG in reverse flow.
+- **Open for the owner (CLAUDE.md 11 (a)):**
+  - **Which model to trust at moderate angles.** The two approved models differ in the in-flight CP at 10 to 20° by up to 0.8 calibers (R2). Measured data at angle (Blue Scout, ±6° only) favour neither fully. The conservative reporting above is the interim choice.
+  - **Wind-tunnel data at higher angles.** The ARCAS reports (TN D-4013) go to 21° and could be digitised for a direct check.
+- **Consequences:**
+  - Ballistic and late-ejection flights in still air now run to the ground in the displayed mode. Warnings explain the unverified range above 60° and any chart limits that were reached.
+  - Flights of rockets with single-wedge fins, or that tumble above Mach 1, still end at 90° with an explanation.
+  - The body-vortex term of 4.3.1.3, the supersonic high-angle charts and Jorgensen's axial force (4.2.3.2, in place of the mirrored axial-drag scaling of D-033) are future work.

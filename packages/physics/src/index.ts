@@ -408,3 +408,28 @@ export {
   DEFAULT_BASE_DRAG_METHOD,
   type BaseDragMethod,
 } from './drag/drag.js';
+export * from './stability/datcom-large-angle-data.js';
+export {
+  crossflowDragCoefficient,
+  crossflowDragProportionality,
+  finLargeAngle,
+  finLargeAngleAvailability,
+  FIN_CHART_MAX_MACH,
+  leadingEdgeParameter,
+  normalForceAt90,
+  taperRatioFactors,
+  TRANSONIC_LARGE_ANGLE_WARNING,
+  wingAnalysis,
+  wingCentreOfPressure,
+  wingNormalForce,
+  wingPlanform,
+  type LeadingEdgeParameter,
+  type WingAnalysis,
+  type WingPlanform,
+} from './stability/datcom-large-angle.js';
+export {
+  AXIAL_DRAG_MIRRORED_WARNING,
+  DEFAULT_LARGE_ANGLE_METHOD,
+  LARGE_ANGLE_UNVERIFIED_WARNING,
+  type LargeAngleMethod,
+} from './flight/aerodynamics.js';
