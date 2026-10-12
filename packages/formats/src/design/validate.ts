@@ -28,6 +28,7 @@ import { DesignFileError } from './errors.js';
 import {
   CURRENT_SCHEMA_VERSION,
   type DeployEvent,
+  type DispersionSettingsRecord,
   type RecordedFlight,
   type DesignComponent,
   type DesignRecoveryDevice,
@@ -595,6 +596,36 @@ function recordedFlight(c: Ctx, path: string, v: unknown): RecordedFlight {
   };
 }
 
+const VARIATION_KEYS = [
+  'windSpeed',
+  'windDirection',
+  'railAngle',
+  'railAzimuth',
+  'motorImpulseScale',
+  'structuralMassScale',
+] as const;
+
+function dispersion(c: Ctx, path: string, v: unknown): DispersionSettingsRecord {
+  const o = c.object(path, v);
+  c.keys(path, o, ['runs', 'seed', 'variations']);
+  const vars = c.object(`${path}.variations`, o['variations']);
+  c.keys(`${path}.variations`, vars, [...VARIATION_KEYS]);
+  const read = (k: (typeof VARIATION_KEYS)[number]): number =>
+    c.number(`${path}.variations.${k}`, vars[k]);
+  return {
+    runs: c.integer(`${path}.runs`, o['runs']),
+    seed: c.integer(`${path}.seed`, o['seed']),
+    variations: {
+      windSpeed: read('windSpeed'),
+      windDirection: read('windDirection'),
+      railAngle: read('railAngle'),
+      railAzimuth: read('railAzimuth'),
+      motorImpulseScale: read('motorImpulseScale'),
+      structuralMassScale: read('structuralMassScale'),
+    },
+  };
+}
+
 /** Validate a stored motor selection (definition and provenance) on its own, for the motor cache. */
 export function validateMotorSelection(value: unknown, fileName?: string): MotorSelection {
   return motorSelection(new Ctx(fileName), '$', value);
@@ -622,7 +653,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       'stabilityThresholds',
       'warningThresholds',
     ],
-    ['motorMount', 'referenceDiameter', 'dragCurve', 'recordedFlight'],
+    ['motorMount', 'referenceDiameter', 'dragCurve', 'recordedFlight', 'dispersion'],
   );
   const version = c.integer('$.schemaVersion', o['schemaVersion']);
   if (version !== CURRENT_SCHEMA_VERSION) {
@@ -682,6 +713,10 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     'recordedFlight' in o && o['recordedFlight'] !== undefined
       ? recordedFlight(c, '$.recordedFlight', o['recordedFlight'])
       : undefined;
+  const disp =
+    'dispersion' in o && o['dispersion'] !== undefined
+      ? dispersion(c, '$.dispersion', o['dispersion'])
+      : undefined;
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     id: c.nonEmptyString('$.id', o['id']),
@@ -699,5 +734,6 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     warningThresholds: warningThresholds(c, '$.warningThresholds', o['warningThresholds']),
     ...(curve === undefined ? {} : { dragCurve: curve }),
     ...(recorded === undefined ? {} : { recordedFlight: recorded }),
+    ...(disp === undefined ? {} : { dispersion: disp }),
   };
 }

@@ -136,6 +136,20 @@ export interface RecordedFlight {
   readonly points: readonly { readonly time: Seconds; readonly altitude: Metres }[];
 }
 
+/** Monte Carlo settings kept with the design (plan 0017); the variations are standard deviations. */
+export interface DispersionSettingsRecord {
+  readonly runs: number;
+  readonly seed: number;
+  readonly variations: {
+    readonly windSpeed: number;
+    readonly windDirection: number;
+    readonly railAngle: number;
+    readonly railAzimuth: number;
+    readonly motorImpulseScale: number;
+    readonly structuralMassScale: number;
+  };
+}
+
 export interface RocketDesign {
   readonly schemaVersion: typeof CURRENT_SCHEMA_VERSION;
   readonly id: string;
@@ -154,6 +168,7 @@ export interface RocketDesign {
   /** An imported C_D versus Mach table used in place of the drag model (CLAUDE.md 6.7 item 2, D-047). */
   readonly dragCurve?: DragCurve;
   readonly recordedFlight?: RecordedFlight;
+  readonly dispersion?: DispersionSettingsRecord;
 }
 
 /** A fresh random id (RFC 4122 version 4) for designs, components and devices. */

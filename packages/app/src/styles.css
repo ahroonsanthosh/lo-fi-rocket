@@ -489,3 +489,26 @@ button:disabled {
   gap: 6px;
   align-items: end;
 }
+
+.plot .containment {
+  fill: rgba(31, 95, 191, 0.08);
+  stroke: #1f5fbf;
+  stroke-dasharray: 4 3;
+}
+.plot .landing-point {
+  fill: #b3261e;
+}
+.plot .mean-point {
+  fill: none;
+  stroke: #1f5fbf;
+  stroke-width: 2;
+}
+.plot .pad-marker line {
+  stroke: #1b1f24;
+  stroke-width: 2;
+}
+.dispersion {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}

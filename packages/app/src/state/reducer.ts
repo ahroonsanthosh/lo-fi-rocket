@@ -15,6 +15,7 @@ import {
 } from '@lo-fi-rocket/physics';
 import type {
   DesignComponent,
+  DispersionSettingsRecord,
   DesignRecoveryDevice,
   LaunchConditions,
   MotorMount,
@@ -66,6 +67,7 @@ export type Action =
   | { readonly type: 'set-launch'; readonly launch: LaunchConditions }
   | { readonly type: 'set-drag-curve'; readonly dragCurve: DragCurve | undefined }
   | { readonly type: 'set-recorded-flight'; readonly recordedFlight: RecordedFlight | undefined }
+  | { readonly type: 'set-dispersion'; readonly dispersion: DispersionSettingsRecord }
   | { readonly type: 'set-simulation'; readonly simulation: SimulationSettings };
 
 export const COMPONENT_LABELS: Record<ComponentKind, string> = {
@@ -400,6 +402,8 @@ export function reduce(state: AppState, action: Action): AppState {
       else (next as { dragCurve?: DragCurve }).dragCurve = action.dragCurve;
       return withDesign(state, next);
     }
+    case 'set-dispersion':
+      return withDesign(state, { ...d, dispersion: action.dispersion });
     case 'set-recorded-flight': {
       const next: RocketDesign = { ...d };
       if (action.recordedFlight === undefined)

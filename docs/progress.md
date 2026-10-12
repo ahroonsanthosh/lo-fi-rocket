@@ -49,13 +49,15 @@ Prompt 4 (roadmap): Phase 5 and the final audit, started on the owner's "continu
 
 - Prompt 4 step 1 (plan 0016): wind profile by altitude as a user table (ENV-3, D-049), Niskanen's turbulence (ENV-4 two-pole pink noise, ENV-5 20 Hz samples scaled by 2.252 along the mean direction, intensity I_u) generated once per flight from a seed recorded in the results, the seeded generator xoshiro128** with Box–Muller normals (RNG-1, RNG-2, D-050; the paper added to `reference/`), the design's wind settings (profile rows, turbulence intensity and seed) with the launch editor's profile table and turbulence fields; tests: profile by hand, filter coefficients by hand, the 2.252 scaling, turbulence statistics, step-size independence, determinism, R1 flights with a profile and with turbulence.
 
+- Prompt 4 step 2 (plan 0017): Monte Carlo dispersion (D-051): seeded sampling of wind speed and direction, rail angle and azimuth, thrust-curve and structural-mass scales with user-entered standard deviations (zero by default), turbulence seeds per run, rank-based statistics and a 95 % containment radius, failed and unlanded runs counted; the batch runs in the worker with progress; the dispersion panel with the settings, the summary table and the landing scatter plot; the settings stored in the design file. Tests: statistics by hand, zero variations reproduce the deterministic flight, determinism per seed, a wind spread, failed runs reported, the panel end to end.
+
 ## In progress
 
-- Prompt 4 step 2 (plan 0017): Monte Carlo dispersion and landing zones.
+- Prompt 4 step 3 (plan 0018): propellant mass and CG profiles for liquid engines.
 
 ## Next
 
-- Steps 3 and 4 of Prompt 4: propellant CG profiles (plan 0018) and the final audit with the Phase 5 report.
+- Prompt 4 step 4: the final audit (`docs/audit.md`) and the Phase 5 acceptance report.
 
 ## Open questions
 

@@ -6,6 +6,7 @@ import { useServices } from '../state/services.js';
 import { useStore } from '../state/store.js';
 import { formatQuantity, type UnitSystem } from '../units/display.js';
 import { ComparisonPanel } from './ComparisonPanel.js';
+import { DispersionPanel } from './DispersionPanel.js';
 import { LaunchEditor } from './LaunchEditor.js';
 
 export const FLIGHT_SELECTION_ID = 'flight';
@@ -99,6 +100,7 @@ export function FlightPanel({ flight, onFlight }: FlightPanelProps): JSX.Element
         </>
       )}
       <ComparisonPanel simulatedApogee={flight?.result.summary.apogee} />
+      <DispersionPanel />
     </section>
   );
 }

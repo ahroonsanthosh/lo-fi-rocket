@@ -126,3 +126,23 @@ export { DragCurveCsvError, parseDragCurveCsv } from './motors/drag-curve.js';
 export { FlightDataCsvError, parseFlightDataCsv } from './motors/flight-data.js';
 export { orkToDesign, type LibraryMotorRef, type OrkImport } from './design/from-ork.js';
 export type { RecordedFlight } from './design/model.js';
+export {
+  DispersionError,
+  flyRun,
+  percentile,
+  perturbDesign,
+  runDispersion,
+  sampleRun,
+  sampleStatistics,
+  summarise,
+  validateDispersionSettings,
+  ZERO_VARIATIONS,
+  type DispersionResult,
+  type DispersionRun,
+  type DispersionSettings,
+  type DispersionSummary,
+  type DispersionVariations,
+  type SampledValues,
+  type SampleStatistics,
+} from './dispersion/dispersion.js';
+export type { DispersionSettingsRecord } from './design/model.js';

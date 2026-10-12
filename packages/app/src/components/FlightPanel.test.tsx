@@ -7,7 +7,7 @@ import {
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { newtons } from '@lo-fi-rocket/physics';
+import { newtons, seconds } from '@lo-fi-rocket/physics';
 import { App } from '../App.js';
 import { synchronousRunner } from '../simulation/runner.js';
 import type { Storage } from '../state/autosave.js';
@@ -187,4 +187,43 @@ describe('wind profile and turbulence (plan 0016)', () => {
     await user.click(screen.getByRole('button', { name: 'Use a uniform wind' }));
     expect(screen.getByLabelText('Wind speed (steady, uniform)')).toBeInTheDocument();
   });
+});
+
+describe('Monte Carlo dispersion panel (plan 0017)', () => {
+  it('runs five dispersed flights with a 2 m/s wind standard deviation and shows the seed, table and scatter plot', async () => {
+    const base = exampleDesign('mc');
+    const quick: RocketDesign = {
+      ...base,
+      simulation: {
+        ...base.simulation,
+        integrator: { kind: 'rk4', timeStep: seconds(0.005) },
+        recordInterval: seconds(0.5),
+      },
+      dispersion: {
+        runs: 5,
+        seed: 3,
+        variations: {
+          windSpeed: 2,
+          windDirection: 0,
+          railAngle: 0,
+          railAzimuth: 0,
+          motorImpulseScale: 0,
+          structuralMassScale: 0,
+        },
+      },
+    };
+    const user = renderApp(quick);
+    await openFlight(user);
+    expect(screen.getByLabelText('Wind speed standard deviation')).toHaveValue('2');
+    await user.click(screen.getByRole('button', { name: 'Run dispersion' }));
+    const results = await screen.findByRole(
+      'region',
+      { name: 'Dispersion results' },
+      { timeout: 20000 },
+    );
+    expect(results).toHaveTextContent(/5 \(landed 5, not landed 0, failed 0\), seed 3/);
+    expect(results).toHaveTextContent(/Landing distance from the pad/);
+    const plot = within(results).getByRole('img', { name: 'Landing points' });
+    expect(plot.querySelectorAll('.landing-point').length).toBe(5);
+  }, 30000);
 });
