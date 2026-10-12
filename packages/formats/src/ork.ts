@@ -478,6 +478,7 @@ class Reader {
       el,
       {
         kind: 'finSet',
+        crossSection: 'square',
         count,
         rootChord: metres(rootChord),
         tipChord: metres(el.number('tipchord')),

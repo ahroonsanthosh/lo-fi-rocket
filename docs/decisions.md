@@ -178,3 +178,27 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Decision:** The rotation applied to the orientation over a step (DYN-5) is the eq. (4.13) quaternion for the angle |ω|Δt, cos(|ω|Δt/2) + ω̂ sin(|ω|Δt/2), applied from the left and normalised, as Niskanen's text defines it ("the unit quaternion corresponding to the 3D rotation ω Δt as in equation (4.13)", p. 67).
 - **Why:** The printed eq. (4.24) omits the halves (checked on the page image, PDF p. 77). Taken literally it would rotate the rocket by twice the angle ω Δt per step, contradicting eq. (4.23) which it is said to implement. The test "a 90° rotation about z" shows eq. (4.13) rotates a vector by exactly the stated angle, so the text, not the typeset formula, is followed. This is an internal inconsistency of one source, resolved by its own definitions, not a conflict between sources.
 - **Consequences:** None beyond the note in the code and here.
+
+## D-032 (2026-10-12): The area ratio in the boat tail equation is taken as 1
+
+- **Decision:** Eq. (3.88) is applied as (C_D•)pressure = (C_D•)base × factor(γ), referred to the boat tail's frontal area, the annulus π(r_fore² − r_aft²).
+- **Why:** The printed prefactor A_base/A_boattail is not defined in the text. Reading A_base as the annulus (the "base" created by the step, as the zero-length limit "equal to the total base drag" suggests) makes the ratio 1; reading it as the full fore area would double count the body's own base drag behind the boat tail. The difference for R2 is under 0.01 in C_D0.
+- **Consequences:** Recorded as an interpretation; the OpenRocket comparison of R2 (within 6 % under D-035) is consistent with it.
+
+## D-033 (2026-10-12): The angle-of-attack drag scaling is the cubic Hermite reading of Niskanen's description, mirrored beyond 90°
+
+- **Decision:** DRAG-14 uses, on [0°, 17°] and [17°, 90°], the cubic polynomials with the stated end values (1, 1.3, 0) and zero end slopes; for 90° < α ≤ 180° the function is mirrored, s(α) = s(180° − α), and the result is flagged `beyondSource`.
+- **Why:** Niskanen §3.4.7 gives the polynomial in words (values and zero derivatives at 0°, 17°, 90°), which determines a cubic on each piece uniquely. The source does not cover tail-first flight; a rocket passing apogee in wind can exceed 90°, and throwing there would stop every such simulation. The mirror is the only choice that keeps the function continuous and bounded by the source's own values; it is documented, flagged, and relevant only to recovery failures.
+- **Alternatives:** Throwing above 90° (rejected: breaks ordinary flights near apogee); a constant (a guess).
+
+## D-034 (2026-10-12): Non-conical, non-ogive noses have no transonic pressure drag yet
+
+- **Decision:** For elliptical, parabolic, power-series and Haack noses, `noseConePressureDrag` returns the low-subsonic value of eq. (3.86) with a warning up to Mach 0.8 and throws `NotImplementedError` above it.
+- **Why:** Niskanen Appendix B.3 takes the transonic drag of these shapes from Stoney's measured curves (NASA TR R-100), which the thesis does not print. CLAUDE.md lists TR R-100 as validation data "never as a source of equations"; using its figures as model data points is a question for the owner. Below Mach 0.8 the missing part is the rise of eq. (3.87) towards the transonic value, which cannot be fitted without that value.
+- **Consequences:** R3 (Von Kármán, Mach 0.69) carries the warning; R5 (Mach 1.09) cannot be simulated past Mach 0.8 until the owner decides. Open question in `docs/progress.md`.
+
+## D-035 (2026-10-12): Base drag removes the motor area while thrusting (source), with an OpenRocket-equivalent rule that keeps it removed
+
+- **Decision:** `dragCoefficient` takes `baseDragMotorRule`: 'while-thrusting' applies Niskanen p. 51 (the thrusting motors' area is subtracted from the base area); 'always' keeps the motor area subtracted after burnout, which is what OpenRocket 24.12 does: in the reference time series the coasting drag coefficient is lower than the source rule by exactly the motor's share of the base drag (R1 3.6 %, R2 8 %, R3 11 %, R4 6 %). No default; the caller states the rule and results name it.
+- **Why:** The source is explicit about "thrusting"; the comparison needs OpenRocket's behaviour to be reproducible (D-016 precedent). Physically, after burnout the nozzle still occupies the base, so the question of which rule is more accurate is open; the owner decides which the app displays (default proposed: the source rule, with the difference shown).
+- **Consequences:** Flight comparisons (plan 0010) run in the OpenRocket-equivalent mode; the displayed figure uses the source rule. Open question in `docs/progress.md`.

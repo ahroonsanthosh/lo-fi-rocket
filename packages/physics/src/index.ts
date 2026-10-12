@@ -106,6 +106,7 @@ export {
   combine,
   componentMassProperties,
   type Component,
+  type FinCrossSection,
   type MassItemComponent,
   type NoseConeComponent,
   type RailButtonComponent,
@@ -163,6 +164,43 @@ export {
   type MotorState,
   type MotorThrustPoint,
 } from './motor/motor.js';
+export {
+  compressibleSkinFriction,
+  frictionDragCoefficient,
+  ROUGHNESS_HEIGHTS,
+  skinFrictionCoefficient,
+  type FrictionDragGeometry,
+  type SkinFriction,
+  type SkinFrictionRegime,
+} from './drag/skin-friction.js';
+export {
+  baseDragCoefficient,
+  boatTailPressureDrag,
+  noseConePressureDrag,
+  shoulderPressureDrag,
+  stagnationDragCoefficient,
+  stagnationPressureRatio,
+  type BoatTailPressureDrag,
+  type NosePressureDrag,
+} from './drag/pressure-drag.js';
+export { finPressureDrag, roundedLeadingEdgeDrag, type FinPressureDrag } from './drag/fin-drag.js';
+export {
+  baseDragArea,
+  launchLugDrag,
+  railButtonDrag,
+  type ParasiticDrag,
+} from './drag/base-parasitic.js';
+export {
+  axialDragCoefficient,
+  axialDragScaling,
+  dragCoefficient,
+  jointAngle,
+  meanAerodynamicChord,
+  wettedArea,
+  type DragInputs,
+  type DragResult,
+  type DragTerm,
+} from './drag/drag.js';
 export {
   InvalidInputError,
   NonFiniteResultError,

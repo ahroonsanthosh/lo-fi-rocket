@@ -29,15 +29,20 @@ Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the 
 
 - Phase 2 step 2: frames, orientation quaternions, gravity and environment (plan 0008, DYN-1 to DYN-8, GRAV-1, ATM-11, ENV-1, ENV-2): world ENU frame and reference orientation fixed in `docs/conventions.md`, quaternion algebra per Niskanen §4.2.2, launch rail direction and initial orientation, flight parameters (airspeed, angle of attack, lateral airflow angle, Mach, dynamic pressure, Reynolds), inverse-square gravity with a sea-level parameter (D-030), launch-site atmosphere conditions, constant wind, launch validation with the NAR 30° warning; D-031 on the printed eq. (4.24).
 
+- Phase 2 step 3: the drag model (plan 0009, DRAG-1 to DRAG-14, GEO-13): skin friction with roughness and compressibility, nose (conical and ogive through the transonic and supersonic regimes), shoulder and boat tail pressure drag, fin pressure drag for square, rounded and airfoil sections, base drag with the motor area, lugs and rail buttons, the total and the angle-of-attack scaling; per-component breakdown and warnings. Against OpenRocket's drag coefficient column: within 6 % while thrusting; after burnout OpenRocket keeps the motor area out of the base (D-035, OpenRocket-equivalent rule added). Decisions D-032 to D-035.
+
 ## In progress
 
-- Phase 2 step 3: the drag model (plan 0009, to be written next).
+- Phase 2 step 4: the flight simulator (plan 0010, to be written next): equations of motion, RK4 and RK45, rail, events by root finding, recovery, outputs, NaN detection, analytical cases, convergence, OpenRocket acceptance.
 
 ## Next
 
-- Phase 2 step 4: 6DOF simulation with RK4 and RK45, events and recovery (plan 0010), then the Phase 2 acceptance report.
+- The Phase 2 acceptance report, then Prompt 3 (Phases 3 and 4).
 
 ## Open questions
+
+- Transonic nose drag for Haack, elliptical, parabolic and power-series noses (D-034): Niskanen takes it from Stoney's measured curves in NASA TR R-100 (in `reference/docs/`). CLAUDE.md lists that report as validation data only. May its fineness-ratio-3 curves be transcribed as the model's data points, as Niskanen does? Until then R5 cannot be simulated above Mach 0.8.
+- Base drag after burnout (D-035): the source removes the motor area only while thrusting; OpenRocket keeps it removed. Which should the app display? The comparison mode uses OpenRocket's rule.
 
 - Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
 

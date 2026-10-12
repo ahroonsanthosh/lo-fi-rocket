@@ -76,6 +76,9 @@ export interface MassItemComponent {
   readonly radius: Metres;
 }
 
+/** Fin profile shapes of Niskanen §3.4.4 p. 49 (square = rectangular, rounded edges, airfoil). */
+export type FinCrossSection = 'square' | 'rounded' | 'airfoil';
+
 export interface TrapezoidFinSetComponent {
   readonly kind: 'finSet';
   readonly count: number;
@@ -89,6 +92,8 @@ export interface TrapezoidFinSetComponent {
   readonly density: KilogramsPerCubicMetre;
   /** Radius of the body at the fin root. */
   readonly bodyRadius: Metres;
+  /** Profile shape, used by the drag model (plan 0009); mass and stability ignore it. */
+  readonly crossSection?: FinCrossSection;
 }
 
 /** Rail buttons: base cylinder, shaft and flange stacked radially on the body surface. */

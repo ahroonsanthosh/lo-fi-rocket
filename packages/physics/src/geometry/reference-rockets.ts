@@ -39,6 +39,7 @@ export const R1_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(0.5, {
     kind: 'finSet',
+    crossSection: 'square',
     count: 3,
     rootChord: m(0.1),
     tipChord: m(0.05),
@@ -101,6 +102,7 @@ export const R2_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(0.63, {
     kind: 'finSet',
+    crossSection: 'square',
     count: 3,
     rootChord: m(0.12),
     tipChord: m(0.04),
@@ -176,6 +178,7 @@ export const R3_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(0.48, {
     kind: 'finSet',
+    crossSection: 'square',
     count: 3,
     rootChord: m(0.07),
     tipChord: m(0.03),
@@ -251,6 +254,7 @@ export const R4_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(0.85, {
     kind: 'finSet',
+    crossSection: 'square',
     count: 4,
     rootChord: m(0.15),
     tipChord: m(0.06),
@@ -294,6 +298,7 @@ export const R5_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(0.605, {
     kind: 'finSet',
+    crossSection: 'square',
     count: 3,
     rootChord: m(0.075),
     tipChord: m(0.025),
