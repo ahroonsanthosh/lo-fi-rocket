@@ -150,3 +150,39 @@ export function WarningCounts({
     </span>
   );
 }
+
+export interface WarningSummaryProps {
+  readonly warnings: readonly WarningItem[];
+  /** Where the full list is, for example "#warnings". */
+  readonly href: string;
+}
+
+/**
+ * For the always-visible status bar: the count per severity and the most
+ * serious warning's title in words, with a link to the full list. The
+ * status bar never shows less than this while any warning exists.
+ */
+export function WarningSummary({ warnings, href }: WarningSummaryProps): JSX.Element {
+  const top = SEVERITY_ORDER.flatMap((s) => warnings.filter((w) => w.severity === s))[0];
+  if (top === undefined) {
+    return (
+      <span className="lfr-warning-summary">
+        <SeverityTag severity="safe" label="No warnings" />
+      </span>
+    );
+  }
+  return (
+    <span className="lfr-warning-summary">
+      <WarningCounts warnings={warnings} />
+      <span className={`lfr-warning-summary__top lfr-warning-summary__top--${top.severity}`}>
+        <StatusIcon severity={top.severity} size={14} />
+        <span>
+          {SEVERITY_LABEL[top.severity]}: {top.title}
+        </span>
+      </span>
+      <a className="lfr-warning-summary__link" href={href}>
+        See all {String(warnings.length)} {warnings.length === 1 ? 'warning' : 'warnings'}
+      </a>
+    </span>
+  );
+}

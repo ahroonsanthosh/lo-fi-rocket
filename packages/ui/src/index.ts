@@ -62,10 +62,12 @@ export {
   WarningBanner,
   WarningCounts,
   WarningList,
+  WarningSummary,
   type WarningBannerProps,
   type WarningItem,
   type WarningListProps,
   type WarningSeverity,
+  type WarningSummaryProps,
 } from './components/Warnings.js';
 export {
   editText,

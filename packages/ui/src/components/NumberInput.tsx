@@ -92,7 +92,7 @@ export function NumberInput(props: NumberInputProps): JSX.Element {
       hint={hint}
       error={error}
       errorDetail={error === undefined ? undefined : `Not applied: still using ${inUse}.`}
-      suffix={unit === '' ? undefined : unit}
+      suffix={unit}
     >
       {(control) => (
         <input

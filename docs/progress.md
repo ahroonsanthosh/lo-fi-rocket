@@ -65,6 +65,8 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 
 - Prompt 5 step 4 (plan 0023): the large-angle fin force stays unimplemented because Hoerner is not in `reference/`; three sourced alternatives proposed, DATCOM recommended (D-059). Ballistic descents of R1 to R5: tail-first fall in still air ends at the limit at apogee; in wind every rocket noses over and lands at its terminal speed, within 1 % of the three-degree-of-freedom fall. Golden flight time series for R1 to R5 (`packages/formats/golden/flights/`, exact comparison). Final report `docs/reports/prompt-5-final-report.md`; audit updated. **Prompt 5 is complete.**
 
+- UI redesign part 1 (plan UI-0001, branch `feature/ui-redesign`, decisions D-UI-1 to D-UI-5 in `docs/ui/decisions.md`): usability review with screenshots (`docs/ui/review.md`), redesign plan with before and after mockups (`docs/ui/redesign.md`), new package `packages/ui` (display-only components, tokens, display rules, glossary; 161 tests). No existing file under `packages/` changed. Report: `docs/reports/ui-redesign-part-1.md`. Next: apply the library to the app once the parallel sessions have merged.
+
 ## In progress
 
 - Nothing. The next work depends on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).

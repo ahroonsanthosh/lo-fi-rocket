@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState, type JSX } from 'react';
 import { describe, expect, it } from 'vitest';
 import { axeViolations } from '../test/axe.js';
-import { WarningList, type WarningItem } from './Warnings.js';
+import { WarningList, WarningSummary, type WarningItem } from './Warnings.js';
 
 // Texts as the app shows them today (review screenshots 10, 15, 22).
 const WARNINGS: WarningItem[] = [
@@ -105,6 +105,29 @@ describe('WarningList and WarningBanner', () => {
 
   it('has no axe violations', async () => {
     const { container } = render(<Harness />);
+    expect(await axeViolations(container)).toEqual([]);
+  });
+});
+
+describe('WarningSummary', () => {
+  it('shows the counts and the most serious title in words, with a link to the list', () => {
+    render(<WarningSummary warnings={WARNINGS} href="#warnings" />);
+    expect(
+      screen.getByText('Danger: Stability margin 0.21 calibers at liftoff is below 1'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1 danger')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See all 3 warnings' })).toHaveAttribute(
+      'href',
+      '#warnings',
+    );
+  });
+  it('says there are none', () => {
+    render(<WarningSummary warnings={[]} href="#warnings" />);
+    expect(screen.getByText('No warnings')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+  it('has no axe violations', async () => {
+    const { container } = render(<WarningSummary warnings={WARNINGS} href="#warnings" />);
     expect(await axeViolations(container)).toEqual([]);
   });
 });
