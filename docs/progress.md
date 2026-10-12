@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 2 (roadmap): all of Phase 2, complete (see `docs/reports/phase-2-acceptance.md`). Prompt 3 starts on the owner's next "continue".
+Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the Phase 2 report. Steps and plans in `docs/plans/0011-application-architecture-and-design-model.md`.
 
 ## Done
 
@@ -37,13 +37,15 @@ Prompt 2 (roadmap): all of Phase 2, complete (see `docs/reports/phase-2-acceptan
 
 - Phase 2 acceptance report: `docs/reports/phase-2-acceptance.md` (R1 to R4 with and without wind: apogee within 2.5 %, maximum velocity within 0.6 %, ground hit within 0.01 %; convergence table; analytical cases; 422 tests, checks clean). **Phase 2 is complete** except R5, which cannot be simulated past Mach 0.8 until the owner decides on the transonic data (D-034, D-039).
 
+- Prompt 3 step 1 (plan 0011): Prompt 3 roadmap (five steps), the design model `RocketDesign`, the `.lofi.json` format with schema version, strict validation, sorted-key serialization and a migration chain (D-041), the design-to-physics adapter (mass, stability with plain-language assessments, vehicle, simulation options, warnings against the thresholds, D-042), the example design (R1 with the Estes D12) reproducing the Phase 1 CG and CP and the Phase 2 apogee from a design file; NIST SP 811 added as the source for the customary units UNIT-5 to UNIT-11 (D-040).
+
 ## In progress
 
-- Nothing. Prompt 2 is finished.
+- Prompt 3 step 2 (plan 0012, to be written): the rocket builder UI.
 
 ## Next
 
-- Prompt 3 (Phases 3 and 4: React application, file format, autosave, .ork import, ThrustCurve integration, flight data comparison) on the owner's next "continue". The first task is a plan `docs/plans/0011-...` for the application skeleton and the app's own file format.
+- Steps 3 to 5 of plan 0011: motors and ThrustCurve.org, simulation UI, files and interoperability with the Playwright tests and the Phase 3 and 4 acceptance report.
 
 ## Open questions
 
@@ -51,6 +53,10 @@ Prompt 2 (roadmap): all of Phase 2, complete (see `docs/reports/phase-2-acceptan
 - Base drag after burnout (D-035): the source removes the motor area only while thrusting; OpenRocket keeps it removed. Which should the app display? The comparison mode uses OpenRocket's rule.
 
 - Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
+
+- Customary units source (D-040): NIST SP 811 was added to `reference/` for the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and Fahrenheit behind the units toggle. Say if another source is preferred; the factors are definitional and would not change.
+- Deployment speed warning threshold (D-042): no default is given in CLAUDE.md; 20 m/s is a user-editable placeholder labelled as a rule of thumb. Please state the figure you want.
+- `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive.
 
 - Dormand and Prince (1980) is not in `reference/`; the tableau is verified by the consistency sums and order tests (D-037). The owner may add the paper to close the verification formally. Not blocking.
 

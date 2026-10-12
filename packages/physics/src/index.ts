@@ -13,9 +13,18 @@ export { defineQuantity } from './units/quantity.js';
 export * from './units/si.js';
 export {
   celsiusToKelvin,
+  CUSTOMARY_UNIT_FACTORS,
   degreesToRadians,
+  fahrenheitToKelvin,
+  feetPerSecondToMetresPerSecond,
+  feetToMetres,
   gramsToKilograms,
+  inchesToMetres,
+  milesPerHourToMetresPerSecond,
   millimetresToMetres,
+  ouncesToKilograms,
+  poundsForceToNewtons,
+  poundsToKilograms,
 } from './units/convert.js';
 export {
   USSA1976_CONSTANTS,

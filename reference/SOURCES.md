@@ -86,9 +86,20 @@ Measured data only, never a source of equations. All four are U.S. government wo
 
 Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports; NTRS copies were preferred as the government archive). Titles, report numbers, authors and dates were taken from the NTRS records and the first pages. Detailed verification of title pages is done when Phase 2 builds test cases from them.
 
+### 9. NIST Special Publication 811 (2008), Guide for the Use of the International System of Units (SI)
+
+- **Citation:** Thompson, Ambler and Taylor, Barry N. _Guide for the Use of the International System of Units (SI)_. NIST Special Publication 811, 2008 edition. National Institute of Standards and Technology, Gaithersburg, MD, March 2008. U.S. Government work, not subject to copyright.
+- **File:** `docs/nist-sp811-2008.pdf`
+- **URL:** https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication811e2008.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `788dd8f0bcb0ec06e40c300690266742532a7e760a93be57764b77ed0ef3482f`
+- **Pages:** 85 (PDF page = printed page + 12 in Appendix B)
+- **Verified:** Appendix B.2 (printed p. 40) states that a factor in boldface is exact; B.8 lists inch 2.54 E−02 m (p. 50), foot 3.048 E−01 m (p. 49), pound (avoirdupois) 4.535 924 E−01 kg with footnote 22 "the exact conversion factor is 4.535 923 7 E−01" (p. 53), ounce (avoirdupois) 2.834 952 E−02 kg (p. 52), pound-force 4.448 222 E+00 N with footnote 23 "the exact conversion factor is 4.448 221 615 260 5 E+00" (p. 53), mile per hour 4.4704 E−01 m/s (p. 52), foot per second 3.048 E−01 m/s (p. 49), degree Fahrenheit (p. 48, 5/9 of a degree Celsius) and B.6 (printed p. 42) on the 1959 definition of the international foot as exactly 0.3048 m.
+- **Used for:** the exact definitions of the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and degree Fahrenheit behind the UI units toggle (UNIT-5 to UNIT-11, decision D-040). Approved by the owner implicitly through CLAUDE.md section 9 ("a units toggle"); recorded as an open question in `docs/progress.md` in case the owner prefers another source.
+
 ## Copyright status and the fetch script
 
-This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014) may stay committed.
+This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811) may stay committed.
 
 ## Reference motors (`reference/motors/`)
 

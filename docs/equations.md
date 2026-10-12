@@ -3,10 +3,10 @@
 Every physics equation implemented in this repository is listed here, per CLAUDE.md section 4.
 An equation that is not in this register must not be in the code.
 
-**Current phase:** Phase 2 complete; Phase 3 (application) starts on the next "continue".
-**Current task:** none in progress. Phase 1 (plans 0001 to 0006), the motor model (plan 0007), frames, gravity and environment (plan 0008), the drag model (plan 0009) and the flight simulator (plan 0010) are implemented. File readers contain no physics equations; the motor rules they apply are the MOT entries below.
+**Current phase:** Phase 3 (application), Prompt 3.
+**Current task:** plan 0011 step 1 (design model and file format) done; step 2 (plan 0012, the rocket builder UI) next. Phase 1 (plans 0001 to 0006), the motor model (plan 0007), frames, gravity and environment (plan 0008), the drag model (plan 0009) and the flight simulator (plan 0010) are implemented. File readers contain no physics equations; the motor rules they apply are the MOT entries below.
 
-Source abbreviations: **USSA76** = NOAA/NASA/USAF, _U.S. Standard Atmosphere, 1976_ (`reference/docs/ussa1976-nasa-ntrs-19770009539.pdf`; printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables). **SI9** = BIPM, _The International System of Units (SI)_, 9th edition 2019 (`reference/docs/si-brochure-9-en.pdf`). **N09** = Niskanen (2009), _Development of an Open Source model rocket simulation software_ (`reference/docs/niskanen-2009-openrocket-thesis.pdf`; printed page numbers; PDF page = printed + 10).
+Source abbreviations: **USSA76** = NOAA/NASA/USAF, _U.S. Standard Atmosphere, 1976_ (`reference/docs/ussa1976-nasa-ntrs-19770009539.pdf`; printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables). **SI9** = BIPM, _The International System of Units (SI)_, 9th edition 2019 (`reference/docs/si-brochure-9-en.pdf`). **N09** = Niskanen (2009), _Development of an Open Source model rocket simulation software_ (`reference/docs/niskanen-2009-openrocket-thesis.pdf`; printed page numbers; PDF page = printed + 10). **NIST SP 811** = Thompson and Taylor, _Guide for the Use of the International System of Units (SI)_, NIST Special Publication 811, 2008 (`reference/docs/nist-sp811-2008.pdf`; printed page numbers; PDF page = printed + 12 in Appendix B).
 
 ## How to add an entry
 
@@ -23,12 +23,19 @@ Test files are in the same folder as the implementation unless stated. "Verified
 
 ### UNIT: definitional conversions (`packages/physics/src/units/convert.ts`)
 
-| ID     | Equation                | Source and location                                                | Validity range                        | Symbols and units                | Implemented in        | Verified by       |
-| ------ | ----------------------- | ------------------------------------------------------------------ | ------------------------------------- | -------------------------------- | --------------------- | ----------------- |
-| UNIT-1 | x_m = x_mm / 1000       | SI9 §3, Table 7 (prefix milli = 10⁻³)                              | any finite x                          | x_mm millimetres, x_m metres     | `millimetresToMetres` | `convert.test.ts` |
-| UNIT-2 | x_kg = x_g / 1000       | SI9 §3, Table 7 (prefix kilo = 10³; the kilogram is the base unit) | any finite x                          | x_g grams, x_kg kilograms        | `gramsToKilograms`    | `convert.test.ts` |
-| UNIT-3 | θ_rad = θ_deg · π / 180 | SI9 §4, Table 8 (degree = (π/180) rad)                             | any finite θ                          | θ_deg degrees, θ_rad radians     | `degreesToRadians`    | `convert.test.ts` |
-| UNIT-4 | T_K = t_°C + 273.15     | SI9 §2.3.1 (definition of the kelvin, t/°C = T/K − 273.15)         | T_K ≥ 0 (rejects below absolute zero) | t_°C degrees Celsius, T_K kelvin | `celsiusToKelvin`     | `convert.test.ts` |
+| ID      | Equation                                            | Source and location                                                                             | Validity range                        | Symbols and units                | Implemented in                                                    | Verified by                                                              |
+| ------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------- | -------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| UNIT-1  | x_m = x_mm / 1000                                   | SI9 §3, Table 7 (prefix milli = 10⁻³)                                                           | any finite x                          | x_mm millimetres, x_m metres     | `millimetresToMetres`                                             | `convert.test.ts`                                                        |
+| UNIT-2  | x_kg = x_g / 1000                                   | SI9 §3, Table 7 (prefix kilo = 10³; the kilogram is the base unit)                              | any finite x                          | x_g grams, x_kg kilograms        | `gramsToKilograms`                                                | `convert.test.ts`                                                        |
+| UNIT-3  | θ_rad = θ_deg · π / 180                             | SI9 §4, Table 8 (degree = (π/180) rad)                                                          | any finite θ                          | θ_deg degrees, θ_rad radians     | `degreesToRadians`                                                | `convert.test.ts`                                                        |
+| UNIT-4  | T_K = t_°C + 273.15                                 | SI9 §2.3.1 (definition of the kelvin, t/°C = T/K − 273.15)                                      | T_K ≥ 0 (rejects below absolute zero) | t_°C degrees Celsius, T_K kelvin | `celsiusToKelvin`                                                 | `convert.test.ts`                                                        |
+| UNIT-5  | x_m = x_in × 0.0254                                 | NIST SP 811 (2008) B.8 p. 50; B.6 p. 42; exact (B.2 p. 40)                                      | every finite float64                  | in, m                            | `inchesToMetres`                                                  | `convert.test.ts` (1 in; 12 in = 1 ft)                                   |
+| UNIT-6  | x_m = x_ft × 0.3048                                 | NIST SP 811 B.8 p. 49; B.6 p. 42; exact                                                         | every finite float64                  | ft, m                            | `feetToMetres`                                                    | `convert.test.ts`                                                        |
+| UNIT-7  | m_kg = m_lb × 0.45359237                            | NIST SP 811 B.8 p. 53, footnote 22; exact                                                       | every finite float64                  | lb (avoirdupois), kg             | `poundsToKilograms`                                               | `convert.test.ts` (2 lb = 0.90718474 kg; printed 4.535 924 E−01)         |
+| UNIT-8  | m_kg = m_oz × 0.45359237/16 = m_oz × 0.028349523125 | NIST SP 811 B.8 p. 52 (2.834 952 E−02 rounded), footnote 22; 16 oz = 1 lb                       | every finite float64                  | oz (avoirdupois), kg             | `ouncesToKilograms`                                               | `convert.test.ts` (16 oz = 1 lb)                                         |
+| UNIT-9  | F_N = F_lbf × 4.4482216152605                       | NIST SP 811 B.8 p. 53, footnote 23 (0.45359237 × 9.80665); exact                                | every finite float64                  | lbf, N                           | `poundsForceToNewtons`                                            | `convert.test.ts` (10 lbf; product check)                                |
+| UNIT-10 | v = v_mph × 0.44704; v = v_fps × 0.3048             | NIST SP 811 B.8 p. 52 (mile per hour), p. 49 (foot per second); exact                           | every finite float64                  | mi/h, ft/s, m/s                  | `milesPerHourToMetresPerSecond`, `feetPerSecondToMetresPerSecond` | `convert.test.ts` (60 mi/h = 88 ft/s = 26.8224 m/s)                      |
+| UNIT-11 | T_K = (t_°F + 459.67) × 5/9                         | NIST SP 811 B.8 p. 48 (5/9 °C per °F) with UNIT-4 (0 °C = 273.15 K); 459.67 = 273.15 × 9/5 − 32 | every finite float64                  | °F, K                            | `fahrenheitToKelvin`                                              | `convert.test.ts` (32 °F = 273.15 K, 212 °F = 373.15 K, −40 °F = −40 °C) |
 
 ### ATM: U.S. Standard Atmosphere 1976 (`packages/physics/src/atmosphere/ussa1976.ts`)
 
@@ -152,15 +159,15 @@ Test files are in the same folder as the implementation unless stated. "Verified
 
 ## Group prefixes
 
-| Prefix | Topic                                           | Primary source                                                         |
-| ------ | ----------------------------------------------- | ---------------------------------------------------------------------- |
-| `UNIT` | Unit definitions and conversions                | SI Brochure, 9th edition (approved, D-011)                             |
-| `ATM`  | Atmosphere                                      | U.S. Standard Atmosphere, 1976                                         |
-| `GEO`  | Component geometry, volume, mass, CG, inertia   | Niskanen (2009), Appendix A and §4.2.3, plus the definitions           |
-| `BAR`  | Normal force coefficient and centre of pressure | Niskanen (2009) ch. 3 (Barrowman 1967 and 1966 as the underlying work) |
-| `DRAG` | Drag components                                 | Niskanen (2009) ch. 3; Hoerner (1965) where Niskanen refers to it      |
-| `MOT`  | Motors and thrust curves                        | RASP .eng and RockSim .rse specifications                              |
-| `DYN`  | Flight dynamics and integration                 | Niskanen (2009) ch. 4; Dormand and Prince (1980) for the RK5(4) pair   |
-| `AERO` | Forces and moments at angle of attack           | Niskanen (2009) ch. 3                                                  |
-| `GRAV` | Gravity                                         | U.S. Standard Atmosphere 1976 eq. (17); SI Brochure for g_n            |
-| `ENV`  | Launch site, rail and wind                      | Niskanen (2009) ch. 2 and 4                                            |
+| Prefix | Topic                                           | Primary source                                                                          |
+| ------ | ----------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `UNIT` | Unit definitions and conversions                | SI Brochure, 9th edition (approved, D-011); NIST SP 811 for the customary units (D-040) |
+| `ATM`  | Atmosphere                                      | U.S. Standard Atmosphere, 1976                                                          |
+| `GEO`  | Component geometry, volume, mass, CG, inertia   | Niskanen (2009), Appendix A and §4.2.3, plus the definitions                            |
+| `BAR`  | Normal force coefficient and centre of pressure | Niskanen (2009) ch. 3 (Barrowman 1967 and 1966 as the underlying work)                  |
+| `DRAG` | Drag components                                 | Niskanen (2009) ch. 3; Hoerner (1965) where Niskanen refers to it                       |
+| `MOT`  | Motors and thrust curves                        | RASP .eng and RockSim .rse specifications                                               |
+| `DYN`  | Flight dynamics and integration                 | Niskanen (2009) ch. 4; Dormand and Prince (1980) for the RK5(4) pair                    |
+| `AERO` | Forces and moments at angle of attack           | Niskanen (2009) ch. 3                                                                   |
+| `GRAV` | Gravity                                         | U.S. Standard Atmosphere 1976 eq. (17); SI Brochure for g_n                             |
+| `ENV`  | Launch site, rail and wind                      | Niskanen (2009) ch. 2 and 4                                                             |

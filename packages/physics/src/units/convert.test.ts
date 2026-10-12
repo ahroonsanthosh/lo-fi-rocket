@@ -3,9 +3,18 @@ import { describe, expect, it } from 'vitest';
 import { InvalidInputError } from '../errors.js';
 import {
   celsiusToKelvin,
+  CUSTOMARY_UNIT_FACTORS,
   degreesToRadians,
+  fahrenheitToKelvin,
+  feetPerSecondToMetresPerSecond,
+  feetToMetres,
   gramsToKilograms,
+  inchesToMetres,
+  milesPerHourToMetresPerSecond,
   millimetresToMetres,
+  ouncesToKilograms,
+  poundsForceToNewtons,
+  poundsToKilograms,
 } from './convert.js';
 
 const FAST_CHECK_SEED = 20261011;
@@ -126,5 +135,51 @@ describe('UNIT-4 celsiusToKelvin', () => {
 
   it('rejects non-finite input', () => {
     expect(() => celsiusToKelvin(Number.POSITIVE_INFINITY)).toThrow(InvalidInputError);
+  });
+});
+
+describe('UNIT-5 to UNIT-11 customary units (NIST SP 811 Appendix B, D-040)', () => {
+  it('the exact factors are the footnoted or boldface values of B.8', () => {
+    // B.8 p. 50 inch 2.54 E−02 (exact); p. 49 foot 3.048 E−01 (exact).
+    expect(CUSTOMARY_UNIT_FACTORS.metresPerInch).toBe(0.0254);
+    expect(CUSTOMARY_UNIT_FACTORS.metresPerFoot).toBe(0.3048);
+    // footnote 22: 4.535 923 7 E−01; printed 4.535 924 E−01 (rounded to 7 digits).
+    expect(CUSTOMARY_UNIT_FACTORS.kilogramsPerPound).toBe(0.45359237);
+    expect(Math.abs(CUSTOMARY_UNIT_FACTORS.kilogramsPerPound - 0.4535924)).toBeLessThan(0.5e-7);
+    // 16 oz = 1 lb: 0.45359237 / 16 = 0.028349523125 exactly; printed 2.834 952 E−02.
+    expect(CUSTOMARY_UNIT_FACTORS.kilogramsPerOunce).toBe(0.45359237 / 16);
+    expect(Math.abs(CUSTOMARY_UNIT_FACTORS.kilogramsPerOunce - 0.02834952)).toBeLessThan(0.5e-8);
+    // footnote 23: 4.448 221 615 260 5 = 0.45359237 × 9.80665; printed 4.448 222.
+    expect(CUSTOMARY_UNIT_FACTORS.newtonsPerPoundForce).toBe(4.4482216152605);
+    expect(ulpsApart(0.45359237 * 9.80665, 4.4482216152605)).toBeLessThan(2);
+    expect(Math.abs(CUSTOMARY_UNIT_FACTORS.newtonsPerPoundForce - 4.448222)).toBeLessThan(0.5e-6);
+    // mile per hour: 1609.344 m / 3600 s = 0.44704 exactly (p. 52).
+    expect(CUSTOMARY_UNIT_FACTORS.metresPerSecondPerMilePerHour).toBe(0.44704);
+    expect(ulpsApart(1609.344 / 3600, 0.44704)).toBeLessThan(2);
+  });
+  it('converts hand values: 1 in, 12 in = 1 ft, 2 lb, 16 oz = 1 lb, 10 lbf, 60 mi/h = 88 ft/s', () => {
+    expect(inchesToMetres(1)).toBe(0.0254);
+    // 12 × 0.0254 = 0.3048 (exact product in decimal; one rounding of the double product)
+    expect(ulpsApart(inchesToMetres(12), feetToMetres(1))).toBeLessThan(2);
+    expect(poundsToKilograms(2)).toBe(0.90718474);
+    expect(ulpsApart(ouncesToKilograms(16), poundsToKilograms(1))).toBeLessThan(2);
+    expect(poundsForceToNewtons(10)).toBeCloseTo(44.482216152605, 12);
+    // 60 mi/h = 26.8224 m/s = 88 ft/s (88 × 0.3048 = 26.8224)
+    expect(milesPerHourToMetresPerSecond(60)).toBeCloseTo(26.8224, 12);
+    expect(
+      ulpsApart(feetPerSecondToMetresPerSecond(88), milesPerHourToMetresPerSecond(60)),
+    ).toBeLessThan(4);
+    expect(inchesToMetres(0)).toBe(0);
+    expect(() => inchesToMetres(Number.NaN)).toThrow(InvalidInputError);
+    expect(() => poundsToKilograms(Number.POSITIVE_INFINITY)).toThrow(InvalidInputError);
+  });
+  it('Fahrenheit: 32 °F = 273.15 K, 212 °F = 373.15 K, −40 °F = −40 °C, −459.67 °F = 0 K', () => {
+    // (32 + 459.67) × 5/9 = 491.67 × 5/9 = 273.15
+    expect(fahrenheitToKelvin(32)).toBeCloseTo(273.15, 12);
+    // (212 + 459.67) × 5/9 = 671.67 × 5/9 = 373.15
+    expect(fahrenheitToKelvin(212)).toBeCloseTo(373.15, 12);
+    expect(fahrenheitToKelvin(-40)).toBeCloseTo(celsiusToKelvin(-40), 12);
+    expect(fahrenheitToKelvin(-459.67)).toBeCloseTo(0, 12);
+    expect(() => fahrenheitToKelvin(Number.NaN)).toThrow(InvalidInputError);
   });
 });

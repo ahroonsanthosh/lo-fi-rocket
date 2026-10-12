@@ -30,4 +30,5 @@ fetch apogee-rocksim-engine-file-format.pdf "https://www.thrustcurve.org/thirdpa
 fetch thrustcurve-api/motorstats.html "https://www.thrustcurve.org/info/motorstats.html" 8cfaacf3319bef69d2a7f1dff46f4ad2566a2496f2c21b53cca9a8612e6a1ec8
 fetch thrustcurve-api/glossary.html "https://www.thrustcurve.org/info/glossary.html" 1702cc6e5b957f49af6f60090490c2fc0b9e4edfd83c93a719287f1e3855e287
 fetch thrustcurve-api/swagger.json "https://www.thrustcurve.org/api/v1/swagger.json" 566009abab4e993283230061c98d47737df139649a70c887b9b6435c5ca04f8d
+fetch nist-sp811-2008.pdf "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication811e2008.pdf" 788dd8f0bcb0ec06e40c300690266742532a7e760a93be57764b77ed0ef3482f
 echo "All reference documents verified."

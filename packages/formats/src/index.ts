@@ -37,3 +37,57 @@ export {
   RseUnsupportedError,
 } from './errors.js';
 export { XmlSyntaxError } from './xml.js';
+export {
+  CURRENT_SCHEMA_VERSION,
+  newId,
+  type DeployEvent,
+  type DesignComponent,
+  type DesignRecoveryDevice,
+  type LaunchConditions,
+  type LaunchRailSettings,
+  type LaunchSiteSettings,
+  type MotorMount,
+  type MotorProvenance,
+  type MotorSelection,
+  type RocketDesign,
+  type SimulationSettings,
+  type StabilityThresholds,
+  type WarningThresholds,
+  type WindSettings,
+} from './design/model.js';
+export { DesignError, DesignFileError } from './design/errors.js';
+export { validateDesign } from './design/validate.js';
+export {
+  applyMigrations,
+  migrateDesignDocument,
+  MIGRATIONS,
+  type Migration,
+} from './design/migrate.js';
+export { DESIGN_FILE_EXTENSION, parseDesign, serializeDesign } from './design/serialize.js';
+export {
+  assessMargin,
+  DEFAULT_ROUGHNESS_HEIGHT,
+  DESIGN_MACH,
+  designFlightWarnings,
+  designMassProperties,
+  designMotor,
+  designMotorMass,
+  designPlacedComponents,
+  designSimulationOptions,
+  designStability,
+  designThrustToWeight,
+  designVehicle,
+  type DesignStability,
+  type DesignWarning,
+  type MassCondition,
+  type PhysicsMode,
+  type StabilityAssessment,
+} from './design/to-physics.js';
+export {
+  DEFAULT_SIMULATION_SETTINGS,
+  DEFAULT_STABILITY_THRESHOLDS,
+  DEFAULT_WARNING_THRESHOLDS,
+  ESTES_D12,
+  exampleDesign,
+  newDesign,
+} from './design/example.js';
