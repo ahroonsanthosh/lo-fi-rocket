@@ -278,6 +278,7 @@ export type {
   RecoveryDevice,
   SimulationOptions,
 } from './flight/vehicle.js';
+export { DEFAULT_MINIMUM_STABILITY_MARGIN } from './flight/vehicle.js';
 export {
   AERO_MAX_ANGLE_OF_ATTACK,
   dragCurveAt,
@@ -293,6 +294,7 @@ export {
   RK4_MAX_PITCH_AMPLITUDE_LOSS,
   RK4_WARN_PITCH_AMPLITUDE_LOSS,
   type LinearisedRates,
+  type StabilityPoint,
   type StepCheck,
 } from './flight/simulate.js';
 export {

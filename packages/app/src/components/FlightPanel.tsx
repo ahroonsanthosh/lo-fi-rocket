@@ -1,5 +1,5 @@
 import { designFlightWarnings, type RocketDesign } from '@lo-fi-rocket/formats';
-import { validateLaunch, type FlightResult } from '@lo-fi-rocket/physics';
+import { validateLaunch, type FlightResult, type StabilityPoint } from '@lo-fi-rocket/physics';
 import { useState, type JSX } from 'react';
 import { resultToCsv } from '../simulation/csv-export.js';
 import { useServices } from '../state/services.js';
@@ -20,6 +20,12 @@ export interface FlightState {
 export interface FlightPanelProps {
   readonly flight: FlightState | undefined;
   readonly onFlight: (f: FlightState | undefined) => void;
+}
+
+/** The lowest margin of a phase at its Mach number and angle of attack (plan 0030). */
+function stabilityText(p: StabilityPoint | undefined, phase: string): string {
+  if (p === undefined) return '';
+  return `${p.calibers.toFixed(2)} cal ${phase} (t ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, α ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°)`;
 }
 
 function bearing(rad: number): string {
@@ -175,6 +181,14 @@ function Summary({
           <dd>
             {opt(s.deploymentTime, (t) => `${t.toFixed(2)} s`)} at{' '}
             {opt(s.deploymentVelocity, (v) => formatQuantity(v, 'velocity', units))}
+          </dd>
+        </div>
+        <div>
+          <dt>Lowest in-flight stability</dt>
+          <dd>
+            {stabilityText(s.minimumStability.powered, 'powered')}
+            {s.minimumStability.coast === undefined ? '' : '; '}
+            {stabilityText(s.minimumStability.coast, 'coast')}
           </dd>
         </div>
         <div>

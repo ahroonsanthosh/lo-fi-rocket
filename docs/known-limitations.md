@@ -373,3 +373,8 @@ Status: nothing physical is implemented yet. Entries below are placeholders for 
 - **Flat-faced (square) leading edges:** the DATCOM has no method; Niskanen's stagnation term remains, unvalidated on independent data.
 - **Rounded leading edges below Mach 0.5:** the DATCOM correlation was substantiated from Mach 0.5; below it the term is small (under 0.14 of the edge frontal area) and is used as written, with a warning.
 - **Wedge geometry:** the model's wedge has a constant thickness t over the span with faces rising t/(2c) along each chord; real wedges with a fixed included angle are thicker at the root.
+
+## In-flight stability (plan 0030, D-067)
+
+- **Near apogee:** the coast minimum is usually near apogee, where the angle of attack grows as the airspeed falls (13° to 20° on the reference rockets) and body lift moves the CP forward. The dynamic pressure there is small, so a warning caused by it matters less than one early in the flight; the warning names the time, Mach number and angle of attack so the user can tell. Flights affected: every flight with wind or an angled rail.
+- **Angle-of-attack model:** the CP at angle of attack uses Niskanen's body lift (eq. 3.26) and linear fins; above about 10° the fin force is outside Barrowman's small-angle assumption (Part C item 8 extends it).

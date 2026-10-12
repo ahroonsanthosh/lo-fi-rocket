@@ -47,7 +47,13 @@ import {
 } from './integrators.js';
 import { quaternionMultiply, quaternionNormalise, type Quaternion } from './quaternion.js';
 import { add, cross, dot, norm, scale, sub, vec3, type Vec3 } from './vector.js';
-import type { DragCurve, FlightVehicle, RecoveryDevice, SimulationOptions } from './vehicle.js';
+import {
+  DEFAULT_MINIMUM_STABILITY_MARGIN,
+  type DragCurve,
+  type FlightVehicle,
+  type RecoveryDevice,
+  type SimulationOptions,
+} from './vehicle.js';
 
 /** D-047: linear interpolation of an imported C_D table in Mach; outside the table is an error. */
 export function dragCurveAt(curve: DragCurve, machNumber: number): number {
@@ -167,6 +173,27 @@ export interface FlightSummary {
   readonly flightTime: number;
   /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
   readonly endReason: 'landing' | 'max-time' | 'model-limit';
+  /**
+   * The smallest stability margin, at the CP for the actual Mach number and
+   * angle of attack and the CG of the moment, over every accepted step of
+   * powered flight (rail exit to burnout) and of coast (burnout to apogee);
+   * undefined when the phase did not occur or had no aerodynamics (plan 0030).
+   */
+  readonly minimumStability: {
+    readonly powered: StabilityPoint | undefined;
+    readonly coast: StabilityPoint | undefined;
+  };
+}
+
+export interface StabilityPoint {
+  /** (CP − CG)/d, calibers. */
+  readonly calibers: number;
+  readonly time: number;
+  readonly mach: number;
+  /** Radians. */
+  readonly angleOfAttack: number;
+  readonly cp: number;
+  readonly cg: number;
 }
 
 /**
@@ -663,9 +690,38 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     options.recordInterval === undefined ? 0 : (options.recordInterval as number);
   let lastRecorded = -Infinity;
   let maxAcceleration = 0;
+  const minimumMargin = options.minimumStabilityMargin ?? DEFAULT_MINIMUM_STABILITY_MARGIN;
+  if (!Number.isFinite(minimumMargin)) {
+    throw new InvalidInputError(
+      'minimum stability margin',
+      minimumMargin,
+      'must be a finite number of calibers',
+    );
+  }
+  const lowest: { powered: StabilityPoint | undefined; coast: StabilityPoint | undefined } = {
+    powered: undefined,
+    coast: undefined,
+  };
   const record = (force: boolean): void => {
-    if (!force && t - lastRecorded < recordInterval - 1e-12) return;
+    const recordNow = force || t - lastRecorded >= recordInterval - 1e-12;
+    if (!recordNow && phase !== 'powered' && phase !== 'coast') return;
     const { derived } = derive(ctx, phase, t, y);
+    // Plan 0030: the in-flight margin at every accepted step of powered flight and coast.
+    if ((phase === 'powered' || phase === 'coast') && Number.isFinite(derived.cp)) {
+      const calibers = (derived.cp - derived.cg) / referenceDiameter;
+      const current = lowest[phase];
+      if (current === undefined || calibers < current.calibers) {
+        lowest[phase] = {
+          calibers,
+          time: t,
+          mach: derived.flight?.mach ?? Number.NaN,
+          angleOfAttack: derived.flight?.angleOfAttack ?? Number.NaN,
+          cp: derived.cp,
+          cg: derived.cg,
+        };
+      }
+    }
+    if (!recordNow) return;
     const s = unpack(y);
     const acc = norm(derived.accelerationWorld);
     maxAcceleration = Math.max(maxAcceleration, acc);
@@ -1083,7 +1139,18 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         : (Math.atan2(landing.x, landing.y) + 2 * Math.PI) % (2 * Math.PI),
     flightTime: t,
     endReason,
+    minimumStability: { powered: lowest.powered, coast: lowest.coast },
   };
+  for (const [name, p] of [
+    ['powered flight', lowest.powered],
+    ['coast', lowest.coast],
+  ] as const) {
+    if (p !== undefined && p.calibers < minimumMargin) {
+      warnings.add(
+        `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (t = ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there. The margin uses the CP at that Mach number and angle of attack (plan 0030).`,
+      );
+    }
+  }
   return {
     samples,
     events,

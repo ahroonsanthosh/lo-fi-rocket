@@ -92,4 +92,13 @@ export interface SimulationOptions {
   readonly degreesOfFreedom: 6 | 3;
   /** Record a sample at most this often (every accepted step when absent). */
   readonly recordInterval?: Seconds;
+  /**
+   * Stability margin below which the flight carries a warning, calibers
+   * (plan 0030, D-067). Default `DEFAULT_MINIMUM_STABILITY_MARGIN`, the 1.0
+   * caliber rule of thumb of CLAUDE.md section 9, not a guarantee.
+   */
+  readonly minimumStabilityMargin?: number;
 }
+
+/** CLAUDE.md section 9: below 1.0 caliber, "warning, likely unstable"; a rule of thumb. */
+export const DEFAULT_MINIMUM_STABILITY_MARGIN = 1.0;
