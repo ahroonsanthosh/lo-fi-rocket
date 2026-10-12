@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 4 (roadmap): Phase 5 and the final audit, started on the owner's "continue" after the Phase 3 and 4 report.
+Prompt 4 (roadmap): Phase 5 and the final audit, complete (`docs/reports/phase-5-acceptance.md`, `docs/audit.md`). The roadmap's five prompts are done.
 
 ## Done
 
@@ -53,13 +53,15 @@ Prompt 4 (roadmap): Phase 5 and the final audit, started on the owner's "continu
 
 - Prompt 4 step 3 (plan 0018): propellant CG profiles for liquid engines (MOT-6, D-052): mass-profile points carry an optional CG from the fore end, interpolated linearly and validated, the CSV reader's fourth column, the design file's optional field; tests by hand including the rocket CG shift.
 
+- Prompt 4 step 4: the final audit `docs/audit.md` (every CLAUDE.md requirement with its status and evidence, the decisions the owner may overturn, what is not done in priority order) and the Phase 5 report `docs/reports/phase-5-acceptance.md`. **Prompt 4 (Phase 5 and the audit) is complete; the roadmap is finished.**
+
 ## In progress
 
-- Prompt 4 step 4: the final audit (`docs/audit.md`) and the Phase 5 acceptance report.
+- Nothing.
 
 ## Next
 
-- Nothing after the audit; the owner's next prompt.
+- The owner's answers to the open questions below decide the follow-up work, in this suggested order: the transonic model sources (D-034, D-039) and then the wind tunnel validation of CLAUDE.md 6.7; the large-angle fin force (D-046); `.CDX1` samples; altimeter data for 7.5; golden flight time series (7.6).
 
 ## Open questions
 
