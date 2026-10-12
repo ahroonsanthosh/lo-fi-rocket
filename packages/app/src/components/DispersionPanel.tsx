@@ -1,5 +1,6 @@
 import type { DispersionResult, DispersionSettingsRecord } from '@lo-fi-rocket/formats';
 import { useId, useState, type JSX } from 'react';
+import type { DispersionState } from './FlightViewer.js';
 import { useServices } from '../state/services.js';
 import { useStore } from '../state/store.js';
 import { displayValue, formatQuantity, unitFor, type QuantityKind } from '../units/display.js';
@@ -41,13 +42,24 @@ const VARIATION_FIELDS: readonly {
   },
 ];
 
-export function DispersionPanel(): JSX.Element {
+export interface DispersionPanelProps {
+  /** The batch, held by the App when given (plan 0024) so the 3D replay can show it; local otherwise. */
+  readonly result?: DispersionState | undefined;
+  readonly onResult?: ((d: DispersionState | undefined) => void) | undefined;
+}
+
+export function DispersionPanel(props: DispersionPanelProps = {}): JSX.Element {
   const { state, dispatch } = useStore();
   const services = useServices();
   const units = state.units;
   const design = state.design;
   const settings = design.dispersion ?? DEFAULT_DISPERSION;
-  const [result, setResult] = useState<DispersionResult | undefined>(undefined);
+  const [local, setLocal] = useState<DispersionResult | undefined>(undefined);
+  const result = props.onResult === undefined ? local : props.result?.result;
+  const setResult = (r: DispersionResult | undefined): void => {
+    if (props.onResult === undefined) setLocal(r);
+    else props.onResult(r === undefined ? undefined : { design, result: r });
+  };
   const [progress, setProgress] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
