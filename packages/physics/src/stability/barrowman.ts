@@ -27,6 +27,15 @@ import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
 import { datcomBodyAssembly, noseCylinderTermAtMach } from './datcom-body.js';
 import {
+  circularArcSemiwedge,
+  exposedWing,
+  finAfterbodyLength,
+  finCarryOver,
+  sonicLeadingEdgeFactor,
+  wingSupersonicCnAlpha,
+  type CarryOver,
+} from './datcom-fin.js';
+import {
   metres,
   squareMetres,
   type Mach,
@@ -55,6 +64,29 @@ export interface FinSetTerm extends AerodynamicTerm {
   readonly interferenceFactor: number;
   /** Roll angle actually used (the worst case when requested), radians. */
   readonly rollAngle: number;
+  /** Supersonic fin method in effect at this Mach (BAR-11 Niskanen, or BAR-15 to BAR-17 DATCOM). */
+  readonly supersonicMethod: SupersonicFinMethod;
+  /** K_B(W), the body carry-over factor (0 with the Niskanen method or below Mach 0.8). */
+  readonly carryOverFactor: number;
+  /** The carry-over part of `cnAlpha` and where it acts (from the root leading edge); cpX is NaN when 0. */
+  readonly carryOver: AerodynamicTerm;
+  /** Why the DATCOM method was not used, or what it could not cover. */
+  readonly warnings: readonly string[];
+}
+
+/**
+ * BAR-11 or BAR-15 to BAR-17. The supersonic fin normal force method:
+ * 'niskanen' is eq. (3.49) with K_T(B) (eq. 3.56) and no body carry-over;
+ * 'datcom' is the DATCOM wing chart with the body carry-over K_B(W) and its
+ * a.c. (plan 0028, D-065). Both use the BAR-12 fairing between Mach 0.8 and 1.2.
+ */
+export type SupersonicFinMethod = 'niskanen' | 'datcom';
+export const DEFAULT_SUPERSONIC_FIN_METHOD: SupersonicFinMethod = 'datcom';
+
+export interface FinSupersonicOptions {
+  readonly method: SupersonicFinMethod;
+  /** Body length behind the fin root trailing edge, metres (chooses figure 4.3.1.2-11a or -11b). */
+  readonly afterbodyLength: number;
 }
 
 export type RollAngle = Radians | 'worst';
@@ -91,6 +123,8 @@ export interface CentreOfPressureOptions {
   readonly referenceDiameter?: Metres;
   /** BAR-12 candidate; defaults to `DEFAULT_TRANSONIC_FIN_INTERPOLATION` (D-056). */
   readonly transonicFinInterpolation?: TransonicFinInterpolation;
+  /** Supersonic fin method; defaults to `DEFAULT_SUPERSONIC_FIN_METHOD` (D-065). */
+  readonly supersonicFinMethod?: SupersonicFinMethod;
 }
 
 export interface ComponentContribution {
@@ -386,6 +420,13 @@ export function supersonicFinCnAlpha(
   );
 }
 
+interface DatcomFinAtMach {
+  readonly value: { single: number; co: CarryOver } | undefined;
+  readonly warnings: readonly string[];
+}
+/** BAR-12 fairing end values of the DATCOM method per fin set object (D-065). */
+const DATCOM_FAIRING_CACHE = new WeakMap<TrapezoidFinSetComponent, Map<string, DatcomFinAtMach>>();
+
 /**
  * BAR-5, BAR-6, BAR-7, BAR-8 for a trapezoidal fin set.
  *
@@ -403,6 +444,7 @@ export function finSetTerm(
   finRollReduction: boolean,
   angleOfAttack = 0,
   transonic: TransonicFinInterpolation = DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+  supersonic: FinSupersonicOptions = { method: 'niskanen', afterbodyLength: 0 },
 ): FinSetTerm {
   const M: number = mach;
   requireMach(M);
@@ -431,39 +473,141 @@ export function finSetTerm(
   const k = (s * s) / (Afin * Math.cos(gammaC));
   const C = (2 * Math.PI * s * s) / Aref;
   const subsonic = (m: number): number => C / (1 + Math.sqrt(1 + (Math.sqrt(1 - m * m) * k) ** 2));
-  let cnAlphaSingleFin: number;
-  let regime: 'subsonic' | 'transonic' | 'supersonic';
-  if (M <= 0.8) {
-    cnAlphaSingleFin = subsonic(M);
-    regime = 'subsonic';
-  } else if (M >= 1.2) {
-    cnAlphaSingleFin = supersonicFinCnAlpha(mach, Afin, Aref, angleOfAttack);
-    regime = 'supersonic';
-  } else {
-    cnAlphaSingleFin = transonicSingleFin(
-      transonic,
-      M,
-      subsonic,
-      k,
-      C,
-      supersonicFinCnAlpha(mach_(1.2), Afin, Aref, angleOfAttack),
-      Afin / Aref,
-    );
-    regime = 'transonic';
-  }
   // eq. (3.54)
   const finCountFactor = finRollFactor(c.count, rollAngle, finRollReduction);
   // eqs. (3.55), (3.56)
   const interferenceFactor = 1 + rt / (s + rt);
+  const warnings: string[] = [];
+  // BAR-15 to BAR-17: the DATCOM single-fin slope (C_Nα)₁ = C_Nα A_fin/A_ref and the carry-over at Mach m.
+  const wing = exposedWing(cr, ct, s, xt);
+  // Step 2 of DATCOM 4.1.3.2 C: 'airfoil' fins as circular-arc sections on the MAC (D-065); blunt edges uncorrected.
+  const sharp = c.crossSection === 'airfoil';
+  const deltaPerp = sharp ? circularArcSemiwedge(c.thickness, mac, wing.tanLeadingEdge) : undefined;
+  const datcomCompute = (m: number): DatcomFinAtMach => {
+    const notes: string[] = [];
+    const w = wingSupersonicCnAlpha(wing, m, deltaPerp);
+    if (w.cnAlpha === undefined) {
+      notes.push(
+        `DATCOM supersonic fin method not used: ${w.reason}; Niskanen eq. (3.49) without body carry-over is used instead.`,
+      );
+      return { value: undefined, warnings: notes };
+    }
+    if (!sharp && wing.tanLeadingEdge > 0) {
+      const beta = Math.sqrt(m * m - 1);
+      const t = wing.tanLeadingEdge;
+      const z = beta <= t ? beta / t : 2 - t / beta;
+      // Where even the 4° curve of figure 4.1.3.2-60 departs from 1, a blunt edge would lose more.
+      if ((sonicLeadingEdgeFactor((4 * Math.PI) / 180, z) ?? 1) < 1) {
+        notes.push(
+          'Blunt (square or rounded) fin leading edge near the sonic-leading-edge condition: DATCOM figure 4.1.3.2-60 covers sharp-nosed sections only, so no thickness correction is applied and the supersonic fin force may be overstated (CP too far aft).',
+        );
+      }
+    }
+    const co = finCarryOver(wing, cr, s, rt, supersonic.afterbodyLength, w.cnAlpha, m);
+    notes.push(...co.warnings);
+    return { value: { single: (w.cnAlpha * Afin) / Aref, co }, warnings: notes };
+  };
+  // The fairing end values are Mach-independent; they are cached per fin set (pure, so results are unchanged).
+  const datcomAt = (m: number, cache = false): { single: number; co: CarryOver } | undefined => {
+    let r: DatcomFinAtMach | undefined;
+    const key = `${String(m)}|${String(Aref)}|${String(supersonic.afterbodyLength)}`;
+    if (cache) {
+      let perFin = DATCOM_FAIRING_CACHE.get(c);
+      if (perFin === undefined) {
+        perFin = new Map();
+        DATCOM_FAIRING_CACHE.set(c, perFin);
+      }
+      r = perFin.get(key);
+      if (r === undefined) {
+        r = datcomCompute(m);
+        perFin.set(key, r);
+      }
+    } else {
+      r = datcomCompute(m);
+    }
+    warnings.push(...r.warnings);
+    return r.value;
+  };
+  let cnAlphaSingleFin: number;
+  let regime: 'subsonic' | 'transonic' | 'supersonic';
+  let method: SupersonicFinMethod = 'niskanen';
+  let carryFraction = 0;
+  let carryCpX = Number.NaN;
+  let carryOverFactor = 0;
+  // DATCOM step 1 (scan p. 520): figure 4.1.3.2-56 is for M ≥ 1.4, so the DATCOM fairing ends there.
+  const datcomStart = 1.4;
+  const useDatcom = supersonic.method === 'datcom';
+  if (M <= 0.8) {
+    cnAlphaSingleFin = subsonic(M);
+    regime = 'subsonic';
+  } else if (M >= 1.2 && !(useDatcom && M < datcomStart)) {
+    regime = 'supersonic';
+    const dat = useDatcom ? datcomAt(M) : undefined;
+    if (dat === undefined) {
+      cnAlphaSingleFin = supersonicFinCnAlpha(mach, Afin, Aref, angleOfAttack);
+    } else {
+      method = 'datcom';
+      // Eq. 4.3.1.2-a: the fin set carries [K_W(B) + K_B(W)] (C_Nα)₁; expressed per K_W(B) so that the
+      // K_T(B) multiplication below stays as in eq. (3.56).
+      cnAlphaSingleFin = (dat.single * (dat.co.kWB + dat.co.kBW)) / dat.co.kWB;
+      carryOverFactor = dat.co.kBW;
+      carryFraction = dat.co.kBW / (dat.co.kWB + dat.co.kBW);
+      carryCpX = dat.co.acFromRootLe;
+    }
+  } else {
+    regime = M < 1.2 ? 'transonic' : 'supersonic';
+    const d12 = useDatcom ? datcomAt(datcomStart, true) : undefined;
+    const d125 = d12 === undefined ? undefined : datcomAt(datcomStart + 0.05, true);
+    if (d12 === undefined || d125 === undefined) {
+      cnAlphaSingleFin = transonicSingleFin(
+        transonic,
+        M,
+        subsonic,
+        k,
+        C,
+        supersonicFinCnAlpha(mach_(1.2), Afin, Aref, angleOfAttack),
+        Afin / Aref,
+      );
+    } else {
+      // BAR-12 with the DATCOM end value at Mach 1.4 (fin plus carry-over, per K_W(B)); the end slope is the
+      // forward difference to Mach 1.45. The carry-over share grows linearly from 0 at Mach 0.8 (D-065).
+      method = 'datcom';
+      const eff = (d: { single: number; co: CarryOver }): number =>
+        (d.single * (d.co.kWB + d.co.kBW)) / d.co.kWB;
+      const hi = eff(d12);
+      cnAlphaSingleFin = transonicSingleFin(
+        transonic,
+        M,
+        subsonic,
+        k,
+        C,
+        hi,
+        Afin / Aref,
+        (eff(d125) - hi) / 0.05,
+        datcomStart,
+      );
+      const t = (M - 0.8) / (datcomStart - 0.8);
+      carryOverFactor = d12.co.kBW * t;
+      carryFraction = (d12.co.kBW / (d12.co.kWB + d12.co.kBW)) * t;
+      carryCpX = d12.co.acFromRootLe;
+    }
+  }
+  const cnAlpha = interferenceFactor * finCountFactor * cnAlphaSingleFin;
+  const carryCn = carryFraction > 0 ? carryFraction * cnAlpha : 0;
+  const totalCpX = carryCn > 0 ? (1 - carryFraction) * cpX + carryFraction * carryCpX : cpX;
   return {
-    cnAlpha: interferenceFactor * finCountFactor * cnAlphaSingleFin,
-    cpX,
+    cnAlpha,
+    cpX: finiteResult('fin set centre of pressure', totalCpX),
     cnAlphaSingleFin,
     chordFraction,
     regime,
     finCountFactor,
     interferenceFactor,
     rollAngle: rollAngle === 'worst' ? worstRollAngle(c.count) : rollAngle,
+    supersonicMethod: method,
+    carryOverFactor,
+    carryOver: { cnAlpha: carryCn, cpX: carryCn > 0 ? carryCpX : Number.NaN },
+    warnings,
   };
 }
 
@@ -485,9 +629,10 @@ function transonicSingleFin(
   C: number,
   supersonicAt12: number,
   areaRatio: number,
+  supersonicSlope?: number,
+  m1 = 1.2,
 ): number {
   const m0 = 0.8;
-  const m1 = 1.2;
   const lo = subsonic(m0);
   const hi = supersonicAt12;
   const beta0 = Math.sqrt(1 - m0 * m0);
@@ -495,7 +640,7 @@ function transonicSingleFin(
   const root = Math.sqrt(1 + u * u);
   const loSlope = (-C * ((u / root) * ((-k * m0) / beta0))) / (1 + root) ** 2;
   const beta1 = Math.sqrt(m1 * m1 - 1);
-  const hiSlope = (-areaRatio * 2 * m1) / beta1 ** 3;
+  const hiSlope = supersonicSlope ?? (-areaRatio * 2 * m1) / beta1 ** 3;
   const h = m1 - m0;
   const t = (M - m0) / h;
   switch (candidate) {
@@ -574,7 +719,7 @@ export function centreOfPressure(
       }
     } else if (c.kind === 'transition') term = transitionTerm(c, referenceArea);
     else if (c.kind === 'finSet') {
-      term = finSetTerm(
+      const fin = finSetTerm(
         c,
         referenceArea,
         options.mach,
@@ -582,7 +727,13 @@ export function centreOfPressure(
         options.finRollReduction,
         0,
         options.transonicFinInterpolation ?? DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+        {
+          method: options.supersonicFinMethod ?? DEFAULT_SUPERSONIC_FIN_METHOD,
+          afterbodyLength: finAfterbodyLength(components, index),
+        },
       );
+      warnings.push(...fin.warnings);
+      term = fin;
     }
     if (term === undefined || term.cnAlpha === 0) return;
     const cp = (position as number) + term.cpX;

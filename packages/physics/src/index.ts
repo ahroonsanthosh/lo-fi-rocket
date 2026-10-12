@@ -182,6 +182,9 @@ export {
   type StabilityResult,
   DEFAULT_TRANSONIC_FIN_INTERPOLATION,
   type TransonicFinInterpolation,
+  DEFAULT_SUPERSONIC_FIN_METHOD,
+  type FinSupersonicOptions,
+  type SupersonicFinMethod,
 } from './stability/barrowman.js';
 export {
   burnTime,
@@ -346,3 +349,30 @@ export {
   type DatcomBodyTerm,
   type MachBodyTerm,
 } from './stability/datcom-body.js';
+export {
+  carryOverParameter,
+  circularArcSemiwedge,
+  exposedWing,
+  finAfterbodyLength,
+  finCarryOver,
+  rectangularWingCnAlpha,
+  sonicLeadingEdgeFactor,
+  tableValue,
+  wingSupersonicCnAlpha,
+  type CarryOver,
+  type ExposedWing,
+  type WingCnAlphaResult,
+} from './stability/datcom-fin.js';
+export {
+  DATCOM_FIGURE_4132_56,
+  DATCOM_FIGURE_4132_56G_LEFT,
+  DATCOM_FIGURE_4132_60,
+  DATCOM_FIGURE_4312_11A,
+  DATCOM_FIGURE_4312_11B,
+  DATCOM_FIGURE_4322_37A,
+  DATCOM_FIGURE_4322_37B,
+  type CarryOverChartCurve,
+  type SonicLeadingEdgeCurve,
+  type WingChartCurve,
+  type WingChartPanel,
+} from './stability/datcom-fin-data.js';

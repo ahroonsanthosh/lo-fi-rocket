@@ -1,6 +1,6 @@
 # Wind tunnel validation (CLAUDE.md 6.7 item 1, plan 0021)
 
-**Date:** 2026-10-12. **Status:** regenerated after Part C item 2 (plan 0027, D-064); no constant was tuned. The ARCAS CP data were used to choose the fin interpolation (D-056) and no longer count as held out (D-061). The tables below are printed by `packages/formats/src/wind-tunnel.validation.test.ts`, which pins the reported errors as regression values (a physics change that moves them fails the test and must be explained in the commit message, CLAUDE.md 7.6).
+**Date:** 2026-10-12. **Status:** regenerated after Part C item 3 (plan 0028, D-065; before it the ARCAS supersonic CP rms was 16.95 % L, now 1.95); no constant was tuned. The ARCAS CP data were used to choose the fin interpolation (D-056) and no longer count as held out (D-061). The tables below are printed by `packages/formats/src/wind-tunnel.validation.test.ts`, which pins the reported errors as regression values (a physics change that moves them fails the test and must be explained in the commit message, CLAUDE.md 7.6).
 
 ## What was compared
 
@@ -25,18 +25,18 @@ Modelling choices that limit the comparison (recorded in the data file):
 | Mach | measured | linear | cubic-hermite | quadratic-subsonic |
 | ---- | -------- | ------ | ------------- | ------------------ |
 | 0.8  | 71.2     | 76.6   | 76.6          | 76.6               |
-| 0.85 | 70.6     | 77.2   | 77.2          | 76.8               |
-| 0.9  | 71.3     | 77.7   | 78.3          | 77.0               |
-| 0.95 | 75.4     | 78.1   | 79.5          | 77.3               |
-| 1    | 83.1     | 78.6   | 80.6          | 77.8               |
-| 1.05 | 86.2     | 79.0   | 81.3          | 78.3               |
-| 1.1  | 87.1     | 79.4   | 81.6          | 78.9               |
-| 1.15 | 86.6     | 79.7   | 81.3          | 79.5               |
-| 1.2  | 85.1     | 80.1   | 80.1          | 80.1               |
+| 0.85 | 70.6     | 77.2   | 77.0          | 76.7               |
+| 0.9  | 71.3     | 77.7   | 77.8          | 76.9               |
+| 0.95 | 75.4     | 78.1   | 78.9          | 77.1               |
+| 1    | 83.1     | 78.6   | 79.9          | 77.4               |
+| 1.05 | 86.2     | 78.9   | 80.8          | 77.7               |
+| 1.1  | 87.1     | 79.3   | 81.6          | 78.1               |
+| 1.15 | 86.6     | 79.6   | 82.2          | 78.6               |
+| 1.2  | 85.1     | 79.9   | 82.5          | 79.0               |
 
-- linear: n=9 rms 6.01 %L max 7.76 %L mean -1.15 %L
-- cubic-hermite: n=9 rms 5.30 %L max 6.97 %L mean -0.03 %L
-- quadratic-subsonic: n=9 rms 6.14 %L max 8.28 %L mean -1.61 %L
+- linear: n=9 rms 6.06 %L max 7.83 %L mean -1.19 %L
+- cubic-hermite: n=9 rms 4.94 %L max 6.48 %L mean +0.08 %L
+- quadratic-subsonic: n=9 rms 6.56 %L max 9.00 %L mean -2.06 %L
 
 Lowest rms: cubic-hermite; default in code: cubic-hermite.
 
@@ -47,25 +47,25 @@ Lowest rms: cubic-hermite; default in code: cubic-hermite.
 | 0.6  | subsonic   | 74.9     | 75.8      | +0.9  |
 | 0.7  | subsonic   | 72.7     | 76.2      | +3.5  |
 | 0.8  | transonic  | 71.2     | 76.6      | +5.5  |
-| 0.85 | transonic  | 70.6     | 77.2      | +6.5  |
-| 0.9  | transonic  | 71.3     | 78.3      | +7.0  |
-| 0.95 | transonic  | 75.4     | 79.5      | +4.1  |
-| 1    | transonic  | 83.1     | 80.6      | -2.5  |
-| 1.05 | transonic  | 86.2     | 81.3      | -4.9  |
-| 1.1  | transonic  | 87.1     | 81.6      | -5.6  |
-| 1.15 | transonic  | 86.6     | 81.3      | -5.3  |
-| 1.2  | transonic  | 85.1     | 80.1      | -5.0  |
-| 1.5  | supersonic | 78.4     | 71.0      | -7.4  |
-| 2    | supersonic | 74.1     | 60.1      | -14.0 |
-| 2.5  | supersonic | 69.8     | 52.9      | -16.8 |
-| 3    | supersonic | 66.2     | 47.6      | -18.6 |
-| 3.5  | supersonic | 63.2     | 43.5      | -19.8 |
-| 4    | supersonic | 60.2     | 40.5      | -19.6 |
-| 4.63 | supersonic | 56.9     | 38.0      | -18.9 |
+| 0.85 | transonic  | 70.6     | 77.0      | +6.4  |
+| 0.9  | transonic  | 71.3     | 77.8      | +6.5  |
+| 0.95 | transonic  | 75.4     | 78.9      | +3.4  |
+| 1    | transonic  | 83.1     | 79.9      | -3.2  |
+| 1.05 | transonic  | 86.2     | 80.8      | -5.4  |
+| 1.1  | transonic  | 87.1     | 81.6      | -5.5  |
+| 1.15 | transonic  | 86.6     | 82.2      | -4.4  |
+| 1.2  | transonic  | 85.1     | 82.5      | -2.6  |
+| 1.5  | supersonic | 78.4     | 79.7      | +1.3  |
+| 2    | supersonic | 74.1     | 73.4      | -0.7  |
+| 2.5  | supersonic | 69.8     | 68.6      | -1.2  |
+| 3    | supersonic | 66.2     | 64.5      | -1.7  |
+| 3.5  | supersonic | 63.2     | 60.8      | -2.4  |
+| 4    | supersonic | 60.2     | 57.9      | -2.3  |
+| 4.63 | supersonic | 56.9     | 53.9      | -3.0  |
 
 - subsonic: n=2 rms 2.57 %L max 3.52 %L mean +2.20 %L
-- transonic: n=9 rms 5.30 %L max 6.97 %L mean -0.03 %L
-- supersonic: n=7 rms 16.95 %L max 19.76 %L mean -16.43 %L
+- transonic: n=9 rms 4.94 %L max 6.48 %L mean +0.08 %L
+- supersonic: n=7 rms 1.95 %L max 3.03 %L mean -1.43 %L
 
 ## ARCAS C_Nα per radian (single-pass secant slopes of C_N over 0 to 4° and 0 to 8°, about ±15 % each; indicative only)
 
@@ -73,20 +73,20 @@ Lowest rms: cubic-hermite; default in code: cubic-hermite.
 | ---- | -------------- | -------------- | --------- | ---------------- |
 | 0.6  | 6.45           | 10.74          | 9.48      | -12 %            |
 | 0.8  | 7.16           | 11.46          | 9.79      | -15 %            |
-| 0.9  | 7.16           | 11.46          | 11.05     | -4 %             |
-| 0.95 | 7.88           | 12.18          | 12.10     | -1 %             |
-| 1    | 8.59           | 11.46          | 13.15     | +15 %            |
-| 1.2  | 7.88           | 10.74          | 13.07     | +22 %            |
-| 1.5  | 7.16           | 10.74          | 8.45      | -21 %            |
-| 1.8  | 5.73           | 8.95           | 6.89      | -23 %            |
-| 2.3  | 5.01           | 7.16           | 5.64      | -21 %            |
-| 2.96 | 4.30           | 6.09           | 4.83      | -21 %            |
-| 3.96 | 3.58           | 4.66           | 4.25      | -9 %             |
-| 4.63 | 2.86           | 3.94           | 3.96      | +1 %             |
+| 0.9  | 7.16           | 11.46          | 10.77     | -6 %             |
+| 0.95 | 7.88           | 12.18          | 11.65     | -4 %             |
+| 1    | 8.59           | 11.46          | 12.68     | +11 %            |
+| 1.2  | 7.88           | 10.74          | 16.39     | +53 %            |
+| 1.5  | 7.16           | 10.74          | 13.19     | +23 %            |
+| 1.8  | 5.73           | 8.95           | 11.12     | +24 %            |
+| 2.3  | 5.01           | 7.16           | 9.05      | +26 %            |
+| 2.96 | 4.30           | 6.09           | 7.53      | +24 %            |
+| 3.96 | 3.58           | 4.66           | 6.25      | +34 %            |
+| 4.63 | 2.86           | 3.94           | 5.49      | +39 %            |
 
 - subsonic: n=1 rms 11.73 % max 11.73 % mean -11.73 %
-- transonic: n=5 rms 13.53 % max 21.72 % mean +3.55 %
-- supersonic: n=6 rms 17.99 % max 23.04 % mean -15.76 %
+- transonic: n=5 rms 25.09 % max 52.61 % mean +7.68 %
+- supersonic: n=6 rms 29.06 % max 39.37 % mean +28.40 %
 
 ## ARCAS forebody axial force coefficient at α ≈ 0 (sting mounted: base at free-stream pressure)
 

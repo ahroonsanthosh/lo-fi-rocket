@@ -17,6 +17,7 @@ import { noseProfile, transitionProfile, type Profile } from '../geometry/profil
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
 import { datcomBodyAssembly, noseCylinderTermAtMach } from '../stability/datcom-body.js';
+import { finAfterbodyLength } from '../stability/datcom-fin.js';
 import {
   busemannCoefficients,
   finSetTerm,
@@ -24,7 +25,9 @@ import {
   noseConeTerm,
   transitionTerm,
   type AerodynamicTerm,
+  DEFAULT_SUPERSONIC_FIN_METHOD,
   DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+  type SupersonicFinMethod,
   type TransonicFinInterpolation,
 } from '../stability/barrowman.js';
 import {
@@ -43,9 +46,11 @@ const BODY_LIFT_K = 1.1;
 
 /** Regime warnings naming the validation status (docs/reports/wind-tunnel-validation.md, D-057). */
 export const TRANSONIC_CP_WARNING =
-  'transonic regime (Mach 0.8 to 1.2): the centre of pressure is within about 7 % of body length of wind tunnel data (ARCAS), the fin force is an interpolation (BAR-12)';
+  'transonic regime (Mach 0.8 to 1.2): the fin force is an interpolation (BAR-12) and accuracy is lower; against held-out wind tunnel data the centre of pressure was within 4.1 % of body length rms (worst 6.1 %, on the conservative side)';
 export const SUPERSONIC_CP_WARNING =
-  'supersonic regime (above Mach 1.2): the predicted centre of pressure moves forward faster than measured (conservative by 5 % of body length at Mach 1.5, 27 % at Mach 4.6 against ARCAS data), so the stability margin shown is a lower bound';
+  'supersonic regime (Mach 1.2 to 2.0): fin force and body carry-over from the DATCOM charts (faired in up to Mach 1.4); against held-out wind tunnel data the centre of pressure was within 3.7 % of body length rms (worst 5.1 %)';
+export const OUTSIDE_VALIDATED_WARNING =
+  'above Mach 2.0: outside the validated range (Mach 0 to 2.0); the centre of pressure and drag have not been checked against measurements here';
 
 export interface AeroModeOptions {
   /** Niskanen eq. (3.54) roll reduction on (displayed) or off (OpenRocket-equivalent, D-016). */
@@ -53,6 +58,8 @@ export interface AeroModeOptions {
   readonly referenceDiameter?: Metres;
   /** BAR-12 candidate; defaults to the chosen one (D-056). */
   readonly transonicFinInterpolation?: TransonicFinInterpolation;
+  /** Supersonic fin method; defaults to `DEFAULT_SUPERSONIC_FIN_METHOD` (D-065). */
+  readonly supersonicFinMethod?: SupersonicFinMethod;
 }
 
 export interface AeroInputs {
@@ -299,14 +306,31 @@ export function normalForceAtAngle(
           options.finRollReduction,
           a,
           options.transonicFinInterpolation ?? DEFAULT_TRANSONIC_FIN_INTERPOLATION,
+          {
+            method: options.supersonicFinMethod ?? DEFAULT_SUPERSONIC_FIN_METHOD,
+            afterbodyLength: finAfterbodyLength(components, index),
+          },
         );
+        warnings.push(...t.warnings);
+        const carry = t.carryOver.cnAlpha;
+        // The fin panels' own force and CP; the body carry-over (BAR-16, BAR-17) is a separate term.
+        const finCn = t.cnAlpha - carry;
+        const finCp = carry > 0 ? (t.cnAlpha * t.cpX - carry * t.carryOver.cpX) / finCn : t.cpX;
         push(
           index,
-          `fins (${t.regime}, ${String(c.count)} fins, K ${t.interferenceFactor.toFixed(4)})`,
-          t.cnAlpha,
-          pos + t.cpX,
+          `fins (${t.regime}${t.regime === 'subsonic' ? '' : `, ${t.supersonicMethod}`}, ${String(c.count)} fins, K ${t.interferenceFactor.toFixed(4)})`,
+          finCn,
+          pos + finCp,
         );
-        finCps.push({ fin: c, cp: pos + t.cpX });
+        if (carry > 0) {
+          push(
+            index,
+            `fin-body carry-over (DATCOM, K_B(W) ${t.carryOverFactor.toFixed(4)})`,
+            carry,
+            pos + t.carryOver.cpX,
+          );
+        }
+        finCps.push({ fin: c, cp: pos + finCp });
         break;
       }
       case 'innerTube':
@@ -327,7 +351,8 @@ export function normalForceAtAngle(
     );
   const M: number = mach;
   if (M >= 0.8 && M <= 1.2) warnings.push(TRANSONIC_CP_WARNING);
-  else if (M > 1.2) warnings.push(SUPERSONIC_CP_WARNING);
+  else if (M > 1.2 && M <= 2) warnings.push(SUPERSONIC_CP_WARNING);
+  else if (M > 2) warnings.push(OUTSIDE_VALIDATED_WARNING);
   const cp = sumCnAlpha > 0 ? sumMoment / sumCnAlpha : Number.NaN;
   if (!(sumCnAlpha > 0)) {
     throw new InvalidInputError(
