@@ -220,3 +220,22 @@ Set up the monorepo, TypeScript strict configuration, Vitest, fast-check, and th
 - Toolchain: pnpm workspaces, TypeScript 6.0, Vitest 5, fast-check 4, ESLint 10 with typescript-eslint. Run `pnpm check` for typecheck, lint, format check and tests.
 - Plans awaiting approval live in `docs/plans/`. The current one is listed at the top of `docs/equations.md`.
 - Session start: read this file, `docs/equations.md`, `docs/decisions.md`, and the newest file in `docs/plans/`, then report the current phase and next task.
+
+## Parallel sessions (maintained by Claude, not part of the original prompt)
+
+Several sessions work on this repository at once. Each session is told its lane in its first message; if it is not, ask before editing anything.
+
+| Lane    | Branch prefix | May edit                                                                                                           | Decision IDs                                      | Notes file                |
+| ------- | ------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------- |
+| physics | `physics/`    | `packages/physics`, `packages/formats`, `reference/`, `docs/equations.md`, `docs/plans/`                           | `D-0nn` (next free number in `docs/decisions.md`) | `docs/progress.md`        |
+| ui      | `ui/`         | `packages/ui`, `packages/app`                                                                                      | `D-UI-n` in `docs/ui/decisions.md`                | `docs/progress/ui.md`     |
+| 3d      | `3d/`         | `packages/viewer`, and `packages/app/src/components/FlightViewer*`                                                 | `D-3D-n` in `docs/decisions.md`                   | `docs/progress/3d.md`     |
+| review  | `review/`     | nothing in `packages/`; findings go to GitHub issues labelled `bug` (one issue per finding, severity in the title) | none                                              | `docs/progress/review.md` |
+
+Rules for every lane:
+
+- Start from the latest `main`. Never push to `main`; finish each piece of work as a pull request into `main`.
+- Edit only your lane's paths. If you need a change elsewhere, open a GitHub issue labelled with the owning lane and carry on.
+- Before opening a pull request: merge the latest `main` in, run `pnpm check`, and say in the description which lane you are and what changed.
+- Keep pull requests small (one plan or one fix each), so the owner can merge them quickly and the site at https://ahroonsanthosh.github.io/lo-fi-rocket/ updates after every merge.
+- The owner gives input through GitHub issue comments and pull request reviews; read them at the start of each task.
