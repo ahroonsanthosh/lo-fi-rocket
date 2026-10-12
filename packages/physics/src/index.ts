@@ -84,11 +84,23 @@ export {
 } from './flight/gravity.js';
 export {
   openRocketWind,
+  PINK_NOISE_COEFFICIENTS,
+  PINK_NOISE_STANDARD_DEVIATION,
+  pinkNoiseSequence,
+  profileWindAt,
+  TURBULENCE_SAMPLE_RATE_HZ,
+  validateWindLayers,
+  windField,
   windVelocity,
   type ConstantWind,
+  type ProfileWind,
+  type TurbulentWind,
   type VectorWind,
+  type WindField,
+  type WindLayer,
   type WindModel,
 } from './environment/wind.js';
+export { createRandom, type Random } from './numerics/random.js';
 export {
   NAR_MAX_LAUNCH_ANGLE,
   validateLaunch,

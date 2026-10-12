@@ -38,11 +38,9 @@ describe('ENV-1 wind', () => {
       6,
     );
   });
-  it('OpenRocket direction π/2 gives a wind along +x; vector winds pass through; profiles and turbulence are not implemented', () => {
+  it('OpenRocket direction π/2 gives a wind along +x; vector winds pass through; profiles and turbulence are plan 0016 models', () => {
     closeTo(windVelocity(openRocketWind(5, Math.PI / 2), 0), vec3(5, 0, 0), 12);
     closeTo(windVelocity({ kind: 'vector', velocity: vec3(1, 2, 0) }, 0), vec3(1, 2, 0), 15);
-    expect(() => windVelocity({ kind: 'profile' }, 0)).toThrow(NotImplementedError);
-    expect(() => windVelocity({ kind: 'turbulent' }, 0)).toThrow(NotImplementedError);
     expect(() =>
       windVelocity({ kind: 'constant', speed: metresPerSecond(-1), from: radians(0) }, 0),
     ).toThrow(InvalidInputError);

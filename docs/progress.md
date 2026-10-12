@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 3 (roadmap): Phases 3 and 4, complete (see `docs/reports/phase-3-4-acceptance.md`). Prompt 4 starts on the owner's next "continue".
+Prompt 4 (roadmap): Phase 5 and the final audit, started on the owner's "continue" after the Phase 3 and 4 report.
 
 ## Done
 
@@ -47,13 +47,15 @@ Prompt 3 (roadmap): Phases 3 and 4, complete (see `docs/reports/phase-3-4-accept
 
 - Prompt 3 step 5 (plan 0015): imported drag curves in the simulator (D-047, linear in Mach, never extrapolated, results labelled), the design file's optional `dragCurve` and `recordedFlight`, CSV readers for drag tables and altimeter data, `orkToDesign` with motor matching against the library (D-048), the files menu (Save, Open, Designs, Import `.ork`), the comparison panel with the recorded altitude overlay, Playwright end-to-end tests (new-user flow, the example's figures, autosave across reload, the laptop layout) running in CI, and the Phase 3 and 4 acceptance report. **Prompt 3 (Phases 3 and 4) is complete.**
 
+- Prompt 4 step 1 (plan 0016): wind profile by altitude as a user table (ENV-3, D-049), Niskanen's turbulence (ENV-4 two-pole pink noise, ENV-5 20 Hz samples scaled by 2.252 along the mean direction, intensity I_u) generated once per flight from a seed recorded in the results, the seeded generator xoshiro128** with Box–Muller normals (RNG-1, RNG-2, D-050; the paper added to `reference/`), the design's wind settings (profile rows, turbulence intensity and seed) with the launch editor's profile table and turbulence fields; tests: profile by hand, filter coefficients by hand, the 2.252 scaling, turbulence statistics, step-size independence, determinism, R1 flights with a profile and with turbulence.
+
 ## In progress
 
-- Nothing. Prompt 3 is finished.
+- Prompt 4 step 2 (plan 0017): Monte Carlo dispersion and landing zones.
 
 ## Next
 
-- Prompt 4 (Phase 5: Monte Carlo dispersion and landing zones, wind profiles, liquid-engine mass profiles; the final audit) on the owner's next "continue".
+- Steps 3 and 4 of Prompt 4: propellant CG profiles (plan 0018) and the final audit with the Phase 5 report.
 
 ## Open questions
 
@@ -63,6 +65,7 @@ Prompt 3 (roadmap): Phases 3 and 4, complete (see `docs/reports/phase-3-4-accept
 - Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
 
 - Fin normal force at large angles of attack (D-046): a six-degree-of-freedom flight now ends with an explicit "model-limit" reason when the angle of attack reaches 90°, because the fin term is a small-angle flat-plate law and no approved source gives a large-angle law. Ballistic flights and ejection-charge deployments after the turn-over therefore stop at the turn-over with the apogee reported. Approve a source for the large-angle fin force (for example Hoerner, Fluid-Dynamic Lift) if those flights must be simulated to landing.
+- Random generator source (D-050): Blackman and Vigna's xoshiro paper was added to `reference/`; the Box and Muller (1958) paper is paywalled and the normal sampler is verified by its distribution tests. Add the paper if a document check is wanted.
 - Customary units source (D-040): NIST SP 811 was added to `reference/` for the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and Fahrenheit behind the units toggle. Say if another source is preferred; the factors are definitional and would not change.
 - Deployment speed warning threshold (D-042): no default is given in CLAUDE.md; 20 m/s is a user-editable placeholder labelled as a rule of thumb. Please state the figure you want.
 - `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive. The drag-curve CSV reader (D-047) should be checked against a real RASAero aero-plot export, which is not in `reference/`.

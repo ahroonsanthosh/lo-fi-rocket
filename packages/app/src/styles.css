@@ -482,3 +482,10 @@ button:disabled {
   border-top: 1px solid var(--line);
   padding-top: 8px;
 }
+
+.wind-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 6px;
+  align-items: end;
+}

@@ -462,7 +462,34 @@ function launch(c: Ctx, path: string, v: unknown): LaunchConditions {
   const r = c.object(`${path}.rail`, o['rail']);
   c.keys(`${path}.rail`, r, ['length', 'angleFromVertical', 'azimuth']);
   const w = c.object(`${path}.wind`, o['wind']);
-  c.keys(`${path}.wind`, w, ['speed', 'from']);
+  c.keys(`${path}.wind`, w, ['speed', 'from'], ['profile', 'turbulence']);
+  const profile =
+    'profile' in w && w['profile'] !== undefined
+      ? c.array(`${path}.wind.profile`, w['profile']).map((row, i) => {
+          const r = c.object(`${path}.wind.profile[${String(i)}]`, row);
+          c.keys(`${path}.wind.profile[${String(i)}]`, r, ['altitude', 'speed', 'from']);
+          return {
+            altitude: metres(
+              c.number(`${path}.wind.profile[${String(i)}].altitude`, r['altitude']),
+            ),
+            speed: metresPerSecond(
+              c.number(`${path}.wind.profile[${String(i)}].speed`, r['speed']),
+            ),
+            from: radians(c.number(`${path}.wind.profile[${String(i)}].from`, r['from'])),
+          };
+        })
+      : undefined;
+  const turbulence =
+    'turbulence' in w && w['turbulence'] !== undefined
+      ? (() => {
+          const t = c.object(`${path}.wind.turbulence`, w['turbulence']);
+          c.keys(`${path}.wind.turbulence`, t, ['intensity', 'seed']);
+          return {
+            intensity: c.number(`${path}.wind.turbulence.intensity`, t['intensity']),
+            seed: c.integer(`${path}.wind.turbulence.seed`, t['seed']),
+          };
+        })()
+      : undefined;
   return {
     site: {
       altitude: metres(c.number(`${path}.site.altitude`, s['altitude'])),
@@ -480,6 +507,8 @@ function launch(c: Ctx, path: string, v: unknown): LaunchConditions {
     wind: {
       speed: metresPerSecond(c.number(`${path}.wind.speed`, w['speed'])),
       from: radians(c.number(`${path}.wind.from`, w['from'])),
+      ...(profile === undefined ? {} : { profile }),
+      ...(turbulence === undefined ? {} : { turbulence }),
     },
   };
 }

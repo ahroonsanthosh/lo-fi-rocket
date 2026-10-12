@@ -13,7 +13,7 @@
 import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
 import { dragCoefficient } from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
-import { windVelocity } from '../environment/wind.js';
+import { windField, type WindField } from '../environment/wind.js';
 import { InvalidInputError, NonFiniteResultError, SimulationStalledError } from '../errors.js';
 import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
 import type { MassProperties } from '../geometry/revolution.js';
@@ -182,6 +182,8 @@ export interface FlightResult {
     readonly integrator: string;
     readonly degreesOfFreedom: 6 | 3;
     readonly gravitySeaLevel: number;
+    /** The seed of the turbulence generator when the wind is turbulent (ENV-5), so the flight can be reproduced. */
+    readonly windSeed: number | undefined;
     /** The label of the imported drag curve when one replaced the drag model (D-047). */
     readonly dragCurve: string | undefined;
   };
@@ -212,6 +214,8 @@ interface Context {
   readonly referenceDiameter: number;
   readonly burnTime: number;
   readonly motorDiameter: number | undefined;
+  /** The wind for this flight (ENV-1, ENV-3 to ENV-5), built once so every stage reads the same gust. */
+  readonly wind: WindField;
   readonly deployedArea: { area: number }; // Σ C_D A of deployed devices (mutable through the run)
   /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
   readonly motorState: { burnedOut: boolean };
@@ -268,7 +272,7 @@ function derive(
   const q = quaternionNormalise(s.orientation);
   const altitudeAsl = (ctx.options.site.altitude as number) + s.position.z;
   const atm = ctx.atmosphere(metres(altitudeAsl));
-  const wind = windVelocity(ctx.options.wind, s.position.z);
+  const wind = ctx.wind(s.position.z, Math.max(0, t));
   const mp = combineRocket(ctx.structure, motorMass(ctx, t));
   const m: number = mp.mass;
   const g = gravityAt(ctx.options.gravity, metres(altitudeAsl));
@@ -474,6 +478,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       vehicle.motor.kind === 'definition' ? vehicle.motor.definition.diameter : undefined,
     deployedArea: { area: 0 },
     motorState: { burnedOut: false },
+    wind: windField(options.wind, maxTime),
   };
 
   const events: FlightEvent[] = [];
@@ -928,6 +933,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           : `Dormand–Prince RK5(4) rtol ${String(options.integrator.relativeTolerance)} atol ${String(options.integrator.absoluteTolerance)}`,
       degreesOfFreedom: options.degreesOfFreedom,
       gravitySeaLevel: options.gravity.seaLevel,
+      windSeed: options.wind.kind === 'turbulent' ? options.wind.seed : undefined,
     },
   };
 }

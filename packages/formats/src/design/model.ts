@@ -85,10 +85,22 @@ export interface LaunchRailSettings {
   readonly azimuth: Radians;
 }
 
+export interface WindLayerSettings {
+  /** Altitude above the pad; the first row is 0. */
+  readonly altitude: Metres;
+  readonly speed: MetresPerSecond;
+  readonly from: Radians;
+}
+
 export interface WindSettings {
+  /** Mean wind at the pad (used alone when no profile is given). */
   readonly speed: MetresPerSecond;
   /** Meteorological direction the wind blows from, clockwise from north. */
   readonly from: Radians;
+  /** Mean wind by altitude (ENV-3); when present it replaces speed and from. */
+  readonly profile?: readonly WindLayerSettings[];
+  /** Niskanen's turbulence (ENV-4, ENV-5): intensity I_u = σ_u/U and the generator seed. */
+  readonly turbulence?: { readonly intensity: number; readonly seed: number };
 }
 
 export interface LaunchConditions {

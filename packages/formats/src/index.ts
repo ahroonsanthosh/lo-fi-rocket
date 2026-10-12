@@ -53,6 +53,7 @@ export {
   type SimulationSettings,
   type StabilityThresholds,
   type WarningThresholds,
+  type WindLayerSettings,
   type WindSettings,
 } from './design/model.js';
 export { DesignError, DesignFileError } from './design/errors.js';
@@ -77,6 +78,7 @@ export {
   designStability,
   designThrustToWeight,
   designVehicle,
+  designWindModel,
   type DesignStability,
   type DesignWarning,
   type MassCondition,

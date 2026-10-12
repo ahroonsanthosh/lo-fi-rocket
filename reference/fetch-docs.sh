@@ -31,4 +31,5 @@ fetch thrustcurve-api/motorstats.html "https://www.thrustcurve.org/info/motorsta
 fetch thrustcurve-api/glossary.html "https://www.thrustcurve.org/info/glossary.html" 1702cc6e5b957f49af6f60090490c2fc0b9e4edfd83c93a719287f1e3855e287
 fetch thrustcurve-api/swagger.json "https://www.thrustcurve.org/api/v1/swagger.json" 566009abab4e993283230061c98d47737df139649a70c887b9b6435c5ca04f8d
 fetch nist-sp811-2008.pdf "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication811e2008.pdf" 788dd8f0bcb0ec06e40c300690266742532a7e760a93be57764b77ed0ef3482f
+fetch blackman-vigna-2018-scrambled-linear-prngs-arxiv-1805.01407v3.pdf "https://arxiv.org/pdf/1805.01407" 3aee2f264786742812e651595898fb3c06e184abf589c56c14cc7c7b205668f5
 echo "All reference documents verified."

@@ -4,7 +4,14 @@
  * phase-2-acceptance.md for R1 (not derived by running this code).
  */
 import fc from 'fast-check';
-import { metres, seconds, simulateFlight, type Component } from '@lo-fi-rocket/physics';
+import {
+  metres,
+  metresPerSecond,
+  radians,
+  seconds,
+  simulateFlight,
+  type Component,
+} from '@lo-fi-rocket/physics';
 import { describe, expect, it } from 'vitest';
 import { DesignError, DesignFileError } from './errors.js';
 import { exampleDesign, newDesign } from './example.js';
@@ -19,6 +26,7 @@ import {
   designStability,
   designThrustToWeight,
   designVehicle,
+  designWindModel,
 } from './to-physics.js';
 
 const FAST_CHECK_SEED = 20261012;
@@ -237,5 +245,42 @@ describe('physics adapter on the example (R1 with the D12)', () => {
     );
     expect(w[0]?.code).toBe('rail-exit-velocity');
     expect(w[0]?.message).toMatch(/below 20 m\/s: the fins may not have enough airflow/);
+  });
+});
+
+describe('wind settings (plan 0016)', () => {
+  it('a profile and turbulence round-trip through the file and map to the physics models', () => {
+    const d = exampleDesign('wind');
+    const windy: RocketDesign = {
+      ...d,
+      launch: {
+        ...d.launch,
+        wind: {
+          speed: d.launch.wind.speed,
+          from: d.launch.wind.from,
+          profile: [
+            { altitude: metres(0), speed: metresPerSecond(3), from: radians(0) },
+            { altitude: metres(200), speed: metresPerSecond(8), from: radians(0.5) },
+          ],
+          turbulence: { intensity: 0.15, seed: 99 },
+        },
+      },
+    };
+    expect(parseDesign(serializeDesign(windy))).toEqual(windy);
+    const model = designWindModel(windy.launch.wind);
+    expect(model.kind).toBe('turbulent');
+    if (model.kind === 'turbulent') {
+      expect(model.seed).toBe(99);
+      expect(model.mean.kind).toBe('profile');
+    }
+    expect(designWindModel(d.launch.wind)).toEqual({ kind: 'constant', speed: 0, from: 0 });
+    const doc = JSON.parse(serializeDesign(windy)) as Record<string, unknown>;
+    (doc['launch'] as { wind: Record<string, unknown> }).wind['turbulence'] = {
+      intensity: 0.1,
+      seed: 1.5,
+    };
+    expect(() => validateDesign(doc)).toThrow(
+      /\$\.launch\.wind\.turbulence\.seed: expected an integer/,
+    );
   });
 });

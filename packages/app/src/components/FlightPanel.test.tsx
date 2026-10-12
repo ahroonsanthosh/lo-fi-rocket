@@ -163,3 +163,28 @@ describe('FlightPanel (plan 0014)', () => {
     expect(saved[1]?.split('\n')[1]).toMatch(/^time_s,phase,/);
   });
 });
+
+describe('wind profile and turbulence (plan 0016)', () => {
+  it('a sheared profile and a seeded turbulence change the landing and show the seed in the modes', async () => {
+    const user = renderApp(exampleDesign('wp'));
+    await openFlight(user);
+    await user.click(screen.getByRole('button', { name: 'Vary the wind with altitude' }));
+    const speed2 = screen.getByLabelText('Row 2 speed');
+    await user.clear(speed2);
+    await user.type(speed2, '8');
+    const speed1 = screen.getByLabelText('Row 1 speed');
+    await user.clear(speed1);
+    await user.type(speed1, '3');
+    const intensity = screen.getByLabelText(/Turbulence intensity/);
+    await user.clear(intensity);
+    await user.type(intensity, '0.1');
+    expect(screen.getByLabelText(/Turbulence seed/)).toHaveValue('1');
+    await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
+    const results = await screen.findByRole('region', { name: 'Flight' });
+    const landing = within(results).getByText('Landing').nextElementSibling?.textContent ?? '';
+    expect(Number.parseFloat(landing)).toBeGreaterThan(10);
+    expect(results).toHaveTextContent(/turbulence seed 1/);
+    await user.click(screen.getByRole('button', { name: 'Use a uniform wind' }));
+    expect(screen.getByLabelText('Wind speed (steady, uniform)')).toBeInTheDocument();
+  });
+});

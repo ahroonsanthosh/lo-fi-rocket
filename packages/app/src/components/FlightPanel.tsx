@@ -215,8 +215,16 @@ function Summary({
         {r.modes.integrator}; {String(r.modes.degreesOfFreedom)} degrees of freedom; Niskanen
         aerodynamics with fin roll reduction {r.modes.finRollReduction ? 'on' : 'off'}; base drag
         motor rule {r.modes.baseDragMotorRule}; sea-level gravity {String(r.modes.gravitySeaLevel)}{' '}
-        m/s²; {String(r.samples.length)} samples in {flight.millis.toFixed(0)} ms. Flat,
-        non-rotating Earth; steady uniform wind (docs/known-limitations.md).
+        m/s²;{' '}
+        {r.modes.dragCurve === undefined
+          ? 'computed drag'
+          : `imported drag curve "${r.modes.dragCurve}"`}
+        ;{' '}
+        {r.modes.windSeed === undefined
+          ? 'steady wind'
+          : `turbulent wind, turbulence seed ${String(r.modes.windSeed)}`}
+        ; {String(r.samples.length)} samples in {flight.millis.toFixed(0)} ms. Flat, non-rotating
+        Earth (docs/known-limitations.md).
       </p>
     </div>
   );

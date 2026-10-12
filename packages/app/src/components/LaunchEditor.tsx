@@ -6,11 +6,16 @@ import {
   radians,
   seconds,
   validateLaunch,
+  validateWindLayers,
 } from '@lo-fi-rocket/physics';
-import type { LaunchConditions, SimulationSettings } from '@lo-fi-rocket/formats';
+import type {
+  LaunchConditions,
+  SimulationSettings,
+  WindLayerSettings,
+} from '@lo-fi-rocket/formats';
 import { useId, type JSX } from 'react';
 import { useStore } from '../state/store.js';
-import { QuantityField } from './QuantityField.js';
+import { IntegerField, QuantityField } from './QuantityField.js';
 
 function launchWarnings(launch: LaunchConditions): string[] {
   try {
@@ -128,26 +133,97 @@ export function LaunchEditor(): JSX.Element {
         }}
       />
       <h3>Wind</h3>
+      {launch.wind.profile === undefined ? (
+        <>
+          <QuantityField
+            label="Wind speed (steady, uniform)"
+            kind="velocity"
+            units={units}
+            value={launch.wind.speed}
+            rule="non-negative"
+            onChange={(si) => {
+              set({ ...launch, wind: { ...launch.wind, speed: metresPerSecond(si) } });
+            }}
+          />
+          <QuantityField
+            label="Wind blows from (compass bearing)"
+            kind="angle"
+            units={units}
+            value={launch.wind.from}
+            rule="any"
+            onChange={(si) => {
+              set({ ...launch, wind: { ...launch.wind, from: radians(si) } });
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              set({
+                ...launch,
+                wind: {
+                  ...launch.wind,
+                  profile: [
+                    { altitude: metres(0), speed: launch.wind.speed, from: launch.wind.from },
+                    { altitude: metres(100), speed: launch.wind.speed, from: launch.wind.from },
+                  ],
+                },
+              });
+            }}
+          >
+            Vary the wind with altitude
+          </button>
+        </>
+      ) : (
+        <WindProfileEditor
+          layers={launch.wind.profile}
+          units={units}
+          onChange={(profile) => {
+            if (profile === undefined) {
+              const rest = { speed: launch.wind.speed, from: launch.wind.from };
+              set({
+                ...launch,
+                wind:
+                  launch.wind.turbulence === undefined
+                    ? rest
+                    : { ...rest, turbulence: launch.wind.turbulence },
+              });
+            } else set({ ...launch, wind: { ...launch.wind, profile } });
+          }}
+        />
+      )}
       <QuantityField
-        label="Wind speed (steady, uniform)"
-        kind="velocity"
+        label="Turbulence intensity (standard deviation over the mean speed)"
+        kind="ratio"
         units={units}
-        value={launch.wind.speed}
+        value={launch.wind.turbulence?.intensity ?? 0}
         rule="non-negative"
-        onChange={(si) => {
-          set({ ...launch, wind: { ...launch.wind, speed: metresPerSecond(si) } });
+        hint="0 for none; Niskanen quotes 0.1 to 0.2 as the top of the range for model rocket conditions; pink-noise gusts at 20 Hz"
+        onChange={(v) => {
+          set({
+            ...launch,
+            wind: {
+              ...launch.wind,
+              turbulence: { intensity: v, seed: launch.wind.turbulence?.seed ?? 1 },
+            },
+          });
         }}
       />
-      <QuantityField
-        label="Wind blows from (compass bearing)"
-        kind="angle"
-        units={units}
-        value={launch.wind.from}
-        rule="any"
-        onChange={(si) => {
-          set({ ...launch, wind: { ...launch.wind, from: radians(si) } });
-        }}
-      />
+      {launch.wind.turbulence === undefined ? null : (
+        <IntegerField
+          label="Turbulence seed (same seed, same gusts)"
+          value={launch.wind.turbulence.seed}
+          min={0}
+          onChange={(n) => {
+            set({
+              ...launch,
+              wind: {
+                ...launch.wind,
+                turbulence: { intensity: launch.wind.turbulence?.intensity ?? 0, seed: n },
+              },
+            });
+          }}
+        />
+      )}
       {warnings.map((w) => (
         <p key={w} className="warning" role="alert">
           {w}
@@ -237,6 +313,111 @@ export function LaunchEditor(): JSX.Element {
           }}
         />
       </details>
+    </div>
+  );
+}
+
+function WindProfileEditor({
+  layers,
+  units,
+  onChange,
+}: {
+  readonly layers: readonly WindLayerSettings[];
+  readonly units: 'metric' | 'imperial';
+  readonly onChange: (layers: readonly WindLayerSettings[] | undefined) => void;
+}): JSX.Element {
+  let problem: string | undefined;
+  try {
+    validateWindLayers(layers.map((l) => ({ altitude: l.altitude, speed: l.speed, from: l.from })));
+  } catch (error) {
+    problem = error instanceof Error ? error.message : String(error);
+  }
+  const update = (i: number, patch: Partial<WindLayerSettings>): void => {
+    onChange(layers.map((l, j) => (j === i ? { ...l, ...patch } : l)));
+  };
+  return (
+    <div className="wind-profile" aria-label="Wind profile by altitude">
+      <p className="muted small">
+        Mean wind by altitude, interpolated between rows; the first row is the pad, the last row
+        holds above it.
+      </p>
+      {layers.map((l, i) => (
+        <div key={i} className="wind-row">
+          <QuantityField
+            label={`Row ${String(i + 1)} altitude`}
+            kind="m"
+            units={units}
+            value={l.altitude}
+            rule="non-negative"
+            disabled={i === 0}
+            onChange={(si) => {
+              update(i, { altitude: metres(si) });
+            }}
+          />
+          <QuantityField
+            label={`Row ${String(i + 1)} speed`}
+            kind="velocity"
+            units={units}
+            value={l.speed}
+            rule="non-negative"
+            onChange={(si) => {
+              update(i, { speed: metresPerSecond(si) });
+            }}
+          />
+          <QuantityField
+            label={`Row ${String(i + 1)} from`}
+            kind="angle"
+            units={units}
+            value={l.from}
+            rule="any"
+            onChange={(si) => {
+              update(i, { from: radians(si) });
+            }}
+          />
+          {i > 0 ? (
+            <button
+              type="button"
+              aria-label={`Remove row ${String(i + 1)}`}
+              onClick={() => {
+                onChange(layers.filter((_, j) => j !== i));
+              }}
+            >
+              Remove
+            </button>
+          ) : null}
+        </div>
+      ))}
+      {problem === undefined ? null : (
+        <p className="field-error" role="alert">
+          {problem}
+        </p>
+      )}
+      <div className="editor-actions">
+        <button
+          type="button"
+          onClick={() => {
+            const last = layers[layers.length - 1];
+            onChange([
+              ...layers,
+              {
+                altitude: metres((last?.altitude ?? 0) + 100),
+                speed: last?.speed ?? metresPerSecond(0),
+                from: last?.from ?? radians(0),
+              },
+            ]);
+          }}
+        >
+          Add row
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onChange(undefined);
+          }}
+        >
+          Use a uniform wind
+        </button>
+      </div>
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
   type StabilityResult,
   type Mach,
   type Metres,
+  type WindModel,
 } from '@lo-fi-rocket/physics';
 import { DesignError } from './errors.js';
 import type { DesignComponent, MotorSelection, RocketDesign } from './model.js';
@@ -187,6 +188,24 @@ export function designVehicle(design: RocketDesign): FlightVehicle {
   };
 }
 
+/** The physics wind model of a design (ENV-1, ENV-3 to ENV-5). */
+export function designWindModel(wind: RocketDesign['launch']['wind']): WindModel {
+  const mean: WindModel =
+    wind.profile === undefined
+      ? { kind: 'constant', speed: wind.speed, from: wind.from }
+      : {
+          kind: 'profile',
+          layers: wind.profile.map((l) => ({ altitude: l.altitude, speed: l.speed, from: l.from })),
+        };
+  if (wind.turbulence === undefined || wind.turbulence.intensity === 0) return mean;
+  return {
+    kind: 'turbulent',
+    mean,
+    intensity: wind.turbulence.intensity,
+    seed: wind.turbulence.seed,
+  };
+}
+
 export function designSimulationOptions(
   design: RocketDesign,
   mode: PhysicsMode = 'displayed',
@@ -208,7 +227,7 @@ export function designSimulationOptions(
       ...(site.latitude === undefined ? {} : { latitude: site.latitude }),
     },
     rail,
-    wind: { kind: 'constant', speed: wind.speed, from: wind.from },
+    wind: designWindModel(wind),
     gravity:
       mode === 'displayed'
         ? STANDARD_GRAVITY_MODEL

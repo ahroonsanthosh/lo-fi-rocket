@@ -97,9 +97,20 @@ Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports
 - **Verified:** Appendix B.2 (printed p. 40) states that a factor in boldface is exact; B.8 lists inch 2.54 E−02 m (p. 50), foot 3.048 E−01 m (p. 49), pound (avoirdupois) 4.535 924 E−01 kg with footnote 22 "the exact conversion factor is 4.535 923 7 E−01" (p. 53), ounce (avoirdupois) 2.834 952 E−02 kg (p. 52), pound-force 4.448 222 E+00 N with footnote 23 "the exact conversion factor is 4.448 221 615 260 5 E+00" (p. 53), mile per hour 4.4704 E−01 m/s (p. 52), foot per second 3.048 E−01 m/s (p. 49), degree Fahrenheit (p. 48, 5/9 of a degree Celsius) and B.6 (printed p. 42) on the 1959 definition of the international foot as exactly 0.3048 m.
 - **Used for:** the exact definitions of the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and degree Fahrenheit behind the UI units toggle (UNIT-5 to UNIT-11, decision D-040). Approved by the owner implicitly through CLAUDE.md section 9 ("a units toggle"); recorded as an open question in `docs/progress.md` in case the owner prefers another source.
 
+### 10. Blackman and Vigna (2018), Scrambled Linear Pseudorandom Number Generators
+
+- **Citation:** Blackman, David and Vigna, Sebastiano. _Scrambled Linear Pseudorandom Number Generators_. arXiv:1805.01407v3 [cs.DS], 28 March 2022 (also ACM Transactions on Mathematical Software 47(4), 2021). Distributed by the authors under the arXiv licence; the reference code is in the public domain (CC0).
+- **File:** `docs/blackman-vigna-2018-scrambled-linear-prngs-arxiv-1805.01407v3.pdf`
+- **URL:** https://arxiv.org/pdf/1805.01407
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `3aee2f264786742812e651595898fb3c06e184abf589c56c14cc7c7b205668f5`
+- **Pages:** 32
+- **Verified:** page 1 is the arXiv title page "Scrambled Linear Pseudorandom Number Generators, David Blackman, Sebastiano Vigna"; the reference code of xoshiro128** (Figure 1 and §5) gives the output rotl(s[1] × 5, 7) × 9 and the state update t = s[1] << 9; s[2] ^= s[0]; s[3] ^= s[1]; s[1] ^= s[2]; s[0] ^= s[3]; s[2] ^= t; s[3] = rotl(s[3], 11); §7 recommends seeding the state from a SplitMix generator.
+- **Used for:** RNG-1, the seeded generator behind wind turbulence (plan 0016) and Monte Carlo dispersion (plan 0017). Not a physics source; recorded under section 11 as the best-documented choice (D-050).
+
 ## Copyright status and the fetch script
 
-This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811) may stay committed.
+This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811) may stay committed; the arXiv paper is redistributable under its arXiv licence.
 
 ## Reference motors (`reference/motors/`)
 
