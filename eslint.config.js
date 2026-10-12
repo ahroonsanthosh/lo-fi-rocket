@@ -79,6 +79,27 @@ export default tseslint.config(
     },
   },
   {
+    // packages/ui displays values it is given: no physics, no file formats (plan UI-0001).
+    files: ['packages/ui/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@lo-fi-rocket/physics', '@lo-fi-rocket/physics/*', '**/physics/**'],
+              message: 'packages/ui must not import physics: components display given values.',
+            },
+            {
+              group: ['@lo-fi-rocket/formats', '@lo-fi-rocket/formats/*', '**/formats/**'],
+              message: 'packages/ui must not import formats (it re-exports physics).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Plain JS config files are not part of any TypeScript project.
     files: ['**/*.js'],
     ...tseslint.configs.disableTypeChecked,
