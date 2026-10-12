@@ -57,9 +57,11 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 
 - Prompt 5 step 1 (plan 0019): the owner's answers recorded (D-053); the Dormand–Prince tableau cross-checked against SciPy 1.18.1 (all coefficients agree to 1e-14); the warning and stability thresholds editable in the launch settings, labelled as rules of thumb that change no physics; TR R-100 declared model data and the ARCAS reports held out in `reference/SOURCES.md`; the WGS 84 document could not be downloaded from this environment (D-054, blocked on the file).
 
+- Prompt 5 step 2 part 1 (plan 0020): NASA TR R-100 Figure 12 digitised twice (`reference/digitised/`, merged with the disagreement and a per-curve uncertainty; the panel (b) curve identities corrected from the report's text, D-055); the transonic and supersonic nose pressure drag of Appendix B.3 for the elliptical, parabolic, power-series and Haack noses (DRAG-15 to DRAG-17): data curves linear in Mach, the (B.9) fineness-ratio scaling with its analytic slope, parameter interpolation between curves, the (3.87) join, held values and late data starts flagged. Every nose shape now has a drag model across all Mach regimes; R5 still stops at the fins (D-039). 604 tests.
+
 ## In progress
 
-- Prompt 5 step 2 (plans 0020, 0021): TR R-100 Figure 12 digitised twice (`reference/digitised/`), the transonic nose drag of Appendix B.3, the fin interpolation candidates, the ARCAS validation.
+- Prompt 5 step 2 part 2 (plan 0021): the fin transonic interpolation candidates compared against the held-out ARCAS data (TN D-4013, TN D-4014), the supersonic roll damping gap, the wind tunnel validation report by Mach regime (CD and CP), then R5.
 
 ## Next
 
@@ -67,7 +69,7 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 
 ## Open questions
 
-- Transonic nose drag for Haack, elliptical, parabolic and power-series noses (D-034): Niskanen takes it from Stoney's measured curves in NASA TR R-100 (in `reference/docs/`). CLAUDE.md lists that report as validation data only. May its fineness-ratio-3 curves be transcribed as the model's data points, as Niskanen does? Until then R5 cannot be simulated above Mach 0.8.
+- Transonic nose drag (D-034, answered in D-053, done in D-055): the x^1/4 and ellipsoidal curves of TR R-100 begin at Mach 1.2, so their subsonic rise is fitted from there per the thesis and may overestimate the drag below Mach 1 (warned). If a measured subsonic curve for blunt noses is wanted, a source is needed.
 - Base drag after burnout (D-035): the source removes the motor area only while thrusting; OpenRocket keeps it removed. Which should the app display? The comparison mode uses OpenRocket's rule.
 
 - Gravity latitude dependence (D-030, D-054): NIMA TR8350.2 is approved but could not be downloaded from this environment (NGA empty reply, DTIC 403, Wayback resets). Please place the PDF in `reference/docs/` or allow the host; the implementation then follows plan 0019.

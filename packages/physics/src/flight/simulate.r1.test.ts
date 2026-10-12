@@ -197,7 +197,7 @@ describe('modes, wind and properties', () => {
     expect(rough).toBeLessThan(base);
     expect(lugged).toBeLessThan(base);
   });
-  it('R5 (Von Kármán nose, Mach 1.09) stops at Mach 0.8 with a clear NotImplementedError (D-034, D-039)', () => {
+  it('R5 (Von Kármán nose, Mach 1.09) stops at Mach 0.8 at the fins with a clear NotImplementedError (D-039; the nose is covered by D-055)', () => {
     const r5: FlightVehicle = {
       components: R5_COMPONENTS,
       motor: { kind: 'ideal', thrust: newtons(238), burnTime: seconds(1.036) },
@@ -209,7 +209,7 @@ describe('modes, wind and properties', () => {
     ).toThrow(NotImplementedError);
     expect(() =>
       simulateFlight(r5, { ...OR, integrator: { kind: 'rk4', timeStep: seconds(0.005) } }),
-    ).toThrow(/Mach 0\.8|Appendix B\.3/);
+    ).toThrow(/fin|0\.8/);
   });
   it('gravity and site inputs are validated', () => {
     expect(() =>

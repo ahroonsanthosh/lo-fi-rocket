@@ -210,6 +210,7 @@ export {
   type BoatTailPressureDrag,
   type NosePressureDrag,
 } from './drag/pressure-drag.js';
+export { STONEY_NOSES, type StoneyCurve, type StoneyNose } from './drag/stoney-noses.js';
 export { finPressureDrag, roundedLeadingEdgeDrag, type FinPressureDrag } from './drag/fin-drag.js';
 export {
   baseDragArea,

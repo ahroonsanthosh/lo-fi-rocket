@@ -1,6 +1,7 @@
 /** Pressure, fin, base and parasitic drag (plan 0009, DRAG-5 to DRAG-12). */
 import { describe, expect, it } from 'vitest';
 import { InvalidInputError, NotImplementedError } from '../errors.js';
+import type { NoseShape } from '../geometry/profiles.js';
 import { mach } from '../units/si.js';
 import { baseDragArea, launchLugDrag, railButtonDrag } from './base-parasitic.js';
 import { finPressureDrag, roundedLeadingEdgeDrag } from './fin-drag.js';
@@ -53,15 +54,113 @@ describe('DRAG-6 to DRAG-8 nose cone pressure drag', () => {
     expect(noseConePressureDrag('ogive', 0.5, 2, 0, mach(2)).cd).toBeCloseTo(0.82 * cone, 12);
     expect(noseConePressureDrag('ogive', 1, 2, 0, mach(0)).cd).toBe(0);
   });
-  it('Haack, elliptical, power and parabolic noses: eq. (3.86) with a warning below Mach 0.8, not implemented above (D-034)', () => {
+});
+
+describe("DRAG-15 to DRAG-17 nose pressure drag from Stoney's curves (NASA TR R-100 Figure 12, D-055)", () => {
+  it('C₀ at Mach 1.2 from (B.1), (B.2): 1.84 − 0.527778 + 0.080054 + 0.011721 = 1.403998, × 0.85 = 1.193398', () => {
+    expect(stagnationDragCoefficient(mach(1.2))).toBeCloseTo(1.193398, 6);
+  });
+  it('Von Kármán (Haack κ = 0) at f_N = 3 and Mach 1.2 returns the table value 0.0741 exactly ((B.9) exponent log₄4 = 1)', () => {
+    const r = noseConePressureDrag('haack', 0, 3, 0, mach(1.2));
+    expect(r.cd).toBeCloseTo(0.0741, 12);
+    expect(r.method).toBe('stoney-data');
+    expect(r.warnings.join('\n')).toContain('TR R-100');
+    expect(r.warnings.join('\n')).toContain('±0.005');
+  });
+  it('(B.9) at f_N = 1: exponent log₄2 = 0.5, C = √(C₀ C₃) = √(1.193398 × 0.0741) = 0.297373; at f_N = 5: exponent 1.292481, C = 1.193398 × (0.0741/1.193398)^1.292481 = 0.032870', () => {
+    expect(noseConePressureDrag('haack', 0, 1, 0, mach(1.2)).cd).toBeCloseTo(0.297373, 6);
+    expect(noseConePressureDrag('haack', 0, 5, 0, mach(1.2)).cd).toBeCloseTo(0.03287, 6);
+  });
+  it('linear interpolation in Mach between points: x^1/2 at f_N = 3 and Mach 1.3 = 0.0924 + (0.0835 − 0.0924) × 0.05/0.15 = 0.089433; x^1/2 is the default κ = 0.5', () => {
+    expect(noseConePressureDrag('power', 0.5, 3, 0, mach(1.3)).cd).toBeCloseTo(0.089433, 6);
+    expect(noseConePressureDrag('power', undefined, 3, 0, mach(1.3)).cd).toBeCloseTo(0.089433, 6);
+  });
+  it('shape-parameter interpolation (DRAG-17): Haack κ = 1/6 at Mach 1.6, f_N = 3 = (0.0871 + 0.1139)/2 = 0.1005; power κ = 0.6 at Mach 1.4 = 0.6 × 0.0835 + 0.4 × 0.0875 = 0.0851', () => {
+    expect(noseConePressureDrag('haack', 1 / 6, 3, 0, mach(1.6)).cd).toBeCloseTo(0.1005, 6);
+    expect(noseConePressureDrag('power', 0.6, 3, 0, mach(1.4)).cd).toBeCloseTo(0.0851, 6);
+  });
+  it('beyond the data the last value is held with a warning: x^1/2 at Mach 2.5 = 0.0899', () => {
+    const r = noseConePressureDrag('power', 0.5, 3, 0, mach(2.5));
+    expect(r.cd).toBeCloseTo(0.0899, 6);
+    expect(r.method).toBe('stoney-data-held');
+    expect(r.warnings.join('\n')).toContain('held');
+  });
+  it('the ellipsoid data begin at Mach 1.2: (3.87) fitted there with C_t = 0.1344 and slope (0.1435 − 0.1344)/0.1 = 0.091: b = 0.091 × 1.2/0.1344 = 0.8125, a = 0.1344/1.2^0.8125 = 0.115895; at Mach 0.6: 0.076527; a warning names the late start', () => {
+    const r = noseConePressureDrag('elliptical', undefined, 3, 0, mach(0.6));
+    expect(r.cd).toBeCloseTo(0.076527, 6);
+    expect(r.method).toBe('subsonic-interpolation');
+    expect(r.warnings.join('\n')).toContain('begin at Mach 1.2');
+    expect(noseConePressureDrag('elliptical', undefined, 3, 0, mach(0.3)).cd).toBeCloseTo(
+      0.043574,
+      6,
+    );
+    // Continuity at the join.
+    const below = noseConePressureDrag('elliptical', undefined, 3, 0, mach(1.2 - 1e-9)).cd;
+    expect(Math.abs(below - 0.1344)).toBeLessThan(1e-6);
+  });
+  it('the slope at the join includes the Mach dependence of C₀ when f_N ≠ 3: ellipsoid at f_N = 5: C(1.2) = 0.070960, dC/dM = 0.053906, b = 0.911606, a = 0.060094; at Mach 0.6: 0.037722', () => {
+    // e = log₄6 = 1.292481; C₀′ = 0.85 (1.52/1.728 − 0.664/2.48832 − 0.21/3.583181) = 0.85 × 0.554107 = 0.470991;
+    // dC/dM = C [(1 − e) C₀′/C₀ + e C₃′/C₃] = 0.070960 × (−0.292481 × 0.394664 + 1.292481 × 0.677083) = 0.053906.
+    const r = noseConePressureDrag('elliptical', undefined, 5, 0, mach(0.6));
+    expect(r.cd).toBeCloseTo(0.037722, 6);
+    expect(noseConePressureDrag('elliptical', undefined, 5, 0, mach(1.2)).cd).toBeCloseTo(
+      0.07096,
+      6,
+    );
+  });
+  it('the drag never falls below the low-speed value: x^3/4 with joint angle atan(0.125), C₀ = 0.8 sin²φ = 0.012308; at Mach 0.85 the scaled data give 0.0028 so C₀ is kept; at Mach 0.95 the data (0.0312) win', () => {
+    const phi = Math.atan(0.125);
+    const low = noseConePressureDrag('power', 0.75, 3, phi, mach(0.85));
+    expect(low.cd).toBeCloseTo(0.012308, 6);
+    expect(low.method).toBe('low-subsonic-constant');
+    expect(noseConePressureDrag('power', 0.75, 3, phi, mach(0.5)).cd).toBeCloseTo(0.012308, 6);
+    const high = noseConePressureDrag('power', 0.75, 3, phi, mach(0.95));
+    expect(high.cd).toBeCloseTo(0.0312, 6);
+    expect(high.method).toBe('stoney-data');
+  });
+  it('a smooth Von Kármán nose is 0 below its data (Mach 0.9) and continuous into them', () => {
     const r = noseConePressureDrag('haack', 0, 4, 0, mach(0.5));
     expect(r.cd).toBe(0);
     expect(r.method).toBe('low-subsonic-constant');
-    expect(r.warnings[0]).toContain('D-034');
-    expect(() => noseConePressureDrag('haack', 0, 4, 0, mach(0.81))).toThrow(NotImplementedError);
-    expect(() => noseConePressureDrag('elliptical', undefined, 4, 0, mach(1.5))).toThrow(
-      NotImplementedError,
+    expect(noseConePressureDrag('haack', 0, 4, 0, mach(0.9)).cd).toBe(0);
+    expect(noseConePressureDrag('haack', 0, 4, 0, mach(0.95)).cd).toBeGreaterThan(0);
+  });
+  it('the cone endpoints of the parameter families delegate to the conical method at the exact cone parameter (D-055)', () => {
+    const cone = noseConePressureDrag('conical', undefined, 3, Math.atan(1 / 6), mach(1.5)).cd;
+    expect(noseConePressureDrag('power', 1, 3, Math.atan(1 / 6), mach(1.5)).cd).toBe(cone);
+    expect(noseConePressureDrag('parabolic', 0, 3, Math.atan(1 / 6), mach(1.5)).cd).toBe(cone);
+    // Just inside the family the cone endpoint is Stoney's cone curve: κ = 0.999 power at Mach 2, weight (0.999 − 0.75)/0.25 = 0.996: 0.004 × 0.0795 + 0.996 × 0.1018 = 0.101711.
+    expect(noseConePressureDrag('power', 0.999, 3, Math.atan(1 / 6), mach(2)).cd).toBeCloseTo(
+      0.004 * 0.0795 + 0.996 * 0.1018,
+      6,
     );
+  });
+  it('parameters outside the measured range are not implemented: power κ = 0.2', () => {
+    expect(() => noseConePressureDrag('power', 0.2, 3, 0, mach(0.5))).toThrow(NotImplementedError);
+  });
+  it('the curves are monotone in Mach where (3.87) applies and continuous everywhere (sampled)', () => {
+    const shapes: [NoseShape, number | undefined][] = [
+      ['elliptical', undefined],
+      ['parabolic', 0.75],
+      ['parabolic', 1],
+      ['power', 0.25],
+      ['power', 0.4],
+      ['haack', 0],
+      ['haack', 1 / 3],
+    ];
+    for (const [shape, k] of shapes) {
+      let prev = noseConePressureDrag(shape, k, 4, 0.1, mach(0)).cd;
+      let prevM = 0;
+      for (let M = 0.001; M <= 4; M += 0.001) {
+        const cd = noseConePressureDrag(shape, k, 4, 0.1, mach(M)).cd;
+        expect(Number.isFinite(cd)).toBe(true);
+        // No jump larger than the steepest data segment allows (0.2 per 0.05 Mach).
+        expect(Math.abs(cd - prev)).toBeLessThan(4 * (M - prevM) + 1e-9);
+        if (M < 0.8) expect(cd).toBeGreaterThanOrEqual(prev - 1e-12);
+        prev = cd;
+        prevM = M;
+      }
+    }
   });
   it('a very blunt nose is flagged; invalid inputs throw', () => {
     expect(noseConePressureDrag('conical', undefined, 0.4, 0.9, mach(0.3)).warnings[0]).toContain(

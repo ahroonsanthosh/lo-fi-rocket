@@ -1,0 +1,1231 @@
+{
+  "source": "NASA TR R-100 (Stoney 1961), Figure 12, printed page 16 (PDF page 20): pressure drag of noses of fineness ratio 3",
+  "passes": [
+    "PDF page rendered at 300 dpi with pdftoppm, each panel cropped and enlarged 2x (1340 px per 1.2 Mach in part (a), 1502 px per 2.8 Mach in part (b)); values read by eye against the printed grid (0.1 in C_D,N; 0.2 in Mach in (a), 0.4 in (b)) by interpolating pixel positions; no overlay. Curve identity by line style matched to the legend symbols (solid = circle, dashed = square, dash-dot = diamond), the same rule as the top panel where the configuration leaders are unambiguous.",
+    "PDF page rendered at 200 dpi (a different rendering from pass 1), each panel cropped and enlarged 3x with a 20 px pixel ruler overlaid; the reader transcribed the pixel coordinates (in 200 dpi page pixels) of the axis labels and gridlines, then of each curve at fixed Mach columns; the values below are computed by the merge script from the calibration, not read as values. Done after pass 1 without re-reading it."
+  ],
+  "note": "value = mean of the two passes; disagreement = |pass1 - pass2|; uncertainty = max(disagreement/2, 0.005) per curve as the larger of half the worst disagreement and the grid reading floor. Panel (b) curves: the keys 'von-karman-b' and 'power-3/4-b' of the pass files are swapped here (the panel-(b) line styles are the reverse of panel (a)'s; see merge-tr-r-100.py and D-055); the merged keys name the correct nose.",
+  "curves": {
+    "cone": {
+      "panel": "top",
+      "read_as": "cone",
+      "worst_disagreement": 0.0082,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.8,
+          "pass1": 0.017,
+          "pass2": 0.0186,
+          "value": 0.0178,
+          "disagreement": 0.0016
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.035,
+          "pass2": 0.0356,
+          "value": 0.0353,
+          "disagreement": 0.0006
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.06,
+          "pass2": 0.0576,
+          "value": 0.0588,
+          "disagreement": 0.0024
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.107,
+          "pass2": 0.1,
+          "value": 0.1035,
+          "disagreement": 0.007
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.159,
+          "pass2": 0.1508,
+          "value": 0.1549,
+          "disagreement": 0.0082
+        },
+        {
+          "mach": 1.07,
+          "pass1": 0.164,
+          "pass2": 0.1627,
+          "value": 0.1633,
+          "disagreement": 0.0013
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.153,
+          "pass2": 0.1576,
+          "value": 0.1553,
+          "disagreement": 0.0046
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.137,
+          "pass2": 0.1373,
+          "value": 0.1371,
+          "disagreement": 0.0003
+        },
+        {
+          "mach": 1.25,
+          "pass1": 0.133,
+          "pass2": 0.1322,
+          "value": 0.1326,
+          "disagreement": 0.0008
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.117,
+          "pass2": 0.1169,
+          "value": 0.1169,
+          "disagreement": 0.0001
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.108,
+          "pass2": 0.1068,
+          "value": 0.1074,
+          "disagreement": 0.0012
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.104,
+          "pass2": 0.1034,
+          "value": 0.1037,
+          "disagreement": 0.0006
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.102,
+          "pass2": 0.1017,
+          "value": 0.1018,
+          "disagreement": 0.0003
+        }
+      ]
+    },
+    "power-3/4": {
+      "panel": "top",
+      "read_as": "power-3/4",
+      "worst_disagreement": 0.006,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.8,
+          "pass1": 0.0,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.006,
+          "pass2": 0.0051,
+          "value": 0.0056,
+          "disagreement": 0.0009
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.032,
+          "pass2": 0.0305,
+          "value": 0.0312,
+          "disagreement": 0.0015
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.084,
+          "pass2": 0.078,
+          "value": 0.081,
+          "disagreement": 0.006
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.114,
+          "pass2": 0.1119,
+          "value": 0.1129,
+          "disagreement": 0.0021
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.108,
+          "pass2": 0.1085,
+          "value": 0.1082,
+          "disagreement": 0.0005
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.097,
+          "pass2": 0.1,
+          "value": 0.0985,
+          "disagreement": 0.003
+        },
+        {
+          "mach": 1.25,
+          "pass1": 0.094,
+          "pass2": 0.0966,
+          "value": 0.0953,
+          "disagreement": 0.0026
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.087,
+          "pass2": 0.0881,
+          "value": 0.0875,
+          "disagreement": 0.0011
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.084,
+          "pass2": 0.0864,
+          "value": 0.0852,
+          "disagreement": 0.0024
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.084,
+          "pass2": 0.0847,
+          "value": 0.0844,
+          "disagreement": 0.0007
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.081,
+          "pass2": 0.078,
+          "value": 0.0795,
+          "disagreement": 0.003
+        }
+      ]
+    },
+    "power-1/2": {
+      "panel": "top",
+      "read_as": "power-1/2",
+      "worst_disagreement": 0.0052,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.9,
+          "pass1": null,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": null
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.009,
+          "pass2": 0.0051,
+          "value": 0.007,
+          "disagreement": 0.0039
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.046,
+          "pass2": 0.0492,
+          "value": 0.0476,
+          "disagreement": 0.0032
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.061,
+          "pass2": 0.061,
+          "value": 0.061,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.058,
+          "pass2": 0.0559,
+          "value": 0.057,
+          "disagreement": 0.0021
+        },
+        {
+          "mach": 1.15,
+          "pass1": 0.066,
+          "pass2": 0.0661,
+          "value": 0.066,
+          "disagreement": 0.0001
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.09,
+          "pass2": 0.0864,
+          "value": 0.0882,
+          "disagreement": 0.0036
+        },
+        {
+          "mach": 1.25,
+          "pass1": 0.095,
+          "pass2": 0.0898,
+          "value": 0.0924,
+          "disagreement": 0.0052
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.084,
+          "pass2": 0.0831,
+          "value": 0.0835,
+          "disagreement": 0.0009
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.085,
+          "pass2": 0.0831,
+          "value": 0.084,
+          "disagreement": 0.0019
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.087,
+          "pass2": 0.0847,
+          "value": 0.0858,
+          "disagreement": 0.0023
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.09,
+          "pass2": 0.0898,
+          "value": 0.0899,
+          "disagreement": 0.0002
+        }
+      ]
+    },
+    "parabola": {
+      "panel": "middle",
+      "read_as": "parabola",
+      "worst_disagreement": 0.0311,
+      "uncertainty": 0.0156,
+      "points": [
+        {
+          "mach": 0.8,
+          "pass1": 0.0,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.006,
+          "pass2": 0.0017,
+          "value": 0.0039,
+          "disagreement": 0.0043
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.023,
+          "pass2": 0.0119,
+          "value": 0.0175,
+          "disagreement": 0.0111
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.065,
+          "pass2": 0.0339,
+          "value": 0.0495,
+          "disagreement": 0.0311
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.097,
+          "pass2": 0.0797,
+          "value": 0.0883,
+          "disagreement": 0.0173
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.108,
+          "pass2": 0.1034,
+          "value": 0.1057,
+          "disagreement": 0.0046
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.118,
+          "pass2": 0.1186,
+          "value": 0.1183,
+          "disagreement": 0.0006
+        },
+        {
+          "mach": 1.3,
+          "pass1": 0.114,
+          "pass2": 0.1136,
+          "value": 0.1138,
+          "disagreement": 0.0004
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.111,
+          "pass2": 0.1102,
+          "value": 0.1106,
+          "disagreement": 0.0008
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.107,
+          "pass2": 0.1068,
+          "value": 0.1069,
+          "disagreement": 0.0002
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.104,
+          "pass2": 0.1051,
+          "value": 0.1046,
+          "disagreement": 0.0011
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.107,
+          "pass2": 0.1068,
+          "value": 0.1069,
+          "disagreement": 0.0002
+        }
+      ]
+    },
+    "parabola-3/4": {
+      "panel": "middle",
+      "read_as": "parabola-3/4",
+      "worst_disagreement": 0.0223,
+      "uncertainty": 0.0112,
+      "points": [
+        {
+          "mach": 0.85,
+          "pass1": 0.003,
+          "pass2": 0.0017,
+          "value": 0.0024,
+          "disagreement": 0.0013
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.017,
+          "pass2": 0.0085,
+          "value": 0.0128,
+          "disagreement": 0.0085
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.051,
+          "pass2": 0.0339,
+          "value": 0.0425,
+          "disagreement": 0.0171
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.102,
+          "pass2": 0.0797,
+          "value": 0.0908,
+          "disagreement": 0.0223
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.119,
+          "pass2": 0.122,
+          "value": 0.1205,
+          "disagreement": 0.003
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.122,
+          "pass2": 0.1237,
+          "value": 0.1229,
+          "disagreement": 0.0017
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.113,
+          "pass2": 0.1136,
+          "value": 0.1133,
+          "disagreement": 0.0006
+        },
+        {
+          "mach": 1.3,
+          "pass1": 0.099,
+          "pass2": 0.1034,
+          "value": 0.1012,
+          "disagreement": 0.0044
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.094,
+          "pass2": 0.0983,
+          "value": 0.0961,
+          "disagreement": 0.0043
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.088,
+          "pass2": 0.0881,
+          "value": 0.088,
+          "disagreement": 0.0001
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.085,
+          "pass2": 0.0847,
+          "value": 0.0849,
+          "disagreement": 0.0003
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.085,
+          "pass2": 0.0847,
+          "value": 0.0849,
+          "disagreement": 0.0003
+        }
+      ]
+    },
+    "parabola-1/2": {
+      "panel": "middle",
+      "read_as": "parabola-1/2",
+      "worst_disagreement": 0.0172,
+      "uncertainty": 0.0086,
+      "points": [
+        {
+          "mach": 0.8,
+          "pass1": 0.001,
+          "pass2": 0.0034,
+          "value": 0.0022,
+          "disagreement": 0.0024
+        },
+        {
+          "mach": 0.85,
+          "pass1": 0.011,
+          "pass2": 0.0085,
+          "value": 0.0097,
+          "disagreement": 0.0025
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.031,
+          "pass2": 0.0169,
+          "value": 0.0239,
+          "disagreement": 0.0141
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.063,
+          "pass2": 0.0458,
+          "value": 0.0544,
+          "disagreement": 0.0172
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.094,
+          "pass2": 0.0881,
+          "value": 0.091,
+          "disagreement": 0.0059
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.108,
+          "pass2": 0.1085,
+          "value": 0.1082,
+          "disagreement": 0.0005
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.111,
+          "pass2": 0.1136,
+          "value": 0.1123,
+          "disagreement": 0.0026
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.107,
+          "pass2": 0.1085,
+          "value": 0.1077,
+          "disagreement": 0.0015
+        },
+        {
+          "mach": 1.3,
+          "pass1": 0.094,
+          "pass2": 0.0983,
+          "value": 0.0961,
+          "disagreement": 0.0043
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.084,
+          "pass2": 0.0847,
+          "value": 0.0844,
+          "disagreement": 0.0007
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.082,
+          "pass2": 0.0814,
+          "value": 0.0817,
+          "disagreement": 0.0006
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.082,
+          "pass2": 0.0814,
+          "value": 0.0817,
+          "disagreement": 0.0006
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.082,
+          "pass2": 0.0814,
+          "value": 0.0817,
+          "disagreement": 0.0006
+        }
+      ]
+    },
+    "von-karman-a": {
+      "panel": "bottom",
+      "read_as": "von-karman-a",
+      "worst_disagreement": 0.0039,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.9,
+          "pass1": 0.0,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.009,
+          "pass2": 0.0052,
+          "value": 0.0071,
+          "disagreement": 0.0038
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.028,
+          "pass2": 0.0241,
+          "value": 0.0261,
+          "disagreement": 0.0039
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.06,
+          "pass2": 0.0586,
+          "value": 0.0593,
+          "disagreement": 0.0014
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.069,
+          "pass2": 0.069,
+          "value": 0.069,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.074,
+          "pass2": 0.0741,
+          "value": 0.0741,
+          "disagreement": 0.0001
+        },
+        {
+          "mach": 1.25,
+          "pass1": 0.077,
+          "pass2": 0.0741,
+          "value": 0.0756,
+          "disagreement": 0.0029
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.084,
+          "pass2": 0.0845,
+          "value": 0.0843,
+          "disagreement": 0.0005
+        },
+        {
+          "mach": 1.45,
+          "pass1": 0.086,
+          "pass2": 0.0862,
+          "value": 0.0861,
+          "disagreement": 0.0002
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.088,
+          "pass2": 0.0862,
+          "value": 0.0871,
+          "disagreement": 0.0018
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.085,
+          "pass2": 0.0845,
+          "value": 0.0848,
+          "disagreement": 0.0005
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.081,
+          "pass2": 0.081,
+          "value": 0.081,
+          "disagreement": 0.0
+        }
+      ]
+    },
+    "lv-haack": {
+      "panel": "bottom",
+      "read_as": "lv-haack",
+      "worst_disagreement": 0.004,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.9,
+          "pass1": 0.0,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.009,
+          "pass2": 0.0052,
+          "value": 0.0071,
+          "disagreement": 0.0038
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.028,
+          "pass2": 0.0241,
+          "value": 0.0261,
+          "disagreement": 0.0039
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.06,
+          "pass2": 0.0586,
+          "value": 0.0593,
+          "disagreement": 0.0014
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.077,
+          "pass2": 0.081,
+          "value": 0.079,
+          "disagreement": 0.004
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.091,
+          "pass2": 0.0948,
+          "value": 0.0929,
+          "disagreement": 0.0038
+        },
+        {
+          "mach": 1.25,
+          "pass1": 0.101,
+          "pass2": 0.1,
+          "value": 0.1005,
+          "disagreement": 0.001
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.111,
+          "pass2": 0.1103,
+          "value": 0.1106,
+          "disagreement": 0.0007
+        },
+        {
+          "mach": 1.45,
+          "pass1": 0.113,
+          "pass2": 0.1121,
+          "value": 0.1126,
+          "disagreement": 0.0009
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.114,
+          "pass2": 0.1138,
+          "value": 0.1139,
+          "disagreement": 0.0002
+        },
+        {
+          "mach": 1.8,
+          "pass1": 0.112,
+          "pass2": 0.1121,
+          "value": 0.1121,
+          "disagreement": 0.0001
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.11,
+          "pass2": 0.1103,
+          "value": 0.1101,
+          "disagreement": 0.0003
+        }
+      ]
+    },
+    "power-3/4-b": {
+      "panel": "b",
+      "read_as": "von-karman-b",
+      "worst_disagreement": 0.0063,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.8,
+          "pass1": 0.0,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 0.85,
+          "pass1": 0.005,
+          "pass2": 0.0017,
+          "value": 0.0034,
+          "disagreement": 0.0033
+        },
+        {
+          "mach": 0.9,
+          "pass1": 0.022,
+          "pass2": 0.0167,
+          "value": 0.0193,
+          "disagreement": 0.0053
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.05,
+          "pass2": 0.0467,
+          "value": 0.0484,
+          "disagreement": 0.0033
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.09,
+          "pass2": 0.085,
+          "value": 0.0875,
+          "disagreement": 0.005
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.123,
+          "pass2": 0.1167,
+          "value": 0.1198,
+          "disagreement": 0.0063
+        },
+        {
+          "mach": 1.07,
+          "pass1": null,
+          "pass2": 0.1183,
+          "value": 0.1183,
+          "disagreement": null
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.115,
+          "pass2": 0.11,
+          "value": 0.1125,
+          "disagreement": 0.005
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.107,
+          "pass2": 0.1033,
+          "value": 0.1051,
+          "disagreement": 0.0037
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.098,
+          "pass2": 0.0917,
+          "value": 0.0949,
+          "disagreement": 0.0063
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.094,
+          "pass2": 0.0883,
+          "value": 0.0912,
+          "disagreement": 0.0057
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.09,
+          "pass2": 0.085,
+          "value": 0.0875,
+          "disagreement": 0.005
+        },
+        {
+          "mach": 2.4,
+          "pass1": 0.085,
+          "pass2": 0.08,
+          "value": 0.0825,
+          "disagreement": 0.005
+        },
+        {
+          "mach": 2.8,
+          "pass1": 0.081,
+          "pass2": 0.0767,
+          "value": 0.0789,
+          "disagreement": 0.0043
+        },
+        {
+          "mach": 3.2,
+          "pass1": 0.078,
+          "pass2": 0.075,
+          "value": 0.0765,
+          "disagreement": 0.003
+        },
+        {
+          "mach": 3.6,
+          "pass1": 0.077,
+          "pass2": 0.0733,
+          "value": 0.0751,
+          "disagreement": 0.0037
+        }
+      ]
+    },
+    "von-karman-b": {
+      "panel": "b",
+      "read_as": "power-3/4-b",
+      "worst_disagreement": 0.0067,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 0.9,
+          "pass1": 0.0,
+          "pass2": 0.0,
+          "value": 0.0,
+          "disagreement": 0.0
+        },
+        {
+          "mach": 0.95,
+          "pass1": 0.013,
+          "pass2": 0.0133,
+          "value": 0.0131,
+          "disagreement": 0.0003
+        },
+        {
+          "mach": 1.0,
+          "pass1": 0.039,
+          "pass2": 0.035,
+          "value": 0.037,
+          "disagreement": 0.004
+        },
+        {
+          "mach": 1.05,
+          "pass1": 0.061,
+          "pass2": 0.0583,
+          "value": 0.0596,
+          "disagreement": 0.0027
+        },
+        {
+          "mach": 1.1,
+          "pass1": 0.076,
+          "pass2": 0.0717,
+          "value": 0.0738,
+          "disagreement": 0.0043
+        },
+        {
+          "mach": 1.2,
+          "pass1": 0.087,
+          "pass2": 0.0817,
+          "value": 0.0843,
+          "disagreement": 0.0053
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.094,
+          "pass2": 0.09,
+          "value": 0.092,
+          "disagreement": 0.004
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.093,
+          "pass2": 0.09,
+          "value": 0.0915,
+          "disagreement": 0.003
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.091,
+          "pass2": 0.0883,
+          "value": 0.0897,
+          "disagreement": 0.0027
+        },
+        {
+          "mach": 2.4,
+          "pass1": 0.088,
+          "pass2": 0.085,
+          "value": 0.0865,
+          "disagreement": 0.003
+        },
+        {
+          "mach": 2.8,
+          "pass1": 0.087,
+          "pass2": 0.0817,
+          "value": 0.0843,
+          "disagreement": 0.0053
+        },
+        {
+          "mach": 3.2,
+          "pass1": 0.086,
+          "pass2": 0.08,
+          "value": 0.083,
+          "disagreement": 0.006
+        },
+        {
+          "mach": 3.6,
+          "pass1": 0.085,
+          "pass2": 0.0783,
+          "value": 0.0817,
+          "disagreement": 0.0067
+        }
+      ]
+    },
+    "ellipsoid": {
+      "panel": "b",
+      "read_as": "ellipsoid",
+      "worst_disagreement": 0.0073,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 1.2,
+          "pass1": 0.137,
+          "pass2": 0.1317,
+          "value": 0.1344,
+          "disagreement": 0.0053
+        },
+        {
+          "mach": 1.3,
+          "pass1": 0.147,
+          "pass2": 0.14,
+          "value": 0.1435,
+          "disagreement": 0.007
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.152,
+          "pass2": 0.145,
+          "value": 0.1485,
+          "disagreement": 0.007
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.157,
+          "pass2": 0.1517,
+          "value": 0.1543,
+          "disagreement": 0.0053
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.161,
+          "pass2": 0.155,
+          "value": 0.158,
+          "disagreement": 0.006
+        },
+        {
+          "mach": 2.4,
+          "pass1": 0.164,
+          "pass2": 0.1567,
+          "value": 0.1603,
+          "disagreement": 0.0073
+        },
+        {
+          "mach": 2.8,
+          "pass1": 0.165,
+          "pass2": 0.1583,
+          "value": 0.1617,
+          "disagreement": 0.0067
+        },
+        {
+          "mach": 3.2,
+          "pass1": 0.165,
+          "pass2": 0.1583,
+          "value": 0.1617,
+          "disagreement": 0.0067
+        },
+        {
+          "mach": 3.6,
+          "pass1": 0.165,
+          "pass2": 0.1583,
+          "value": 0.1617,
+          "disagreement": 0.0067
+        }
+      ]
+    },
+    "power-1/4": {
+      "panel": "b",
+      "read_as": "power-1/4",
+      "worst_disagreement": 0.0083,
+      "uncertainty": 0.005,
+      "points": [
+        {
+          "mach": 1.2,
+          "pass1": 0.144,
+          "pass2": 0.1383,
+          "value": 0.1411,
+          "disagreement": 0.0057
+        },
+        {
+          "mach": 1.4,
+          "pass1": 0.169,
+          "pass2": 0.1633,
+          "value": 0.1662,
+          "disagreement": 0.0057
+        },
+        {
+          "mach": 1.6,
+          "pass1": 0.186,
+          "pass2": 0.1817,
+          "value": 0.1839,
+          "disagreement": 0.0043
+        },
+        {
+          "mach": 2.0,
+          "pass1": 0.212,
+          "pass2": 0.205,
+          "value": 0.2085,
+          "disagreement": 0.007
+        },
+        {
+          "mach": 2.4,
+          "pass1": 0.231,
+          "pass2": 0.2233,
+          "value": 0.2272,
+          "disagreement": 0.0077
+        },
+        {
+          "mach": 2.8,
+          "pass1": 0.243,
+          "pass2": 0.235,
+          "value": 0.239,
+          "disagreement": 0.008
+        },
+        {
+          "mach": 3.2,
+          "pass1": 0.25,
+          "pass2": 0.2417,
+          "value": 0.2459,
+          "disagreement": 0.0083
+        },
+        {
+          "mach": 3.6,
+          "pass1": 0.253,
+          "pass2": 0.245,
+          "value": 0.249,
+          "disagreement": 0.008
+        }
+      ]
+    }
+  },
+  "cross_panel_check": {
+    "note": "the same nose read in both panels after the identity correction; the model uses the panel (a) curves (finer scale) for these two noses",
+    "comparison": {
+      "power-3/4": [
+        {
+          "mach": 0.9,
+          "panel_a": 0.0056,
+          "panel_b": 0.0193,
+          "difference": 0.0137
+        },
+        {
+          "mach": 0.95,
+          "panel_a": 0.0312,
+          "panel_b": 0.0484,
+          "difference": 0.0172
+        },
+        {
+          "mach": 1.0,
+          "panel_a": 0.081,
+          "panel_b": 0.0875,
+          "difference": 0.0065
+        },
+        {
+          "mach": 1.05,
+          "panel_a": 0.1129,
+          "panel_b": 0.1198,
+          "difference": 0.0069
+        },
+        {
+          "mach": 1.1,
+          "panel_a": 0.1082,
+          "panel_b": 0.1125,
+          "difference": 0.0043
+        },
+        {
+          "mach": 1.2,
+          "panel_a": 0.0985,
+          "panel_b": 0.1051,
+          "difference": 0.0066
+        },
+        {
+          "mach": 1.4,
+          "panel_a": 0.0875,
+          "panel_b": 0.0949,
+          "difference": 0.0074
+        },
+        {
+          "mach": 1.6,
+          "panel_a": 0.0852,
+          "panel_b": 0.0912,
+          "difference": 0.006
+        },
+        {
+          "mach": 2.0,
+          "panel_a": 0.0795,
+          "panel_b": 0.0875,
+          "difference": 0.008
+        }
+      ],
+      "von-karman-a": [
+        {
+          "mach": 0.9,
+          "panel_a": 0.0,
+          "panel_b": 0.0,
+          "difference": 0.0
+        },
+        {
+          "mach": 0.95,
+          "panel_a": 0.0071,
+          "panel_b": 0.0131,
+          "difference": 0.006
+        },
+        {
+          "mach": 1.0,
+          "panel_a": 0.0261,
+          "panel_b": 0.037,
+          "difference": 0.0109
+        },
+        {
+          "mach": 1.05,
+          "panel_a": 0.0593,
+          "panel_b": 0.0596,
+          "difference": 0.0003
+        },
+        {
+          "mach": 1.1,
+          "panel_a": 0.069,
+          "panel_b": 0.0738,
+          "difference": 0.0048
+        },
+        {
+          "mach": 1.2,
+          "panel_a": 0.0741,
+          "panel_b": 0.0843,
+          "difference": 0.0102
+        },
+        {
+          "mach": 1.4,
+          "panel_a": 0.0843,
+          "panel_b": 0.092,
+          "difference": 0.0077
+        },
+        {
+          "mach": 1.6,
+          "panel_a": 0.0871,
+          "panel_b": 0.0915,
+          "difference": 0.0044
+        },
+        {
+          "mach": 2.0,
+          "panel_a": 0.081,
+          "panel_b": 0.0897,
+          "difference": 0.0087
+        }
+      ]
+    }
+  }
+}

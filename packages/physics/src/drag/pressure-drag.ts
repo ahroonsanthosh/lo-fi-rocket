@@ -1,14 +1,16 @@
 /**
- * Pressure drag of body components (plan 0009, DRAG-5 to DRAG-9).
+ * Pressure drag of body components (plan 0009, DRAG-5 to DRAG-9; plan 0020,
+ * DRAG-15 to DRAG-17).
  *
  * Sources: Niskanen (2009) §3.4.3 pp. 46 to 49 and Appendix B pp. 106 to
- * 110. Every coefficient here is referred to the component's own reference
+ * 110; NASA TR R-100 Figure 12 for the data of Appendix B.3 (D-053, D-055). Every coefficient here is referred to the component's own reference
  * area (its frontal area, p. 41) and must be scaled by the caller (eq. 3.75).
  */
 import { InvalidInputError, NotImplementedError } from '../errors.js';
 import type { NoseShape } from '../geometry/profiles.js';
 import { finiteResult } from '../numerics/finite.js';
-import type { Mach } from '../units/si.js';
+import { mach, type Mach } from '../units/si.js';
+import { STONEY_NOSES, type StoneyCurve, type StoneyNose } from './stoney-noses.js';
 
 /** γ = 1.4, the specific heat ratio of air used in eq. (B.5) p. 108. */
 const GAMMA_AIR = 1.4;
@@ -27,6 +29,16 @@ export function stagnationPressureRatio(mach: Mach): number {
   requireMach(M);
   if (M < 1) return 1 + (M * M) / 4 + M ** 4 / 40;
   return 1.84 - 0.76 / (M * M) + 0.166 / M ** 4 + 0.035 / M ** 6;
+}
+
+/**
+ * The derivative in M of eq. (B.1), used for the slope of the scaled data
+ * at the lower boundary of the transonic method (DRAG-16): M/2 + M³/10 for
+ * M < 1; 1.52/M³ − 0.664/M⁵ − 0.21/M⁷ for M > 1.
+ */
+function stagnationPressureRatioSlope(M: number): number {
+  if (M < 1) return M / 2 + M ** 3 / 10;
+  return 1.52 / M ** 3 - 0.664 / M ** 5 - 0.21 / M ** 7;
 }
 
 /** DRAG-5. Eq. (B.2) p. 107: (C_D•)stag = 0.85 q_stag/q, referred to the frontal area. */
@@ -108,8 +120,214 @@ export interface NosePressureDrag {
   /** Referred to the nose base area. */
   readonly cd: number;
   readonly method:
-    'low-subsonic-constant' | 'subsonic-interpolation' | 'conical-transonic' | 'conical-supersonic';
+    | 'low-subsonic-constant'
+    | 'subsonic-interpolation'
+    | 'conical-transonic'
+    | 'conical-supersonic'
+    | 'stoney-data'
+    | 'stoney-data-held';
   readonly warnings: readonly string[];
+}
+
+/**
+ * DRAG-15. C₃(M) of a measured curve: linear interpolation in Mach between
+ * the data points; the last value held above the data (Stoney's curves are
+ * nearly flat there, and holding it is the conservative choice, D-055).
+ * Below the first point the curve is undefined (returns undefined).
+ */
+function curveValue(curve: StoneyCurve, M: number): number | undefined {
+  const pts = curve.points;
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (first === undefined || last === undefined) throw new Error('empty Stoney curve');
+  if (M < first[0]) return undefined;
+  if (M >= last[0]) return last[1];
+  for (let i = 1; i < pts.length; i += 1) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    if (a === undefined || b === undefined) continue;
+    if (M <= b[0]) return a[1] + ((b[1] - a[1]) * (M - a[0])) / (b[0] - a[0]);
+  }
+  throw new Error('unreachable');
+}
+
+/** Right-hand slope dC₃/dM of a measured curve at M (zero beyond the last point). */
+function curveSlope(curve: StoneyCurve, M: number): number {
+  const pts = curve.points;
+  for (let i = 1; i < pts.length; i += 1) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    if (a === undefined || b === undefined) continue;
+    if (M >= a[0] && M < b[0]) return (b[1] - a[1]) / (b[0] - a[0]);
+  }
+  return 0;
+}
+
+/** The curves between which a parametrised shape interpolates (DRAG-17), by shape parameter. */
+interface CurveFamily {
+  /** Increasing parameter values with their curves. */
+  readonly members: readonly (readonly [number, StoneyNose])[];
+  readonly parameterName: string;
+}
+
+/**
+ * DRAG-17. Stoney's figure covers the power series at x^1/4, x^1/2, x^3/4
+ * and the cone (κ = 1), the parabolic series at κ = 1/2, 3/4, 1 and the cone
+ * (κ = 0), and the Haack series at κ = 0 (Von Kármán) and 1/3 (L-V Haack).
+ * A parameter between two measured curves interpolates linearly between them
+ * (N09 p. 110, "interpolate the data between parameter values"); the cone
+ * endpoint is Stoney's own cone curve (configuration 56) so that every
+ * endpoint is measured data of the same figure (D-055).
+ */
+const FAMILIES: Readonly<Record<'power' | 'parabolic' | 'haack', CurveFamily>> = {
+  power: {
+    members: [
+      [0.25, 'power-1/4'],
+      [0.5, 'power-1/2'],
+      [0.75, 'power-3/4'],
+      [1, 'cone'],
+    ],
+    parameterName: 'power series shape parameter',
+  },
+  parabolic: {
+    members: [
+      [0, 'cone'],
+      [0.5, 'parabola-1/2'],
+      [0.75, 'parabola-3/4'],
+      [1, 'parabola'],
+    ],
+    parameterName: 'parabolic shape parameter',
+  },
+  haack: {
+    members: [
+      [0, 'von-karman'],
+      [1 / 3, 'lv-haack'],
+    ],
+    parameterName: 'Haack series shape parameter',
+  },
+};
+
+/** The one or two curves a nose uses with their weights (DRAG-17). */
+interface CurveBlend {
+  readonly curves: readonly { readonly name: StoneyNose; readonly weight: number }[];
+}
+
+function selectCurves(
+  shape: 'elliptical' | 'parabolic' | 'power' | 'haack',
+  kappa: number,
+): CurveBlend {
+  if (shape === 'elliptical') return { curves: [{ name: 'ellipsoid', weight: 1 }] };
+  const family = FAMILIES[shape];
+  const first = family.members[0];
+  const last = family.members[family.members.length - 1];
+  if (first === undefined || last === undefined) throw new Error('empty family');
+  if (!(kappa >= first[0] && kappa <= last[0])) {
+    throw new NotImplementedError(
+      `${family.parameterName} ${String(kappa)}: NASA TR R-100 Figure 12 has no pressure drag data outside ${String(first[0])} to ${String(last[0])} (Niskanen Appendix B.3)`,
+    );
+  }
+  for (let i = 1; i < family.members.length; i += 1) {
+    const lo = family.members[i - 1];
+    const hi = family.members[i];
+    if (lo === undefined || hi === undefined) continue;
+    if (kappa === lo[0]) return { curves: [{ name: lo[1], weight: 1 }] };
+    if (kappa === hi[0]) return { curves: [{ name: hi[1], weight: 1 }] };
+    if (kappa < hi[0]) {
+      const w = (kappa - lo[0]) / (hi[0] - lo[0]);
+      return {
+        curves: [
+          { name: lo[1], weight: 1 - w },
+          { name: hi[1], weight: w },
+        ],
+      };
+    }
+  }
+  throw new Error('unreachable');
+}
+
+/**
+ * DRAG-16. Eq. (B.9) p. 110: C = C₀ (C₃/C₀)^{log₄(f_N + 1)}, C₀ the blunt
+ * cylinder value of eq. (B.2) at this Mach number and C₃ the measured value
+ * at fineness ratio 3. At f_N = 3 the exponent is 1 and C = C₃.
+ */
+function finenessScaling(c0Blunt: number, c3: number, finenessRatio: number): number {
+  const exponent = Math.log(finenessRatio + 1) / Math.log(4);
+  return c0Blunt * (c3 / c0Blunt) ** exponent;
+}
+
+/**
+ * DRAG-15 to DRAG-17 for the shapes of Appendix B.3. Returns the transonic
+ * and supersonic value C(M) of eq. (B.9) for M at or above the first data
+ * point of every curve the nose uses, else undefined.
+ */
+function stoneyTransonic(
+  blend: CurveBlend,
+  finenessRatio: number,
+  M: number,
+): { value: number; held: boolean } | undefined {
+  let c3 = 0;
+  let held = false;
+  for (const { name, weight } of blend.curves) {
+    const curve = STONEY_NOSES[name];
+    const v = curveValue(curve, M);
+    if (v === undefined) return undefined;
+    const lastPoint = curve.points[curve.points.length - 1];
+    if (lastPoint !== undefined && M > lastPoint[0]) held = true;
+    c3 += weight * v;
+  }
+  const value = finenessScaling(stagnationDragCoefficient(mach(M)), c3, finenessRatio);
+  return { value, held };
+}
+
+/**
+ * Right-hand derivative dC/dM of eq. (B.9) at M (DRAG-16): with e = log₄(f_N + 1),
+ * C = C₀^(1−e) C₃^e, so dC/dM = C [(1 − e) C₀′/C₀ + e C₃′/C₃], C₀′ = 0.85 d(q_stag/q)/dM
+ * and C₃′ the slope of the data segment. Requires C₃ > 0.
+ */
+function stoneySlope(blend: CurveBlend, finenessRatio: number, M: number): number {
+  let c3 = 0;
+  let c3Slope = 0;
+  for (const { name, weight } of blend.curves) {
+    const curve = STONEY_NOSES[name];
+    const v = curveValue(curve, M);
+    if (v === undefined) throw new Error('unreachable: slope below the data');
+    c3 += weight * v;
+    c3Slope += weight * curveSlope(curve, M);
+  }
+  const c0Blunt = stagnationDragCoefficient(mach(M));
+  const c0Slope = 0.85 * stagnationPressureRatioSlope(M);
+  const e = Math.log(finenessRatio + 1) / Math.log(4);
+  const c = finenessScaling(c0Blunt, c3, finenessRatio);
+  return c * (((1 - e) * c0Slope) / c0Blunt + (e * c3Slope) / c3);
+}
+
+/** The Mach number of the first data point shared by every curve of the blend. */
+function dataStart(blend: CurveBlend): number {
+  let start = 0;
+  for (const { name } of blend.curves) {
+    const first = STONEY_NOSES[name].points[0];
+    if (first !== undefined && first[0] > start) start = first[0];
+  }
+  return start;
+}
+
+/** The uncertainty the nose inherits: the largest of its curves' (D-055). */
+function dataUncertainty(blend: CurveBlend): number {
+  let u = 0;
+  for (const { name } of blend.curves) u = Math.max(u, STONEY_NOSES[name].uncertainty);
+  return u;
+}
+
+/** Shape parameter defaults as in `noseProfile` (GEO-3 to GEO-6). */
+function defaultParameter(shape: 'parabolic' | 'power' | 'haack'): number {
+  switch (shape) {
+    case 'parabolic':
+      return 1;
+    case 'power':
+      return 0.5;
+    case 'haack':
+      return 0;
+  }
 }
 
 /**
@@ -168,20 +386,66 @@ export function noseConePressureDrag(
       warnings,
     };
   }
-  // Elliptical, parabolic, power and Haack series: Appendix B.3 takes the
-  // transonic drag from Stoney's measured curves, which the thesis does not
-  // reproduce. Above Mach 0.8 nothing can be computed from the approved
-  // text; below it the low-subsonic value of eq. (3.86) is returned with a
-  // warning that the rise towards the transonic value (eq. 3.87) is missing (D-034).
-  if (M > 0.8) {
-    throw new NotImplementedError(
-      `pressure drag of a ${shape} nose cone at Mach ${String(M)}: Niskanen Appendix B.3 uses Stoney's measured curves (NASA TR R-100), not yet transcribed`,
+  // Elliptical, parabolic, power and Haack series: Appendix B.3 (B.5 "other
+  // shapes", p. 110) with Stoney's measured curves (DRAG-15 to DRAG-17).
+  const kappa = shape === 'elliptical' ? 0 : (shapeParameter ?? defaultParameter(shape));
+  if (shape === 'power' && kappa === 1) {
+    // x^1 is a cone: the conical method applies to the geometry (D-055).
+    return noseConePressureDrag('conical', undefined, finenessRatio, jointAngle, mach);
+  }
+  if (shape === 'parabolic' && kappa === 0) {
+    return noseConePressureDrag('conical', undefined, finenessRatio, jointAngle, mach);
+  }
+  const blend = selectCurves(shape, kappa);
+  const start = dataStart(blend);
+  const dataWarning = `${shape} nose: transonic and supersonic pressure drag from NASA TR R-100 Figure 12 (fineness ratio 3, digitised, reading uncertainty ±${dataUncertainty(blend).toFixed(3)} in C_D,N) scaled to the nose by Niskanen eq. (B.9); D-055`;
+  const transonic = stoneyTransonic(blend, finenessRatio, M);
+  if (transonic !== undefined) {
+    warnings.push(dataWarning);
+    if (transonic.held) {
+      warnings.push(
+        `${shape} nose: beyond the end of the TR R-100 data the last measured value is held (D-055)`,
+      );
+    }
+    if (transonic.value < c0) {
+      // The scaled data lie below the low-speed value of eq. (3.86) (within the
+      // reading floor); the drag never falls below the low-speed value (D-055).
+      return {
+        cd: finiteResult('nose pressure drag', c0),
+        method: 'low-subsonic-constant',
+        warnings,
+      };
+    }
+    return {
+      cd: finiteResult('nose pressure drag', transonic.value),
+      method: transonic.held ? 'stoney-data-held' : 'stoney-data',
+      warnings,
+    };
+  }
+  // Below the data: eq. (3.87) matched to the value and the right-hand slope
+  // of the scaled data at their first point (B.5 p. 109). When the first
+  // point is not above the low-speed value the rise has nothing to fit and
+  // the low-speed value is kept (D-055).
+  const at = stoneyTransonic(blend, finenessRatio, start);
+  if (at === undefined) throw new Error('unreachable: data start');
+  if (start > 1) {
+    warnings.push(
+      `${shape} nose: the TR R-100 data for this shape begin at Mach ${String(start)}; the subsonic rise of eq. (3.87) is fitted from there and may overestimate the pressure drag below Mach 1 (D-055)`,
     );
   }
-  warnings.push(
-    `${shape} nose: the subsonic rise of pressure drag towards the transonic value (eq. 3.87) is not included because the transonic data of Appendix B.3 are not transcribed; eq. (3.86) low-speed value used (D-034)`,
-  );
-  return { cd: finiteResult('nose pressure drag', c0), method: 'low-subsonic-constant', warnings };
+  if (!(at.value > c0)) {
+    return {
+      cd: finiteResult('nose pressure drag', c0),
+      method: 'low-subsonic-constant',
+      warnings,
+    };
+  }
+  const slope = stoneySlope(blend, finenessRatio, start);
+  return {
+    cd: finiteResult('nose pressure drag', subsonicInterpolation(M, c0, start, at.value, slope)),
+    method: 'subsonic-interpolation',
+    warnings,
+  };
 }
 
 /**
