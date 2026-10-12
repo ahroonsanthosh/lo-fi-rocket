@@ -121,3 +121,46 @@ describe('DYN-11 Dormand–Prince RK5(4)', () => {
     expect(steps).toBeLessThan(20000);
   });
 });
+
+describe('DYN-11 tableau against SciPy 1.18.1 (scipy/integrate/_ivp/rk.py, class RK45; owner-approved cross-check)', () => {
+  // Printed from the installed package on 2026-10-12: RK45.C, RK45.A (rows 2 to 6), RK45.B and RK45.E.
+  // SciPy stores b5 as B and the error weights E = b4 − b5 (so E[6] = 1/40 is the FSAL stage's b4).
+  const C = [0.0, 0.2, 0.3, 0.8, 0.8888888888888888, 1.0];
+  const A = [
+    [0.2],
+    [0.075, 0.225],
+    [0.9777777777777777, -3.7333333333333334, 3.5555555555555554],
+    [2.9525986892242035, -11.595793324188385, 9.822892851699436, -0.2908093278463649],
+    [
+      2.8462752525252526, -10.757575757575758, 8.906422717743473, 0.2784090909090909,
+      -0.2735313036020583,
+    ],
+  ];
+  const B = [
+    0.09114583333333333, 0.0, 0.44923629829290207, 0.6510416666666666, -0.322376179245283,
+    0.13095238095238096,
+  ];
+  const E = [
+    -0.0012326388888888888, 0.0, 0.0042527702905061394, -0.03697916666666667, 0.05086379716981132,
+    -0.0419047619047619, 0.025,
+  ];
+  const T = DORMAND_PRINCE_TABLEAU;
+  it('the nodes c and the stage coefficients a agree to 1e-15', () => {
+    C.forEach((c, i) => {
+      expect(Math.abs((T.c[i] ?? Number.NaN) - c)).toBeLessThan(1e-15);
+    });
+    A.forEach((row, r) => {
+      row.forEach((a, j) => {
+        expect(Math.abs((T.a[r + 1]?.[j] ?? Number.NaN) - a)).toBeLessThan(1e-14);
+      });
+    });
+  });
+  it('the fifth-order weights equal SciPy B and b4 − b5 equals SciPy E', () => {
+    B.forEach((b, i) => {
+      expect(Math.abs((T.b5[i] ?? Number.NaN) - b)).toBeLessThan(1e-15);
+    });
+    E.forEach((e, i) => {
+      expect(Math.abs((T.b4[i] ?? 0) - (T.b5[i] ?? 0) - e)).toBeLessThan(1e-15);
+    });
+  });
+});

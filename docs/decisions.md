@@ -304,3 +304,20 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Decision:** `MotorMassProfilePoint.cgFromForeEnd` gives the whole motor's CG from its fore end at that time; it is interpolated linearly in time (MOT-6), must be present on every point or none, and lie within the motor. The custom thrust-curve CSV takes it as a fourth column (D-044 extended). Without it the CG stays at mid-length as for solid motors (D-029). The motor's inertia remains that of a uniform cylinder of the current mass about the current CG.
 - **Why:** CLAUDE.md 2 and 10 ask for propellant mass that changes in non-standard ways (tanks) without a rewrite. The CG of the engine as its tanks drain is data the user computes from the tank geometry; the simulator needs only the mass and the CG against time, which the existing mass rule and the assembly already consume. A tank inertia law would need a new source and is left documented.
 - **Consequences:** Liquid-engine designs are simulated with correct mass and CG histories; the inertia is approximate for long tanks (documented). Files written before this step load unchanged (optional field).
+
+## D-053 (2026-10-12): Owner's answers to the open questions of the audit (Prompt 5, Part A)
+
+- **Transonic data (replaces the open part of D-034 and D-039):** NASA TR R-100's curves may be transcribed as model data, its public domain status confirmed in `reference/SOURCES.md`. Every curve is digitised twice independently, the method of each pass recorded, and the disagreement between the passes recorded as the digitisation uncertainty (`reference/digitised/`). NASA TN D-4013 and TN D-4014 (ARCAS) are held out as validation-only data and are never used to build or tune the model. The fin transonic interpolation is chosen by implementing each candidate and comparing against the held-out data; the comparison is recorded in a decision.
+- **Large-angle fin force (D-046):** approved, after the transonic work; Hoerner's flat-plate data if it is in `reference/`, otherwise alternatives are proposed and asked for.
+- **Random generator (D-050):** the statistical verification of the Box–Muller sampler is accepted; recorded in the audit.
+- **Dormand–Prince tableau (D-037):** additionally cross-checked against SciPy 1.18.1 (`scipy/integrate/_ivp/rk.py`, class `RK45`): C, A, B and E = b₄ − b₅ agree to 1e-14 (`integrators.test.ts`).
+- **Deployment speed (D-042):** kept as a user-adjustable warning threshold labelled, in the UI and the docs, as a rule of thumb without a source; it affects no physics calculation (it is read only by `designFlightWarnings`).
+- **NIST SP 811 (D-040):** approved.
+- **Gravity (D-030):** the WGS 84 definition, NIMA TR8350.2, is the source for a latitude formula; it must be downloaded, verified and cited before implementation. See D-054.
+- **Pull request:** the owner creates `main` from this branch and makes it the default; from then on work goes on new branches with pull requests into `main`.
+
+## D-054 (2026-10-12): WGS 84 gravity waits for the document; nothing is implemented from memory
+
+- **Decision:** The Somigliana formula and the altitude series of NIMA TR8350.2 (GRAV-2, GRAV-3, plan 0019) are not implemented until the document is in `reference/` with its SHA-256 and the constants verified against its pages. The downloads attempted on 2026-10-12 all failed from this environment: earth-info.nga.mil (empty reply or TLS reset), apps.dtic.mil (403), web.archive.org (connection reset); the UNOOSA "WGS 84" PDF is a three-page summary, not the report.
+- **Why:** CLAUDE.md rules 1 and 11 ("never mark a value as verified unless you have checked it against a specific page of a document in reference/"). The constants are well known, but writing them from memory is exactly what rule 1 forbids.
+- **Consequences:** The gravity model keeps the sea-level parameter (D-030) with the OpenRocket-equivalent value for comparisons. The owner is asked to place the PDF in `reference/docs/` (or to allow the host); the implementation is then one function and its hand tests.

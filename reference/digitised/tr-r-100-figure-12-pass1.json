@@ -1,0 +1,232 @@
+{
+  "source": "NASA TR R-100 (Stoney 1961), Figure 12, printed page 16 (PDF page 20): pressure drag of noses of fineness ratio 3",
+  "pass": 1,
+  "method": "PDF page rendered at 300 dpi with pdftoppm, each panel cropped and enlarged 2x (1340 px per 1.2 Mach in part (a), 1502 px per 2.8 Mach in part (b)); values read by eye against the printed grid (0.1 in C_D,N; 0.2 in Mach in (a), 0.4 in (b)) by interpolating pixel positions; no overlay. Curve identity by line style matched to the legend symbols (solid = circle, dashed = square, dash-dot = diamond), the same rule as the top panel where the configuration leaders are unambiguous.",
+  "reader": "Claude, 2026-10-12, pass 1 before any pass-2 reading",
+  "estimated_reading_precision_cd": 0.008,
+  "curves": {
+    "cone": {
+      "panel": "a-top",
+      "configuration": 56,
+      "style": "solid, circles",
+      "points": [
+        [0.8, 0.017],
+        [0.9, 0.035],
+        [0.95, 0.06],
+        [1.0, 0.107],
+        [1.05, 0.159],
+        [1.07, 0.164],
+        [1.1, 0.153],
+        [1.2, 0.137],
+        [1.25, 0.133],
+        [1.4, 0.117],
+        [1.6, 0.108],
+        [1.8, 0.104],
+        [2.0, 0.102]
+      ]
+    },
+    "power-3/4": {
+      "panel": "a-top",
+      "configuration": 61,
+      "style": "dashed, squares",
+      "points": [
+        [0.8, 0.0],
+        [0.9, 0.006],
+        [0.95, 0.032],
+        [1.0, 0.084],
+        [1.05, 0.114],
+        [1.1, 0.108],
+        [1.2, 0.097],
+        [1.25, 0.094],
+        [1.4, 0.087],
+        [1.6, 0.084],
+        [1.8, 0.084],
+        [2.0, 0.081]
+      ]
+    },
+    "power-1/2": {
+      "panel": "a-top",
+      "configuration": 63,
+      "style": "dash-dot, diamonds",
+      "points": [
+        [0.8, 0.0],
+        [0.95, 0.009],
+        [1.0, 0.046],
+        [1.05, 0.061],
+        [1.1, 0.058],
+        [1.15, 0.066],
+        [1.2, 0.09],
+        [1.25, 0.095],
+        [1.4, 0.084],
+        [1.6, 0.085],
+        [1.8, 0.087],
+        [2.0, 0.09]
+      ]
+    },
+    "parabola": {
+      "panel": "a-middle",
+      "configuration": 57,
+      "style": "solid, circles",
+      "points": [
+        [0.8, 0.0],
+        [0.9, 0.006],
+        [0.95, 0.023],
+        [1.0, 0.065],
+        [1.05, 0.097],
+        [1.1, 0.108],
+        [1.2, 0.118],
+        [1.3, 0.114],
+        [1.4, 0.111],
+        [1.6, 0.107],
+        [1.8, 0.104],
+        [2.0, 0.107]
+      ]
+    },
+    "parabola-3/4": {
+      "panel": "a-middle",
+      "configuration": 62,
+      "style": "dashed, squares",
+      "points": [
+        [0.85, 0.003],
+        [0.9, 0.017],
+        [0.95, 0.051],
+        [1.0, 0.102],
+        [1.05, 0.119],
+        [1.1, 0.122],
+        [1.2, 0.113],
+        [1.3, 0.099],
+        [1.4, 0.094],
+        [1.6, 0.088],
+        [1.8, 0.085],
+        [2.0, 0.085]
+      ]
+    },
+    "parabola-1/2": {
+      "panel": "a-middle",
+      "configuration": 59,
+      "style": "dash-dot, diamonds",
+      "points": [
+        [0.8, 0.001],
+        [0.85, 0.011],
+        [0.9, 0.031],
+        [0.95, 0.063],
+        [1.0, 0.094],
+        [1.05, 0.108],
+        [1.1, 0.111],
+        [1.2, 0.107],
+        [1.3, 0.094],
+        [1.4, 0.084],
+        [1.6, 0.082],
+        [1.8, 0.082],
+        [2.0, 0.082]
+      ]
+    },
+    "von-karman-a": {
+      "panel": "a-bottom",
+      "configuration": 60,
+      "style": "solid, circles",
+      "points": [
+        [0.9, 0.0],
+        [0.95, 0.009],
+        [1.0, 0.028],
+        [1.05, 0.06],
+        [1.1, 0.069],
+        [1.2, 0.074],
+        [1.25, 0.077],
+        [1.4, 0.084],
+        [1.45, 0.086],
+        [1.6, 0.088],
+        [1.8, 0.085],
+        [2.0, 0.081]
+      ]
+    },
+    "lv-haack": {
+      "panel": "a-bottom",
+      "configuration": 58,
+      "style": "dashed, squares",
+      "points": [
+        [0.9, 0.0],
+        [0.95, 0.009],
+        [1.0, 0.028],
+        [1.05, 0.06],
+        [1.1, 0.077],
+        [1.2, 0.091],
+        [1.25, 0.101],
+        [1.4, 0.111],
+        [1.45, 0.113],
+        [1.6, 0.114],
+        [1.8, 0.112],
+        [2.0, 0.11]
+      ]
+    },
+    "von-karman-b": {
+      "panel": "b",
+      "style": "solid",
+      "points": [
+        [0.8, 0.0],
+        [0.85, 0.005],
+        [0.9, 0.022],
+        [0.95, 0.05],
+        [1.0, 0.09],
+        [1.05, 0.123],
+        [1.1, 0.115],
+        [1.2, 0.107],
+        [1.4, 0.098],
+        [1.6, 0.094],
+        [2.0, 0.09],
+        [2.4, 0.085],
+        [2.8, 0.081],
+        [3.2, 0.078],
+        [3.6, 0.077]
+      ]
+    },
+    "power-3/4-b": {
+      "panel": "b",
+      "style": "dashed",
+      "points": [
+        [0.9, 0.0],
+        [0.95, 0.013],
+        [1.0, 0.039],
+        [1.05, 0.061],
+        [1.1, 0.076],
+        [1.2, 0.087],
+        [1.4, 0.094],
+        [1.6, 0.093],
+        [2.0, 0.091],
+        [2.4, 0.088],
+        [2.8, 0.087],
+        [3.2, 0.086],
+        [3.6, 0.085]
+      ]
+    },
+    "ellipsoid": {
+      "panel": "b",
+      "style": "dash-dot (short)",
+      "points": [
+        [1.2, 0.137],
+        [1.3, 0.147],
+        [1.4, 0.152],
+        [1.6, 0.157],
+        [2.0, 0.161],
+        [2.4, 0.164],
+        [2.8, 0.165],
+        [3.2, 0.165],
+        [3.6, 0.165]
+      ]
+    },
+    "power-1/4": {
+      "panel": "b",
+      "style": "dash-dot (long)",
+      "points": [
+        [1.2, 0.144],
+        [1.4, 0.169],
+        [1.6, 0.186],
+        [2.0, 0.212],
+        [2.4, 0.231],
+        [2.8, 0.243],
+        [3.2, 0.25],
+        [3.6, 0.253]
+      ]
+    }
+  }
+}

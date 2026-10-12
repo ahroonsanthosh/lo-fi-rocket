@@ -31,8 +31,9 @@ export const DEFAULT_STABILITY_THRESHOLDS: StabilityThresholds = {
 
 /**
  * CLAUDE.md 9: 15 m/s rail exit and 5:1 thrust-to-weight are the stated
- * defaults. The deployment speed limit has no stated default; 20 m/s is a
- * conservative placeholder the user can change (D-042, open question).
+ * defaults. The deployment speed limit has no stated default and no source;
+ * 20 m/s is a rule of thumb the user can change (D-042, D-053). None of these
+ * thresholds enters any physics calculation; they only decide warnings.
  */
 export const DEFAULT_WARNING_THRESHOLDS: WarningThresholds = {
   minRailExitVelocity: metresPerSecond(15),

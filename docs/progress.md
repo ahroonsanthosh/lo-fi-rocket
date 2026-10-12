@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 4 (roadmap): Phase 5 and the final audit, complete (`docs/reports/phase-5-acceptance.md`, `docs/audit.md`). The roadmap's five prompts are done.
+Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B follow-up list: transonic model from TR R-100 with the ARCAS validation, R5, warnings, large-angle fin force, golden time series.
 
 ## Done
 
@@ -55,9 +55,11 @@ Prompt 4 (roadmap): Phase 5 and the final audit, complete (`docs/reports/phase-5
 
 - Prompt 4 step 4: the final audit `docs/audit.md` (every CLAUDE.md requirement with its status and evidence, the decisions the owner may overturn, what is not done in priority order) and the Phase 5 report `docs/reports/phase-5-acceptance.md`. **Prompt 4 (Phase 5 and the audit) is complete; the roadmap is finished.**
 
+- Prompt 5 step 1 (plan 0019): the owner's answers recorded (D-053); the Dormand–Prince tableau cross-checked against SciPy 1.18.1 (all coefficients agree to 1e-14); the warning and stability thresholds editable in the launch settings, labelled as rules of thumb that change no physics; TR R-100 declared model data and the ARCAS reports held out in `reference/SOURCES.md`; the WGS 84 document could not be downloaded from this environment (D-054, blocked on the file).
+
 ## In progress
 
-- Nothing.
+- Prompt 5 step 2 (plans 0020, 0021): TR R-100 Figure 12 digitised twice (`reference/digitised/`), the transonic nose drag of Appendix B.3, the fin interpolation candidates, the ARCAS validation.
 
 ## Next
 
@@ -68,7 +70,7 @@ Prompt 4 (roadmap): Phase 5 and the final audit, complete (`docs/reports/phase-5
 - Transonic nose drag for Haack, elliptical, parabolic and power-series noses (D-034): Niskanen takes it from Stoney's measured curves in NASA TR R-100 (in `reference/docs/`). CLAUDE.md lists that report as validation data only. May its fineness-ratio-3 curves be transcribed as the model's data points, as Niskanen does? Until then R5 cannot be simulated above Mach 0.8.
 - Base drag after burnout (D-035): the source removes the motor area only while thrusting; OpenRocket keeps it removed. Which should the app display? The comparison mode uses OpenRocket's rule.
 
-- Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
+- Gravity latitude dependence (D-030, D-054): NIMA TR8350.2 is approved but could not be downloaded from this environment (NGA empty reply, DTIC 403, Wayback resets). Please place the PDF in `reference/docs/` or allow the host; the implementation then follows plan 0019.
 
 - Fin normal force at large angles of attack (D-046): a six-degree-of-freedom flight now ends with an explicit "model-limit" reason when the angle of attack reaches 90°, because the fin term is a small-angle flat-plate law and no approved source gives a large-angle law. Ballistic flights and ejection-charge deployments after the turn-over therefore stop at the turn-over with the apogee reported. Approve a source for the large-angle fin force (for example Hoerner, Fluid-Dynamic Lift) if those flights must be simulated to landing.
 - Random generator source (D-050): Blackman and Vigna's xoshiro paper was added to `reference/`; the Box and Muller (1958) paper is paywalled and the normal sampler is verified by its distribution tests. Add the paper if a document check is wanted.

@@ -227,3 +227,17 @@ describe('Monte Carlo dispersion panel (plan 0017)', () => {
     expect(plot.querySelectorAll('.landing-point').length).toBe(5);
   }, 30000);
 });
+
+describe('warning thresholds are user-adjustable rules of thumb (D-042, D-053)', () => {
+  it('raising the rail-exit threshold to 20 m/s makes the warning fire on the example', async () => {
+    const user = renderApp(exampleDesign('th'));
+    await openFlight(user);
+    await user.click(screen.getByText(/Warning and stability thresholds/));
+    const field = screen.getByLabelText('Minimum rail exit velocity');
+    await user.clear(field);
+    await user.type(field, '20');
+    await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
+    const warnings = await screen.findByRole('list', { name: 'Warnings' });
+    expect(warnings).toHaveTextContent(/below 20 m\/s/);
+  });
+});

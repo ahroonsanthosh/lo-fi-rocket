@@ -73,7 +73,9 @@ Everything in `reference/` with its provenance. Downloaded 2026-10-11 from insid
 - **SHA-256:** `221e4814360f7f7c1b27f2b2747dff67d9ab5452d644ee5e38865a8594aa8f6f` (api.html), `566009abab4e993283230061c98d47737df139649a70c887b9b6435c5ca04f8d` (swagger.json)
 - **Verified:** the OpenAPI document defines the `/api/v1/search.json`, `/api/v1/download.json` and related endpoints used below; the guide page is the publisher's own description of the same API.
 
-### 8. Wind tunnel and free-flight validation data (CLAUDE.md section 6.7)
+### 8. Wind tunnel and free-flight validation data (CLAUDE.md section 6.7), and NASA TR R-100 as model data
+
+Status after Prompt 5 (D-053): **NASA TR R-100 is used as model data** (its Figure 12 curves of nose pressure drag against Mach number at fineness ratio 3 are transcribed in `reference/digitised/`, twice, with the disagreement recorded). It is a work of the United States Government (NASA, 1961) and in the public domain; the NTRS record carries no copyright notice. **NASA TN D-4013 and TN D-4014 are held out as validation-only data** and are never used to build or tune the model. NACA RM A53D02 is validation data.
 
 Measured data only, never a source of equations. All four are U.S. government works; the NASA NTRS record for each carries the copyright determination `GOV_PUBLIC_USE_PERMITTED` and distribution `PUBLIC`, which is why they are committed to this repository.
 

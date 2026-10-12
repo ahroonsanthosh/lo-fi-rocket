@@ -313,6 +313,85 @@ export function LaunchEditor(): JSX.Element {
           }}
         />
       </details>
+      <details className="settings">
+        <summary>
+          Warning and stability thresholds (rules of thumb, no source; they change no physics)
+        </summary>
+        <QuantityField
+          label="Minimum rail exit velocity"
+          kind="velocity"
+          units={units}
+          value={state.design.warningThresholds.minRailExitVelocity}
+          rule="non-negative"
+          hint="15 m/s is commonly cited guidance (CLAUDE.md 9)"
+          onChange={(si) => {
+            dispatch({
+              type: 'set-warning-thresholds',
+              thresholds: {
+                ...state.design.warningThresholds,
+                minRailExitVelocity: metresPerSecond(si),
+              },
+            });
+          }}
+        />
+        <QuantityField
+          label="Minimum thrust-to-weight ratio"
+          kind="ratio"
+          units={units}
+          value={state.design.warningThresholds.minThrustToWeight}
+          rule="non-negative"
+          hint="5:1 is commonly cited guidance (CLAUDE.md 9); average thrust over liftoff weight"
+          onChange={(v) => {
+            dispatch({
+              type: 'set-warning-thresholds',
+              thresholds: { ...state.design.warningThresholds, minThrustToWeight: v },
+            });
+          }}
+        />
+        <QuantityField
+          label="Maximum deployment speed"
+          kind="velocity"
+          units={units}
+          value={state.design.warningThresholds.maxDeploymentVelocity}
+          rule="non-negative"
+          hint="20 m/s is a rule of thumb without a source (D-042); adjust it to your recovery hardware"
+          onChange={(si) => {
+            dispatch({
+              type: 'set-warning-thresholds',
+              thresholds: {
+                ...state.design.warningThresholds,
+                maxDeploymentVelocity: metresPerSecond(si),
+              },
+            });
+          }}
+        />
+        <QuantityField
+          label="Stability margin: likely unstable below (calibers)"
+          kind="ratio"
+          units={units}
+          value={state.design.stabilityThresholds.unstableBelow}
+          rule="non-negative"
+          onChange={(v) => {
+            dispatch({
+              type: 'set-stability-thresholds',
+              thresholds: { ...state.design.stabilityThresholds, unstableBelow: v },
+            });
+          }}
+        />
+        <QuantityField
+          label="Stability margin: possibly overstable above (calibers)"
+          kind="ratio"
+          units={units}
+          value={state.design.stabilityThresholds.overstableAbove}
+          rule="non-negative"
+          onChange={(v) => {
+            dispatch({
+              type: 'set-stability-thresholds',
+              thresholds: { ...state.design.stabilityThresholds, overstableAbove: v },
+            });
+          }}
+        />
+      </details>
     </div>
   );
 }
