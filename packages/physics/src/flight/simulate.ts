@@ -855,6 +855,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const s = unpack(y);
     const acc = norm(derived.accelerationWorld);
     maxAcceleration = Math.max(maxAcceleration, acc);
+    // One sample per instant: a timed event that falls exactly on a step boundary is recorded again at the
+    // same time; the later record holds the state after the event, so it replaces the earlier one.
+    if ((samples.at(-1)?.time as number | undefined) === t) samples.pop();
     samples.push({
       time: seconds(t),
       phase,

@@ -198,3 +198,19 @@ describe('golden flight time series (exact)', () => {
     }
   }
 });
+
+describe('one stored sample per instant', () => {
+  // A timed event that fell exactly on a step boundary used to be stored twice with the same time
+  // (found when merging the 3D viewer: R2, R3 and R5 at the ejection charge).
+  for (const c of ROCKETS) {
+    for (const wind of [0, 5] as const) {
+      it(`${c.file}, wind ${String(wind)} m/s: sample times strictly increase`, () => {
+        const times = simulateFlight(vehicle(c), options(wind)).samples.map(
+          (p) => p.time as number,
+        );
+        const repeats = times.filter((t, i) => i > 0 && !(t > times[i - 1]!));
+        expect(repeats).toEqual([]);
+      });
+    }
+  }
+});
