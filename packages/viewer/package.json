@@ -1,0 +1,30 @@
+{
+  "name": "@lo-fi-rocket/viewer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "three.js replay of simulation results. Draws the simulator's stored output; computes no physics.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./dom": {
+      "types": "./src/dom/viewer.ts",
+      "default": "./src/dom/viewer.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lo-fi-rocket/physics": "workspace:*",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@lo-fi-rocket/formats": "workspace:*",
+    "@types/three": "0.186.0"
+  },
+  "sideEffects": false
+}

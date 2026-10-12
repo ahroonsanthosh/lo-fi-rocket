@@ -67,6 +67,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 - UI redesign part 1 (plan UI-0001, branch `feature/ui-redesign`, decisions D-UI-1 to D-UI-5 in `docs/ui/decisions.md`): usability review with screenshots (`docs/ui/review.md`), redesign plan with before and after mockups (`docs/ui/redesign.md`), new package `packages/ui` (display-only components, tokens, display rules, glossary; 161 tests). No existing file under `packages/` changed. Report: `docs/reports/ui-redesign-part-1.md`. Next: apply the library to the app once the parallel sessions have merged.
 
+- 3D viewer (plan 0034, branch `feature/3d-viewer`, D-071): `packages/viewer` on three.js replays a `FlightResult` exactly as stored (the scene is the flight frame, the stored quaternion is the rocket's rotation, the stored CG position carries the model by the stored CG offset), with play, pause, speed and a scrubber, the readouts of the nearest stored step labelled with its time, the flight path, event markers at their stored steps, the rail, a 1-2-5 ground grid with a distance scale, the wind arrow, four cameras (follow, pad, whole flight, orbit), the Monte Carlo landing points with the stored containment circle and a descriptive covariance ellipse, and a run picker that replays a run by re-running the simulator on the identical perturbed design; units through the app's formatter. Accuracy tests for all five reference rockets (readouts bit-identical to the stored samples at every event and sampled step; model dimensions; rendered axis against `noseDirection` within 1e-12); jsdom and Playwright tests; `docs/reports/3d-viewer.md` with screenshots. No change to `packages/physics` or `packages/formats`.
+
+- Replay provenance check (D-072, owner's request before merging the viewer): every Monte Carlo result carries the app version and a SHA-256 of the physics and formats sources; replaying a run compares both and the landing point with the stored ones, exactly, and warns when either differs.
+
 ## In progress
 
 - Nothing. The next work depends on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).
@@ -94,3 +98,17 @@ At v1.0 these are open. Resolved earlier: gravity latitude (D-060), the large-an
 - **`.CDX1` import.** It needs sample RASAero II files.
 - **Default branch.** `main` exists. Making it the default branch needs the owner, because the `gh` token here is invalid.
 - **Not blocking:** papers that would close verifications formally, namely Dormand and Prince (1980), Box and Muller (1958) and Barrowman's 1966 NARAM-8 report.
+
+- Gravity latitude dependence (D-030, D-054): NIMA TR8350.2 is approved but could not be downloaded from this environment (NGA empty reply, DTIC 403, Wayback resets). Please place the PDF in `reference/docs/` or allow the host; the implementation then follows plan 0019.
+
+- Fin normal force at large angles of attack (D-046): a six-degree-of-freedom flight now ends with an explicit "model-limit" reason when the angle of attack reaches 90°, because the fin term is a small-angle flat-plate law and no approved source gives a large-angle law. Ballistic flights and ejection-charge deployments after the turn-over therefore stop at the turn-over with the apogee reported. Approve a source for the large-angle fin force (for example Hoerner, Fluid-Dynamic Lift) if those flights must be simulated to landing.
+- Random generator source (D-050): Blackman and Vigna's xoshiro paper was added to `reference/`; the Box and Muller (1958) paper is paywalled and the normal sampler is verified by its distribution tests. Add the paper if a document check is wanted.
+- Customary units source (D-040): NIST SP 811 was added to `reference/` for the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and Fahrenheit behind the units toggle. Say if another source is preferred; the factors are definitional and would not change.
+- Deployment speed warning threshold (D-042): no default is given in CLAUDE.md; 20 m/s is a user-editable placeholder labelled as a rule of thumb. Please state the figure you want.
+- `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive. The drag-curve CSV reader (D-047) should be checked against a real RASAero aero-plot export, which is not in `reference/`.
+
+- Dormand and Prince (1980) is not in `reference/`; the tableau is verified by the consistency sums and order tests (D-037). The owner may add the paper to close the verification formally. Not blocking.
+
+- Pull request: `main` now exists (at the same head as `claude/inspiring-tesla-xxp0hh` when the viewer branch was cut); the viewer's pull request targets it and waits for v1.0.0.
+- RK4 at a 0.01 s fixed step is unstable for R2 (found while testing the viewer, D-071): the flight ends in a `NonFiniteResultError` from the pitch damping moment, or early at the model limit, while 0.002 s and the Dormand–Prince integrator fly it normally. The app's default is Dormand–Prince. For the physics owner: a step-size stability check or a warning when a fixed RK4 step is coarse against the pitch period would make this explicit to users (CLAUDE.md rule 3).
+- The viewer's requests for the results (plan 0034, D-071): a wind record in `FlightResult.modes`, an optional stored time series per `DispersionRun`, and an ellipse in `DispersionSummary`.
