@@ -39,13 +39,15 @@ Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the 
 
 - Prompt 3 step 1 (plan 0011): Prompt 3 roadmap (five steps), the design model `RocketDesign`, the `.lofi.json` format with schema version, strict validation, sorted-key serialization and a migration chain (D-041), the design-to-physics adapter (mass, stability with plain-language assessments, vehicle, simulation options, warnings against the thresholds, D-042), the example design (R1 with the Estes D12) reproducing the Phase 1 CG and CP and the Phase 2 apogee from a design file; NIST SP 811 added as the source for the customary units UNIT-5 to UNIT-11 (D-040).
 
+- Prompt 3 step 2 (plan 0012): the rocket builder UI in `packages/app`: reducer store with validated actions and new-component defaults, component list (listbox with arrow keys) and editors for every component kind and for recovery devices, numeric fields converting at the boundary with plain-language rejection messages, metric/imperial toggle (UNIT-5 to UNIT-11), live SVG side view with CG and CP markers, stability panel with the margins at liftoff and burnout, colours and guidance against the editable thresholds, mass and size panel, autosave to local storage with recovery of invalid saves (D-043); Testing Library tests in jsdom (the example shows the Phase 1 figures; a zero chord is rejected; the units toggle; autosave round trip; invalid autosave reported).
+
 ## In progress
 
-- Prompt 3 step 2 (plan 0012, to be written): the rocket builder UI.
+- Prompt 3 step 3 (plan 0013, to be written): motors (bundled set, file and CSV import, ThrustCurve.org client with offline cache, picker).
 
 ## Next
 
-- Steps 3 to 5 of plan 0011: motors and ThrustCurve.org, simulation UI, files and interoperability with the Playwright tests and the Phase 3 and 4 acceptance report.
+- Steps 4 and 5 of plan 0011: simulation UI, files and interoperability with the Playwright tests and the Phase 3 and 4 acceptance report.
 
 ## Open questions
 
