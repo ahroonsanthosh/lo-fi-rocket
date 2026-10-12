@@ -34,6 +34,7 @@ export function LaunchEditor(): JSX.Element {
   const launch = state.design.launch;
   const sim = state.design.simulation;
   const overrideId = useId();
+  const latitudeId = `${overrideId}-latitude`;
   const integratorId = useId();
   const set = (next: LaunchConditions): void => {
     dispatch({ type: 'set-launch', launch: next });
@@ -56,6 +57,46 @@ export function LaunchEditor(): JSX.Element {
           set({ ...launch, site: { ...launch.site, altitude: metres(si) } });
         }}
       />
+      <div className="field field-check">
+        <input
+          id={latitudeId}
+          type="checkbox"
+          checked={launch.site.latitude !== undefined}
+          onChange={(e) => {
+            if (e.target.checked) {
+              set({ ...launch, site: { ...launch.site, latitude: radians(Math.PI / 4) } });
+            } else {
+              const s = launch.site;
+              set({
+                ...launch,
+                site: {
+                  altitude: s.altitude,
+                  ...(s.temperature === undefined || s.pressure === undefined
+                    ? {}
+                    : { temperature: s.temperature, pressure: s.pressure }),
+                },
+              });
+            }
+          }}
+        />
+        <label htmlFor={latitudeId}>
+          Use the launch latitude for gravity (WGS 84 formula, NGA.STND.0036); otherwise the
+          standard 9.80665 m/s²
+        </label>
+      </div>
+      {launch.site.latitude === undefined ? null : (
+        <QuantityField
+          label="Launch latitude (north positive)"
+          kind="angle"
+          units={units}
+          value={launch.site.latitude}
+          rule="any"
+          hint="between −90° and 90°"
+          onChange={(si) => {
+            set({ ...launch, site: { ...launch.site, latitude: radians(si) } });
+          }}
+        />
+      )}
       <div className="field field-check">
         <input
           id={overrideId}

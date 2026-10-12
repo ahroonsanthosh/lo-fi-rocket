@@ -30,7 +30,7 @@ import {
   worldToBody,
   type FlightParameters,
 } from './frames.js';
-import { gravityAt } from './gravity.js';
+import { gravityAt, seaLevelGravity } from './gravity.js';
 import {
   dormandPrinceStep,
   errorNorm,
@@ -932,7 +932,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           ? `RK4 fixed step ${String(options.integrator.timeStep)} s`
           : `Dormand–Prince RK5(4) rtol ${String(options.integrator.relativeTolerance)} atol ${String(options.integrator.absoluteTolerance)}`,
       degreesOfFreedom: options.degreesOfFreedom,
-      gravitySeaLevel: options.gravity.seaLevel,
+      gravitySeaLevel: seaLevelGravity(options.gravity),
       windSeed: options.wind.kind === 'turbulent' ? options.wind.seed : undefined,
     },
   };

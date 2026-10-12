@@ -110,6 +110,28 @@ Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports
 - **Verified:** page 1 is the arXiv title page "Scrambled Linear Pseudorandom Number Generators, David Blackman, Sebastiano Vigna"; the reference code of xoshiro128** (Figure 1 and §5) gives the output rotl(s[1] × 5, 7) × 9 and the state update t = s[1] << 9; s[2] ^= s[0]; s[3] ^= s[1]; s[1] ^= s[2]; s[0] ^= s[3]; s[2] ^= t; s[3] = rotl(s[3], 11); §7 recommends seeding the state from a SplitMix generator.
 - **Used for:** RNG-1, the seeded generator behind wind turbulence (plan 0016) and Monte Carlo dispersion (plan 0017). Not a physics source; recorded under section 11 as the best-documented choice (D-050).
 
+### 11. NACA Technical Note 4197 (Martin, 1958), Summary of Flutter Experiences as a Guide to the Preliminary Design of Lifting Surfaces on Missiles
+
+- **Citation:** Martin, Dennis J. _Summary of Flutter Experiences as a Guide to the Preliminary Design of Lifting Surfaces on Missiles_. NACA Technical Note 4197, Langley Aeronautical Laboratory, February 1958. U.S. Government work (NTRS: "GOV_PUBLIC_USE_PERMITTED").
+- **File:** `docs/naca-tn-4197-ntrs-19930085030.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930085030/downloads/19930085030.pdf (NTRS document 19930085030)
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `cd46997b270a6463c1a0dd3656af30b990dfbf14f3d72578bf622c45d29cecea`
+- **Pages:** 23 (printed page = PDF page − 2 for the text; the appendix equations (1) to (18) are on printed pp. 11 to 14, PDF pp. 13 to 16)
+- **Verified:** the appendix derives the bending-torsion flutter criterion from the Theodorsen and Garrick expression: eq. (3) at the three-quarter span, (4) r_α² = 4I/(mc²), (5) κ = πρc²/(4m), (6) ω_α = (π/2L)√(JG/I), (7) and (8) the taper function f₁ ≈ 1 + 1.87(1 − λ)^1.6, (10) J ≈ ct³/6, (12) G_E = 6JG/(ct³), (13) and (14) f₂ = (1 + 3λ)/(2(1 + λ)), (15) the criterion for constant thickness ratio, (16) with the aspect-ratio correction A/(A + 2), the stated approximation 1/(f₁²f₂²) ≈ (λ + 1)/2, (17) ρa² = γp, ε = 0.25 assumed, and (18) (V_f/a)² = G_E / [39.3 A³/((t/c)³(A + 2)) · (λ + 1)/2 · (p/p₀)] with G_E in pounds per square inch and p₀ the standard sea-level pressure (printed pp. 11 to 14).
+- **Used for:** the fin flutter velocity (FLUT-1), approved by the owner in the completion prompt (Part A item 3).
+
+### 12. NGA.STND.0036 (2014), Department of Defense World Geodetic System 1984
+
+- **Citation:** National Geospatial-Intelligence Agency, Office of Geomatics. _Department of Defense World Geodetic System 1984: Its Definition and Relationships with Local Geodetic Systems_. NGA.STND.0036_1.0.0_WGS84, version 1.0.0, 2014-07-08 (formerly NIMA TR8350.2, 3rd edition). U.S. Government work.
+- **File:** `docs/nga-stnd-0036-wgs84-2014.pdf`
+- **URL:** https://earth-info.nga.mil/php/download.php?file=coord-wgs84 (NGA Office of Geomatics; the DTIC copy of TR8350.2 was unreachable, DTIC being "Under Maintenance" on 2026-10-12)
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `5edc1cf7411d4df01cae5205ee19f661265c45a55cca60b9351f6ae5abade512`
+- **Pages:** 207 (printed chapter-page numbers; chapter 4 begins at PDF p. 37)
+- **Verified:** Table 3.1 (printed p. 3-5, PDF p. 32) a = 6378137.0 m, 1/f = 298.257223563; Table 3.5 "WGS 84 Ellipsoid Derived Geometric Constants" (printed p. 3-8, PDF p. 35) e² = 6.694379990141 × 10⁻³; Table 3.6 "WGS 84 Derived Physical Constants" (printed p. 3-9, PDF p. 36) γ_e = 9.7803253359 m/s², γ_p = 9.8321849379 m/s², k = 1.931852652458 × 10⁻³, m = 3.449786506841 × 10⁻³; section 4.2 eq. (4-1) (printed p. 4-1, PDF p. 37) γ = γ_e (1 + k sin²φ)/√(1 − e² sin²φ), k = bγ_p/(aγ_e) − 1; section 4.3 eq. (4-3) (printed p. 4-3, PDF p. 39) γ_h = γ [1 − (2/a)(1 + f + m − 2f sin²φ) h + (3/a²) h²], m = ω²a²b/GM, "when the geodetic height (h) is small", with the ellipsoidal method recommended "at moderate and high geodetic heights".
+- **Used for:** GRAV-2 and GRAV-3 (D-060). The pre-approved substitute (Moritz, Geodetic Reference System 1980) was not needed; its constants give the OpenRocket value at 45° (D-060).
+
 ## Copyright status and the fetch script
 
 This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811) may stay committed; the arXiv paper is redistributable under its arXiv licence.

@@ -230,7 +230,9 @@ export function designSimulationOptions(
     wind: designWindModel(wind),
     gravity:
       mode === 'displayed'
-        ? STANDARD_GRAVITY_MODEL
+        ? site.latitude === undefined
+          ? STANDARD_GRAVITY_MODEL
+          : { altitudeDependence: 'wgs84', latitude: site.latitude }
         : { seaLevel: OPENROCKET_REFERENCE_GRAVITY_45N, altitudeDependence: 'inverse-square' },
     ...atmosphere,
     aerodynamics: 'niskanen',

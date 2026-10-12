@@ -81,6 +81,12 @@ export {
   STANDARD_GRAVITY,
   STANDARD_GRAVITY_MODEL,
   type GravityModel,
+  WGS84,
+  wgs84NormalGravity,
+  wgs84NormalGravityAbove,
+  seaLevelGravity,
+  type ParameterGravityModel,
+  type Wgs84GravityModel,
 } from './flight/gravity.js';
 export {
   openRocketWind,
