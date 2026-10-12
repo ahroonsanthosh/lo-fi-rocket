@@ -165,9 +165,69 @@ Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports
 - **Verified:** front matter (PDF pp. 1 to 3): "Approved for public release; distribution unlimited" on the cover and in block 10 of the report documentation page; "releasable to the National Technical Information Service (NTIS) ... available to the general public, including foreign nations".
 - **Used for:** confirming how the DATCOM charts are tabulated in the Digital DATCOM where a chart reading needed a cross-check; not a source of equations.
 
+### 16. NASA TN D-1958 (1963), Blue Scout 1/15-scale model at transonic speeds
+
+- **Citation:** NASA Technical Note D-1958, _Transonic Aerodynamic Characteristics of Several Variations of a 1/15-Scale Model of the Blue Scout_ (Langley Research Center, 1963). NTRS document 19630012011.
+- **File:** `docs/nasa-tn-d-1958-ntrs-19630012011.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19630012011/downloads/19630012011.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `c919984d93036c9fbe0b6116258e9adb706e5078ffbab0b645adf5a61c455cf3`
+- **Verified:** symbols (PDF p. 5): coefficients on 0.0388 sq ft and 2.668 in, moments about 66.3 % of the overall length; tests (PDF p. 6): Langley 8-foot transonic pressure tunnel, Mach 0.60 to 1.03, Reynolds number 3.18e6 to 4.12e6 per foot, transition fixed 3.56 in from the apex, axial force adjusted to free-stream static pressure at the base; configuration list (PDF p. 4): D = body with fins, no base flare; figure 1(a) (PDF pp. 9 to 10), figure 5(c) and (d) (PDF pp. 21 to 22), figure 8(a) (PDF p. 31).
+- **Used for:** held-out validation data (D-061): CP, normal-force slope and forebody axial force at Mach 0.6 to 1.03. Never used to build or tune the model.
+
+### 17. NACA RM E50D28 (Luidens and Simon, 1950), the half-scale RM-10 with fins at Mach 1.49 to 1.98
+
+- **Citation:** Luidens, R. W. and Simon, P. C. _Aerodynamic Characteristics of NACA RM-10 Missile in 8- by 6-Foot Supersonic Wind Tunnel at Mach Numbers from 1.49 to 1.98. II: Presentation and Analysis of Force Measurements_. NACA RM E50D28, 1950. NTRS document 19930086134.
+- **File:** `docs/naca-rm-e50d28-ntrs-19930086134.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930086134/downloads/19930086134.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `0e261cf3321ad38440ae669bc3a878dc8ed1500759b00a02af3131c4e6d3c2c8`
+- **Verified:** summary (PDF p. 3): body alone, two fins and four fins at Mach 1.49, 1.59, 1.78, 1.98, Reynolds number about 30e6 on the length, drag independent of Mach, pressure 30 %, base 20 %, friction 50 % of the drag; apparatus (PDF pp. 6 to 7): Reynolds numbers 29.1, 29.2, 29.5, 31.1e6, sting-to-base diameter ratio 0.66 with negligible interference; figure 2 (PDF p. 19) geometry; figures 7(c), 8(c), 8(d) (PDF pp. 31, 34, 35).
+- **Used for:** held-out validation data (D-061): CP and total drag with four fins at Mach 1.49 to 1.98.
+
+### 18. NACA TN 2944 (Evans, 1953), compilation of RM-10 zero-lift drag from several tunnels and free flight
+
+- **Citation:** Evans, A. J. _The Zero-Lift Drag of a Slender Body of Revolution (NACA RM-10 Research Model) as Determined from Tests in Several Wind Tunnels and in Flight at Supersonic Speeds_. NACA TN 2944, 1953. NTRS document 19930083685.
+- **File:** `docs/naca-tn-2944-ntrs-19930083685.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930083685/downloads/19930083685.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `f433811076e476b6912f5d43de9871e546bf333de534cf6e020f7899f7f7c773`
+- **Verified:** summary (PDF p. 3): flight Mach 0.8 to 2.5 with fins, tunnel 1.5 to 2.4 with and without fins, unexplained differences between tunnel results with fins and flight; Table I (PDF p. 19) configurations (73.25 in flight models, magnesium alloy, polished, fins); figure 1 (PDF p. 20) geometry with 0.0504 L fin chord; figure 9(b) (PDF p. 34); figure 10 (PDF p. 35) Reynolds numbers; figure 13 (PDF p. 41).
+- **Used for:** held-out validation data (D-061): free-flight total and base drag of the 73.25 in RM-10 models at Mach 0.9 to 2.5.
+
+### 19. NASA TN D-3182 (Yuska, 1966), sounding rocket second stage with thick wedge fins at Mach 1.79 to 3.47
+
+- **Citation:** Yuska, J. A. _Static Aerodynamic Characteristics of a Rocket Vehicle with Thick Wedge Fins and Sweptback Leading and Trailing Edges_. NASA TN D-3182, Lewis Research Center, January 1966. NTRS document 19660004864.
+- **File:** `docs/nasa-tn-d-3182-ntrs-19660004864.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19660004864/downloads/19660004864.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `240e99bb1723d6c07b40158010c10ca0fc23a874f516293f1a1fa40465e5405c`
+- **Verified:** summary and introduction (PDF pp. 3 to 4): three one-fifth scale models, Mach 1.79 to 3.47, approximately three-quarter-power nose, thick wedge fins; Tables I and II (PDF p. 8): tests and Reynolds numbers per foot; figure 1 (PDF p. 9) with the nose coordinate table and the fin section B; figures 4 and 5 (PDF pp. 14 to 15).
+- **Used for:** held-out validation data (D-061): CP, normal-force slope and axial force of model A at Mach 1.79 to 3.47 (1.79 to 2.0 inside the validated range).
+
+### 20. NASA TM X-1661 (1968), nose shape and fin geometry effects on a high-fineness-ratio sounding rocket at Mach 2.01
+
+- **Citation:** _Effects of Nose Shape and Fin Geometry on Static Stability of a High-Fineness-Ratio Sounding Rocket_. NASA TM X-1661, 1968. NTRS document 19680027037.
+- **File:** `docs/nasa-tm-x-1661-ntrs-19680027037.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19680027037/downloads/19680027037.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `92bcda5932377170e5c60bbdf18f62a30cb14f14183d0f08b435dba7fad70c16`
+- **Verified:** summary and model description (PDF pp. 3 to 6): half-scale ARCAS variants, configurations 1 (l/d 18.20) and 2 (23.77), Mach 2.01, Reynolds number 9.8e6 per metre, conical, ogive and spherical noses, basic and high aspect ratio fins; figure 2(a) (PDF p. 10); figure 4 (PDF p. 16).
+- **Used for:** held-out validation data (D-061): aerodynamic centre and axial force of the basic ARCAS configuration at Mach 2.01.
+
+### 21. NACA RM L8A05 (1948), free-flight drag of fin-stabilised parabolic bodies
+
+- **Citation:** _Flight Tests to Determine the Drag of Fin-Stabilized Parabolic Bodies at Transonic and Supersonic Speeds_. NACA RM L8A05, Langley Pilotless Aircraft Research Division, 1948. NTRS document 19930085317.
+- **File:** `docs/naca-rm-l8a05-ntrs-19930085317.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930085317/downloads/19930085317.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `eb3a607b5705d20084b5ede71802a8118d37590707a5e0ea793a97cf6743f192`
+- **Verified:** summary and models (PDF pp. 3 to 4): fineness ratios 7.87 (Mach 0.58 to 1.19) and 12 (1.16 to 2.58), three untapered 60° swept fins of circular-arc section (t/c 10 % normal to the leading edge), wooden models, drag on the maximum frontal area; figure 1(a) (PDF p. 9) with the profile equation; figure 6 (PDF p. 21) Reynolds numbers; figure 8(a) (PDF p. 24).
+- **Used for:** held-out validation data (D-061): free-flight total drag of the fineness-ratio 7.87 model A at Mach 0.62 to 1.17.
+
 ## Copyright status and the fetch script
 
-This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811, NACA TN 4197, NGA.STND.0036, the DATCOM documents) may stay committed; the arXiv paper is redistributable under its arXiv licence.
+This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811, NACA TN 4197, NGA.STND.0036, the DATCOM documents, TN D-1958, RM E50D28, TN 2944, TN D-3182, TM X-1661, RM L8A05) may stay committed; the arXiv paper is redistributable under its arXiv licence.
 
 ## Reference motors (`reference/motors/`)
 

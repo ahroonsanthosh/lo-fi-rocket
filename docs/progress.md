@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B follow-up list: transonic model from TR R-100 with the ARCAS validation, R5, warnings, large-angle fin force, golden time series.
+Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, WGS 84), Part B (held-out datasets), Part C (nine physics items with validation after each), Part D (limitations, README, future work, tag v1.0.0, PR into main). Branch `claude/v1-completion` from `main`.
 
 ## Done
 
@@ -89,3 +89,6 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 - Dormand and Prince (1980) is not in `reference/`; the tableau is verified by the consistency sums and order tests (D-037). The owner may add the paper to close the verification formally. Not blocking.
 
 - Pull request: the repository has a single branch, `claude/inspiring-tesla-xxp0hh`, which is also its default branch, so no pull request can be opened until a separate default branch exists (see the Prompt 1 report).
+
+- v1.0 Part A: `main` created from the Prompt 5 head and pushed (the default-branch change needs the owner: the `gh` token is invalid); WGS 84 gravity (GRAV-2, GRAV-3, D-060) from NGA.STND.0036 with the launch-latitude option in the app; NACA TN 4197, the USAF DATCOM (two PDFs, Internet Archive DTIC mirror), the Missile DATCOM manual and Digital DATCOM Volume II recorded in `reference/SOURCES.md` (commits b1c0716, c89d034).
+- v1.0 Part B (plan 0024, D-061): six held-out NTRS datasets digitised twice (`reference/digitised/held-out-v1.json`), their models in `held-out-models.ts`, the comparison test and `docs/reports/held-out-validation.md`; curve identities of every earlier panel re-checked (TR R-100 panel (b) labels confirm D-055); ARCAS CP recorded as non-independent. Baseline: CP meets the subsonic and transonic targets, misses supersonic (7.2 % rms, conservative); C_D over-predicted 30 to 60 % and the drag rise 0.12 to 0.14 Mach early. **Next:** Part C item 1 (transonic drag rise from DATCOM 4.2.3.1 B and 4.1.5.1 B).
