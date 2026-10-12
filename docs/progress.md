@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B follow-up list: transonic model from TR R-100 with the ARCAS validation, R5, warnings, large-angle fin force, golden time series.
+Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, WGS 84), Part B (held-out datasets), Part C (nine physics items with validation after each), Part D (limitations, README, future work, tag v1.0.0, PR into main). Branch `claude/v1-completion` from `main`.
 
 ## Done
 
@@ -73,19 +73,22 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 
 - The owner's answers to the open questions below decide the follow-up work, in this suggested order: the transonic model sources (D-034, D-039) and then the wind tunnel validation of CLAUDE.md 6.7; the large-angle fin force (D-046); `.CDX1` samples; altimeter data for 7.5; golden flight time series (7.6).
 
+- v1.0 Part D:
+  - `docs/known-limitations.md` has a v1.0 summary, and its superseded rows are corrected.
+  - `README.md` has "What you can trust", with the evidence for each figure.
+  - `docs/future-work.md` lists, in order, what v1.0 leaves out, including the drag targets not met and their remaining sourced methods.
+  - The full check passes, plus the Playwright end-to-end tests.
+  - Tag `v1.0.0`; pull request from `claude/v1-completion` into `main`.
+
 ## Open questions
 
-- Transonic nose drag (D-034, answered in D-053, done in D-055): the x^1/4 and ellipsoidal curves of TR R-100 begin at Mach 1.2, so their subsonic rise is fitted from there per the thesis and may overestimate the drag below Mach 1 (warned). If a measured subsonic curve for blunt noses is wanted, a source is needed.
-- Base drag after burnout (D-035): the source removes the motor area only while thrusting; OpenRocket keeps it removed. Which should the app display? The comparison mode uses OpenRocket's rule.
+At v1.0 these are open. Resolved earlier: gravity latitude (D-060), the large-angle force (D-070), and the transonic models (D-055, D-056).
 
-- Gravity latitude dependence (D-030, D-054): NIMA TR8350.2 is approved but could not be downloaded from this environment (NGA empty reply, DTIC 403, Wayback resets). Please place the PDF in `reference/docs/` or allow the host; the implementation then follows plan 0019.
-
-- Fin normal force at large angles of attack (D-046): a six-degree-of-freedom flight now ends with an explicit "model-limit" reason when the angle of attack reaches 90°, because the fin term is a small-angle flat-plate law and no approved source gives a large-angle law. Ballistic flights and ejection-charge deployments after the turn-over therefore stop at the turn-over with the apogee reported. Approve a source for the large-angle fin force (for example Hoerner, Fluid-Dynamic Lift) if those flights must be simulated to landing.
-- Random generator source (D-050): Blackman and Vigna's xoshiro paper was added to `reference/`; the Box and Muller (1958) paper is paywalled and the normal sampler is verified by its distribution tests. Add the paper if a document check is wanted.
-- Customary units source (D-040): NIST SP 811 was added to `reference/` for the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and Fahrenheit behind the units toggle. Say if another source is preferred; the factors are definitional and would not change.
-- Deployment speed warning threshold (D-042): no default is given in CLAUDE.md; 20 m/s is a user-editable placeholder labelled as a rule of thumb. Please state the figure you want.
-- `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive. The drag-curve CSV reader (D-047) should be checked against a real RASAero aero-plot export, which is not in `reference/`.
-
-- Dormand and Prince (1980) is not in `reference/`; the tableau is verified by the consistency sums and order tests (D-037). The owner may add the paper to close the verification formally. Not blocking.
-
-- Pull request: the repository has a single branch, `claude/inspiring-tesla-xxp0hh`, which is also its default branch, so no pull request can be opened until a separate default branch exists (see the Prompt 1 report).
+- **Moderate-angle CP (D-070).** The small-angle model and the DATCOM model differ in the in-flight CP at 10 to 20° by up to 0.8 calibers. Blue Scout's measured CP shift at 6° is larger than either predicts. The in-flight margin uses the more forward CP. Should the ARCAS data of TN D-4013, which goes to 21°, be digitised to decide?
+- **Base drag with fins and stings (D-069).** The sting-mounted Blue Scout's base force agrees with Niskanen's eq. (3.94) and not with the DATCOM. The free-flight evidence decided the default.
+- **Fibreglass shear modulus (D-068).** No approved source gives it. R3 and R5 need at least 0.18 and 0.43 GPa to be flutter-free by TN 4197.
+- **Base drag after burnout (D-035).** The displayed mode uses the source's rule; the comparison mode uses OpenRocket's.
+- **Deployment speed warning (D-042).** It is a rule-of-thumb placeholder. Please state the figure you want.
+- **`.CDX1` import.** It needs sample RASAero II files.
+- **Default branch.** `main` exists. Making it the default branch needs the owner, because the `gh` token here is invalid.
+- **Not blocking:** papers that would close verifications formally, namely Dormand and Prince (1980), Box and Muller (1958) and Barrowman's 1966 NARAM-8 report.

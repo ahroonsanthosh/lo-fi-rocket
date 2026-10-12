@@ -11,17 +11,29 @@
  * crossing by bisection on the step (owner's requirement, D-017).
  */
 import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
+import { flutterGeometry, flutterVelocity } from '../stability/flutter.js';
 import { dragCoefficient } from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
 import { windField, type WindField } from '../environment/wind.js';
-import { InvalidInputError, NonFiniteResultError, SimulationStalledError } from '../errors.js';
+import {
+  IntegrationUnstableError,
+  InvalidInputError,
+  NonFiniteResultError,
+  SimulationStalledError,
+} from '../errors.js';
 import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
 import type { MassProperties } from '../geometry/revolution.js';
 import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.js';
 import { finiteResult } from '../numerics/finite.js';
 import { maximumBodyDiameter } from '../stability/barrowman.js';
 import { dimensionless, metres, seconds, type Metres, type Seconds } from '../units/si.js';
-import { aerodynamicForcesAndMoments } from './aerodynamics.js';
+import {
+  aerodynamicForcesAndMoments,
+  normalForceAtAngle,
+  DEFAULT_LARGE_ANGLE_METHOD,
+  type LargeAngleMethod,
+} from './aerodynamics.js';
+import { finLargeAngleAvailability } from '../stability/datcom-large-angle.js';
 import {
   bodyToWorld,
   flightParameters,
@@ -30,17 +42,25 @@ import {
   worldToBody,
   type FlightParameters,
 } from './frames.js';
-import { gravityAt } from './gravity.js';
+import { gravityAt, seaLevelGravity } from './gravity.js';
 import {
   dormandPrinceStep,
   errorNorm,
   nextStepSize,
   rk4Step,
   type Derivative,
+  rk4StabilityFunction,
+  rk4StableStep,
 } from './integrators.js';
 import { quaternionMultiply, quaternionNormalise, type Quaternion } from './quaternion.js';
 import { add, cross, dot, norm, scale, sub, vec3, type Vec3 } from './vector.js';
-import type { DragCurve, FlightVehicle, RecoveryDevice, SimulationOptions } from './vehicle.js';
+import {
+  DEFAULT_MINIMUM_STABILITY_MARGIN,
+  type DragCurve,
+  type FlightVehicle,
+  type RecoveryDevice,
+  type SimulationOptions,
+} from './vehicle.js';
 
 /** D-047: linear interpolation of an imported C_D table in Mach; outside the table is an error. */
 export function dragCurveAt(curve: DragCurve, machNumber: number): number {
@@ -136,6 +156,7 @@ export interface FlightSample {
   readonly cg: number;
   /** CP at the current angle of attack; NaN when no aerodynamics. */
   readonly cp: number;
+  /** (CP − CG)/d with the CP of the in-flight margin: with the DATCOM model the more forward of its CP and the small-angle model's (D-070). */
   readonly stabilityCalibers: number;
 }
 
@@ -160,13 +181,53 @@ export interface FlightSummary {
   readonly flightTime: number;
   /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
   readonly endReason: 'landing' | 'max-time' | 'model-limit';
+  /**
+   * The smallest stability margin, at the CP for the actual Mach number and
+   * angle of attack and the CG of the moment, over every accepted step of
+   * powered flight (rail exit to burnout) and of coast (burnout to apogee);
+   * undefined when the phase did not occur or had no aerodynamics (plan 0030).
+   */
+  readonly minimumStability: {
+    readonly powered: StabilityPoint | undefined;
+    readonly coast: StabilityPoint | undefined;
+  };
+  /** Per fin set (plan 0031): the lowest flutter-speed margin V_f/V of the ascent, or why it was not evaluated. */
+  readonly flutter: readonly FlutterMargin[];
+}
+
+export type FlutterMargin =
+  | {
+      readonly finIndex: number;
+      /** Lowest V_f/airspeed over powered flight and coast; below 1 the flight exceeds the TN 4197 flutter speed. */
+      readonly ratio: number;
+      readonly time: number;
+      readonly mach: number;
+      readonly airspeed: number;
+      /** V_f at that moment, m/s (local pressure and speed of sound). */
+      readonly flutterVelocity: number;
+    }
+  | { readonly finIndex: number; readonly ratio: undefined; readonly reason: string };
+
+export interface StabilityPoint {
+  /** (CP − CG)/d, calibers. */
+  readonly calibers: number;
+  readonly time: number;
+  readonly mach: number;
+  /** Radians. */
+  readonly angleOfAttack: number;
+  readonly cp: number;
+  readonly cg: number;
+  /** The normal force model whose CP gave this margin, the more forward of the two (D-070). */
+  readonly model: LargeAngleMethod;
 }
 
 /**
- * D-046: the normal force model of Niskanen chapter 3 (Barrowman's fins as
- * flat plates at small angles, p. 26; body terms with sin α) is applied up
- * to 90°, the limit of the thesis's own angle-of-attack drag scaling
- * (p. 53). Beyond it a six-degree-of-freedom flight is not continued.
+ * D-046: the small-angle normal force model of Niskanen chapter 3 (Barrowman's
+ * fins as flat plates at small angles, p. 26; body terms with sin α) is
+ * applied up to 90°, the limit of the thesis's own angle-of-attack drag
+ * scaling (p. 53); beyond it a six-degree-of-freedom flight is not continued.
+ * With the DATCOM large-angle model (D-070) the limit applies only at Mach 1
+ * and above.
  */
 export const AERO_MAX_ANGLE_OF_ATTACK = Math.PI / 2;
 
@@ -186,10 +247,35 @@ export interface FlightResult {
     readonly windSeed: number | undefined;
     /** The label of the imported drag curve when one replaced the drag model (D-047). */
     readonly dragCurve: string | undefined;
+    /** The large-angle method in effect (D-070). */
+    readonly largeAngleMethod: LargeAngleMethod;
   };
+  /** Present for fixed-step RK4 runs: the stability and accuracy check that every step passed (D-063). */
+  readonly stepCheck: StepCheck | undefined;
 }
 
 // State vector layout: [x, y, z, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz]
+
+/**
+ * DYN-17. Linearised rates of the state at an instant, s⁻¹, from the model's
+ * own force and moment laws, for the RK4 step check (D-063):
+ *  - roll: the roll damping moment of AERO-5 to AERO-7 is C_r ω_x, so
+ *    I_rot ω̇_x = −C_r ω_x decays at C_r/I_rot;
+ *  - pitchNatural: the restoring moment of AERO-1/AERO-2 about the CG at
+ *    small α is −q A_ref C_Nα (X_CP − X_CG) α, so I_long α̈ = −k α has the
+ *    natural frequency ω_n = √(q A_ref C_Nα (X_CP − X_CG)/I_long) (0 when the
+ *    margin is negative: a diverging true solution is not a step question);
+ *  - pitchDamping: the AERO-4 damping moment C_p ω_t² linearised about the
+ *    current transverse rate, 2 C_p |ω_t|/I_long;
+ *  - drag: the drag force ½ρ v² C A along the velocity linearised about v,
+ *    ρ v C A/m (the axial drag in flight, the deployed devices in descent).
+ */
+export interface LinearisedRates {
+  readonly roll: number;
+  readonly pitchNatural: number;
+  readonly pitchDamping: number;
+  readonly drag: number;
+}
 
 interface Derived {
   readonly mass: number;
@@ -201,6 +287,19 @@ interface Derived {
   readonly flight: FlightParameters | undefined;
   readonly accelerationWorld: Vec3;
   readonly warnings: readonly string[];
+  readonly rates: LinearisedRates;
+}
+
+/** Result of the RK4 step check over a run (DYN-16, DYN-17, D-063). */
+export interface StepCheck {
+  /** The smallest safe step found along the run (0.9 of the stability boundary over all modes), s. */
+  readonly minimumSafeStep: number;
+  readonly minimumSafeStepTime: number;
+  readonly minimumSafeStepMode: 'roll' | 'pitch' | 'drag';
+  /** The largest h ω_n met: the pitch oscillation's phase advance per step, rad. */
+  readonly maxPitchStepAngle: number;
+  /** The numerical amplitude loss of the pitch oscillation per step at that angle, 1 − |R(i h ω_n)|. */
+  readonly maxPitchAmplitudeLossPerStep: number;
 }
 
 interface Context {
@@ -219,6 +318,8 @@ interface Context {
   readonly deployedArea: { area: number }; // Σ C_D A of deployed devices (mutable through the run)
   /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
   readonly motorState: { burnedOut: boolean };
+  /** The large-angle method in effect (D-070): the requested one, or 'linear' when a fin set is not covered. */
+  readonly largeAngleMethod: LargeAngleMethod;
 }
 
 function unpack(y: readonly number[]): {
@@ -293,6 +394,7 @@ function derive(
   let aeroForce = 0;
   let cd0 = Number.NaN;
   let cp = Number.NaN;
+  let rates: LinearisedRates = { roll: 0, pitchNatural: 0, pitchDamping: 0, drag: 0 };
   if (phase === 'descent') {
     // DYN-14: the deployed devices provide the whole drag: F = −½ ρ |v_air| v_air Σ C_D A.
     const vAir = sub(s.velocity, wind);
@@ -300,6 +402,7 @@ function derive(
     const drag = scale(vAir, -0.5 * atm.density * speed * ctx.deployedArea.area);
     forceWorld = add(forceWorld, drag);
     aeroForce = norm(drag);
+    rates = { ...rates, drag: (atm.density * speed * ctx.deployedArea.area) / m };
   } else if (ctx.options.aerodynamics === 'niskanen' && phase !== 'landed') {
     flight = flightParameters({
       velocityWorld: s.velocity,
@@ -323,6 +426,9 @@ function derive(
           ? {}
           : { motor: { diameter: metres(ctx.motorDiameter), thrusting } }),
         baseDragMotorRule: ctx.options.baseDragMotorRule,
+        ...(ctx.options.baseDragMethod === undefined
+          ? {}
+          : { baseDragMethod: ctx.options.baseDragMethod }),
         referenceDiameter: metres(ctx.referenceDiameter),
       });
       cd0 = drag.cd0;
@@ -361,6 +467,7 @@ function derive(
         options: {
           finRollReduction: ctx.options.finRollReduction,
           referenceDiameter: metres(ctx.referenceDiameter),
+          largeAngleMethod: ctx.largeAngleMethod,
         },
       });
       warnings.push(...aero.warnings);
@@ -368,6 +475,21 @@ function derive(
       momentBody = aero.momentBody;
       aeroForce = norm(aero.forceBody);
       cp = aero.cp;
+      // DYN-17: the linearised rates for the step check.
+      const aRef = (Math.PI * ctx.referenceDiameter ** 2) / 4;
+      const qDyn: number = flight.dynamicPressure;
+      const stiffness = qDyn * aRef * aero.cnAlpha * ((aero.cp as number) - (mp.cg as number));
+      const transverse = Math.hypot(wBody.y, wBody.z);
+      rates = {
+        roll: aero.rollDampingCoefficient / (mp.inertiaRotational as number),
+        pitchNatural: Math.sqrt(Math.max(0, stiffness / (mp.inertiaLongitudinal as number))),
+        pitchDamping:
+          (2 * aero.pitchDampingCoefficient * transverse) / (mp.inertiaLongitudinal as number),
+        drag:
+          flight.airspeed > 0
+            ? (atm.density * flight.airspeed * aero.axialDragCoefficient * aRef) / m
+            : 0,
+      };
     }
   }
 
@@ -425,9 +547,60 @@ function derive(
       flight,
       accelerationWorld: acceleration,
       warnings,
+      rates,
     },
   };
 }
+
+/**
+ * DYN-16, DYN-17 (D-063). The RK4 step check at one instant: the eigenvalues
+ * of the linearised roll, pitch and drag dynamics and the largest step for
+ * which every one lies inside the RK4 stability region, with a factor 0.9
+ * for the change of the rates within a step. Also the pitch oscillation's
+ * phase advance per step h ω_n and its numerical amplitude loss 1 − |R(i h ω_n)|.
+ */
+export function rk4StepCheck(
+  h: number,
+  rates: LinearisedRates,
+): {
+  safeStep: number;
+  limitedBy: 'roll' | 'pitch' | 'drag';
+  pitchStepAngle: number;
+  pitchAmplitudeLoss: number;
+} {
+  const modes: { mode: 'roll' | 'pitch' | 'drag'; re: number; im: number }[] = [
+    { mode: 'roll', re: -rates.roll, im: 0 },
+    { mode: 'drag', re: -rates.drag, im: 0 },
+  ];
+  // Pitch: λ² + λ_d λ + ω_n² = 0.
+  const disc = rates.pitchDamping ** 2 - 4 * rates.pitchNatural ** 2;
+  if (disc >= 0) {
+    modes.push({ mode: 'pitch', re: (-rates.pitchDamping - Math.sqrt(disc)) / 2, im: 0 });
+  } else {
+    modes.push({ mode: 'pitch', re: -rates.pitchDamping / 2, im: Math.sqrt(-disc) / 2 });
+  }
+  let safeStep = Number.POSITIVE_INFINITY;
+  let limitedBy: 'roll' | 'pitch' | 'drag' = 'pitch';
+  for (const m of modes) {
+    const hb = 0.9 * rk4StableStep(m.re, m.im);
+    if (hb < safeStep) {
+      safeStep = hb;
+      limitedBy = m.mode;
+    }
+  }
+  const pitchStepAngle = h * rates.pitchNatural;
+  return {
+    safeStep,
+    limitedBy,
+    pitchStepAngle,
+    pitchAmplitudeLoss: 1 - rk4StabilityFunction(0, pitchStepAngle),
+  };
+}
+
+/** D-063: the RK4 run stops when the pitch oscillation would lose more than this per step. */
+export const RK4_MAX_PITCH_AMPLITUDE_LOSS = 0.1;
+/** D-063: a warning is attached above this loss per step. */
+export const RK4_WARN_PITCH_AMPLITUDE_LOSS = 0.01;
 
 /** Cross-check mode: the axis follows the velocity (the rail direction before the rocket moves). */
 function velocityAlignedNose(v: Vec3, rail: Vec3): Vec3 {
@@ -440,6 +613,32 @@ interface PendingTimed {
   readonly kind: FlightEventKind;
   readonly detail: string;
   readonly action: () => void;
+}
+
+/**
+ * D-070: the large-angle method in effect for a flight. 'datcom' needs every
+ * fin set to be covered by the DATCOM charts (HA-5, HA-6); otherwise the
+ * small-angle model and the 90° limit (D-046) apply, with a warning naming
+ * the reason.
+ */
+function effectiveLargeAngleMethod(
+  vehicle: FlightVehicle,
+  options: SimulationOptions,
+  warnings: Set<string>,
+): LargeAngleMethod {
+  const requested = options.largeAngleMethod ?? DEFAULT_LARGE_ANGLE_METHOD;
+  if (requested === 'linear') return 'linear';
+  for (const p of vehicle.components) {
+    if (p.component.kind !== 'finSet') continue;
+    const av = finLargeAngleAvailability(p.component);
+    if (!av.available) {
+      warnings.add(
+        `The large-angle model (DATCOM, D-070) does not cover this fin set: ${av.reason}. The small-angle model is used instead, and the flight ends if the angle of attack passes 90° (D-046).`,
+      );
+      return 'linear';
+    }
+  }
+  return 'datcom';
 }
 
 /** Run the simulation. */
@@ -479,6 +678,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     deployedArea: { area: 0 },
     motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
+    largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, warnings),
   };
 
   const events: FlightEvent[] = [];
@@ -552,9 +752,106 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     options.recordInterval === undefined ? 0 : (options.recordInterval as number);
   let lastRecorded = -Infinity;
   let maxAcceleration = 0;
+  const minimumMargin = options.minimumStabilityMargin ?? DEFAULT_MINIMUM_STABILITY_MARGIN;
+  if (!Number.isFinite(minimumMargin)) {
+    throw new InvalidInputError(
+      'minimum stability margin',
+      minimumMargin,
+      'must be a finite number of calibers',
+    );
+  }
+  const lowest: { powered: StabilityPoint | undefined; coast: StabilityPoint | undefined } = {
+    powered: undefined,
+    coast: undefined,
+  };
+  // Plan 0031: the TN 4197 flutter speed of every fin set with a shear modulus, at the local atmosphere.
+  const flutterFins = vehicle.components.flatMap(({ component: c }, index) =>
+    c.kind === 'finSet'
+      ? [
+          {
+            index,
+            fin: c,
+            geometry: c.shearModulus === undefined ? undefined : flutterGeometry(c),
+          },
+        ]
+      : [],
+  );
+  const flutterLowest = new Map<number, Extract<FlutterMargin, { ratio: number }>>();
   const record = (force: boolean): void => {
-    if (!force && t - lastRecorded < recordInterval - 1e-12) return;
+    const recordNow = force || t - lastRecorded >= recordInterval - 1e-12;
+    if (!recordNow && phase !== 'powered' && phase !== 'coast') return;
     const { derived } = derive(ctx, phase, t, y);
+    // Plan 0030: the in-flight margin at every accepted step of powered flight and coast.
+    // D-070: the margin uses the more forward of the DATCOM CP and the small-angle model's CP (the conservative
+    // choice: they differ at moderate angles, see the decision); the minimum covers nose-forward flight (α ≤ 90°).
+    const f = derived.flight;
+    let cp = derived.cp;
+    let model: StabilityPoint['model'] = ctx.largeAngleMethod;
+    if (
+      ctx.largeAngleMethod === 'datcom' &&
+      f !== undefined &&
+      options.degreesOfFreedom === 6 &&
+      phase !== 'descent' &&
+      phase !== 'landed' &&
+      Number.isFinite(cp) &&
+      (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK
+    ) {
+      const linear = normalForceAtAngle(
+        vehicle.components,
+        f.mach,
+        f.angleOfAttack,
+        f.lateralAirflowAngle,
+        {
+          finRollReduction: options.finRollReduction,
+          referenceDiameter: metres(ctx.referenceDiameter),
+          largeAngleMethod: 'linear',
+        },
+      ).cp;
+      if (linear < cp) {
+        cp = linear;
+        model = 'linear';
+      }
+    }
+    if (
+      (phase === 'powered' || phase === 'coast') &&
+      Number.isFinite(cp) &&
+      (f === undefined || (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK)
+    ) {
+      const calibers = (cp - derived.cg) / referenceDiameter;
+      const current = lowest[phase];
+      if (current === undefined || calibers < current.calibers) {
+        lowest[phase] = {
+          calibers,
+          time: t,
+          mach: f?.mach ?? Number.NaN,
+          angleOfAttack: f?.angleOfAttack ?? Number.NaN,
+          cp,
+          cg: derived.cg,
+          model,
+        };
+      }
+    }
+    if ((phase === 'powered' || phase === 'coast') && derived.flight !== undefined) {
+      const airspeed = derived.flight.airspeed;
+      const atm = ctx.atmosphere(metres((options.site.altitude as number) + unpack(y).position.z));
+      for (const { index, fin, geometry } of flutterFins) {
+        if (fin.shearModulus === undefined || geometry === undefined || !(airspeed > 0)) continue;
+        const vf = flutterVelocity(geometry, fin.shearModulus, atm.pressure, atm.speedOfSound);
+        const ratio = vf / airspeed;
+        const current = flutterLowest.get(index);
+        if (current === undefined || ratio < current.ratio) {
+          flutterLowest.set(index, {
+            finIndex: index,
+            ratio,
+            time: t,
+            mach: derived.flight.mach,
+            airspeed,
+            flutterVelocity: vf,
+          });
+        }
+      }
+    }
+    if (!recordNow) return;
     const s = unpack(y);
     const acc = norm(derived.accelerationWorld);
     maxAcceleration = Math.max(maxAcceleration, acc);
@@ -577,9 +874,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       mass: derived.mass,
       cg: derived.cg,
       cp: derived.cp,
-      stabilityCalibers: Number.isNaN(derived.cp)
-        ? Number.NaN
-        : (derived.cp - derived.cg) / referenceDiameter,
+      stabilityCalibers: Number.isNaN(cp) ? Number.NaN : (cp - derived.cg) / referenceDiameter,
     });
     for (const w of derived.warnings) warnings.add(w);
     lastRecorded = t;
@@ -629,6 +924,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let maxVelocity = 0;
   let maxMach = 0;
   let steps = 0;
+  let stepCheck: StepCheck | undefined;
+  let pitchLossWarned = false;
 
   while (phase !== 'landed' && !stopped && t < maxTime) {
     steps++;
@@ -657,6 +954,58 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         deployment = { t, v: norm(unpack(y).velocity) };
       record(true);
       continue;
+    }
+    if (options.integrator.kind === 'rk4') {
+      // D-063: never take an RK4 step outside the stability region of the linearised dynamics.
+      const check = rk4StepCheck(hTry, derive(ctx, phase, t, y).derived.rates);
+      if (
+        stepCheck === undefined ||
+        check.safeStep < stepCheck.minimumSafeStep ||
+        check.pitchStepAngle > stepCheck.maxPitchStepAngle
+      ) {
+        stepCheck = {
+          minimumSafeStep: Math.min(check.safeStep, stepCheck?.minimumSafeStep ?? Infinity),
+          minimumSafeStepTime:
+            stepCheck === undefined || check.safeStep < stepCheck.minimumSafeStep
+              ? t
+              : stepCheck.minimumSafeStepTime,
+          minimumSafeStepMode:
+            stepCheck === undefined || check.safeStep < stepCheck.minimumSafeStep
+              ? check.limitedBy
+              : stepCheck.minimumSafeStepMode,
+          maxPitchStepAngle: Math.max(check.pitchStepAngle, stepCheck?.maxPitchStepAngle ?? 0),
+          maxPitchAmplitudeLossPerStep: Math.max(
+            check.pitchAmplitudeLoss,
+            stepCheck?.maxPitchAmplitudeLossPerStep ?? 0,
+          ),
+        };
+      }
+      if (hTry > check.safeStep) {
+        throw new IntegrationUnstableError(
+          t,
+          `${check.limitedBy} dynamics`,
+          check.safeStep,
+          check.limitedBy === 'roll'
+            ? `the roll damping decays at ${derive(ctx, phase, t, y).derived.rates.roll.toFixed(0)} per second and RK4 is only stable for a step below 2.785 divided by that rate; a larger step makes the roll rate grow every step instead of decaying.`
+            : check.limitedBy === 'pitch'
+              ? `the pitch oscillation runs at ${derive(ctx, phase, t, y).derived.rates.pitchNatural.toFixed(0)} rad/s and RK4 is only stable for a step below 2.83 divided by that frequency.`
+              : `the drag decelerates at ${derive(ctx, phase, t, y).derived.rates.drag.toFixed(0)} per second and RK4 is only stable for a step below 2.785 divided by that rate.`,
+        );
+      }
+      if (check.pitchAmplitudeLoss > RK4_MAX_PITCH_AMPLITUDE_LOSS) {
+        throw new IntegrationUnstableError(
+          t,
+          'pitch accuracy',
+          (1.4 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9,
+          `the pitch oscillation advances ${check.pitchStepAngle.toFixed(2)} rad per step and RK4 would damp its amplitude by ${(check.pitchAmplitudeLoss * 100).toFixed(0)} % every step, a numerical loss, not the rocket's.`,
+        );
+      }
+      if (check.pitchAmplitudeLoss > RK4_WARN_PITCH_AMPLITUDE_LOSS && !pitchLossWarned) {
+        pitchLossWarned = true;
+        warnings.add(
+          `RK4 step check: the pitch oscillation advances up to ${check.pitchStepAngle.toFixed(2)} rad per step, so RK4 damps its amplitude numerically by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step (D-063); apogee and velocities are not affected on the reference rockets, the oscillation history is. Use a step below ${((1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9).toPrecision(2)} s or the Dormand–Prince integrator for the oscillation.`,
+        );
+      }
     }
     let attempt = stepOnce(hTry);
     if (options.integrator.kind === 'dormand-prince') {
@@ -761,19 +1110,25 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         const f = sampleFlight(ctx, phase, t, yy);
         return f === undefined ? 0 : f.angleOfAttack;
       };
-      if (aoa(y) > AERO_MAX_ANGLE_OF_ATTACK) {
+      // D-070: the DATCOM model continues through 180° below Mach 1; the 90° limit remains otherwise.
+      const beyond = (yy: readonly number[]): boolean => {
+        const f = sampleFlight(ctx, phase, t, yy);
+        if (f === undefined || f.angleOfAttack <= AERO_MAX_ANGLE_OF_ATTACK) return false;
+        return ctx.largeAngleMethod === 'linear' || (f.mach as number) >= 1;
+      };
+      if (beyond(y)) {
         // Already beyond the limit at the start of the step (a rocket falling tail-first from apogee).
         yNext = y;
         tNext = t;
         fired = { kind: 'model-limit', g: aoa };
-      } else if (aoa(yNext) > AERO_MAX_ANGLE_OF_ATTACK) {
+      } else if (beyond(yNext)) {
         let lo = 0;
         let hi = hTry;
         let yHi = yNext;
         for (let i = 0; i < 80 && hi - lo > 1e-10; i++) {
           const mid = (lo + hi) / 2;
           const yMid = normaliseOrientation(stepOnce(mid).yNext);
-          if (aoa(yMid) > AERO_MAX_ANGLE_OF_ATTACK) {
+          if (beyond(yMid)) {
             hi = mid;
             yHi = yMid;
           } else lo = mid;
@@ -788,8 +1143,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const s = unpack(y);
     const speed = norm(s.velocity);
     maxVelocity = Math.max(maxVelocity, speed);
+    let liftoffNow = false;
     if (!liftedOff && speed > 0) {
       liftedOff = true;
+      liftoffNow = true;
       events.push({ kind: 'liftoff', time: seconds(t), detail: 'first motion on the rail' });
     }
     if (fired !== undefined) {
@@ -862,13 +1219,18 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           endReason = 'model-limit';
           const f = sampleFlight(ctx, phase, t, y);
           const deg = f === undefined ? Number.NaN : ((f.angleOfAttack as number) * 180) / Math.PI;
+          const supersonic = ctx.largeAngleMethod === 'datcom';
           events.push({
             kind: 'model-limit',
             time: seconds(t),
-            detail: `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
+            detail: supersonic
+              ? `angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above, beyond the large-angle model (D-070); the flight is not continued`
+              : `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
           });
           warnings.add(
-            `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is a model for small angles of attack and is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
+            supersonic
+              ? `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above: the large-angle model (DATCOM, D-070) covers fins beyond 90° only below Mach 1, and the DATCOM supersonic high-angle charts are not implemented. The rocket was flying backwards or tumbling at supersonic speed.`
+              : `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
           );
           break;
         }
@@ -885,7 +1247,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const sample = derive(ctx, phase, t, y).derived;
     if (sample.flight !== undefined) maxMach = Math.max(maxMach, sample.flight.mach);
     maxAcceleration = Math.max(maxAcceleration, norm(sample.accelerationWorld));
-    record(fired !== undefined);
+    record(fired !== undefined || liftoffNow);
   }
   if (phase !== 'landed' && !stopped)
     events.push({
@@ -916,7 +1278,46 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         : (Math.atan2(landing.x, landing.y) + 2 * Math.PI) % (2 * Math.PI),
     flightTime: t,
     endReason,
+    minimumStability: { powered: lowest.powered, coast: lowest.coast },
+    flutter: flutterFins.map(({ index, fin }): FlutterMargin => {
+      if (fin.shearModulus === undefined) {
+        return {
+          finIndex: index,
+          ratio: undefined,
+          reason: 'no shear modulus for the fin material',
+        };
+      }
+      return (
+        flutterLowest.get(index) ?? {
+          finIndex: index,
+          ratio: undefined,
+          reason: 'no powered or coasting flight with aerodynamics',
+        }
+      );
+    }),
   };
+  for (const f of summary.flutter) {
+    if (f.ratio === undefined) {
+      if (f.reason.startsWith('no shear modulus'))
+        warnings.add(
+          `Fin flutter not checked for the fin set at component ${String(f.finIndex)}: enter the fin material's shear modulus (NACA TN 4197).`,
+        );
+    } else if (f.ratio < 1) {
+      warnings.add(
+        `Fin flutter: the fin set at component ${String(f.finIndex)} reaches ${f.airspeed.toFixed(0)} m/s at t = ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}), above its NACA TN 4197 flutter speed of ${f.flutterVelocity.toFixed(0)} m/s there: the fins may flutter and fail. Thicker fins, a stiffer material, a smaller span or a slower flight raise the margin.`,
+      );
+    }
+  }
+  for (const [name, p] of [
+    ['powered flight', lowest.powered],
+    ['coast', lowest.coast],
+  ] as const) {
+    if (p !== undefined && p.calibers < minimumMargin) {
+      warnings.add(
+        `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (t = ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there. The margin uses the CP at that Mach number and angle of attack (plan 0030).`,
+      );
+    }
+  }
   return {
     samples,
     events,
@@ -932,8 +1333,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           ? `RK4 fixed step ${String(options.integrator.timeStep)} s`
           : `Dormand–Prince RK5(4) rtol ${String(options.integrator.relativeTolerance)} atol ${String(options.integrator.absoluteTolerance)}`,
       degreesOfFreedom: options.degreesOfFreedom,
-      gravitySeaLevel: options.gravity.seaLevel,
+      gravitySeaLevel: seaLevelGravity(options.gravity),
       windSeed: options.wind.kind === 'turbulent' ? options.wind.seed : undefined,
+      largeAngleMethod: ctx.largeAngleMethod,
     },
+    stepCheck,
   };
 }

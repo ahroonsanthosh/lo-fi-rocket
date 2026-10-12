@@ -16,6 +16,7 @@ import { finiteResult } from '../numerics/finite.js';
 import { maximumBodyDiameter } from '../stability/barrowman.js';
 import {
   dimensionless,
+  mach,
   metres,
   squareMetres,
   type Dimensionless,
@@ -25,6 +26,12 @@ import {
 } from '../units/si.js';
 import { baseDragArea, launchLugDrag, railButtonDrag } from './base-parasitic.js';
 import { finPressureDrag } from './fin-drag.js';
+import { finWaveDrag } from './datcom-fin-wave-drag.js';
+import {
+  DATCOM_BASE_GUIDE_END,
+  datcomBaseDragAtMach,
+  datcomSubsonicBaseDrag,
+} from './datcom-base-drag.js';
 import {
   baseDragCoefficient,
   boatTailPressureDrag,
@@ -39,11 +46,11 @@ import {
 } from './skin-friction.js';
 
 /** GEO-13. Wetted (lateral) area of a body of revolution: ∫ 2π r √(1 + r′²) dx. */
-/** Regime warnings naming the validation status (docs/reports/wind-tunnel-validation.md, D-057). */
+/** Regime warnings naming the validation status (docs/reports/held-out-validation.md, D-061, D-069). */
 export const TRANSONIC_DRAG_WARNING =
-  'transonic regime (Mach 0.8 to 1.2): accuracy is lower than in subsonic flight (CLAUDE.md 6.3); against wind tunnel data the drag rise is predicted too early (up to +40 % at Mach 0.9, within 10 % from Mach 1.0 to 1.2)';
+  'transonic regime (Mach 0.8 to 1.2): accuracy is lower than in subsonic flight (CLAUDE.md 6.3); against held-out wind tunnel and flight data the drag is within 21 % rms and the drag rise within 0.05 Mach (docs/reports/held-out-validation.md)';
 export const SUPERSONIC_DRAG_WARNING =
-  'supersonic regime (above Mach 1.2): validated only against two models; the drag is within about 10 % for thin sharp fins and over-predicted up to twofold for thick fins with the rounded section (docs/reports/wind-tunnel-validation.md)';
+  'supersonic regime (above Mach 1.2): against held-out data the drag is within 16 % rms to Mach 2.0, low by about 20 % for thick wedge fins (docs/reports/held-out-validation.md); above Mach 2.0 it is outside the validated range';
 
 export function wettedArea(profile: Profile): number {
   return integrate(
@@ -88,6 +95,8 @@ export interface DragInputs {
    */
   readonly baseDragMotorRule: 'while-thrusting' | 'always';
   readonly referenceDiameter?: Metres;
+  /** Body base drag method; defaults to `DEFAULT_BASE_DRAG_METHOD` (D-069). */
+  readonly baseDragMethod?: BaseDragMethod;
 }
 
 export interface DragTerm {
@@ -119,6 +128,7 @@ interface ExternalGeometry {
   length: number;
   wettedBody: number;
   baseRadius: number;
+  maxRadius: number;
 }
 
 /** Per-component numbers that do not depend on Mach or Reynolds number, computed once per design. */
@@ -241,6 +251,80 @@ function staticEntries(components: readonly PlacedComponent[]): readonly StaticE
  * DRAG-13. Eq. (3.97) p. 52: C_D0 = Σ (A_T/A_ref)(C_D•)T + (C_D)friction over
  * pressure (nose, shoulder, boat tail, fins), base and parasitic terms.
  */
+/** Body base drag method (D-069): Niskanen eq. (3.94), or the DATCOM's body correlation (DRAG-21, DRAG-22). */
+export type BaseDragMethod = 'niskanen' | 'datcom';
+export const DEFAULT_BASE_DRAG_METHOD: BaseDragMethod = 'datcom';
+
+/** Fairing from the end of figure 4.2.3.1-24 to Niskanen's supersonic base drag (DATCOM sketch (a), p. 4.2.3.1-5). */
+export const DATCOM_BASE_FAIRING_END = 1.5;
+
+function cfcForBase(input: DragInputs, geometry: ExternalGeometry): number {
+  const friction = skinFrictionCoefficient(
+    input.reynolds,
+    input.roughnessHeight,
+    metres(geometry.length),
+  );
+  return compressibleSkinFriction(friction, input.mach, input.reynolds);
+}
+
+/**
+ * The base drag coefficient on the base area: DRAG-11 (Niskanen eq. 3.94), or
+ * with `baseDragMethod: 'datcom'` DRAG-21 and DRAG-22 to Mach 1.295, a linear
+ * fairing to eq. (3.94) at Mach 1.5 (the DATCOM's supersonic base-pressure
+ * charts, figures 4.2.3.1-50, -55 and -60, are not implemented), and
+ * eq. (3.94) above.
+ */
+function bodyBaseDrag(
+  input: DragInputs,
+  geometry: ExternalGeometry,
+  skinFriction: number,
+): { cd: number; method: string; warnings: string[] } {
+  const M: number = input.mach;
+  const niskanen = baseDragCoefficient(input.mach);
+  if (
+    (input.baseDragMethod ?? DEFAULT_BASE_DRAG_METHOD) === 'niskanen' ||
+    geometry.baseRadius <= 0
+  ) {
+    return { cd: niskanen, method: 'Niskanen (3.94)', warnings: [] };
+  }
+  const subsonic = datcomSubsonicBaseDrag({
+    skinFriction,
+    wettedArea: geometry.wettedBody,
+    length: geometry.length,
+    maxRadius: geometry.maxRadius,
+    baseRadius: geometry.baseRadius,
+  });
+  const at = (m: number): number | undefined => datcomBaseDragAtMach(subsonic, m);
+  const outside = (): { cd: number; method: string; warnings: string[] } => ({
+    cd: niskanen,
+    method: 'Niskanen (3.94)',
+    warnings: [
+      'DATCOM base drag not used: the subsonic value is outside the guide curves of figure 4.2.3.1-24; Niskanen eq. (3.94) is used instead.',
+    ],
+  });
+  if (M <= DATCOM_BASE_GUIDE_END) {
+    const v = at(M);
+    return v === undefined ? outside() : { cd: v, method: 'DATCOM 4.2.3.1', warnings: [] };
+  }
+  if (M >= DATCOM_BASE_FAIRING_END) {
+    return {
+      cd: niskanen,
+      method: 'Niskanen (3.94) above the DATCOM fairing',
+      warnings: [],
+    };
+  }
+  const end = at(DATCOM_BASE_GUIDE_END);
+  if (end === undefined) return outside();
+  const w = (M - DATCOM_BASE_GUIDE_END) / (DATCOM_BASE_FAIRING_END - DATCOM_BASE_GUIDE_END);
+  return {
+    cd: (1 - w) * end + w * baseDragCoefficient(mach(DATCOM_BASE_FAIRING_END)),
+    method: 'DATCOM to Niskanen fairing',
+    warnings: [
+      'base drag: faired linearly between DATCOM figure 4.2.3.1-24 at Mach 1.295 and Niskanen eq. (3.94) at Mach 1.5 (D-069)',
+    ],
+  };
+}
+
 export function dragCoefficient(input: DragInputs): DragResult {
   const M: number = input.mach;
   if (!(M >= 0) || !Number.isFinite(M))
@@ -251,7 +335,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const aRef = (Math.PI * d * d) / 4;
   const warnings: string[] = [];
   const terms: DragTerm[] = [];
-  const geometry: ExternalGeometry = { length: 0, wettedBody: 0, baseRadius: 0 };
+  const geometry: ExternalGeometry = { length: 0, wettedBody: 0, baseRadius: 0, maxRadius: 0 };
   const finSets: { wettedArea: number; thickness: number; meanChord: number }[] = [];
 
   const statics = staticEntries(input.components);
@@ -263,6 +347,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
         geometry.length += st.length;
         geometry.wettedBody += st.wetted;
         geometry.baseRadius = st.aftRadius;
+        geometry.maxRadius = Math.max(geometry.maxRadius, st.aftRadius, st.foreRadius);
         const r = noseConePressureDrag(
           c.shape,
           c.shapeParameter,
@@ -285,12 +370,14 @@ export function dragCoefficient(input: DragInputs): DragResult {
         geometry.length += st.length;
         geometry.wettedBody += st.wetted;
         geometry.baseRadius = st.aftRadius;
+        geometry.maxRadius = Math.max(geometry.maxRadius, st.aftRadius, st.foreRadius);
         break;
       }
       case 'transition': {
         geometry.length += st.length;
         geometry.wettedBody += st.wetted;
         geometry.baseRadius = st.aftRadius;
+        geometry.maxRadius = Math.max(geometry.maxRadius, st.aftRadius, st.foreRadius);
         if (st.aftRadius > st.foreRadius) {
           const r = shoulderPressureDrag(
             c.shape,
@@ -329,7 +416,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           throw new InvalidInputError(
             'fin cross-section',
             c.crossSection,
-            'must be square, rounded or airfoil for the drag model (Niskanen §3.4.4)',
+            'must be square, rounded, airfoil, wedge or double-wedge for the drag model (Niskanen §3.4.4, D-066)',
           );
         }
         finSets.push({
@@ -338,6 +425,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           meanChord: st.finMeanChord,
         });
         const r = finPressureDrag(c.crossSection, st.finSweepAngle, input.mach);
+        warnings.push(...r.warnings);
         terms.push({
           index,
           kind: c.kind,
@@ -346,6 +434,37 @@ export function dragCoefficient(input: DragInputs): DragResult {
           area: st.area,
           cd: (r.cd * st.area) / aRef,
         });
+        if (c.crossSection !== 'square') {
+          // DRAG-18/19: wave drag of the section (DATCOM 4.1.5.1 B and C) on the
+          // planform area of the N fins; the airfoil profile is taken as
+          // biconvex and the rounded one as a round-nosed biconvex (D-062), the
+          // wedges with their own K (D-066).
+          const cr: number = c.rootChord;
+          const ct: number = c.tipChord;
+          const s: number = c.span;
+          const planform = ((cr + ct) / 2) * s;
+          const w = finWaveDrag({
+            mach: input.mach,
+            thicknessRatio: st.finThickness / st.finMeanChord,
+            aspectRatio: (2 * s * s) / planform,
+            quarterChordSweep: Math.atan(((c.sweep as number) + ct / 4 - cr / 4) / s),
+            leadingEdgeSweep: st.finSweepAngle,
+            section:
+              c.crossSection === 'wedge' || c.crossSection === 'double-wedge'
+                ? c.crossSection
+                : 'biconvex',
+          });
+          warnings.push(...w.warnings);
+          const area = c.count * planform;
+          terms.push({
+            index,
+            kind: c.kind,
+            source: `fin wave drag (DATCOM ${w.method})`,
+            cdComponent: w.cd,
+            area,
+            cd: (w.cd * area) / aRef,
+          });
+        }
         break;
       }
       case 'launchLug': {
@@ -399,11 +518,13 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const removeMotor =
     motor !== undefined && (motor.thrusting || input.baseDragMotorRule === 'always');
   const baseArea = baseDragArea(geometry.baseRadius, removeMotor ? motor.diameter : undefined);
-  const baseCd = baseDragCoefficient(input.mach);
+  const base = bodyBaseDrag(input, geometry, cfcForBase(input, geometry));
+  warnings.push(...base.warnings);
+  const baseCd = base.cd;
   terms.push({
     index: -1,
     kind: 'base',
-    source: removeMotor ? `base (motor area removed, ${input.baseDragMotorRule})` : 'base (full)',
+    source: `${removeMotor ? `base (motor area removed, ${input.baseDragMotorRule})` : 'base (full)'}, ${base.method}`,
     cdComponent: baseCd,
     area: baseArea,
     cd: (baseCd * baseArea) / aRef,

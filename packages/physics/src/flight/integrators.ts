@@ -147,3 +147,51 @@ export function nextStepSize(h: number, e: number, o: AdaptiveOptions): number {
   const factor = e === 0 ? 5 : Math.min(5, Math.max(0.2, 0.9 * e ** -0.2));
   return Math.min(o.maxStep, Math.max(o.minStep, h * factor));
 }
+
+/**
+ * DYN-16. Stability function of RK4. Applying eqs. (4.20) to (4.21) to the
+ * test equation y′ = λy gives k₁ = λy, k₂ = λ(1 + z/2)y, k₃ = λ(1 + z/2 + z²/4)y,
+ * k₄ = λ(1 + z + z²/2 + z³/4)y with z = λΔt, and the step y₁ = R(z) y₀ with
+ *   R(z) = 1 + z + z²/2 + z³/6 + z⁴/24,
+ * the fourth-order Taylor polynomial of e^z. The numerical solution decays
+ * only where |R(z)| ≤ 1; a step with |R(z)| > 1 grows by that factor every
+ * step whatever the true solution does. Returns |R(z)| for z = re + i·im.
+ */
+export function rk4StabilityFunction(re: number, im: number): number {
+  // Horner's scheme in complex arithmetic: R = (((z/24 + 1/6) z + 1/2) z + 1) z + 1.
+  let ar = 1 / 24;
+  let ai = 0;
+  for (const c of [1 / 6, 1 / 2, 1, 1]) {
+    const nr = ar * re - ai * im + c;
+    const ni = ar * im + ai * re;
+    ar = nr;
+    ai = ni;
+  }
+  return Math.hypot(ar, ai);
+}
+
+/**
+ * DYN-16. The largest step h for which |R(hλ)| ≤ 1 along the ray of the
+ * eigenvalue λ = re + i·im (Re λ ≤ 0), by bisection on |R| = 1 between 0 and
+ * 4/|λ| (the region never reaches |z| = 4). Infinity for λ = 0 or Re λ > 0
+ * (a growing true solution is not a stability question).
+ */
+export function rk4StableStep(re: number, im: number): number {
+  const mag = Math.hypot(re, im);
+  if (!(mag > 0) || re > 0) return Number.POSITIVE_INFINITY;
+  const ur = re / mag;
+  const ui = im / mag;
+  let lo = 0;
+  let hi = 4 / mag;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (rk4StabilityFunction(mid * mag * ur, mid * mag * ui) <= 1) lo = mid;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/** DYN-16. Boundary of the RK4 stability region on the negative real axis (|R(−x)| = 1): 2.7853. */
+export const RK4_REAL_AXIS_LIMIT = rk4StableStep(-1, 0);
+/** DYN-16. Boundary on the imaginary axis: 2√2 = 2.8284 (R(iθ) has |R|² = 1 − θ⁶/72 + θ⁸/576). */
+export const RK4_IMAGINARY_AXIS_LIMIT = rk4StableStep(0, 1);

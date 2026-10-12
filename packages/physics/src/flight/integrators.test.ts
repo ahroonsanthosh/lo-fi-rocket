@@ -1,4 +1,5 @@
 /** Integrator order tests (plan 0010, DYN-10, DYN-11, D-037). */
+import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { NonFiniteResultError } from '../errors.js';
 import {
@@ -8,6 +9,10 @@ import {
   nextStepSize,
   rk4Step,
   type Derivative,
+  rk4StabilityFunction,
+  rk4StableStep,
+  RK4_REAL_AXIS_LIMIT,
+  RK4_IMAGINARY_AXIS_LIMIT,
 } from './integrators.js';
 
 const decay: Derivative = (_t, y) => [-(y[0] ?? 0)];
@@ -162,5 +167,66 @@ describe('DYN-11 tableau against SciPy 1.18.1 (scipy/integrate/_ivp/rk.py, class
     E.forEach((e, i) => {
       expect(Math.abs((T.b4[i] ?? 0) - (T.b5[i] ?? 0) - e)).toBeLessThan(1e-15);
     });
+  });
+});
+
+describe('DYN-16 RK4 stability function and stable step (D-063)', () => {
+  it('R(z) = 1 + z + z²/2 + z³/6 + z⁴/24: R(0) = 1, R(−1) = 0.375, |R(2i)| = √(1 − 64/72 + 256/576) = 0.7454', () => {
+    expect(rk4StabilityFunction(0, 0)).toBe(1);
+    // 1 − 1 + 0.5 − 1/6 + 1/24 = 0.375
+    expect(rk4StabilityFunction(-1, 0)).toBeCloseTo(0.375, 12);
+    // |R(iθ)|² = 1 − θ⁶/72 + θ⁸/576 at θ = 2: 1 − 0.88889 + 0.44444 = 0.55556 → 0.74536
+    expect(rk4StabilityFunction(0, 2)).toBeCloseTo(Math.sqrt(1 - 64 / 72 + 256 / 576), 12);
+  });
+  it('equals the growth factor of one rk4Step on y′ = λy, real and complex λ', () => {
+    const cases: readonly (readonly [number, number])[] = [
+      [-0.7, 0],
+      [-2.5, 0],
+      [-3.1, 0],
+      [0, 1.5],
+      [-0.3, 2.2],
+    ];
+    for (const [re, im] of cases) {
+      const h = 1;
+      // y = [Re y, Im y]; λ y = (re + i im)(yr + i yi)
+      const f = (_t: number, y: readonly number[]): number[] => [
+        re * (y[0] ?? 0) - im * (y[1] ?? 0),
+        re * (y[1] ?? 0) + im * (y[0] ?? 0),
+      ];
+      const y1 = rk4Step(f, 0, [1, 0], h);
+      expect(Math.hypot(y1[0] ?? 0, y1[1] ?? 0)).toBeCloseTo(
+        rk4StabilityFunction(re * h, im * h),
+        12,
+      );
+    }
+  });
+  it('stability boundaries: real axis 2.7853, imaginary axis 2√2; a step beyond grows', () => {
+    expect(RK4_REAL_AXIS_LIMIT).toBeCloseTo(2.7853, 4);
+    expect(RK4_IMAGINARY_AXIS_LIMIT).toBeCloseTo(2 * Math.SQRT2, 6);
+    expect(rk4StabilityFunction(-2.8, 0)).toBeGreaterThan(1);
+    expect(rk4StabilityFunction(-2.77, 0)).toBeLessThan(1);
+    expect(rk4StabilityFunction(0, 2.85)).toBeGreaterThan(1);
+  });
+  it('rk4StableStep: 2.7853/|λ| on the real axis, Infinity for λ = 0 or Re λ > 0', () => {
+    // λ = −330 s⁻¹ (R2's roll damping rate at maximum dynamic pressure): h = 2.7853/330 = 0.0084403 s.
+    expect(rk4StableStep(-330, 0)).toBeCloseTo(0.0084403, 6);
+    expect(rk4StableStep(0, 0)).toBe(Number.POSITIVE_INFINITY);
+    expect(rk4StableStep(0.5, 0)).toBe(Number.POSITIVE_INFINITY);
+    expect(rk4StableStep(0, 100)).toBeCloseTo((2 * Math.SQRT2) / 100, 9);
+  });
+  it('property: |R(hλ)| ≤ 1 at the stable step and > 1 at 1.01 times it, for Re λ < 0', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: -500, max: -0.01, noNaN: true }),
+        fc.double({ min: -500, max: 500, noNaN: true }),
+        (re, im) => {
+          const h = rk4StableStep(re, im);
+          return (
+            rk4StabilityFunction(h * re, h * im) <= 1 + 1e-9 &&
+            rk4StabilityFunction(1.01 * h * re, 1.01 * h * im) > 1
+          );
+        },
+      ),
+    );
   });
 });

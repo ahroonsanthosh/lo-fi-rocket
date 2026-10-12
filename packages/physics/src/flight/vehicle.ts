@@ -8,6 +8,8 @@ import type { WindModel } from '../environment/wind.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import type { Metres, Newtons, Seconds } from '../units/si.js';
+import type { BaseDragMethod } from '../drag/drag.js';
+import type { LargeAngleMethod } from './aerodynamics.js';
 import type { GravityModel } from './gravity.js';
 
 /** A recovery device and when it deploys (Niskanen Table 4.2 p. 69; events with optional delays). */
@@ -86,10 +88,26 @@ export interface SimulationOptions {
   readonly finRollReduction: boolean;
   /** Base drag motor area rule (D-035). */
   readonly baseDragMotorRule: 'while-thrusting' | 'always';
+  /** Body base drag method (D-069); defaults to the drag model's default. */
+  readonly baseDragMethod?: BaseDragMethod;
+  /**
+   * Normal force at large angles of attack (D-070): 'datcom' continues a flight through 180° (HA-1 to HA-10);
+   * 'linear' keeps the small-angle model and ends the flight at 90° (D-046). Defaults to 'datcom'.
+   */
+  readonly largeAngleMethod?: LargeAngleMethod;
   readonly integrator: IntegratorOptions;
   readonly maxTime: Seconds;
   /** 6: the main simulator; 3: the point-mass cross-check (velocity-aligned axis, zero angle of attack). */
   readonly degreesOfFreedom: 6 | 3;
   /** Record a sample at most this often (every accepted step when absent). */
   readonly recordInterval?: Seconds;
+  /**
+   * Stability margin below which the flight carries a warning, calibers
+   * (plan 0030, D-067). Default `DEFAULT_MINIMUM_STABILITY_MARGIN`, the 1.0
+   * caliber rule of thumb of CLAUDE.md section 9, not a guarantee.
+   */
+  readonly minimumStabilityMargin?: number;
 }
+
+/** CLAUDE.md section 9: below 1.0 caliber, "warning, likely unstable"; a rule of thumb. */
+export const DEFAULT_MINIMUM_STABILITY_MARGIN = 1.0;

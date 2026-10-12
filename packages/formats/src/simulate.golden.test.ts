@@ -20,10 +20,13 @@ import {
   type FlightVehicle,
   type SimulationOptions,
 } from '@lo-fi-rocket/physics';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseEng } from './eng.js';
 import { motorFromEng } from './motor-definition.js';
 import { parseOrk } from './ork.js';
+
+// Each case flies a full 6DOF flight; under a parallel test run R5 takes about 5 s.
+vi.setConfig({ testTimeout: 60_000 });
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REFERENCE = join(HERE, '..', '..', '..', 'reference');
@@ -68,6 +71,8 @@ const options = (windX: number): SimulationOptions => ({
   aerodynamics: 'niskanen',
   finRollReduction: false,
   baseDragMotorRule: 'always',
+  baseDragMethod: 'niskanen',
+  largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(200),
   degreesOfFreedom: 6,

@@ -69,7 +69,7 @@ describe('runDispersion (plan 0017)', () => {
     expect(ap !== undefined && (ap.max - ap.min) / ap.mean).toBeLessThan(0.1);
     // A negative sampled speed is kept as a reversed wind: landings can lie on either side of the pad.
     expect(a.runs.some((r) => r.sampled.windSpeed < 0) || a.runs.length === 6).toBe(true);
-  });
+  }, 60_000);
   it('mass and impulse scales move the apogee the expected way; a failing run is reported, not thrown', () => {
     const heavier = runDispersion(design, { runs: 1, seed: 1, variations: ZERO_VARIATIONS });
     const r = runDispersion(

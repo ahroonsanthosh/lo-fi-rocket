@@ -1,0 +1,3287 @@
+{
+  "source": "USAF Stability and Control DATCOM (1978 revision), figure 4.1.3.2-56 (section 4.1.3.2 C), panels (a) lambda = 0, (c) 1/4, (e) 1/2, (f) 1; scan pp. 556 to 558 = pages 62 to 64 of reference/docs/usaf-datcom-1978-dtic-adb072483-pp0495-0920.pdf. Theory of references 20 to 25 of that section (linear theory, slender-wing theory below A beta = 1/4).",
+  "quantity": "tan(Lambda_LE) C_N_alpha (left, u <= 1) or beta C_N_alpha (right, u > 1), per radian, on the wing planform area, for curves of A tan(Lambda_LE); u = beta/tan(Lambda_LE) for u <= 1, u = 2 - tan(Lambda_LE)/beta for u > 1",
+  "method": {
+    "pass1": "read by eye against the printed grid from the 300 dpi renders before the pixel pass",
+    "pass2": "pixel y of each curve at 11 columns of 2x zoomed strips with a 10 px ruler, converted by the 7 and 0 gridline calibration per panel; the u = 2 end point of every curve is the measured 4.0 gridline (END_Y in the build script)",
+    "value": "mean; uncertainty per curve = max(0.1, half the worst disagreement) per radian in the chart ordinate",
+    "panels_not_digitised": "(b) lambda = 1/5 and (d) 1/3: the model interpolates linearly in lambda between the digitised panels; panel (g) rectangular wings is the lambda = 1, Lambda = 0 limit of (f)",
+    "curve_identity": "the A tan(Lambda_LE) labels sit on the curves at the u = 1 axis of every panel; the dashed 'unswept T.E.' and 'sonic T.E.' lines are boundaries, not curves, and were not digitised"
+  },
+  "panels": {
+    "a": {
+      "taper_ratio": 0.0,
+      "curves": {
+        "6": {
+          "a_tan_le": 6.0,
+          "worst_disagreement": 0.06,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 6.4,
+              "pass2": 6.436,
+              "value": 6.418,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.2,
+              "pass1": 6.4,
+              "pass2": 6.436,
+              "value": 6.418,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.4,
+              "pass1": 6.2,
+              "pass2": 6.154,
+              "value": 6.177,
+              "disagreement": 0.046
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.6,
+              "pass2": 5.66,
+              "value": 5.63,
+              "disagreement": 0.06
+            },
+            {
+              "u": 0.8,
+              "pass1": 5.2,
+              "pass2": 5.166,
+              "value": 5.183,
+              "disagreement": 0.034
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.6,
+              "pass2": 4.602,
+              "value": 4.601,
+              "disagreement": 0.002
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.3,
+              "pass2": 4.32,
+              "value": 4.31,
+              "disagreement": 0.02
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.1,
+              "pass2": 4.073,
+              "value": 4.087,
+              "disagreement": 0.027
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.0,
+              "pass2": 3.967,
+              "value": 3.984,
+              "disagreement": 0.033
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.967,
+              "value": 3.984,
+              "disagreement": 0.033
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 6.418],
+            [0.2, 6.418],
+            [0.4, 6.177],
+            [0.6, 5.63],
+            [0.8, 5.183],
+            [1.0, 4.601],
+            [1.2, 4.31],
+            [1.4, 4.087],
+            [1.6, 3.984],
+            [1.8, 3.984],
+            [2.0, 3.989]
+          ]
+        },
+        "5": {
+          "a_tan_le": 5.0,
+          "worst_disagreement": 0.049,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 6.4,
+              "pass2": 6.436,
+              "value": 6.418,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.2,
+              "pass1": 6.3,
+              "pass2": 6.33,
+              "value": 6.315,
+              "disagreement": 0.03
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.8,
+              "pass2": 5.836,
+              "value": 5.818,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.3,
+              "pass2": 5.343,
+              "value": 5.322,
+              "disagreement": 0.043
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.8,
+              "pass2": 4.849,
+              "value": 4.825,
+              "disagreement": 0.049
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.3,
+              "pass2": 4.32,
+              "value": 4.31,
+              "disagreement": 0.02
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.2,
+              "pass2": 4.179,
+              "value": 4.19,
+              "disagreement": 0.021
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.05,
+              "pass2": 4.038,
+              "value": 4.044,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.0,
+              "pass2": 3.967,
+              "value": 3.984,
+              "disagreement": 0.033
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.967,
+              "value": 3.984,
+              "disagreement": 0.033
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 6.418],
+            [0.2, 6.315],
+            [0.4, 5.818],
+            [0.6, 5.322],
+            [0.8, 4.825],
+            [1.0, 4.31],
+            [1.2, 4.19],
+            [1.4, 4.044],
+            [1.6, 3.984],
+            [1.8, 3.984],
+            [2.0, 3.989]
+          ]
+        },
+        "4": {
+          "a_tan_le": 4.0,
+          "worst_disagreement": 0.048,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 6.4,
+              "pass2": 6.436,
+              "value": 6.418,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.2,
+              "pass1": 6.0,
+              "pass2": 6.048,
+              "value": 6.024,
+              "disagreement": 0.048
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.5,
+              "pass2": 5.519,
+              "value": 5.51,
+              "disagreement": 0.019
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.0,
+              "pass2": 5.025,
+              "value": 5.013,
+              "disagreement": 0.025
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.5,
+              "pass2": 4.531,
+              "value": 4.515,
+              "disagreement": 0.031
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.0,
+              "pass2": 4.038,
+              "value": 4.019,
+              "disagreement": 0.038
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.0,
+              "pass2": 4.003,
+              "value": 4.002,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.0,
+              "pass2": 4.003,
+              "value": 4.002,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.0,
+              "pass2": 4.003,
+              "value": 4.002,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 4.003,
+              "value": 4.002,
+              "disagreement": 0.003
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 6.418],
+            [0.2, 6.024],
+            [0.4, 5.51],
+            [0.6, 5.013],
+            [0.8, 4.515],
+            [1.0, 4.019],
+            [1.2, 4.002],
+            [1.4, 4.002],
+            [1.6, 4.002],
+            [1.8, 4.002],
+            [2.0, 3.989]
+          ]
+        },
+        "3": {
+          "a_tan_le": 3.0,
+          "worst_disagreement": 0.066,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 6.4,
+              "pass2": 6.436,
+              "value": 6.418,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.7,
+              "pass2": 5.766,
+              "value": 5.733,
+              "disagreement": 0.066
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.2,
+              "pass2": 5.202,
+              "value": 5.201,
+              "disagreement": 0.002
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.7,
+              "pass2": 4.673,
+              "value": 4.687,
+              "disagreement": 0.027
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.2,
+              "pass2": 4.179,
+              "value": 4.19,
+              "disagreement": 0.021
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.7,
+              "pass2": 3.72,
+              "value": 3.71,
+              "disagreement": 0.02
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.8,
+              "pass2": 3.826,
+              "value": 3.813,
+              "disagreement": 0.026
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.9,
+              "pass2": 3.932,
+              "value": 3.916,
+              "disagreement": 0.032
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.0,
+              "pass2": 3.988,
+              "value": 3.994,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 4.003,
+              "value": 4.002,
+              "disagreement": 0.003
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 6.418],
+            [0.2, 5.733],
+            [0.4, 5.201],
+            [0.6, 4.687],
+            [0.8, 4.19],
+            [1.0, 3.71],
+            [1.2, 3.813],
+            [1.4, 3.916],
+            [1.6, 3.994],
+            [1.8, 4.002],
+            [2.0, 3.989]
+          ]
+        },
+        "2": {
+          "a_tan_le": 2.0,
+          "worst_disagreement": 0.048,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 6.4,
+              "pass2": 6.436,
+              "value": 6.418,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.4,
+              "pass2": 5.448,
+              "value": 5.424,
+              "disagreement": 0.048
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.9,
+              "pass2": 4.884,
+              "value": 4.892,
+              "disagreement": 0.016
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.35,
+              "pass2": 4.355,
+              "value": 4.353,
+              "disagreement": 0.005
+            },
+            {
+              "u": 0.8,
+              "pass1": 3.8,
+              "pass2": 3.826,
+              "value": 3.813,
+              "disagreement": 0.026
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.4,
+              "pass2": 3.403,
+              "value": 3.401,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.6,
+              "pass2": 3.579,
+              "value": 3.59,
+              "disagreement": 0.021
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.75,
+              "pass2": 3.72,
+              "value": 3.735,
+              "disagreement": 0.03
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.9,
+              "pass2": 3.861,
+              "value": 3.881,
+              "disagreement": 0.039
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.967,
+              "value": 3.984,
+              "disagreement": 0.033
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 6.418],
+            [0.2, 5.424],
+            [0.4, 4.892],
+            [0.6, 4.353],
+            [0.8, 3.813],
+            [1.0, 3.401],
+            [1.2, 3.59],
+            [1.4, 3.735],
+            [1.6, 3.881],
+            [1.8, 3.984],
+            [2.0, 3.989]
+          ]
+        },
+        "1": {
+          "a_tan_le": 1.0,
+          "worst_disagreement": 0.034,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 1.55,
+              "pass2": 1.534,
+              "value": 1.542,
+              "disagreement": 0.016
+            },
+            {
+              "u": 0.2,
+              "pass1": 1.55,
+              "pass2": 1.569,
+              "value": 1.559,
+              "disagreement": 0.019
+            },
+            {
+              "u": 0.4,
+              "pass1": 1.6,
+              "pass2": 1.605,
+              "value": 1.603,
+              "disagreement": 0.005
+            },
+            {
+              "u": 0.6,
+              "pass1": 1.65,
+              "pass2": 1.675,
+              "value": 1.663,
+              "disagreement": 0.025
+            },
+            {
+              "u": 0.8,
+              "pass1": 1.75,
+              "pass2": 1.746,
+              "value": 1.748,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.0,
+              "pass1": 1.85,
+              "pass2": 1.851,
+              "value": 1.851,
+              "disagreement": 0.001
+            },
+            {
+              "u": 1.2,
+              "pass1": 2.1,
+              "pass2": 2.134,
+              "value": 2.117,
+              "disagreement": 0.034
+            },
+            {
+              "u": 1.4,
+              "pass1": 2.6,
+              "pass2": 2.592,
+              "value": 2.596,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.2,
+              "pass2": 3.227,
+              "value": 3.213,
+              "disagreement": 0.027
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.8,
+              "pass2": 3.791,
+              "value": 3.795,
+              "disagreement": 0.009
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 1.542],
+            [0.2, 1.559],
+            [0.4, 1.603],
+            [0.6, 1.663],
+            [0.8, 1.748],
+            [1.0, 1.851],
+            [1.2, 2.117],
+            [1.4, 2.596],
+            [1.6, 3.213],
+            [1.8, 3.795],
+            [2.0, 3.989]
+          ]
+        },
+        "0.5": {
+          "a_tan_le": 0.5,
+          "worst_disagreement": 0.029,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.8,
+              "pass2": 0.793,
+              "value": 0.796,
+              "disagreement": 0.007
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.8,
+              "pass2": 0.793,
+              "value": 0.796,
+              "disagreement": 0.007
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.8,
+              "pass2": 0.829,
+              "value": 0.815,
+              "disagreement": 0.029
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.85,
+              "pass2": 0.864,
+              "value": 0.857,
+              "disagreement": 0.014
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.9,
+              "pass2": 0.899,
+              "value": 0.899,
+              "disagreement": 0.001
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.95,
+              "pass2": 0.935,
+              "value": 0.943,
+              "disagreement": 0.015
+            },
+            {
+              "u": 1.2,
+              "pass1": 1.05,
+              "pass2": 1.04,
+              "value": 1.045,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.4,
+              "pass1": 1.3,
+              "pass2": 1.322,
+              "value": 1.311,
+              "disagreement": 0.022
+            },
+            {
+              "u": 1.6,
+              "pass1": 1.95,
+              "pass2": 1.957,
+              "value": 1.954,
+              "disagreement": 0.007
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.1,
+              "pass2": 3.086,
+              "value": 3.093,
+              "disagreement": 0.014
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 0.796],
+            [0.2, 0.796],
+            [0.4, 0.815],
+            [0.6, 0.857],
+            [0.8, 0.899],
+            [1.0, 0.943],
+            [1.2, 1.045],
+            [1.4, 1.311],
+            [1.6, 1.954],
+            [1.8, 3.093],
+            [2.0, 3.989]
+          ]
+        },
+        "0.25": {
+          "a_tan_le": 0.25,
+          "worst_disagreement": 0.028,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.4,
+              "pass2": 0.406,
+              "value": 0.403,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.4,
+              "pass2": 0.406,
+              "value": 0.403,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.4,
+              "pass2": 0.42,
+              "value": 0.41,
+              "disagreement": 0.02
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.42,
+              "pass2": 0.441,
+              "value": 0.43,
+              "disagreement": 0.021
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.45,
+              "pass2": 0.462,
+              "value": 0.456,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.47,
+              "pass2": 0.476,
+              "value": 0.473,
+              "disagreement": 0.006
+            },
+            {
+              "u": 1.2,
+              "pass1": 0.5,
+              "pass2": 0.511,
+              "value": 0.506,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.4,
+              "pass1": 0.65,
+              "pass2": 0.652,
+              "value": 0.651,
+              "disagreement": 0.002
+            },
+            {
+              "u": 1.6,
+              "pass1": 1.05,
+              "pass2": 1.04,
+              "value": 1.045,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.8,
+              "pass1": 2.0,
+              "pass2": 2.028,
+              "value": 2.014,
+              "disagreement": 0.028
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.978,
+              "value": 3.989,
+              "disagreement": 0.022
+            }
+          ],
+          "points": [
+            [0, 0.403],
+            [0.2, 0.403],
+            [0.4, 0.41],
+            [0.6, 0.43],
+            [0.8, 0.456],
+            [1.0, 0.473],
+            [1.2, 0.506],
+            [1.4, 0.651],
+            [1.6, 1.045],
+            [1.8, 2.014],
+            [2.0, 3.989]
+          ]
+        }
+      }
+    },
+    "c": {
+      "taper_ratio": 0.25,
+      "curves": {
+        "6": {
+          "a_tan_le": 6.0,
+          "worst_disagreement": 0.035,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.8,
+              "pass2": 5.794,
+              "value": 5.797,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.8,
+              "pass2": 5.829,
+              "value": 5.814,
+              "disagreement": 0.029
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.75,
+              "pass2": 5.759,
+              "value": 5.755,
+              "disagreement": 0.009
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.6,
+              "pass2": 5.618,
+              "value": 5.609,
+              "disagreement": 0.018
+            },
+            {
+              "u": 0.8,
+              "pass1": 5.05,
+              "pass2": 5.053,
+              "value": 5.051,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.6,
+              "pass2": 4.595,
+              "value": 4.598,
+              "disagreement": 0.005
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.7,
+              "pass2": 4.665,
+              "value": 4.683,
+              "disagreement": 0.035
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.55,
+              "pass2": 4.56,
+              "value": 4.555,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.3,
+              "pass2": 4.313,
+              "value": 4.306,
+              "disagreement": 0.013
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.05,
+              "pass2": 4.066,
+              "value": 4.058,
+              "disagreement": 0.016
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 5.797],
+            [0.2, 5.814],
+            [0.4, 5.755],
+            [0.6, 5.609],
+            [0.8, 5.051],
+            [1.0, 4.598],
+            [1.2, 4.683],
+            [1.4, 4.555],
+            [1.6, 4.306],
+            [1.8, 4.058],
+            [2.0, 4.003]
+          ]
+        },
+        "5": {
+          "a_tan_le": 5.0,
+          "worst_disagreement": 0.023,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.7,
+              "pass2": 5.723,
+              "value": 5.712,
+              "disagreement": 0.023
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.7,
+              "pass2": 5.723,
+              "value": 5.712,
+              "disagreement": 0.023
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.6,
+              "pass2": 5.618,
+              "value": 5.609,
+              "disagreement": 0.018
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.25,
+              "pass2": 5.23,
+              "value": 5.24,
+              "disagreement": 0.02
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.65,
+              "pass2": 4.665,
+              "value": 4.658,
+              "disagreement": 0.015
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.2,
+              "pass2": 4.207,
+              "value": 4.204,
+              "disagreement": 0.007
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.3,
+              "pass2": 4.313,
+              "value": 4.306,
+              "disagreement": 0.013
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.25,
+              "pass2": 4.242,
+              "value": 4.246,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.1,
+              "pass2": 4.101,
+              "value": 4.101,
+              "disagreement": 0.001
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 4.01,
+              "value": 4.005,
+              "disagreement": 0.01
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 5.712],
+            [0.2, 5.712],
+            [0.4, 5.609],
+            [0.6, 5.24],
+            [0.8, 4.658],
+            [1.0, 4.204],
+            [1.2, 4.306],
+            [1.4, 4.246],
+            [1.6, 4.101],
+            [1.8, 4.005],
+            [2.0, 4.003]
+          ]
+        },
+        "4": {
+          "a_tan_le": 4.0,
+          "worst_disagreement": 0.053,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.6,
+              "pass2": 5.653,
+              "value": 5.627,
+              "disagreement": 0.053
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.6,
+              "pass2": 5.653,
+              "value": 5.627,
+              "disagreement": 0.053
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.5,
+              "pass2": 5.512,
+              "value": 5.506,
+              "disagreement": 0.012
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.0,
+              "pass2": 4.983,
+              "value": 4.992,
+              "disagreement": 0.017
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.45,
+              "pass2": 4.454,
+              "value": 4.452,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.9,
+              "pass2": 3.925,
+              "value": 3.912,
+              "disagreement": 0.025
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.05,
+              "pass2": 4.066,
+              "value": 4.058,
+              "disagreement": 0.016
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.05,
+              "pass2": 4.066,
+              "value": 4.058,
+              "disagreement": 0.016
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.0,
+              "pass2": 4.031,
+              "value": 4.015,
+              "disagreement": 0.031
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 4.01,
+              "value": 4.005,
+              "disagreement": 0.01
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 5.627],
+            [0.2, 5.627],
+            [0.4, 5.506],
+            [0.6, 4.992],
+            [0.8, 4.452],
+            [1.0, 3.912],
+            [1.2, 4.058],
+            [1.4, 4.058],
+            [1.6, 4.015],
+            [1.8, 4.005],
+            [2.0, 4.003]
+          ]
+        },
+        "3": {
+          "a_tan_le": 3.0,
+          "worst_disagreement": 0.043,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.5,
+              "pass2": 5.512,
+              "value": 5.506,
+              "disagreement": 0.012
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.45,
+              "pass2": 5.477,
+              "value": 5.463,
+              "disagreement": 0.027
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.2,
+              "pass2": 5.194,
+              "value": 5.197,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.6,
+              "pass2": 4.63,
+              "value": 4.615,
+              "disagreement": 0.03
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.15,
+              "pass2": 4.137,
+              "value": 4.143,
+              "disagreement": 0.013
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.6,
+              "pass2": 3.643,
+              "value": 3.622,
+              "disagreement": 0.043
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.8,
+              "pass2": 3.819,
+              "value": 3.809,
+              "disagreement": 0.019
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.9,
+              "pass2": 3.89,
+              "value": 3.895,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.95,
+              "pass2": 3.96,
+              "value": 3.955,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.995,
+              "value": 3.998,
+              "disagreement": 0.005
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 5.506],
+            [0.2, 5.463],
+            [0.4, 5.197],
+            [0.6, 4.615],
+            [0.8, 4.143],
+            [1.0, 3.622],
+            [1.2, 3.809],
+            [1.4, 3.895],
+            [1.6, 3.955],
+            [1.8, 3.998],
+            [2.0, 4.003]
+          ]
+        },
+        "2": {
+          "a_tan_le": 2.0,
+          "worst_disagreement": 0.04,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.35,
+              "pass2": 5.371,
+              "value": 5.361,
+              "disagreement": 0.021
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.3,
+              "pass2": 5.265,
+              "value": 5.282,
+              "disagreement": 0.035
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.9,
+              "pass2": 4.912,
+              "value": 4.906,
+              "disagreement": 0.012
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.4,
+              "pass2": 4.383,
+              "value": 4.392,
+              "disagreement": 0.017
+            },
+            {
+              "u": 0.8,
+              "pass1": 3.9,
+              "pass2": 3.89,
+              "value": 3.895,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.4,
+              "pass2": 3.396,
+              "value": 3.398,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.6,
+              "pass2": 3.608,
+              "value": 3.604,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.75,
+              "pass2": 3.749,
+              "value": 3.75,
+              "disagreement": 0.001
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.9,
+              "pass2": 3.89,
+              "value": 3.895,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.96,
+              "value": 3.98,
+              "disagreement": 0.04
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 5.361],
+            [0.2, 5.282],
+            [0.4, 4.906],
+            [0.6, 4.392],
+            [0.8, 3.895],
+            [1.0, 3.398],
+            [1.2, 3.604],
+            [1.4, 3.75],
+            [1.6, 3.895],
+            [1.8, 3.98],
+            [2.0, 4.003]
+          ]
+        },
+        "1": {
+          "a_tan_le": 1.0,
+          "worst_disagreement": 0.039,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 1.5,
+              "pass2": 1.527,
+              "value": 1.514,
+              "disagreement": 0.027
+            },
+            {
+              "u": 0.2,
+              "pass1": 1.55,
+              "pass2": 1.562,
+              "value": 1.556,
+              "disagreement": 0.012
+            },
+            {
+              "u": 0.4,
+              "pass1": 1.6,
+              "pass2": 1.633,
+              "value": 1.617,
+              "disagreement": 0.033
+            },
+            {
+              "u": 0.6,
+              "pass1": 1.7,
+              "pass2": 1.739,
+              "value": 1.72,
+              "disagreement": 0.039
+            },
+            {
+              "u": 0.8,
+              "pass1": 1.8,
+              "pass2": 1.809,
+              "value": 1.804,
+              "disagreement": 0.009
+            },
+            {
+              "u": 1.0,
+              "pass1": 1.95,
+              "pass2": 1.95,
+              "value": 1.95,
+              "disagreement": 0.0
+            },
+            {
+              "u": 1.2,
+              "pass1": 2.25,
+              "pass2": 2.268,
+              "value": 2.259,
+              "disagreement": 0.018
+            },
+            {
+              "u": 1.4,
+              "pass1": 2.8,
+              "pass2": 2.796,
+              "value": 2.798,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.4,
+              "pass2": 3.396,
+              "value": 3.398,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.85,
+              "pass2": 3.819,
+              "value": 3.835,
+              "disagreement": 0.031
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 1.514],
+            [0.2, 1.556],
+            [0.4, 1.617],
+            [0.6, 1.72],
+            [0.8, 1.804],
+            [1.0, 1.95],
+            [1.2, 2.259],
+            [1.4, 2.798],
+            [1.6, 3.398],
+            [1.8, 3.835],
+            [2.0, 4.003]
+          ]
+        },
+        "0.5": {
+          "a_tan_le": 0.5,
+          "worst_disagreement": 0.023,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.8,
+              "pass2": 0.786,
+              "value": 0.793,
+              "disagreement": 0.014
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.8,
+              "pass2": 0.801,
+              "value": 0.8,
+              "disagreement": 0.001
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.8,
+              "pass2": 0.822,
+              "value": 0.811,
+              "disagreement": 0.022
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.85,
+              "pass2": 0.857,
+              "value": 0.853,
+              "disagreement": 0.007
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.9,
+              "pass2": 0.878,
+              "value": 0.889,
+              "disagreement": 0.022
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.95,
+              "pass2": 0.927,
+              "value": 0.939,
+              "disagreement": 0.023
+            },
+            {
+              "u": 1.2,
+              "pass1": 1.05,
+              "pass2": 1.069,
+              "value": 1.059,
+              "disagreement": 0.019
+            },
+            {
+              "u": 1.4,
+              "pass1": 1.4,
+              "pass2": 1.386,
+              "value": 1.393,
+              "disagreement": 0.014
+            },
+            {
+              "u": 1.6,
+              "pass1": 2.0,
+              "pass2": 2.021,
+              "value": 2.01,
+              "disagreement": 0.021
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.1,
+              "pass2": 3.114,
+              "value": 3.107,
+              "disagreement": 0.014
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 0.793],
+            [0.2, 0.8],
+            [0.4, 0.811],
+            [0.6, 0.853],
+            [0.8, 0.889],
+            [1.0, 0.939],
+            [1.2, 1.059],
+            [1.4, 1.393],
+            [1.6, 2.01],
+            [1.8, 3.107],
+            [2.0, 4.003]
+          ]
+        },
+        "0.25": {
+          "a_tan_le": 0.25,
+          "worst_disagreement": 0.019,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.4,
+              "pass2": 0.413,
+              "value": 0.406,
+              "disagreement": 0.013
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.4,
+              "pass2": 0.413,
+              "value": 0.406,
+              "disagreement": 0.013
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.42,
+              "pass2": 0.427,
+              "value": 0.423,
+              "disagreement": 0.007
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.43,
+              "pass2": 0.441,
+              "value": 0.435,
+              "disagreement": 0.011
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.45,
+              "pass2": 0.455,
+              "value": 0.453,
+              "disagreement": 0.005
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.47,
+              "pass2": 0.469,
+              "value": 0.469,
+              "disagreement": 0.001
+            },
+            {
+              "u": 1.2,
+              "pass1": 0.52,
+              "pass2": 0.525,
+              "value": 0.522,
+              "disagreement": 0.005
+            },
+            {
+              "u": 1.4,
+              "pass1": 0.7,
+              "pass2": 0.681,
+              "value": 0.691,
+              "disagreement": 0.019
+            },
+            {
+              "u": 1.6,
+              "pass1": 1.1,
+              "pass2": 1.104,
+              "value": 1.102,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.8,
+              "pass1": 2.1,
+              "pass2": 2.091,
+              "value": 2.096,
+              "disagreement": 0.009
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 4.006,
+              "value": 4.003,
+              "disagreement": 0.006
+            }
+          ],
+          "points": [
+            [0, 0.406],
+            [0.2, 0.406],
+            [0.4, 0.423],
+            [0.6, 0.435],
+            [0.8, 0.453],
+            [1.0, 0.469],
+            [1.2, 0.522],
+            [1.4, 0.691],
+            [1.6, 1.102],
+            [1.8, 2.096],
+            [2.0, 4.003]
+          ]
+        }
+      }
+    },
+    "e": {
+      "taper_ratio": 0.5,
+      "curves": {
+        "6": {
+          "a_tan_le": 6.0,
+          "worst_disagreement": 0.113,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.2,
+              "pass2": 5.118,
+              "value": 5.159,
+              "disagreement": 0.082
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.2,
+              "pass2": 5.118,
+              "value": 5.159,
+              "disagreement": 0.082
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.2,
+              "pass2": 5.104,
+              "value": 5.152,
+              "disagreement": 0.096
+            },
+            {
+              "u": 0.6,
+              "pass1": 5.15,
+              "pass2": 5.083,
+              "value": 5.117,
+              "disagreement": 0.067
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.7,
+              "pass2": 4.696,
+              "value": 4.698,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.35,
+              "pass2": 4.344,
+              "value": 4.347,
+              "disagreement": 0.006
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.45,
+              "pass2": 4.415,
+              "value": 4.433,
+              "disagreement": 0.035
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.4,
+              "pass2": 4.344,
+              "value": 4.372,
+              "disagreement": 0.056
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.15,
+              "pass2": 4.133,
+              "value": 4.142,
+              "disagreement": 0.017
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.887,
+              "value": 3.944,
+              "disagreement": 0.113
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 5.159],
+            [0.2, 5.159],
+            [0.4, 5.152],
+            [0.6, 5.117],
+            [0.8, 4.698],
+            [1.0, 4.347],
+            [1.2, 4.433],
+            [1.4, 4.372],
+            [1.6, 4.142],
+            [1.8, 3.944],
+            [2.0, 3.998]
+          ]
+        },
+        "5": {
+          "a_tan_le": 5.0,
+          "worst_disagreement": 0.183,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 5.1,
+              "pass2": 5.048,
+              "value": 5.074,
+              "disagreement": 0.052
+            },
+            {
+              "u": 0.2,
+              "pass1": 5.1,
+              "pass2": 5.048,
+              "value": 5.074,
+              "disagreement": 0.052
+            },
+            {
+              "u": 0.4,
+              "pass1": 5.05,
+              "pass2": 5.034,
+              "value": 5.042,
+              "disagreement": 0.016
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.95,
+              "pass2": 4.907,
+              "value": 4.928,
+              "disagreement": 0.043
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.4,
+              "pass2": 4.415,
+              "value": 4.408,
+              "disagreement": 0.015
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.0,
+              "pass2": 3.957,
+              "value": 3.978,
+              "disagreement": 0.043
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.1,
+              "pass2": 4.063,
+              "value": 4.082,
+              "disagreement": 0.037
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.1,
+              "pass2": 4.049,
+              "value": 4.075,
+              "disagreement": 0.051
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.0,
+              "pass2": 3.922,
+              "value": 3.961,
+              "disagreement": 0.078
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.817,
+              "value": 3.909,
+              "disagreement": 0.183
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 5.074],
+            [0.2, 5.074],
+            [0.4, 5.042],
+            [0.6, 4.928],
+            [0.8, 4.408],
+            [1.0, 3.978],
+            [1.2, 4.082],
+            [1.4, 4.075],
+            [1.6, 3.961],
+            [1.8, 3.909],
+            [2.0, 3.998]
+          ]
+        },
+        "4": {
+          "a_tan_le": 4.0,
+          "worst_disagreement": 0.205,
+          "uncertainty": 0.103,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 4.95,
+              "pass2": 4.942,
+              "value": 4.946,
+              "disagreement": 0.008
+            },
+            {
+              "u": 0.2,
+              "pass1": 4.95,
+              "pass2": 4.942,
+              "value": 4.946,
+              "disagreement": 0.008
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.9,
+              "pass2": 4.907,
+              "value": 4.904,
+              "disagreement": 0.007
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.65,
+              "pass2": 4.626,
+              "value": 4.638,
+              "disagreement": 0.024
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.1,
+              "pass2": 4.133,
+              "value": 4.117,
+              "disagreement": 0.033
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.7,
+              "pass2": 3.711,
+              "value": 3.705,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.85,
+              "pass2": 3.817,
+              "value": 3.833,
+              "disagreement": 0.033
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.9,
+              "pass2": 3.852,
+              "value": 3.876,
+              "disagreement": 0.048
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.95,
+              "pass2": 3.817,
+              "value": 3.884,
+              "disagreement": 0.133
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.795,
+              "value": 3.897,
+              "disagreement": 0.205
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 4.946],
+            [0.2, 4.946],
+            [0.4, 4.904],
+            [0.6, 4.638],
+            [0.8, 4.117],
+            [1.0, 3.705],
+            [1.2, 3.833],
+            [1.4, 3.876],
+            [1.6, 3.884],
+            [1.8, 3.897],
+            [2.0, 3.998]
+          ]
+        },
+        "3": {
+          "a_tan_le": 3.0,
+          "worst_disagreement": 0.205,
+          "uncertainty": 0.103,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 4.85,
+              "pass2": 4.837,
+              "value": 4.843,
+              "disagreement": 0.013
+            },
+            {
+              "u": 0.2,
+              "pass1": 4.85,
+              "pass2": 4.837,
+              "value": 4.843,
+              "disagreement": 0.013
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.7,
+              "pass2": 4.696,
+              "value": 4.698,
+              "disagreement": 0.004
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.3,
+              "pass2": 4.309,
+              "value": 4.304,
+              "disagreement": 0.009
+            },
+            {
+              "u": 0.8,
+              "pass1": 3.85,
+              "pass2": 3.852,
+              "value": 3.851,
+              "disagreement": 0.002
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.4,
+              "pass2": 3.394,
+              "value": 3.397,
+              "disagreement": 0.006
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.65,
+              "pass2": 3.606,
+              "value": 3.628,
+              "disagreement": 0.044
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.8,
+              "pass2": 3.711,
+              "value": 3.755,
+              "disagreement": 0.089
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.95,
+              "pass2": 3.781,
+              "value": 3.865,
+              "disagreement": 0.169
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.795,
+              "value": 3.897,
+              "disagreement": 0.205
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 4.843],
+            [0.2, 4.843],
+            [0.4, 4.698],
+            [0.6, 4.304],
+            [0.8, 3.851],
+            [1.0, 3.397],
+            [1.2, 3.628],
+            [1.4, 3.755],
+            [1.6, 3.865],
+            [1.8, 3.897],
+            [2.0, 3.998]
+          ]
+        },
+        "2": {
+          "a_tan_le": 2.0,
+          "worst_disagreement": 0.183,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 4.15,
+              "pass2": 4.133,
+              "value": 4.142,
+              "disagreement": 0.017
+            },
+            {
+              "u": 0.2,
+              "pass1": 4.1,
+              "pass2": 4.098,
+              "value": 4.099,
+              "disagreement": 0.002
+            },
+            {
+              "u": 0.4,
+              "pass1": 3.85,
+              "pass2": 3.852,
+              "value": 3.851,
+              "disagreement": 0.002
+            },
+            {
+              "u": 0.6,
+              "pass1": 3.55,
+              "pass2": 3.535,
+              "value": 3.542,
+              "disagreement": 0.015
+            },
+            {
+              "u": 0.8,
+              "pass1": 3.2,
+              "pass2": 3.219,
+              "value": 3.21,
+              "disagreement": 0.019
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.0,
+              "pass2": 3.008,
+              "value": 3.004,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.25,
+              "pass2": 3.254,
+              "value": 3.252,
+              "disagreement": 0.004
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.5,
+              "pass2": 3.5,
+              "value": 3.5,
+              "disagreement": 0.0
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.8,
+              "pass2": 3.676,
+              "value": 3.738,
+              "disagreement": 0.124
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.95,
+              "pass2": 3.767,
+              "value": 3.859,
+              "disagreement": 0.183
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 4.142],
+            [0.2, 4.099],
+            [0.4, 3.851],
+            [0.6, 3.542],
+            [0.8, 3.21],
+            [1.0, 3.004],
+            [1.2, 3.252],
+            [1.4, 3.5],
+            [1.6, 3.738],
+            [1.8, 3.859],
+            [2.0, 3.998]
+          ]
+        },
+        "1": {
+          "a_tan_le": 1.0,
+          "worst_disagreement": 0.124,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 1.65,
+              "pass2": 1.671,
+              "value": 1.66,
+              "disagreement": 0.021
+            },
+            {
+              "u": 0.2,
+              "pass1": 1.65,
+              "pass2": 1.685,
+              "value": 1.667,
+              "disagreement": 0.035
+            },
+            {
+              "u": 0.4,
+              "pass1": 1.7,
+              "pass2": 1.706,
+              "value": 1.703,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.6,
+              "pass1": 1.75,
+              "pass2": 1.755,
+              "value": 1.752,
+              "disagreement": 0.005
+            },
+            {
+              "u": 0.8,
+              "pass1": 1.8,
+              "pass2": 1.812,
+              "value": 1.806,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.0,
+              "pass1": 1.9,
+              "pass2": 1.917,
+              "value": 1.909,
+              "disagreement": 0.017
+            },
+            {
+              "u": 1.2,
+              "pass1": 2.2,
+              "pass2": 2.234,
+              "value": 2.217,
+              "disagreement": 0.034
+            },
+            {
+              "u": 1.4,
+              "pass1": 2.75,
+              "pass2": 2.761,
+              "value": 2.756,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.3,
+              "pass2": 3.289,
+              "value": 3.295,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.8,
+              "pass2": 3.676,
+              "value": 3.738,
+              "disagreement": 0.124
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 1.66],
+            [0.2, 1.667],
+            [0.4, 1.703],
+            [0.6, 1.752],
+            [0.8, 1.806],
+            [1.0, 1.909],
+            [1.2, 2.217],
+            [1.4, 2.756],
+            [1.6, 3.295],
+            [1.8, 3.738],
+            [2.0, 3.998]
+          ]
+        },
+        "0.5": {
+          "a_tan_le": 0.5,
+          "worst_disagreement": 0.041,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.8,
+              "pass2": 0.827,
+              "value": 0.814,
+              "disagreement": 0.027
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.8,
+              "pass2": 0.841,
+              "value": 0.821,
+              "disagreement": 0.041
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.85,
+              "pass2": 0.862,
+              "value": 0.856,
+              "disagreement": 0.012
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.85,
+              "pass2": 0.883,
+              "value": 0.867,
+              "disagreement": 0.033
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.9,
+              "pass2": 0.911,
+              "value": 0.905,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.95,
+              "pass2": 0.967,
+              "value": 0.958,
+              "disagreement": 0.017
+            },
+            {
+              "u": 1.2,
+              "pass1": 1.1,
+              "pass2": 1.108,
+              "value": 1.104,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.4,
+              "pass1": 1.4,
+              "pass2": 1.389,
+              "value": 1.394,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.6,
+              "pass1": 2.05,
+              "pass2": 2.023,
+              "value": 2.037,
+              "disagreement": 0.027
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.0,
+              "pass2": 3.008,
+              "value": 3.004,
+              "disagreement": 0.008
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 0.814],
+            [0.2, 0.821],
+            [0.4, 0.856],
+            [0.6, 0.867],
+            [0.8, 0.905],
+            [1.0, 0.958],
+            [1.2, 1.104],
+            [1.4, 1.394],
+            [1.6, 2.037],
+            [1.8, 3.004],
+            [2.0, 3.998]
+          ]
+        },
+        "0.25": {
+          "a_tan_le": 0.25,
+          "worst_disagreement": 0.034,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.4,
+              "pass2": 0.369,
+              "value": 0.385,
+              "disagreement": 0.031
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.4,
+              "pass2": 0.376,
+              "value": 0.388,
+              "disagreement": 0.024
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.4,
+              "pass2": 0.39,
+              "value": 0.395,
+              "disagreement": 0.01
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.42,
+              "pass2": 0.405,
+              "value": 0.412,
+              "disagreement": 0.015
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.43,
+              "pass2": 0.419,
+              "value": 0.424,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.45,
+              "pass2": 0.44,
+              "value": 0.445,
+              "disagreement": 0.01
+            },
+            {
+              "u": 1.2,
+              "pass1": 0.5,
+              "pass2": 0.489,
+              "value": 0.494,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.4,
+              "pass1": 0.65,
+              "pass2": 0.616,
+              "value": 0.633,
+              "disagreement": 0.034
+            },
+            {
+              "u": 1.6,
+              "pass1": 1.05,
+              "pass2": 1.038,
+              "value": 1.044,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.8,
+              "pass1": 2.05,
+              "pass2": 2.023,
+              "value": 2.037,
+              "disagreement": 0.027
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.996,
+              "value": 3.998,
+              "disagreement": 0.004
+            }
+          ],
+          "points": [
+            [0, 0.385],
+            [0.2, 0.388],
+            [0.4, 0.395],
+            [0.6, 0.412],
+            [0.8, 0.424],
+            [1.0, 0.445],
+            [1.2, 0.494],
+            [1.4, 0.633],
+            [1.6, 1.044],
+            [1.8, 2.037],
+            [2.0, 3.998]
+          ]
+        }
+      }
+    },
+    "f": {
+      "taper_ratio": 1.0,
+      "curves": {
+        "6": {
+          "a_tan_le": 6.0,
+          "worst_disagreement": 0.029,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 4.55,
+              "pass2": 4.558,
+              "value": 4.554,
+              "disagreement": 0.008
+            },
+            {
+              "u": 0.2,
+              "pass1": 4.55,
+              "pass2": 4.558,
+              "value": 4.554,
+              "disagreement": 0.008
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.5,
+              "pass2": 4.523,
+              "value": 4.511,
+              "disagreement": 0.023
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.5,
+              "pass2": 4.523,
+              "value": 4.511,
+              "disagreement": 0.023
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.6,
+              "pass2": 4.629,
+              "value": 4.614,
+              "disagreement": 0.029
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.8,
+              "pass2": 4.805,
+              "value": 4.803,
+              "disagreement": 0.005
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.85,
+              "pass2": 4.841,
+              "value": 4.845,
+              "disagreement": 0.009
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.7,
+              "pass2": 4.7,
+              "value": 4.7,
+              "disagreement": 0.0
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.4,
+              "pass2": 4.382,
+              "value": 4.391,
+              "disagreement": 0.018
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.15,
+              "pass2": 4.135,
+              "value": 4.143,
+              "disagreement": 0.015
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 4.554],
+            [0.2, 4.554],
+            [0.4, 4.511],
+            [0.6, 4.511],
+            [0.8, 4.614],
+            [1.0, 4.803],
+            [1.2, 4.845],
+            [1.4, 4.7],
+            [1.6, 4.391],
+            [1.8, 4.143],
+            [2.0, 3.998]
+          ]
+        },
+        "5": {
+          "a_tan_le": 5.0,
+          "worst_disagreement": 0.032,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 4.4,
+              "pass2": 4.417,
+              "value": 4.409,
+              "disagreement": 0.017
+            },
+            {
+              "u": 0.2,
+              "pass1": 4.4,
+              "pass2": 4.417,
+              "value": 4.409,
+              "disagreement": 0.017
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.35,
+              "pass2": 4.382,
+              "value": 4.366,
+              "disagreement": 0.032
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.35,
+              "pass2": 4.382,
+              "value": 4.366,
+              "disagreement": 0.032
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.45,
+              "pass2": 4.453,
+              "value": 4.452,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.5,
+              "pass2": 4.488,
+              "value": 4.494,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.55,
+              "pass2": 4.558,
+              "value": 4.554,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.45,
+              "pass2": 4.453,
+              "value": 4.452,
+              "disagreement": 0.003
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.25,
+              "pass2": 4.241,
+              "value": 4.245,
+              "disagreement": 0.009
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.05,
+              "pass2": 4.065,
+              "value": 4.058,
+              "disagreement": 0.015
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 4.409],
+            [0.2, 4.409],
+            [0.4, 4.366],
+            [0.6, 4.366],
+            [0.8, 4.452],
+            [1.0, 4.494],
+            [1.2, 4.554],
+            [1.4, 4.452],
+            [1.6, 4.245],
+            [1.8, 4.058],
+            [2.0, 3.998]
+          ]
+        },
+        "4": {
+          "a_tan_le": 4.0,
+          "worst_disagreement": 0.041,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 4.2,
+              "pass2": 4.206,
+              "value": 4.203,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.2,
+              "pass1": 4.25,
+              "pass2": 4.241,
+              "value": 4.245,
+              "disagreement": 0.009
+            },
+            {
+              "u": 0.4,
+              "pass1": 4.15,
+              "pass2": 4.17,
+              "value": 4.16,
+              "disagreement": 0.02
+            },
+            {
+              "u": 0.6,
+              "pass1": 4.1,
+              "pass2": 4.135,
+              "value": 4.117,
+              "disagreement": 0.035
+            },
+            {
+              "u": 0.8,
+              "pass1": 4.1,
+              "pass2": 4.135,
+              "value": 4.117,
+              "disagreement": 0.035
+            },
+            {
+              "u": 1.0,
+              "pass1": 4.15,
+              "pass2": 4.17,
+              "value": 4.16,
+              "disagreement": 0.02
+            },
+            {
+              "u": 1.2,
+              "pass1": 4.2,
+              "pass2": 4.241,
+              "value": 4.22,
+              "disagreement": 0.041
+            },
+            {
+              "u": 1.4,
+              "pass1": 4.2,
+              "pass2": 4.206,
+              "value": 4.203,
+              "disagreement": 0.006
+            },
+            {
+              "u": 1.6,
+              "pass1": 4.1,
+              "pass2": 4.1,
+              "value": 4.1,
+              "disagreement": 0.0
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 4.008,
+              "value": 4.004,
+              "disagreement": 0.008
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 4.203],
+            [0.2, 4.245],
+            [0.4, 4.16],
+            [0.6, 4.117],
+            [0.8, 4.117],
+            [1.0, 4.16],
+            [1.2, 4.22],
+            [1.4, 4.203],
+            [1.6, 4.1],
+            [1.8, 4.004],
+            [2.0, 3.998]
+          ]
+        },
+        "3": {
+          "a_tan_le": 3.0,
+          "worst_disagreement": 0.038,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 3.8,
+              "pass2": 3.818,
+              "value": 3.809,
+              "disagreement": 0.018
+            },
+            {
+              "u": 0.2,
+              "pass1": 3.85,
+              "pass2": 3.853,
+              "value": 3.852,
+              "disagreement": 0.003
+            },
+            {
+              "u": 0.4,
+              "pass1": 3.8,
+              "pass2": 3.818,
+              "value": 3.809,
+              "disagreement": 0.018
+            },
+            {
+              "u": 0.6,
+              "pass1": 3.75,
+              "pass2": 3.747,
+              "value": 3.748,
+              "disagreement": 0.003
+            },
+            {
+              "u": 0.8,
+              "pass1": 3.7,
+              "pass2": 3.712,
+              "value": 3.706,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.0,
+              "pass1": 3.65,
+              "pass2": 3.641,
+              "value": 3.646,
+              "disagreement": 0.009
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.75,
+              "pass2": 3.782,
+              "value": 3.766,
+              "disagreement": 0.032
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.85,
+              "pass2": 3.888,
+              "value": 3.869,
+              "disagreement": 0.038
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.95,
+              "pass2": 3.959,
+              "value": 3.955,
+              "disagreement": 0.009
+            },
+            {
+              "u": 1.8,
+              "pass1": 4.0,
+              "pass2": 3.994,
+              "value": 3.997,
+              "disagreement": 0.006
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 3.809],
+            [0.2, 3.852],
+            [0.4, 3.809],
+            [0.6, 3.748],
+            [0.8, 3.706],
+            [1.0, 3.646],
+            [1.2, 3.766],
+            [1.4, 3.869],
+            [1.6, 3.955],
+            [1.8, 3.997],
+            [2.0, 3.998]
+          ]
+        },
+        "2": {
+          "a_tan_le": 2.0,
+          "worst_disagreement": 0.035,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 3.2,
+              "pass2": 3.218,
+              "value": 3.209,
+              "disagreement": 0.018
+            },
+            {
+              "u": 0.2,
+              "pass1": 3.15,
+              "pass2": 3.182,
+              "value": 3.166,
+              "disagreement": 0.032
+            },
+            {
+              "u": 0.4,
+              "pass1": 3.05,
+              "pass2": 3.077,
+              "value": 3.063,
+              "disagreement": 0.027
+            },
+            {
+              "u": 0.6,
+              "pass1": 3.0,
+              "pass2": 3.006,
+              "value": 3.003,
+              "disagreement": 0.006
+            },
+            {
+              "u": 0.8,
+              "pass1": 2.95,
+              "pass2": 2.971,
+              "value": 2.961,
+              "disagreement": 0.021
+            },
+            {
+              "u": 1.0,
+              "pass1": 2.9,
+              "pass2": 2.865,
+              "value": 2.883,
+              "disagreement": 0.035
+            },
+            {
+              "u": 1.2,
+              "pass1": 3.2,
+              "pass2": 3.218,
+              "value": 3.209,
+              "disagreement": 0.018
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.5,
+              "pass2": 3.535,
+              "value": 3.518,
+              "disagreement": 0.035
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.8,
+              "pass2": 3.782,
+              "value": 3.791,
+              "disagreement": 0.018
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.95,
+              "pass2": 3.938,
+              "value": 3.944,
+              "disagreement": 0.012
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 3.209],
+            [0.2, 3.166],
+            [0.4, 3.063],
+            [0.6, 3.003],
+            [0.8, 2.961],
+            [1.0, 2.883],
+            [1.2, 3.209],
+            [1.4, 3.518],
+            [1.6, 3.791],
+            [1.8, 3.944],
+            [2.0, 3.998]
+          ]
+        },
+        "1": {
+          "a_tan_le": 1.0,
+          "worst_disagreement": 0.029,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 1.75,
+              "pass2": 1.736,
+              "value": 1.743,
+              "disagreement": 0.014
+            },
+            {
+              "u": 0.2,
+              "pass1": 1.75,
+              "pass2": 1.75,
+              "value": 1.75,
+              "disagreement": 0.0
+            },
+            {
+              "u": 0.4,
+              "pass1": 1.8,
+              "pass2": 1.771,
+              "value": 1.785,
+              "disagreement": 0.029
+            },
+            {
+              "u": 0.6,
+              "pass1": 1.85,
+              "pass2": 1.842,
+              "value": 1.846,
+              "disagreement": 0.008
+            },
+            {
+              "u": 0.8,
+              "pass1": 1.95,
+              "pass2": 1.948,
+              "value": 1.949,
+              "disagreement": 0.002
+            },
+            {
+              "u": 1.0,
+              "pass1": 2.1,
+              "pass2": 2.089,
+              "value": 2.095,
+              "disagreement": 0.011
+            },
+            {
+              "u": 1.2,
+              "pass1": 2.5,
+              "pass2": 2.512,
+              "value": 2.506,
+              "disagreement": 0.012
+            },
+            {
+              "u": 1.4,
+              "pass1": 3.1,
+              "pass2": 3.077,
+              "value": 3.088,
+              "disagreement": 0.023
+            },
+            {
+              "u": 1.6,
+              "pass1": 3.6,
+              "pass2": 3.606,
+              "value": 3.603,
+              "disagreement": 0.006
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.9,
+              "pass2": 3.888,
+              "value": 3.894,
+              "disagreement": 0.012
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 1.743],
+            [0.2, 1.75],
+            [0.4, 1.785],
+            [0.6, 1.846],
+            [0.8, 1.949],
+            [1.0, 2.095],
+            [1.2, 2.506],
+            [1.4, 3.088],
+            [1.6, 3.603],
+            [1.8, 3.894],
+            [2.0, 3.998]
+          ]
+        },
+        "0.5": {
+          "a_tan_le": 0.5,
+          "worst_disagreement": 0.082,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.9,
+              "pass2": 0.924,
+              "value": 0.912,
+              "disagreement": 0.024
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.9,
+              "pass2": 0.939,
+              "value": 0.919,
+              "disagreement": 0.039
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.95,
+              "pass2": 0.96,
+              "value": 0.955,
+              "disagreement": 0.01
+            },
+            {
+              "u": 0.6,
+              "pass1": 1.0,
+              "pass2": 0.995,
+              "value": 0.998,
+              "disagreement": 0.005
+            },
+            {
+              "u": 0.8,
+              "pass1": 1.05,
+              "pass2": 1.044,
+              "value": 1.047,
+              "disagreement": 0.006
+            },
+            {
+              "u": 1.0,
+              "pass1": 1.1,
+              "pass2": 1.101,
+              "value": 1.101,
+              "disagreement": 0.001
+            },
+            {
+              "u": 1.2,
+              "pass1": 1.25,
+              "pass2": 1.242,
+              "value": 1.246,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.4,
+              "pass1": 1.6,
+              "pass2": 1.595,
+              "value": 1.598,
+              "disagreement": 0.005
+            },
+            {
+              "u": 1.6,
+              "pass1": 2.25,
+              "pass2": 2.23,
+              "value": 2.24,
+              "disagreement": 0.02
+            },
+            {
+              "u": 1.8,
+              "pass1": 3.3,
+              "pass2": 3.218,
+              "value": 3.259,
+              "disagreement": 0.082
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 0.912],
+            [0.2, 0.919],
+            [0.4, 0.955],
+            [0.6, 0.998],
+            [0.8, 1.047],
+            [1.0, 1.101],
+            [1.2, 1.246],
+            [1.4, 1.598],
+            [1.6, 2.24],
+            [1.8, 3.259],
+            [2.0, 3.998]
+          ]
+        },
+        "0.25": {
+          "a_tan_le": 0.25,
+          "worst_disagreement": 0.041,
+          "uncertainty": 0.1,
+          "rows": [
+            {
+              "u": 0,
+              "pass1": 0.5,
+              "pass2": 0.501,
+              "value": 0.5,
+              "disagreement": 0.001
+            },
+            {
+              "u": 0.2,
+              "pass1": 0.5,
+              "pass2": 0.501,
+              "value": 0.5,
+              "disagreement": 0.001
+            },
+            {
+              "u": 0.4,
+              "pass1": 0.5,
+              "pass2": 0.522,
+              "value": 0.511,
+              "disagreement": 0.022
+            },
+            {
+              "u": 0.6,
+              "pass1": 0.5,
+              "pass2": 0.536,
+              "value": 0.518,
+              "disagreement": 0.036
+            },
+            {
+              "u": 0.8,
+              "pass1": 0.55,
+              "pass2": 0.55,
+              "value": 0.55,
+              "disagreement": 0.0
+            },
+            {
+              "u": 1.0,
+              "pass1": 0.55,
+              "pass2": 0.572,
+              "value": 0.561,
+              "disagreement": 0.022
+            },
+            {
+              "u": 1.2,
+              "pass1": 0.6,
+              "pass2": 0.621,
+              "value": 0.611,
+              "disagreement": 0.021
+            },
+            {
+              "u": 1.4,
+              "pass1": 0.8,
+              "pass2": 0.783,
+              "value": 0.792,
+              "disagreement": 0.017
+            },
+            {
+              "u": 1.6,
+              "pass1": 1.25,
+              "pass2": 1.242,
+              "value": 1.246,
+              "disagreement": 0.008
+            },
+            {
+              "u": 1.8,
+              "pass1": 2.2,
+              "pass2": 2.159,
+              "value": 2.179,
+              "disagreement": 0.041
+            },
+            {
+              "u": 2.0,
+              "pass1": 4.0,
+              "pass2": 3.997,
+              "value": 3.998,
+              "disagreement": 0.003
+            }
+          ],
+          "points": [
+            [0, 0.5],
+            [0.2, 0.5],
+            [0.4, 0.511],
+            [0.6, 0.518],
+            [0.8, 0.55],
+            [1.0, 0.561],
+            [1.2, 0.611],
+            [1.4, 0.792],
+            [1.6, 1.246],
+            [1.8, 2.179],
+            [2.0, 3.998]
+          ]
+        }
+      }
+    }
+  },
+  "panel_g": {
+    "left": {
+      "quantity": "C_N_alpha / A per radian against A beta, A beta <= 1",
+      "rows": [
+        {
+          "a_beta": 0.0,
+          "pass1": 1.6,
+          "pass2": 1.595,
+          "value": 1.598,
+          "disagreement": 0.005
+        },
+        {
+          "a_beta": 0.1,
+          "pass1": 1.58,
+          "pass2": 1.577,
+          "value": 1.579,
+          "disagreement": 0.003
+        },
+        {
+          "a_beta": 0.2,
+          "pass1": 1.57,
+          "pass2": 1.563,
+          "value": 1.567,
+          "disagreement": 0.007
+        },
+        {
+          "a_beta": 0.3,
+          "pass1": 1.56,
+          "pass2": 1.548,
+          "value": 1.554,
+          "disagreement": 0.012
+        },
+        {
+          "a_beta": 0.4,
+          "pass1": 1.55,
+          "pass2": 1.532,
+          "value": 1.541,
+          "disagreement": 0.018
+        },
+        {
+          "a_beta": 0.45,
+          "pass1": 1.56,
+          "pass2": 1.555,
+          "value": 1.558,
+          "disagreement": 0.005
+        },
+        {
+          "a_beta": 0.5,
+          "pass1": 1.6,
+          "pass2": 1.606,
+          "value": 1.603,
+          "disagreement": 0.006
+        },
+        {
+          "a_beta": 0.55,
+          "pass1": 1.68,
+          "pass2": 1.684,
+          "value": 1.682,
+          "disagreement": 0.004
+        },
+        {
+          "a_beta": 0.6,
+          "pass1": 1.77,
+          "pass2": 1.759,
+          "value": 1.764,
+          "disagreement": 0.011
+        },
+        {
+          "a_beta": 0.65,
+          "pass1": 1.82,
+          "pass2": 1.808,
+          "value": 1.814,
+          "disagreement": 0.012
+        },
+        {
+          "a_beta": 0.7,
+          "pass1": 1.88,
+          "pass2": 1.862,
+          "value": 1.871,
+          "disagreement": 0.018
+        },
+        {
+          "a_beta": 0.75,
+          "pass1": 1.92,
+          "pass2": 1.903,
+          "value": 1.911,
+          "disagreement": 0.017
+        },
+        {
+          "a_beta": 0.8,
+          "pass1": 1.97,
+          "pass2": 1.942,
+          "value": 1.956,
+          "disagreement": 0.028
+        },
+        {
+          "a_beta": 0.85,
+          "pass1": 1.99,
+          "pass2": 1.978,
+          "value": 1.984,
+          "disagreement": 0.012
+        },
+        {
+          "a_beta": 0.9,
+          "pass1": 2.0,
+          "pass2": 1.991,
+          "value": 1.996,
+          "disagreement": 0.009
+        },
+        {
+          "a_beta": 0.95,
+          "pass1": 2.0,
+          "pass2": 1.996,
+          "value": 1.998,
+          "disagreement": 0.004
+        },
+        {
+          "a_beta": 1.0,
+          "pass1": 2.0,
+          "pass2": 2.0,
+          "value": 2.0,
+          "disagreement": 0.0
+        }
+      ],
+      "points": [
+        [0.0, 1.598],
+        [0.1, 1.579],
+        [0.2, 1.567],
+        [0.3, 1.554],
+        [0.4, 1.541],
+        [0.45, 1.558],
+        [0.5, 1.603],
+        [0.55, 1.682],
+        [0.6, 1.764],
+        [0.65, 1.814],
+        [0.7, 1.871],
+        [0.75, 1.911],
+        [0.8, 1.956],
+        [0.85, 1.984],
+        [0.9, 1.996],
+        [0.95, 1.998],
+        [1.0, 2.0]
+      ],
+      "worst_disagreement": 0.028
+    },
+    "right": {
+      "quantity": "beta C_N_alpha per radian against 1/(A beta), A beta >= 1",
+      "line": "straight line through (1/(A beta), beta C_N_alpha) = (1, 2) and (0, 4): beta C_N_alpha = 4 - 2/(A beta)"
+    }
+  }
+}

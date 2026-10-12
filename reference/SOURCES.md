@@ -110,9 +110,124 @@ Downloaded 2026-10-11 from NASA NTRS (the RASAero website lists the same reports
 - **Verified:** page 1 is the arXiv title page "Scrambled Linear Pseudorandom Number Generators, David Blackman, Sebastiano Vigna"; the reference code of xoshiro128** (Figure 1 and §5) gives the output rotl(s[1] × 5, 7) × 9 and the state update t = s[1] << 9; s[2] ^= s[0]; s[3] ^= s[1]; s[1] ^= s[2]; s[0] ^= s[3]; s[2] ^= t; s[3] = rotl(s[3], 11); §7 recommends seeding the state from a SplitMix generator.
 - **Used for:** RNG-1, the seeded generator behind wind turbulence (plan 0016) and Monte Carlo dispersion (plan 0017). Not a physics source; recorded under section 11 as the best-documented choice (D-050).
 
+### 11. NACA Technical Note 4197 (Martin, 1958), Summary of Flutter Experiences as a Guide to the Preliminary Design of Lifting Surfaces on Missiles
+
+- **Citation:** Martin, Dennis J. _Summary of Flutter Experiences as a Guide to the Preliminary Design of Lifting Surfaces on Missiles_. NACA Technical Note 4197, Langley Aeronautical Laboratory, February 1958. U.S. Government work (NTRS: "GOV_PUBLIC_USE_PERMITTED").
+- **File:** `docs/naca-tn-4197-ntrs-19930085030.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930085030/downloads/19930085030.pdf (NTRS document 19930085030)
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `cd46997b270a6463c1a0dd3656af30b990dfbf14f3d72578bf622c45d29cecea`
+- **Pages:** 23 (printed page = PDF page − 2 for the text; the appendix equations (1) to (18) are on printed pp. 11 to 14, PDF pp. 13 to 16)
+- **Verified:** the appendix derives the bending-torsion flutter criterion from the Theodorsen and Garrick expression: eq. (3) at the three-quarter span, (4) r_α² = 4I/(mc²), (5) κ = πρc²/(4m), (6) ω_α = (π/2L)√(JG/I), (7) and (8) the taper function f₁ ≈ 1 + 1.87(1 − λ)^1.6, (10) J ≈ ct³/6, (12) G_E = 6JG/(ct³), (13) and (14) f₂ = (1 + 3λ)/(2(1 + λ)), (15) the criterion for constant thickness ratio, (16) with the aspect-ratio correction A/(A + 2), the stated approximation 1/(f₁²f₂²) ≈ (λ + 1)/2, (17) ρa² = γp, ε = 0.25 assumed, and (18) (V_f/a)² = G_E / [39.3 A³/((t/c)³(A + 2)) · (λ + 1)/2 · (p/p₀)] with G_E in pounds per square inch and p₀ the standard sea-level pressure (printed pp. 11 to 14).
+- **Used for:** the fin flutter velocity (FLUT-1), approved by the owner in the completion prompt (Part A item 3).
+
+### 12. NGA.STND.0036 (2014), Department of Defense World Geodetic System 1984
+
+- **Citation:** National Geospatial-Intelligence Agency, Office of Geomatics. _Department of Defense World Geodetic System 1984: Its Definition and Relationships with Local Geodetic Systems_. NGA.STND.0036_1.0.0_WGS84, version 1.0.0, 2014-07-08 (formerly NIMA TR8350.2, 3rd edition). U.S. Government work.
+- **File:** `docs/nga-stnd-0036-wgs84-2014.pdf`
+- **URL:** https://earth-info.nga.mil/php/download.php?file=coord-wgs84 (NGA Office of Geomatics; the DTIC copy of TR8350.2 was unreachable, DTIC being "Under Maintenance" on 2026-10-12)
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `5edc1cf7411d4df01cae5205ee19f661265c45a55cca60b9351f6ae5abade512`
+- **Pages:** 207 (printed chapter-page numbers; chapter 4 begins at PDF p. 37)
+- **Verified:** Table 3.1 (printed p. 3-5, PDF p. 32) a = 6378137.0 m, 1/f = 298.257223563; Table 3.5 "WGS 84 Ellipsoid Derived Geometric Constants" (printed p. 3-8, PDF p. 35) e² = 6.694379990141 × 10⁻³; Table 3.6 "WGS 84 Derived Physical Constants" (printed p. 3-9, PDF p. 36) γ_e = 9.7803253359 m/s², γ_p = 9.8321849379 m/s², k = 1.931852652458 × 10⁻³, m = 3.449786506841 × 10⁻³; section 4.2 eq. (4-1) (printed p. 4-1, PDF p. 37) γ = γ_e (1 + k sin²φ)/√(1 − e² sin²φ), k = bγ_p/(aγ_e) − 1; section 4.3 eq. (4-3) (printed p. 4-3, PDF p. 39) γ_h = γ [1 − (2/a)(1 + f + m − 2f sin²φ) h + (3/a²) h²], m = ω²a²b/GM, "when the geodetic height (h) is small", with the ellipsoidal method recommended "at moderate and high geodetic heights".
+- **Used for:** GRAV-2 and GRAV-3 (D-060). The pre-approved substitute (Moritz, Geodetic Reference System 1980) was not needed; its constants give the OpenRocket value at 45° (D-060).
+
+### 13. USAF Stability and Control DATCOM (1978 revision), sections 4.1 to 4.3
+
+- **Citation:** Finck, R. D. (McDonnell Douglas Corporation), with D. E. Hoak et al. _USAF Stability and Control DATCOM_. Air Force Flight Dynamics Laboratory, Wright-Patterson Air Force Base, April 1978 revision (AFWAL-TR-83-3048, DTIC accession ADB072483). U.S. Government work. DTIC cover sheet: "NEW LIMITATION CHANGE TO Approved for public release, distribution unlimited" (authority AFWAL-DOOS W-PAFB letter), superseding the 1982 limitation printed in block 16 of the report documentation page.
+- **Files:** `docs/usaf-datcom-1978-dtic-adb072483-pp0495-0920.pdf` (PDF pages 495 to 920 of the DTIC scan: sections 4.1.3 to 4.2.2) and `docs/usaf-datcom-1978-dtic-adb072483-pp0921-1350.pdf` (pages 921 to 1350: sections 4.2.3 to 4.5), extracted with `pdfseparate`/`pdfunite` because the full 119 MB scan exceeds GitHub's file limit; page numbers in citations are the full scan's PDF pages and the printed section-page numbers (for example 4.2.3.1-5).
+- **URL:** DTIC https://apps.dtic.mil/sti/pdfs/ADB072483.pdf was "Under Maintenance" on 2026-10-12 (every request returned the maintenance page); the identical DTIC file was obtained from the Internet Archive's DTIC mirror item `DTIC_ADB072483`, https://archive.org/download/DTIC_ADB072483/DTIC_ADB072483.pdf, whose metadata lists the file as the original with MD5 `6481c0738615dddb6a0ca1df5b381d87` and SHA-1 `129019714888e00f30105ec47237f87b9e0c457b`. To be re-verified against DTIC when it returns.
+- **Downloaded:** 2026-10-12
+- **SHA-256 (full scan, 3134 pages):** `9b7b5e0f12bcabdf7f9e0054590977b2c79fdb51a319ff3982b0909495afbbfa` (MD5 matches the archive metadata)
+- **SHA-256 (extracts):** `4d00a99b45a03c6dbf7b1f5c79af673c3007a66ce2f24fb671a808047f66e870` (pp. 495 to 920), `b22197f617b35da1c05ac01f35d1042e87456fb2e30683036b15654d5fe2fc83` (pp. 921 to 1350)
+- **Verified:** the cover sheet and the report documentation page (PDF pp. 1 to 6: title, author, AFWAL-TR-83-3048, abstract); section 4.2.1.1 Body lift-curve slope (PDF p. 815 ff., "Revised June 1969"): subsonic eq. 4.2.1.1-a, transonic fairing, supersonic design charts 4.2.1.1-21a/b and the increments 4.2.1.1-22a/b; section 4.2.2.1 Body pitching-moment-curve slope (PDF p. 885 ff., "Revised February 1972"): eq. 4.2.2.1-c and -d, charts 4.2.2.1-23a/b; section 4.2.3.1 Body zero-lift drag (PDF p. 939 ff.): the transonic procedure (steps 1 to 6, eq. 4.2.3.1-c to -e, PDF pp. 942 to 943), figures 4.2.3.1-24 to -26 (PDF pp. 962 to 964); section 4.1.5.1 Wing zero-lift drag (PDF p. 722 ff.): eq. 4.1.5.1-a/-b, the transonic procedure (PDF pp. 728 ff.). The pages used by each register entry are cited there.
+- **Used for:** approved by the owner in the completion prompt (Part A item 2, D-059) for transonic and supersonic body and fin aerodynamics and large-angle forces.
+
+### 14. Missile DATCOM User Manual, 2014 revision
+
+- **Citation:** Rosema, Christopher; Doyle, Joshua (U.S. Army AMRDEC); Blake, William B. (AFRL). _Missile Data Compendium (DATCOM) User Manual, 2014 Revision_. AFRL-RQ-WP-TR-2014-0281, Air Force Research Laboratory, December 2014 (DTIC accession AD1000581). "Approved for public release; distribution unlimited", cleared by 88 ABW Public Affairs (notice page).
+- **File:** `docs/missile-datcom-user-manual-2014-dtic-ad1000581.pdf`
+- **URL:** DTIC unreachable on 2026-10-12; obtained from the Internet Archive DTIC mirror item `DTIC_AD1000581` (MD5 `6bc20165a4a5970de1665921d29db5b4` as downloaded).
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `20157ba7c1ee56b87115d239d36363eabf433d52c60fd0e8fbac8d9032b8d3c0`
+- **Pages:** 116
+- **Verified:** title, notice and signature pages (PDF pp. 1 to 2).
+- **Used for:** background on the methods Missile DATCOM applies (a user manual; it gives no equations itself), consulted but not a source of equations.
+
+### 15. The USAF Stability and Control Digital DATCOM, Volume II, Implementation of DATCOM Methods (1979)
+
+- **Citation:** Williams, J. E. and Vukelich, S. R. (McDonnell Douglas Astronautics Company). _The USAF Stability and Control Digital DATCOM. Volume II. Implementation of Datcom Methods_. AFFDL-TR-79-3032, Volume II, Air Force Flight Dynamics Laboratory, April 1979 (DTIC accession ADA086558).
+- **File:** `docs/digital-datcom-vol2-dtic-ada086558.pdf`
+- **URL:** DTIC unreachable on 2026-10-12; obtained from the Internet Archive DTIC mirror item `DTIC_ADA086558` (MD5 `845a91e08092a6f2bccc4d231513e785` as downloaded).
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `c4d06a551f298ea227bad797d496af206437dcbb9fd3ccb939e13697991fbb79`
+- **Pages:** 161
+- **Verified:** front matter (PDF pp. 1 to 3): "Approved for public release; distribution unlimited" on the cover and in block 10 of the report documentation page; "releasable to the National Technical Information Service (NTIS) ... available to the general public, including foreign nations".
+- **Used for:** confirming how the DATCOM charts are tabulated in the Digital DATCOM where a chart reading needed a cross-check; not a source of equations.
+
+### 16. NASA TN D-1958 (1963), Blue Scout 1/15-scale model at transonic speeds
+
+- **Citation:** NASA Technical Note D-1958, _Transonic Aerodynamic Characteristics of Several Variations of a 1/15-Scale Model of the Blue Scout_ (Langley Research Center, 1963). NTRS document 19630012011.
+- **File:** `docs/nasa-tn-d-1958-ntrs-19630012011.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19630012011/downloads/19630012011.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `c919984d93036c9fbe0b6116258e9adb706e5078ffbab0b645adf5a61c455cf3`
+- **Verified:** symbols (PDF p. 5): coefficients on 0.0388 sq ft and 2.668 in, moments about 66.3 % of the overall length; tests (PDF p. 6): Langley 8-foot transonic pressure tunnel, Mach 0.60 to 1.03, Reynolds number 3.18e6 to 4.12e6 per foot, transition fixed 3.56 in from the apex, axial force adjusted to free-stream static pressure at the base; configuration list (PDF p. 4): D = body with fins, no base flare; figure 1(a) (PDF pp. 9 to 10), figure 5(c) and (d) (PDF pp. 21 to 22), figure 8(a) (PDF p. 31).
+- **Used for:** held-out validation data (D-061): CP, normal-force slope and forebody axial force at Mach 0.6 to 1.03. Never used to build or tune the model.
+
+### 17. NACA RM E50D28 (Luidens and Simon, 1950), the half-scale RM-10 with fins at Mach 1.49 to 1.98
+
+- **Citation:** Luidens, R. W. and Simon, P. C. _Aerodynamic Characteristics of NACA RM-10 Missile in 8- by 6-Foot Supersonic Wind Tunnel at Mach Numbers from 1.49 to 1.98. II: Presentation and Analysis of Force Measurements_. NACA RM E50D28, 1950. NTRS document 19930086134.
+- **File:** `docs/naca-rm-e50d28-ntrs-19930086134.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930086134/downloads/19930086134.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `0e261cf3321ad38440ae669bc3a878dc8ed1500759b00a02af3131c4e6d3c2c8`
+- **Verified:** summary (PDF p. 3): body alone, two fins and four fins at Mach 1.49, 1.59, 1.78, 1.98, Reynolds number about 30e6 on the length, drag independent of Mach, pressure 30 %, base 20 %, friction 50 % of the drag; apparatus (PDF pp. 6 to 7): Reynolds numbers 29.1, 29.2, 29.5, 31.1e6, sting-to-base diameter ratio 0.66 with negligible interference; figure 2 (PDF p. 19) geometry; figures 7(c), 8(c), 8(d) (PDF pp. 31, 34, 35).
+- **Used for:** held-out validation data (D-061): CP and total drag with four fins at Mach 1.49 to 1.98.
+
+### 18. NACA TN 2944 (Evans, 1953), compilation of RM-10 zero-lift drag from several tunnels and free flight
+
+- **Citation:** Evans, A. J. _The Zero-Lift Drag of a Slender Body of Revolution (NACA RM-10 Research Model) as Determined from Tests in Several Wind Tunnels and in Flight at Supersonic Speeds_. NACA TN 2944, 1953. NTRS document 19930083685.
+- **File:** `docs/naca-tn-2944-ntrs-19930083685.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930083685/downloads/19930083685.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `f433811076e476b6912f5d43de9871e546bf333de534cf6e020f7899f7f7c773`
+- **Verified:** summary (PDF p. 3): flight Mach 0.8 to 2.5 with fins, tunnel 1.5 to 2.4 with and without fins, unexplained differences between tunnel results with fins and flight; Table I (PDF p. 19) configurations (73.25 in flight models, magnesium alloy, polished, fins); figure 1 (PDF p. 20) geometry with 0.0504 L fin chord; figure 9(b) (PDF p. 34); figure 10 (PDF p. 35) Reynolds numbers; figure 13 (PDF p. 41).
+- **Used for:** held-out validation data (D-061): free-flight total and base drag of the 73.25 in RM-10 models at Mach 0.9 to 2.5.
+
+### 19. NASA TN D-3182 (Yuska, 1966), sounding rocket second stage with thick wedge fins at Mach 1.79 to 3.47
+
+- **Citation:** Yuska, J. A. _Static Aerodynamic Characteristics of a Rocket Vehicle with Thick Wedge Fins and Sweptback Leading and Trailing Edges_. NASA TN D-3182, Lewis Research Center, January 1966. NTRS document 19660004864.
+- **File:** `docs/nasa-tn-d-3182-ntrs-19660004864.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19660004864/downloads/19660004864.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `240e99bb1723d6c07b40158010c10ca0fc23a874f516293f1a1fa40465e5405c`
+- **Verified:** summary and introduction (PDF pp. 3 to 4): three one-fifth scale models, Mach 1.79 to 3.47, approximately three-quarter-power nose, thick wedge fins; Tables I and II (PDF p. 8): tests and Reynolds numbers per foot; figure 1 (PDF p. 9) with the nose coordinate table and the fin section B; figures 4 and 5 (PDF pp. 14 to 15).
+- **Used for:** held-out validation data (D-061): CP, normal-force slope and axial force of model A at Mach 1.79 to 3.47 (1.79 to 2.0 inside the validated range).
+
+### 20. NASA TM X-1661 (1968), nose shape and fin geometry effects on a high-fineness-ratio sounding rocket at Mach 2.01
+
+- **Citation:** _Effects of Nose Shape and Fin Geometry on Static Stability of a High-Fineness-Ratio Sounding Rocket_. NASA TM X-1661, 1968. NTRS document 19680027037.
+- **File:** `docs/nasa-tm-x-1661-ntrs-19680027037.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19680027037/downloads/19680027037.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `92bcda5932377170e5c60bbdf18f62a30cb14f14183d0f08b435dba7fad70c16`
+- **Verified:** summary and model description (PDF pp. 3 to 6): half-scale ARCAS variants, configurations 1 (l/d 18.20) and 2 (23.77), Mach 2.01, Reynolds number 9.8e6 per metre, conical, ogive and spherical noses, basic and high aspect ratio fins; figure 2(a) (PDF p. 10); figure 4 (PDF p. 16).
+- **Used for:** held-out validation data (D-061): aerodynamic centre and axial force of the basic ARCAS configuration at Mach 2.01.
+
+### 21. NACA RM L8A05 (1948), free-flight drag of fin-stabilised parabolic bodies
+
+- **Citation:** _Flight Tests to Determine the Drag of Fin-Stabilized Parabolic Bodies at Transonic and Supersonic Speeds_. NACA RM L8A05, Langley Pilotless Aircraft Research Division, 1948. NTRS document 19930085317.
+- **File:** `docs/naca-rm-l8a05-ntrs-19930085317.pdf`
+- **URL:** https://ntrs.nasa.gov/api/citations/19930085317/downloads/19930085317.pdf
+- **Downloaded:** 2026-10-12
+- **SHA-256:** `eb3a607b5705d20084b5ede71802a8118d37590707a5e0ea793a97cf6743f192`
+- **Verified:** summary and models (PDF pp. 3 to 4): fineness ratios 7.87 (Mach 0.58 to 1.19) and 12 (1.16 to 2.58), three untapered 60° swept fins of circular-arc section (t/c 10 % normal to the leading edge), wooden models, drag on the maximum frontal area; figure 1(a) (PDF p. 9) with the profile equation; figure 6 (PDF p. 21) Reynolds numbers; figure 8(a) (PDF p. 24).
+- **Used for:** held-out validation data (D-061): free-flight total drag of the fineness-ratio 7.87 model A at Mach 0.62 to 1.17.
+
 ## Copyright status and the fetch script
 
-This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811) may stay committed; the arXiv paper is redistributable under its arXiv licence.
+This repository is private (checked 2026-10-11), so all documents are committed. If it is ever made public, the third-party copyrighted files must be removed from git: the Niskanen thesis (CC BY-NC-ND), the SI Brochure (CC BY 4.0, redistribution permitted but kept with the others for simplicity), the Barrowman 1967 thesis (a university dissertation reissued by NASA; copyright not confirmed as public domain), the Barrowman 1966 reprint (permissioned reprint), and the ThrustCurve.org pages. `fetch-docs.sh` re-downloads every document from its recorded URL and verifies it against the SHA-256 above, so the files can be restored without being in git. The U.S. government documents (USSA 1976, NACA RM A53D02, NASA TR R-100, TN D-4013, TN D-4014, NIST SP 811, NACA TN 4197, NGA.STND.0036, the DATCOM documents, TN D-1958, RM E50D28, TN 2944, TN D-3182, TM X-1661, RM L8A05) may stay committed; the arXiv paper is redistributable under its arXiv licence.
 
 ## Reference motors (`reference/motors/`)
 

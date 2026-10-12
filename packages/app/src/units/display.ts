@@ -22,7 +22,8 @@ export type QuantityKind =
   | 'pressure'
   | 'angle'
   | 'time'
-  | 'ratio';
+  | 'ratio'
+  | 'modulus'; // shear modulus of fin materials (plan 0031)
 
 export interface UnitSpec {
   /** Unit label shown after the value. */
@@ -71,6 +72,7 @@ const METRIC: Record<QuantityKind, UnitSpec> = {
     decimals: 1,
   },
   time: linear('s', 1, 2),
+  modulus: linear('GPa', 1e9, 2),
   ratio: linear('', 1, 2),
 };
 
@@ -91,6 +93,7 @@ const IMPERIAL: Record<QuantityKind, UnitSpec> = {
     decimals: 1,
   },
   pressure: linear('psi', PA_PER_PSI, 2),
+  modulus: linear('10⁶ psi', PA_PER_PSI * 1e6, 3),
   angle: METRIC.angle,
   time: METRIC.time,
   ratio: METRIC.ratio,

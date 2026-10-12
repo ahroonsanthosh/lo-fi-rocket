@@ -88,3 +88,23 @@ export class SimulationStalledError extends PhysicsError {
     this.time = time;
   }
 }
+
+/**
+ * Thrown when a fixed-step RK4 run would leave the integrator's stability
+ * region or lose the pitch oscillation to numerical damping (DYN-16, DYN-17,
+ * D-063): continuing would show an unstable run as a result (CLAUDE.md
+ * section 8). `safeStep` is the largest step the check allows at that instant.
+ */
+export class IntegrationUnstableError extends PhysicsError {
+  readonly time: number;
+  readonly safeStep: number;
+  readonly mode: string;
+  constructor(time: number, mode: string, safeStep: number, detail: string) {
+    super(
+      `The RK4 time step is too large at t = ${time.toFixed(3)} s (${mode}): ${detail} Use a time step of at most ${safeStep.toPrecision(2)} s, or the Dormand–Prince integrator, which chooses its own step.`,
+    );
+    this.time = time;
+    this.safeStep = safeStep;
+    this.mode = mode;
+  }
+}

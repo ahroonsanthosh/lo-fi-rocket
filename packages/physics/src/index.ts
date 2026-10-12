@@ -81,6 +81,12 @@ export {
   STANDARD_GRAVITY,
   STANDARD_GRAVITY_MODEL,
   type GravityModel,
+  WGS84,
+  wgs84NormalGravity,
+  wgs84NormalGravityAbove,
+  seaLevelGravity,
+  type ParameterGravityModel,
+  type Wgs84GravityModel,
 } from './flight/gravity.js';
 export {
   openRocketWind,
@@ -176,6 +182,9 @@ export {
   type StabilityResult,
   DEFAULT_TRANSONIC_FIN_INTERPOLATION,
   type TransonicFinInterpolation,
+  DEFAULT_SUPERSONIC_FIN_METHOD,
+  type FinSupersonicOptions,
+  type SupersonicFinMethod,
 } from './stability/barrowman.js';
 export {
   burnTime,
@@ -213,7 +222,13 @@ export {
   type NosePressureDrag,
 } from './drag/pressure-drag.js';
 export { STONEY_NOSES, type StoneyCurve, type StoneyNose } from './drag/stoney-noses.js';
-export { finPressureDrag, roundedLeadingEdgeDrag, type FinPressureDrag } from './drag/fin-drag.js';
+export {
+  cylindricalLeadingEdgeDrag,
+  finPressureDrag,
+  ROUNDED_LEADING_EDGE_WARNING,
+  roundedLeadingEdgeDrag,
+  type FinPressureDrag,
+} from './drag/fin-drag.js';
 export {
   baseDragArea,
   launchLugDrag,
@@ -250,6 +265,10 @@ export {
   type AdaptiveOptions,
   type Derivative,
   type DormandPrinceStep,
+  rk4StabilityFunction,
+  rk4StableStep,
+  RK4_REAL_AXIS_LIMIT,
+  RK4_IMAGINARY_AXIS_LIMIT,
 } from './flight/integrators.js';
 export type {
   DragCurve,
@@ -259,6 +278,7 @@ export type {
   RecoveryDevice,
   SimulationOptions,
 } from './flight/vehicle.js';
+export { DEFAULT_MINIMUM_STABILITY_MARGIN } from './flight/vehicle.js';
 export {
   AERO_MAX_ANGLE_OF_ATTACK,
   dragCurveAt,
@@ -270,13 +290,30 @@ export {
   type FlightResult,
   type FlightSample,
   type FlightSummary,
+  rk4StepCheck,
+  RK4_MAX_PITCH_AMPLITUDE_LOSS,
+  RK4_WARN_PITCH_AMPLITUDE_LOSS,
+  type LinearisedRates,
+  type FlutterMargin,
+  type StabilityPoint,
+  type StepCheck,
 } from './flight/simulate.js';
+export {
+  flutterGeometry,
+  flutterVelocity,
+  TN4197_EPSILON,
+  TN4197_GAMMA,
+  TN4197_MATERIALS,
+  type FlutterGeometry,
+  type FlutterMaterial,
+} from './stability/flutter.js';
 export {
   InvalidInputError,
   NonFiniteResultError,
   NotImplementedError,
   PhysicsError,
   SimulationStalledError,
+  IntegrationUnstableError,
 } from './errors.js';
 export {
   ARCAS_BODY_LENGTH_INCHES,
@@ -287,3 +324,112 @@ export {
   NACA_A53D02_LENGTH_INCHES,
   nacaA53d02Components,
 } from './validation/wind-tunnel-models.js';
+export {
+  BLUE_SCOUT_COMPONENTS,
+  BLUE_SCOUT_DIAMETER_INCHES,
+  BLUE_SCOUT_LENGTH_INCHES,
+  L8A05_COMPONENTS,
+  L8A05_DIAMETER_INCHES,
+  L8A05_LENGTH_INCHES,
+  RM10_BASE_STATION_INCHES,
+  RM10_COMPONENTS,
+  RM10_DIAMETER_INCHES,
+  TN_D3182_DIAMETER_INCHES,
+  TN_D3182_LENGTH_INCHES,
+  TN_D3182_MODEL_A_COMPONENTS,
+} from './validation/held-out-models.js';
+export {
+  DATCOM_FIGURE_4151_29,
+  finWaveDrag,
+  sectionFactorK,
+  supersonicWaveDrag,
+  WAVE_DRAG_FAIRING,
+  waveDragChart,
+  type FinWaveDrag,
+  type FinWaveDragInput,
+  type WaveDragCurve,
+  type WaveDragSection,
+} from './drag/datcom-fin-wave-drag.js';
+export {
+  bodyChartAbscissa,
+  bodyChartStartMach,
+  CONE_CYLINDER_CN_ALPHA,
+  CONE_CYLINDER_XCP,
+  datcomBodyAssembly,
+  datcomBodyTerm,
+  noseCylinderTermAtMach,
+  OGIVE_CYLINDER_CN_ALPHA,
+  OGIVE_CYLINDER_XCP,
+  readBodyChart,
+  type BodyChartCurve,
+  type DatcomBodyAssembly,
+  type DatcomBodyNose,
+  type DatcomBodyTerm,
+  type MachBodyTerm,
+} from './stability/datcom-body.js';
+export {
+  carryOverParameter,
+  circularArcSemiwedge,
+  exposedWing,
+  finAfterbodyLength,
+  finCarryOver,
+  rectangularWingCnAlpha,
+  sonicLeadingEdgeFactor,
+  tableValue,
+  wingSupersonicCnAlpha,
+  type CarryOver,
+  type ExposedWing,
+  type WingCnAlphaResult,
+} from './stability/datcom-fin.js';
+export {
+  DATCOM_FIGURE_4132_56,
+  DATCOM_FIGURE_4132_56G_LEFT,
+  DATCOM_FIGURE_4132_60,
+  DATCOM_FIGURE_4312_11A,
+  DATCOM_FIGURE_4312_11B,
+  DATCOM_FIGURE_4322_37A,
+  DATCOM_FIGURE_4322_37B,
+  type CarryOverChartCurve,
+  type SonicLeadingEdgeCurve,
+  type WingChartCurve,
+  type WingChartPanel,
+} from './stability/datcom-fin-data.js';
+export {
+  DATCOM_BASE_GUIDE_END,
+  DATCOM_BASE_SUBSONIC_MACH,
+  DATCOM_FIGURE_4231_24,
+  datcomBaseDragAtMach,
+  datcomSubsonicBaseDrag,
+  type BaseDragGuideCurve,
+  type DatcomBodyBaseInput,
+} from './drag/datcom-base-drag.js';
+export {
+  DATCOM_BASE_FAIRING_END,
+  DEFAULT_BASE_DRAG_METHOD,
+  type BaseDragMethod,
+} from './drag/drag.js';
+export * from './stability/datcom-large-angle-data.js';
+export {
+  crossflowDragCoefficient,
+  crossflowDragProportionality,
+  finLargeAngle,
+  finLargeAngleAvailability,
+  FIN_CHART_MAX_MACH,
+  leadingEdgeParameter,
+  normalForceAt90,
+  taperRatioFactors,
+  TRANSONIC_LARGE_ANGLE_WARNING,
+  wingAnalysis,
+  wingCentreOfPressure,
+  wingNormalForce,
+  wingPlanform,
+  type LeadingEdgeParameter,
+  type WingAnalysis,
+  type WingPlanform,
+} from './stability/datcom-large-angle.js';
+export {
+  AXIAL_DRAG_MIRRORED_WARNING,
+  DEFAULT_LARGE_ANGLE_METHOD,
+  LARGE_ANGLE_UNVERIFIED_WARNING,
+  type LargeAngleMethod,
+} from './flight/aerodynamics.js';
