@@ -16,6 +16,7 @@ import type { TrapezoidFinSetComponent } from '../geometry/components.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
+import { datcomBodyAssembly, noseCylinderTermAtMach } from '../stability/datcom-body.js';
 import {
   busemannCoefficients,
   finSetTerm,
@@ -248,6 +249,7 @@ export function normalForceAtAngle(
     sumMoment += cnAlpha * cp;
   };
   const statics = staticAero(components, aRef);
+  const assembly = datcomBodyAssembly(components);
   components.forEach(({ component: c, position }, index) => {
     const pos: number = position;
     const st = statics[index];
@@ -258,12 +260,16 @@ export function normalForceAtAngle(
         if (st.piece !== undefined) bodyPieces.push(st.piece);
         x = st.end;
         if (st.term !== undefined) {
-          push(
-            index,
-            c.kind === 'noseCone' ? 'nose cone (3.19)' : 'transition (3.19)',
-            st.term.cnAlpha * sinOverAlpha,
-            pos + st.term.cpX,
-          );
+          let term = { cnAlpha: st.term.cnAlpha, cp: pos + st.term.cpX };
+          let label = c.kind === 'noseCone' ? 'nose cone (3.19)' : 'transition (3.19)';
+          if (c.kind === 'noseCone' && assembly?.noseIndex === index && (mach as number) > 0.8) {
+            // BAR-13, BAR-14: the nose-cylinder body term against Mach (D-064).
+            const m = noseCylinderTermAtMach(assembly, term, aRef, mach);
+            term = { cnAlpha: m.cnAlpha, cp: m.cp };
+            label = `nose-cylinder body (DATCOM ${m.method})`;
+            warnings.push(...m.warnings);
+          }
+          push(index, label, term.cnAlpha * sinOverAlpha, term.cp);
         }
         push(
           index,

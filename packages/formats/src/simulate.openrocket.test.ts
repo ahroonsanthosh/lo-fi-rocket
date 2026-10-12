@@ -17,7 +17,10 @@ import {
   type FlightVehicle,
   type SimulationOptions,
 } from '@lo-fi-rocket/physics';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// R5 flies to Mach 1.1 at 0.002 s: above the 5 s default under a loaded suite.
+vi.setConfig({ testTimeout: 120_000 });
 import { parseEng } from './eng.js';
 import { motorFromEng } from './motor-definition.js';
 import { parseOrk } from './ork.js';

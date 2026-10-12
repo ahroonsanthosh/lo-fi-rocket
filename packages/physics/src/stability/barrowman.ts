@@ -25,6 +25,7 @@ import type {
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
+import { datcomBodyAssembly, noseCylinderTermAtMach } from './datcom-body.js';
 import {
   metres,
   squareMetres,
@@ -108,7 +109,8 @@ export interface CentreOfPressureResult {
   readonly finRollReduction: boolean;
   readonly referenceDiameter: Metres;
   readonly referenceArea: SquareMetres;
-  readonly contributions: readonly ComponentContribution[];
+  readonly contributions: readonly ComponentContribution[]; /** Validity notes of the Mach-dependent body term (BAR-13, BAR-14). */
+  readonly warnings: readonly string[];
 }
 
 function requireMach(mach: number): void {
@@ -553,10 +555,24 @@ export function centreOfPressure(
   const contributions: ComponentContribution[] = [];
   let sumCn = 0;
   let sumMoment = 0;
+  const assembly = datcomBodyAssembly(components);
+  const warnings: string[] = [];
   components.forEach(({ component: c, position }, index) => {
     let term: AerodynamicTerm | undefined;
-    if (c.kind === 'noseCone') term = noseConeTerm(c, referenceArea);
-    else if (c.kind === 'transition') term = transitionTerm(c, referenceArea);
+    if (c.kind === 'noseCone') {
+      term = noseConeTerm(c, referenceArea);
+      if (assembly?.noseIndex === index && (options.mach as number) > 0.8) {
+        // BAR-13, BAR-14: the nose-cylinder body term against Mach (D-064).
+        const m = noseCylinderTermAtMach(
+          assembly,
+          { cnAlpha: term.cnAlpha, cp: (position as number) + term.cpX },
+          referenceArea,
+          options.mach,
+        );
+        warnings.push(...m.warnings);
+        term = { cnAlpha: m.cnAlpha, cpX: m.cp - (position as number) };
+      }
+    } else if (c.kind === 'transition') term = transitionTerm(c, referenceArea);
     else if (c.kind === 'finSet') {
       term = finSetTerm(
         c,
@@ -597,6 +613,7 @@ export function centreOfPressure(
     referenceDiameter,
     referenceArea,
     contributions,
+    warnings,
   };
 }
 

@@ -329,3 +329,20 @@ export {
   type WaveDragCurve,
   type WaveDragSection,
 } from './drag/datcom-fin-wave-drag.js';
+export {
+  bodyChartAbscissa,
+  bodyChartStartMach,
+  CONE_CYLINDER_CN_ALPHA,
+  CONE_CYLINDER_XCP,
+  datcomBodyAssembly,
+  datcomBodyTerm,
+  noseCylinderTermAtMach,
+  OGIVE_CYLINDER_CN_ALPHA,
+  OGIVE_CYLINDER_XCP,
+  readBodyChart,
+  type BodyChartCurve,
+  type DatcomBodyAssembly,
+  type DatcomBodyNose,
+  type DatcomBodyTerm,
+  type MachBodyTerm,
+} from './stability/datcom-body.js';
