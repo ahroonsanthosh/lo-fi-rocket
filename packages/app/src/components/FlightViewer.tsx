@@ -21,12 +21,26 @@ import {
 } from '@lo-fi-rocket/viewer';
 import { mountViewer, type ViewerHandle } from '@lo-fi-rocket/viewer/dom';
 import { useEffect, useId, useMemo, useRef, useState, type JSX } from 'react';
+import {
+  CURRENT_PROVENANCE,
+  describeProvenance,
+  sameProvenance,
+  type BuildProvenance,
+} from '../build/provenance.js';
+import {
+  checkReplay,
+  replayMatches,
+  type LandingPoint,
+  type ReplayCheck,
+} from '../simulation/replay-check.js';
 import { useServices } from '../state/services.js';
 import { formatQuantity, type UnitSystem } from '../units/display.js';
 
 export interface DispersionState {
   readonly design: RocketDesign;
   readonly result: DispersionResult;
+  /** The app version and physics source hash the batch was run with (D-061). */
+  readonly provenance: BuildProvenance;
 }
 
 export interface FlightViewerProps {
@@ -57,6 +71,8 @@ interface Shown {
   readonly result: FlightResult;
   /** The Monte Carlo batch a replayed run belongs to; the replay is dropped when the batch changes. */
   readonly batch?: DispersionResult;
+  /** For a replayed run: the comparison with the stored run and its provenance (D-061). */
+  readonly check?: ReplayCheck;
 }
 
 export function FlightViewer(outer: FlightViewerProps): JSX.Element {
@@ -207,16 +223,22 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
     const perturbed = perturbDesign(props.dispersion.design, run.sampled);
     const outcome = await services.runner.run(perturbed);
     setReplaying(false);
+    const stamp = props.dispersion.provenance;
     if (outcome.ok) {
       setReplay({
         label: `Monte Carlo run ${String(index + 1)}`,
         design: perturbed,
         result: outcome.result,
         batch: props.dispersion.result,
+        check: checkReplay(run, stamp, outcome.result.summary, CURRENT_PROVENANCE),
       });
     } else {
       setReplay(undefined);
-      setReplayError(outcome.message);
+      setReplayError(
+        sameProvenance(stamp, CURRENT_PROVENANCE)
+          ? outcome.message
+          : `${outcome.message} The batch was run with ${describeProvenance(stamp)}; this is ${describeProvenance(CURRENT_PROVENANCE)}, so the replay may not match the original result.`,
+      );
     }
   };
 
@@ -379,6 +401,7 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
             ))}
           </select>
           {replaying ? <span className="muted"> Re-simulating the run…</span> : null}
+          {shown.check === undefined ? null : <ReplayCheckNotice check={shown.check} units={u} />}
           {replayError === undefined ? null : (
             <p className="warning" role="alert">
               {replayError}
@@ -387,5 +410,54 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         </div>
       )}
     </section>
+  );
+}
+
+function point(p: LandingPoint | undefined, units: UnitSystem): string {
+  return p === undefined
+    ? 'did not land'
+    : `${formatQuantity(p.east, 'm', units)} east, ${formatQuantity(p.north, 'm', units)} north`;
+}
+
+/**
+ * The outcome of the replay check (D-061): a warning naming each reason
+ * when the replay may not match the stored run, otherwise a short note
+ * that it reproduced the stored landing point exactly.
+ */
+function ReplayCheckNotice({
+  check,
+  units,
+}: {
+  readonly check: ReplayCheck;
+  readonly units: UnitSystem;
+}): JSX.Element {
+  if (replayMatches(check)) {
+    return (
+      <p className="muted small replay-check-ok">
+        The replay reproduces the stored landing point exactly, with the same app version and
+        physics as the batch.
+      </p>
+    );
+  }
+  return (
+    <div className="warning replay-mismatch" role="alert">
+      <p className="banner-main">This replay may not match the original Monte Carlo result.</p>
+      <ul>
+        {check.provenance === undefined ? null : (
+          <li>
+            The batch was run with {describeProvenance(check.provenance.stored)}; this is{' '}
+            {describeProvenance(check.provenance.current)}. The simulator was re-run with the
+            current physics, which may differ from the one that produced the batch.
+          </li>
+        )}
+        {check.landing === undefined ? null : (
+          <li>
+            The replayed landing point ({point(check.landing.replayed, units)}) differs from the
+            stored one ({point(check.landing.stored, units)}). The figures of the batch are the
+            stored ones; the picture shows the replay.
+          </li>
+        )}
+      </ul>
+    </div>
   );
 }

@@ -70,3 +70,7 @@ No physics, no new equation. Recovery devices are not drawn as canopies (the res
 - RK4 at a 0.01 s fixed step is unstable for R2 (see D-060 and docs/progress.md); the viewer tests fly the reference rockets at 0.002 s as the golden flight test does.
 - A fourth camera, "whole flight" (overview), was added: the fixed follow and pad views cannot show the trajectory and the landing points together.
 - A swept fin's tip trailing edge can lie aft of the root's (R3), so the model's length is the aft-most drawn point, not the last external component's end.
+
+## Addendum: replay provenance check (owner's request before merging, D-061)
+
+Replaying a Monte Carlo run re-runs the simulator, so a batch produced under an older physics could replay differently. Each Monte Carlo result now carries the app version and a SHA-256 of the physics and formats sources, injected at build time (`packages/app/src/build/`). On replay the viewer compares the stored provenance with the running build and the replayed landing point with the stored one, exactly; any difference shows a warning naming the reason (`packages/app/src/simulation/replay-check.ts`, `FlightViewer.tsx`). Tests: the hash against Python's hashlib on a small tree, the build's own provenance, the check by hand (match, version mismatch, a landing point one bit off, landed against not landed, both together), and the viewer in jsdom with a batch from an older build and with a stored landing point the replay does not reproduce, plus the faithful case with no warning.

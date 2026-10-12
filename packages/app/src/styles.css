@@ -592,3 +592,14 @@ button:disabled {
 .viewer-dispersion {
   margin-top: 8px;
 }
+.replay-mismatch {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--overstable);
+  border-radius: 6px;
+  background: #fff4d6;
+}
+.replay-mismatch ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}

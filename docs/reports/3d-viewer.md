@@ -45,10 +45,15 @@ Taken by the end-to-end tests with `VIEWER_SCREENSHOTS=1` (the example design, R
 | Monte Carlo landing points and containment circle | ![dispersion](images/3d-viewer-dispersion.png) |
 | A replayed Monte Carlo run at its landing step    | ![run](images/3d-viewer-run.png)               |
 
+## Replay provenance check (D-061)
+
+Every Monte Carlo result carries the app version and a SHA-256 of the physics and formats sources of the build that ran it, shown in the dispersion results as "Produced by". Replaying a run compares that stamp with the running build and the replayed landing point with the stored one, exactly. Either difference shows a warning that the replay may not match the original result, with both builds or both landing points named; a faithful replay shows a one-line note that it matched exactly. Tested by hand in `replay-check.test.ts` and `physics-fingerprint.test.ts`, and in the viewer in `FlightViewer.provenance.test.tsx` (a batch from an older build; a stored landing point the replay does not reproduce; the faithful case).
+
 ## Limitations and requests (no physics changed)
 
 - `FlightResult` stores no wind; the arrow is the design's ground wind (the simulator's input). A `modes.wind` record would make a stored result self-describing.
-- `DispersionRun` stores no time series; replaying a run re-runs the simulator on the identical perturbed design (deterministic). An optional stored result would avoid the second run.
+- `DispersionRun` stores no time series; replaying a run re-runs the simulator on the identical perturbed design (deterministic), checked against the stored provenance and landing point (D-061). An optional stored result would avoid the second run.
+- Monte Carlo results are held in memory only; when a save path is added, the provenance must be saved with them.
 - `DispersionSummary` has no ellipse; the viewer's covariance ellipse is descriptive statistics on the stored points, labelled as such.
 - Recovery devices are not drawn (the result stores no canopy state); internal components are not drawn; lugs and buttons are drawn at +z because the design records no angular position for them.
 - Liftoff has no stored step of its own and is shown at the nearest step, flagged.
