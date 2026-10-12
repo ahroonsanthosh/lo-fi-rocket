@@ -125,7 +125,10 @@ export {
   REFERENCE_MOTORS,
 } from './geometry/reference-rockets.js';
 export {
+  combineRocket,
+  motorMassPart,
   rocketMassProperties,
+  structuralMassParts,
   type MotorMass,
   type PlacedComponent,
   type RocketMassProperties,
@@ -213,6 +216,32 @@ export {
   type AeroModeOptions,
   type AeroResult,
 } from './flight/aerodynamics.js';
+export {
+  DORMAND_PRINCE_TABLEAU,
+  dormandPrinceStep,
+  errorNorm,
+  nextStepSize,
+  rk4Step,
+  type AdaptiveOptions,
+  type Derivative,
+  type DormandPrinceStep,
+} from './flight/integrators.js';
+export type {
+  FlightVehicle,
+  IntegratorOptions,
+  MotorSource,
+  RecoveryDevice,
+  SimulationOptions,
+} from './flight/vehicle.js';
+export {
+  simulateFlight,
+  type FlightEvent,
+  type FlightEventKind,
+  type FlightPhase,
+  type FlightResult,
+  type FlightSample,
+  type FlightSummary,
+} from './flight/simulate.js';
 export {
   InvalidInputError,
   NonFiniteResultError,

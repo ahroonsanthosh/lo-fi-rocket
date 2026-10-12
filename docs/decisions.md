@@ -203,6 +203,24 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** The source is explicit about "thrusting"; the comparison needs OpenRocket's behaviour to be reproducible (D-016 precedent). Physically, after burnout the nozzle still occupies the base, so the question of which rule is more accurate is open; the owner decides which the app displays (default proposed: the source rule, with the difference shown).
 - **Consequences:** Flight comparisons (plan 0010) run in the OpenRocket-equivalent mode; the displayed figure uses the source rule. Open question in `docs/progress.md`.
 
+## D-036 (2026-10-12): The rotational equation of motion is Euler's rigid-body equation about the CG
+
+- **Decision:** The simulator integrates I ω̇_b = τ_b − ω_b × (I ω_b) in the body frame with I = diag(I_rot, I_long, I_long) from GEO-12 at the current propellant mass, and transforms ω̇ to the world frame. The angular velocity state is kept in the world frame.
+- **Why:** Niskanen §4.2 states that the simulation is "based on Newton's laws" and gives the forces and moments but not the rigid-body equation explicitly; Euler's equation is the standard statement of Newton's second law for rotation and needs no approximation. The inertia tensor is diagonal in the body frame because every component is a body of revolution or a symmetric fin set (GEO-12).
+- **Consequences:** The term for the change of inertia during the burn (İ ω) and jet damping are not included; neither is in the source and both are small for the reference flights (rotation rates near zero in still air). Recorded in `docs/known-limitations.md`.
+
+## D-037 (2026-10-12): The Dormand–Prince coefficients are verified by their consistency and order tests; the step controller is a project convention
+
+- **Decision:** The RK5(4)7M tableau is written from Dormand and Prince (1980), Table 2, which is not in `reference/`. It is verified in code by the exact consistency sums (Σb = Σb\* = 1, each row sum equal to c, Σbc = 1/2, Σbc² = 1/3) and by `integrators.test.ts`, which measures the global error order on y′ = −y and on the harmonic oscillator (order 5 for the propagated solution, order 4 for the embedded one, error estimate within a factor of 3 of the true local error) and integrates an oscillator over 100 periods at a 1e-9 tolerance. The step controller h·min(5, max(0.2, 0.9 e^(−1/5))) with rejection for e > 1 is the usual rule for a fifth-order error estimate and is recorded as a convention, not as a sourced equation.
+- **Why:** CLAUDE.md 6.5 requires this integrator. A wrong tableau entry would break the order tests (the consistency sums alone would not catch every error, which is why both are used). The owner may add the paper to `reference/` to close the verification formally.
+- **Consequences:** Listed in the Phase 2 report as an item not verified against a document in `reference/` (rule 11 (b) is not triggered because the tests give an independent verification). RK4, which is in the source, remains the default for the acceptance comparisons.
+
+## D-038 (2026-10-12): The orientation is integrated through its derivative q̇ = ½ ω q
+
+- **Decision:** Inside the integrators the orientation quaternion is a state variable with q̇ = ½ (0, ω_w) q, and is normalised after each accepted step. The closed-form update of eq. (4.24), implemented as `advanceOrientation` (DYN-5), is kept for tests and for callers that step the orientation separately.
+- **Why:** Eq. (4.24) is a first-order update that cannot be used inside a Runge–Kutta stage; its derivative at Δt → 0 is exactly q̇ = ½ ω q for the half-angle convention of D-031, so both describe the same rotation. Using the derivative keeps the orientation at the integrator's order (verified: the R1 flight has zero angle of attack in still air at every sample, and a crosswind produces the expected angle).
+- **Consequences:** The normalisation after each step removes the drift of ‖q‖ from the finite step; the drift per step is of the order of the integrator error and is not an approximation of the dynamics.
+
 ## D-039 (2026-10-12): Fin normal force in the transonic band throws; the fin CP shift and supersonic force are implemented
 
 - **Decision:** `finSetTerm` uses eq. (3.40) below Mach 0.8 and the Busemann expansion of eqs. (3.41) to (3.49) from Mach 1.2, and throws `NotImplementedError` for 0.8 < M < 1.2. The CP shift of eqs. (3.35) and (3.36) is implemented over the whole range by solving the stated polynomial constraints.

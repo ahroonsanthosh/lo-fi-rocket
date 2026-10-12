@@ -115,6 +115,122 @@ interface ExternalGeometry {
   baseRadius: number;
 }
 
+/** Per-component numbers that do not depend on Mach or Reynolds number, computed once per design. */
+interface StaticEntry {
+  readonly kind: 'nose' | 'tube' | 'transition' | 'fins' | 'lug' | 'button' | 'none';
+  readonly length: number;
+  readonly wetted: number;
+  readonly aftRadius: number;
+  readonly area: number;
+  readonly finenessRatio: number;
+  readonly jointAngle: number;
+  readonly foreRadius: number;
+  readonly finWetted: number;
+  readonly finThickness: number;
+  readonly finMeanChord: number;
+  readonly finSweepAngle: number;
+}
+
+const STATIC_CACHE = new WeakMap<readonly PlacedComponent[], readonly StaticEntry[]>();
+
+function staticEntries(components: readonly PlacedComponent[]): readonly StaticEntry[] {
+  const cached = STATIC_CACHE.get(components);
+  if (cached !== undefined) return cached;
+  const none: StaticEntry = {
+    kind: 'none',
+    length: 0,
+    wetted: 0,
+    aftRadius: 0,
+    area: 0,
+    finenessRatio: 0,
+    jointAngle: 0,
+    foreRadius: 0,
+    finWetted: 0,
+    finThickness: 0,
+    finMeanChord: 0,
+    finSweepAngle: 0,
+  };
+  const entries = components.map(({ component: c }): StaticEntry => {
+    switch (c.kind) {
+      case 'noseCone': {
+        const profile = noseProfile(c.shape, c.length, c.baseRadius, c.shapeParameter);
+        const R: number = c.baseRadius;
+        return {
+          ...none,
+          kind: 'nose',
+          length: profile.length,
+          wetted: wettedArea(profile),
+          aftRadius: R,
+          area: Math.PI * R * R,
+          finenessRatio: profile.length / (2 * R),
+          jointAngle: jointAngle(profile),
+        };
+      }
+      case 'bodyTube': {
+        const R: number = c.outerRadius;
+        const L: number = c.length;
+        return {
+          ...none,
+          kind: 'tube',
+          length: L,
+          wetted: 2 * Math.PI * R * L,
+          aftRadius: R,
+          foreRadius: R,
+        };
+      }
+      case 'transition': {
+        const profile = transitionProfile(
+          c.shape,
+          c.length,
+          c.foreRadius,
+          c.aftRadius,
+          c.shapeParameter,
+        );
+        const rf: number = c.foreRadius;
+        const ra: number = c.aftRadius;
+        return {
+          ...none,
+          kind: 'transition',
+          length: profile.length,
+          wetted: wettedArea(profile),
+          aftRadius: ra,
+          foreRadius: rf,
+          area: Math.PI * Math.abs(ra * ra - rf * rf),
+          jointAngle: jointAngle(profile),
+        };
+      }
+      case 'finSet': {
+        const cr: number = c.rootChord;
+        const ct: number = c.tipChord;
+        const s: number = c.span;
+        const t: number = c.thickness;
+        const planform = ((cr + ct) / 2) * s;
+        return {
+          ...none,
+          kind: 'fins',
+          area: c.count * t * s,
+          finWetted: 2 * c.count * planform,
+          finThickness: t,
+          finMeanChord: meanAerodynamicChord(c),
+          finSweepAngle: Math.atan((c.sweep as number) / s),
+        };
+      }
+      case 'launchLug':
+        return { ...none, kind: 'lug' };
+      case 'railButton':
+        return { ...none, kind: 'button' };
+      case 'innerTube':
+      case 'centeringRing':
+      case 'bulkhead':
+      case 'massComponent':
+      case 'parachute':
+        return none;
+    }
+  });
+  STATIC_CACHE.set(components, entries);
+  return entries;
+}
+
 /**
  * DRAG-13. Eq. (3.97) p. 52: C_D0 = Σ (A_T/A_ref)(C_D•)T + (C_D)friction over
  * pressure (nose, shoulder, boat tail, fins), base and parasitic terms.
@@ -132,20 +248,20 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const geometry: ExternalGeometry = { length: 0, wettedBody: 0, baseRadius: 0 };
   const finSets: { wettedArea: number; thickness: number; meanChord: number }[] = [];
 
+  const statics = staticEntries(input.components);
   input.components.forEach(({ component: c }, index) => {
+    const st = statics[index];
+    if (st === undefined) return;
     switch (c.kind) {
       case 'noseCone': {
-        const profile = noseProfile(c.shape, c.length, c.baseRadius, c.shapeParameter);
-        geometry.length += profile.length;
-        geometry.wettedBody += wettedArea(profile);
-        geometry.baseRadius = c.baseRadius;
-        const R: number = c.baseRadius;
-        const area = Math.PI * R * R;
+        geometry.length += st.length;
+        geometry.wettedBody += st.wetted;
+        geometry.baseRadius = st.aftRadius;
         const r = noseConePressureDrag(
           c.shape,
           c.shapeParameter,
-          profile.length / (2 * R),
-          jointAngle(profile),
+          st.finenessRatio,
+          st.jointAngle,
           input.mach,
         );
         warnings.push(...r.warnings);
@@ -154,41 +270,29 @@ export function dragCoefficient(input: DragInputs): DragResult {
           kind: c.kind,
           source: `nose pressure (${r.method})`,
           cdComponent: r.cd,
-          area,
-          cd: (r.cd * area) / aRef,
+          area: st.area,
+          cd: (r.cd * st.area) / aRef,
         });
         break;
       }
       case 'bodyTube': {
-        const R: number = c.outerRadius;
-        const L: number = c.length;
-        geometry.length += L;
-        geometry.wettedBody += 2 * Math.PI * R * L;
-        geometry.baseRadius = R;
+        geometry.length += st.length;
+        geometry.wettedBody += st.wetted;
+        geometry.baseRadius = st.aftRadius;
         break;
       }
       case 'transition': {
-        const profile = transitionProfile(
-          c.shape,
-          c.length,
-          c.foreRadius,
-          c.aftRadius,
-          c.shapeParameter,
-        );
-        geometry.length += profile.length;
-        geometry.wettedBody += wettedArea(profile);
-        const rf: number = c.foreRadius;
-        const ra: number = c.aftRadius;
-        geometry.baseRadius = ra;
-        const area = Math.PI * Math.abs(ra * ra - rf * rf);
-        if (ra > rf) {
+        geometry.length += st.length;
+        geometry.wettedBody += st.wetted;
+        geometry.baseRadius = st.aftRadius;
+        if (st.aftRadius > st.foreRadius) {
           const r = shoulderPressureDrag(
             c.shape,
             c.shapeParameter,
-            profile.length,
-            rf,
-            ra,
-            jointAngle(profile),
+            st.length,
+            st.foreRadius,
+            st.aftRadius,
+            st.jointAngle,
             input.mach,
           );
           warnings.push(...r.warnings);
@@ -197,19 +301,19 @@ export function dragCoefficient(input: DragInputs): DragResult {
             kind: c.kind,
             source: `shoulder pressure (${r.method})`,
             cdComponent: r.cd,
-            area,
-            cd: (r.cd * area) / aRef,
+            area: st.area,
+            cd: (r.cd * st.area) / aRef,
           });
-        } else if (ra < rf) {
-          const r = boatTailPressureDrag(profile.length, rf, ra, input.mach);
+        } else if (st.aftRadius < st.foreRadius) {
+          const r = boatTailPressureDrag(st.length, st.foreRadius, st.aftRadius, input.mach);
           warnings.push(...r.warnings);
           terms.push({
             index,
             kind: c.kind,
             source: `boat tail pressure (γ = ${r.lengthToHeight.toFixed(3)})`,
             cdComponent: r.cd,
-            area,
-            cd: (r.cd * area) / aRef,
+            area: st.area,
+            cd: (r.cd * st.area) / aRef,
           });
         }
         break;
@@ -222,26 +326,19 @@ export function dragCoefficient(input: DragInputs): DragResult {
             'must be square, rounded or airfoil for the drag model (Niskanen §3.4.4)',
           );
         }
-        const cr: number = c.rootChord;
-        const ct: number = c.tipChord;
-        const s: number = c.span;
-        const t: number = c.thickness;
-        const planform = ((cr + ct) / 2) * s;
         finSets.push({
-          wettedArea: 2 * c.count * planform,
-          thickness: t,
-          meanChord: meanAerodynamicChord(c),
+          wettedArea: st.finWetted,
+          thickness: st.finThickness,
+          meanChord: st.finMeanChord,
         });
-        const sweepAngle = Math.atan((c.sweep as number) / s);
-        const r = finPressureDrag(c.crossSection, sweepAngle, input.mach);
-        const area = c.count * t * s;
+        const r = finPressureDrag(c.crossSection, st.finSweepAngle, input.mach);
         terms.push({
           index,
           kind: c.kind,
           source: `fin pressure (${c.crossSection}, LE ${r.leadingEdge.toFixed(4)} + TE ${r.trailingEdge.toFixed(4)})`,
           cdComponent: r.cd,
-          area,
-          cd: (r.cd * area) / aRef,
+          area: st.area,
+          cd: (r.cd * st.area) / aRef,
         });
         break;
       }

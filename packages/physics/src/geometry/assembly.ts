@@ -48,29 +48,50 @@ function placed(p: MassProperties, position: number): MassProperties {
   return { ...p, cgX: p.cgX + position };
 }
 
+/**
+ * The motor as a mass part in the rocket frame: a solid cylinder of the
+ * given mass, CG at `cgFromForeEnd` (mid-length when absent), aft end at
+ * `aftEnd` (GEO-12).
+ */
+export function motorMassPart(motor: MotorMass): MassProperties {
+  const m: number = motor.mass;
+  const l: number = motor.length;
+  const r = (motor.diameter as number) / 2;
+  if (!(m >= 0)) throw new InvalidInputError('motor mass', m, 'must be 0 or greater');
+  if (!(l > 0)) throw new InvalidInputError('motor length', l, 'must be greater than 0 m');
+  if (!(r > 0))
+    throw new InvalidInputError('motor diameter', motor.diameter, 'must be greater than 0 m');
+  return {
+    volume: Math.PI * r * r * l,
+    mass: m,
+    cgX: (motor.aftEnd as number) - l + (motor.cgFromForeEnd ?? l / 2),
+    inertiaRotational: 0.5 * m * r * r,
+    inertiaLongitudinal: (m * (3 * r * r + l * l)) / 12,
+  };
+}
+
+/** The structure's mass parts placed in the rocket frame (computed once per design by the simulator). */
+export function structuralMassParts(components: readonly PlacedComponent[]): MassProperties[] {
+  return components.map((pc) => placed(componentMassProperties(pc.component), pc.position));
+}
+
+/** Combine precomputed structural parts with a motor part (GEO-12). */
+export function combineRocket(
+  structure: readonly MassProperties[],
+  motor?: MotorMass,
+): RocketMassProperties {
+  const parts = motor === undefined ? [...structure] : [...structure, motorMassPart(motor)];
+  return finishRocket(parts);
+}
+
 export function rocketMassProperties(
   components: readonly PlacedComponent[],
   motor?: MotorMass,
 ): RocketMassProperties {
-  const parts: MassProperties[] = components.map((pc) =>
-    placed(componentMassProperties(pc.component), pc.position),
-  );
-  if (motor !== undefined) {
-    const m: number = motor.mass;
-    const l: number = motor.length;
-    const r = (motor.diameter as number) / 2;
-    if (!(m >= 0)) throw new InvalidInputError('motor mass', m, 'must be 0 or greater');
-    if (!(l > 0)) throw new InvalidInputError('motor length', l, 'must be greater than 0 m');
-    if (!(r > 0))
-      throw new InvalidInputError('motor diameter', motor.diameter, 'must be greater than 0 m');
-    parts.push({
-      volume: Math.PI * r * r * l,
-      mass: m,
-      cgX: (motor.aftEnd as number) - l + (motor.cgFromForeEnd ?? l / 2),
-      inertiaRotational: 0.5 * m * r * r,
-      inertiaLongitudinal: (m * (3 * r * r + l * l)) / 12,
-    });
-  }
+  return combineRocket(structuralMassParts(components), motor);
+}
+
+function finishRocket(parts: MassProperties[]): RocketMassProperties {
   if (parts.length === 0) {
     throw new InvalidInputError('components', parts.length, 'at least one component is required');
   }

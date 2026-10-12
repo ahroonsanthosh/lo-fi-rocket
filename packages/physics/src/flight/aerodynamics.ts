@@ -114,6 +114,80 @@ interface BodyPiece {
   readonly profile: Profile;
 }
 
+/** Static (Mach- and α-independent) data per component, computed once per design and reference area. */
+interface StaticAero {
+  readonly piece?: BodyPiece;
+  readonly end: number;
+  /** Barrowman term at α → 0 (nose cones and transitions). */
+  readonly term?: AerodynamicTerm;
+  readonly planformArea: number;
+  readonly planformCentroid: number;
+}
+
+const AERO_CACHE = new WeakMap<
+  readonly PlacedComponent[],
+  { aRef: number; entries: readonly StaticAero[] }
+>();
+
+function staticAero(components: readonly PlacedComponent[], aRef: number): readonly StaticAero[] {
+  const cached = AERO_CACHE.get(components);
+  if (cached?.aRef === aRef) return cached.entries;
+  const entries = components.map(({ component: c, position }): StaticAero => {
+    const pos: number = position;
+    switch (c.kind) {
+      case 'noseCone': {
+        const profile = noseProfile(c.shape, c.length, c.baseRadius, c.shapeParameter);
+        const pl = planform(profile);
+        return {
+          piece: { start: pos, profile },
+          end: pos + profile.length,
+          term: noseConeTerm(c, squareMetres(aRef)),
+          planformArea: pl.area,
+          planformCentroid: pos + pl.centroid,
+        };
+      }
+      case 'bodyTube': {
+        const R: number = c.outerRadius;
+        const L: number = c.length;
+        return {
+          piece: { start: pos, profile: { length: L, radius: () => R, slope: () => 0 } },
+          end: pos + L,
+          planformArea: 2 * R * L,
+          planformCentroid: pos + L / 2,
+        };
+      }
+      case 'transition': {
+        const profile = transitionProfile(
+          c.shape,
+          c.length,
+          c.foreRadius,
+          c.aftRadius,
+          c.shapeParameter,
+        );
+        const pl = planform(profile);
+        return {
+          piece: { start: pos, profile },
+          end: pos + profile.length,
+          term: transitionTerm(c, squareMetres(aRef)),
+          planformArea: pl.area,
+          planformCentroid: pos + pl.centroid,
+        };
+      }
+      case 'finSet':
+      case 'innerTube':
+      case 'centeringRing':
+      case 'bulkhead':
+      case 'massComponent':
+      case 'parachute':
+      case 'launchLug':
+      case 'railButton':
+        return { end: 0, planformArea: 0, planformCentroid: 0 };
+    }
+  });
+  AERO_CACHE.set(components, { aRef, entries });
+  return entries;
+}
+
 /**
  * AERO-1, AERO-2: the normal force coefficient and CP at angle of attack by
  * the moment sum (3.29). Body terms carry sin α/α (eq. 3.19, "we shall not
@@ -159,45 +233,40 @@ export function normalForceAtAngle(
     sumCnAlpha += cnAlpha;
     sumMoment += cnAlpha * cp;
   };
+  const statics = staticAero(components, aRef);
   components.forEach(({ component: c, position }, index) => {
     const pos: number = position;
+    const st = statics[index];
+    if (st === undefined) return;
     switch (c.kind) {
-      case 'noseCone': {
-        const profile = noseProfile(c.shape, c.length, c.baseRadius, c.shapeParameter);
-        bodyPieces.push({ start: pos, profile });
-        x = pos + profile.length;
-        const t: AerodynamicTerm = noseConeTerm(c, squareMetres(aRef));
-        push(index, 'nose cone (3.19)', t.cnAlpha * sinOverAlpha, pos + t.cpX);
-        const pl = planform(profile);
-        push(index, 'nose cone body lift (3.26)', (liftFactor * pl.area) / aRef, pos + pl.centroid);
+      case 'noseCone':
+      case 'transition': {
+        if (st.piece !== undefined) bodyPieces.push(st.piece);
+        x = st.end;
+        if (st.term !== undefined) {
+          push(
+            index,
+            c.kind === 'noseCone' ? 'nose cone (3.19)' : 'transition (3.19)',
+            st.term.cnAlpha * sinOverAlpha,
+            pos + st.term.cpX,
+          );
+        }
+        push(
+          index,
+          c.kind === 'noseCone' ? 'nose cone body lift (3.26)' : 'transition body lift (3.26)',
+          (liftFactor * st.planformArea) / aRef,
+          st.planformCentroid,
+        );
         break;
       }
       case 'bodyTube': {
-        const R: number = c.outerRadius;
-        const L: number = c.length;
-        bodyPieces.push({ start: pos, profile: { length: L, radius: () => R, slope: () => 0 } });
-        x = pos + L;
-        push(index, 'body tube lift (3.26)', (liftFactor * 2 * R * L) / aRef, pos + L / 2);
-        break;
-      }
-      case 'transition': {
-        const profile = transitionProfile(
-          c.shape,
-          c.length,
-          c.foreRadius,
-          c.aftRadius,
-          c.shapeParameter,
-        );
-        bodyPieces.push({ start: pos, profile });
-        x = pos + profile.length;
-        const t = transitionTerm(c, squareMetres(aRef));
-        push(index, 'transition (3.19)', t.cnAlpha * sinOverAlpha, pos + t.cpX);
-        const pl = planform(profile);
+        if (st.piece !== undefined) bodyPieces.push(st.piece);
+        x = st.end;
         push(
           index,
-          'transition body lift (3.26)',
-          (liftFactor * pl.area) / aRef,
-          pos + pl.centroid,
+          'body tube lift (3.26)',
+          (liftFactor * st.planformArea) / aRef,
+          st.planformCentroid,
         );
         break;
       }

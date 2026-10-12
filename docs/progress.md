@@ -33,13 +33,15 @@ Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the 
 
 - Phase 2 step 4 part A (plan 0010): forces and moments at angle of attack (AERO-1 to AERO-5): normal force with sin α/α, body lift and the moment sum, axial drag with the angle-of-attack scaling, pitch and roll damping; fin CP shift above Mach 0.5 (BAR-10) and the supersonic fin normal force (BAR-11); the transonic fin band throws (D-039).
 
+- Phase 2 step 4 parts B and C (plan 0010, DYN-9 to DYN-15): `simulateFlight` with the 6DOF equations of motion (D-036), the rail constraint, RK4 and the adaptive Dormand–Prince pair (D-037), the orientation derivative (D-038), events located by bisection (launch, liftoff, rail exit, burnout, ejection charge, apogee, altitude, deployment, landing, max time), the 3DOF recovery descent, the full time series and summary, NaN and Infinity detection; the 3DOF cross-check mode. Analytical cases (constant-thrust kinematics, vacuum coast v²/2g, energy conservation), step-size convergence (R1 apogee 168.860 / 168.870 / 168.866 / 168.867 m at 0.01 / 0.005 / 0.002 / 0.001 s; Dormand–Prince 1e-8 168.867 m), and the OpenRocket comparison from the `.ork` and `.eng` files: R1 to R4 with and without wind, apogee within 2.5 % (tolerance 5 %), maximum velocity within 0.6 % (tolerance 3 %), ground-hit velocity within 0.01 %. R5 stops at Mach 0.8 (D-034, D-039). 422 tests.
+
 ## In progress
 
-- Phase 2 step 4 parts B and C (plan 0010): equations of motion, RK4 and Dormand–Prince, rail, events by root finding, recovery descent, outputs, NaN detection; analytical cases, convergence, OpenRocket acceptance.
+- The Phase 2 acceptance report (`docs/reports/phase-2-acceptance.md`).
 
 ## Next
 
-- The Phase 2 acceptance report, then Prompt 3 (Phases 3 and 4).
+- Prompt 3 (Phases 3 and 4) on the owner's next "continue".
 
 ## Open questions
 
@@ -47,5 +49,7 @@ Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the 
 - Base drag after burnout (D-035): the source removes the motor area only while thrusting; OpenRocket keeps it removed. Which should the app display? The comparison mode uses OpenRocket's rule.
 
 - Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
+
+- Dormand and Prince (1980) is not in `reference/`; the tableau is verified by the consistency sums and order tests (D-037). The owner may add the paper to close the verification formally. Not blocking.
 
 - Pull request: the repository has a single branch, `claude/inspiring-tesla-xxp0hh`, which is also its default branch, so no pull request can be opened until a separate default branch exists (see the Prompt 1 report).
