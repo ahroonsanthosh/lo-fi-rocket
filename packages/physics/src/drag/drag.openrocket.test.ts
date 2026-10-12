@@ -114,6 +114,7 @@ describe('C_D0 against OpenRocket time series (R1 to R4, ascent above 15 m/s)', 
           roughnessHeight: metres(ROUGHNESS_HEIGHTS.regularPaint60um),
           motor: { diameter: metres(c.motor.diameter), thrusting: thrust > 0 },
           baseDragMotorRule: 'always',
+          baseDragMethod: 'niskanen',
         };
         const relOr = (dragCoefficient(inputs).cd0 - cdOr) / cdOr;
         if (thrust > 0) {

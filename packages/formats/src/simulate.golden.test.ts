@@ -20,10 +20,13 @@ import {
   type FlightVehicle,
   type SimulationOptions,
 } from '@lo-fi-rocket/physics';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseEng } from './eng.js';
 import { motorFromEng } from './motor-definition.js';
 import { parseOrk } from './ork.js';
+
+// Each case flies a full 6DOF flight; under a parallel test run R5 takes about 5 s.
+vi.setConfig({ testTimeout: 60_000 });
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REFERENCE = join(HERE, '..', '..', '..', 'reference');
@@ -68,6 +71,8 @@ const options = (windX: number): SimulationOptions => ({
   aerodynamics: 'niskanen',
   finRollReduction: false,
   baseDragMotorRule: 'always',
+  baseDragMethod: 'niskanen',
+  largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(200),
   degreesOfFreedom: 6,
@@ -189,6 +194,22 @@ describe('golden flight time series (exact)', () => {
         }
         const golden = restore(JSON.parse(readFileSync(path, 'utf8')) as Golden);
         expect(restore(JSON.parse(JSON.stringify(actual)) as Golden)).toEqual(golden);
+      });
+    }
+  }
+});
+
+describe('one stored sample per instant', () => {
+  // A timed event that fell exactly on a step boundary used to be stored twice with the same time
+  // (found when merging the 3D viewer: R2, R3 and R5 at the ejection charge).
+  for (const c of ROCKETS) {
+    for (const wind of [0, 5] as const) {
+      it(`${c.file}, wind ${String(wind)} m/s: sample times strictly increase`, () => {
+        const times = simulateFlight(vehicle(c), options(wind)).samples.map(
+          (p) => p.time as number,
+        );
+        const repeats = times.filter((t, i) => i > 0 && !(t > times[i - 1]!));
+        expect(repeats).toEqual([]);
       });
     }
   }

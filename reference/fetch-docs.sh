@@ -32,4 +32,10 @@ fetch thrustcurve-api/glossary.html "https://www.thrustcurve.org/info/glossary.h
 fetch thrustcurve-api/swagger.json "https://www.thrustcurve.org/api/v1/swagger.json" 566009abab4e993283230061c98d47737df139649a70c887b9b6435c5ca04f8d
 fetch nist-sp811-2008.pdf "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication811e2008.pdf" 788dd8f0bcb0ec06e40c300690266742532a7e760a93be57764b77ed0ef3482f
 fetch blackman-vigna-2018-scrambled-linear-prngs-arxiv-1805.01407v3.pdf "https://arxiv.org/pdf/1805.01407" 3aee2f264786742812e651595898fb3c06e184abf589c56c14cc7c7b205668f5
+fetch nasa-tn-d-1958-ntrs-19630012011.pdf "https://ntrs.nasa.gov/api/citations/19630012011/downloads/19630012011.pdf" c919984d93036c9fbe0b6116258e9adb706e5078ffbab0b645adf5a61c455cf3
+fetch naca-rm-e50d28-ntrs-19930086134.pdf "https://ntrs.nasa.gov/api/citations/19930086134/downloads/19930086134.pdf" 0e261cf3321ad38440ae669bc3a878dc8ed1500759b00a02af3131c4e6d3c2c8
+fetch naca-tn-2944-ntrs-19930083685.pdf "https://ntrs.nasa.gov/api/citations/19930083685/downloads/19930083685.pdf" f433811076e476b6912f5d43de9871e546bf333de534cf6e020f7899f7f7c773
+fetch nasa-tn-d-3182-ntrs-19660004864.pdf "https://ntrs.nasa.gov/api/citations/19660004864/downloads/19660004864.pdf" 240e99bb1723d6c07b40158010c10ca0fc23a874f516293f1a1fa40465e5405c
+fetch nasa-tm-x-1661-ntrs-19680027037.pdf "https://ntrs.nasa.gov/api/citations/19680027037/downloads/19680027037.pdf" 92bcda5932377170e5c60bbdf18f62a30cb14f14183d0f08b435dba7fad70c16
+fetch naca-rm-l8a05-ntrs-19930085317.pdf "https://ntrs.nasa.gov/api/citations/19930085317/downloads/19930085317.pdf" eb3a607b5705d20084b5ede71802a8118d37590707a5e0ea793a97cf6743f192
 echo "All reference documents verified."

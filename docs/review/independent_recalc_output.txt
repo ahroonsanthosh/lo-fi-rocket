@@ -1,0 +1,137 @@
+====================================================================================================
+R1  (d_ref = 0.05 m, Mach 0.3, alpha 0)
+quantity                            independent          app   OpenRocket  ind-OR %  app-OR % app-ind %
+liftoff mass kg                        0.190904     0.190904     0.190904   -0.0001   -0.0001    0.0000
+liftoff CG m                           0.387022     0.387022     0.387022    0.0000    0.0000    0.0000
+burnout mass kg                        0.169804     0.169804     0.169804   -0.0001   -0.0001    0.0000
+burnout CG m                           0.364906     0.364906     0.364906    0.0001    0.0001    0.0000
+CP m (unreduced 3.54)                  0.487227     0.487227     0.487149    0.0161    0.0161    0.0000
+stability cal (unreduced)              2.004104     2.004104     2.002500    0.0801    0.0801    0.0000
+CP m (worst roll, 3.54)                0.478890     0.478890            -         -         -    0.0000
+stability cal (worst roll)             1.837358     1.837358            -         -         -    0.0000
+burnout stability (unreduced)          2.446418     2.446418     2.444860    0.0637    0.0637    0.0000
+total C_Na (unreduced)                17.450582    17.450582            -         -         -    0.0000
+total C_Na (worst roll)               15.132995    15.132995            -         -         -    0.0000
+-- aerodynamic contributions (independent)
+   Nose cone              C_Na    2.00000  CP  0.066667 m
+   Fins                   C_Na   15.45058  CP  0.541667 m
+   Fins (worst roll)      C_Na   13.13299  CP  0.541667 m
+   fin: A=6.000000e-03 m^2, MAC=0.077778, x_MAC,LE=0.022222, (C_Na)_1=8.31954, K_T(B)=1.238095
+   app: nose CP 0.066667, fin CP 0.541667
+-- components: independent vs OpenRocket (components csv)
+   component                    mass ind    mass OR       d%     CG ind      CG OR     d mm
+   Nose cone                    0.010472   0.010472   -0.000   0.075000   0.075000    0.000
+   Body tube                    0.053878   0.053878    0.001   0.350000   0.350000    0.000
+   Fins (3)                     0.032400   0.032400    0.000   0.561111   0.561111    0.000
+   Nose weight                  0.030000   0.030000    0.000   0.110000   0.110000    0.000
+   Launch lug                   0.000302   0.000302    0.125   0.375000   0.375000    0.000
+   Motor mount tube             0.002020   0.002020    0.022   0.562500   0.562500    0.000
+   Centering ring 0.53          0.004615   0.004615    0.009   0.532500   0.532500    0.000
+   Centering ring 0.59          0.004615   0.004615    0.009   0.592500   0.592500   -0.000
+   Parachute                    0.010000   0.010000    0.000   0.225000   0.225000    0.000
+   Motor at launch              0.042600   0.042600    0.000   0.565000   0.565000    0.000
+   app nose cone: mass 0.010472 (-0.000 % vs ind), CG 0.075000
+====================================================================================================
+R2  (d_ref = 0.054 m, Mach 0.3, alpha 0)
+quantity                            independent          app   OpenRocket  ind-OR %  app-OR % app-ind %
+liftoff mass kg                        0.414486     0.414485     0.414484    0.0006    0.0001   -0.0004
+liftoff CG m                           0.484546     0.484547     0.484548   -0.0005   -0.0001    0.0004
+burnout mass kg                        0.345486     0.345485     0.345484    0.0007    0.0002   -0.0005
+burnout CG m                           0.443894     0.443896     0.443897   -0.0006   -0.0001    0.0005
+CP m (unreduced 3.54)                  0.571233     0.571233     0.571037    0.0344    0.0344   -0.0000
+stability cal (unreduced)              1.605326     1.605292     1.601600    0.2327    0.2305   -0.0022
+CP m (worst roll, 3.54)                0.552929     0.552929            -         -         -   -0.0000
+stability cal (worst roll)             1.266366     1.266331            -         -         -   -0.0027
+burnout stability (unreduced)          2.358124     2.358087     2.354444    0.1563    0.1547   -0.0016
+total C_Na (unreduced)                11.687250    11.687250            -         -         -    0.0000
+total C_Na (worst roll)               10.067496    10.067496            -         -         -    0.0000
+-- aerodynamic contributions (independent)
+   Nose cone              C_Na    2.00000  CP  0.069263 m
+   Boat tail              C_Na   -1.11111  CP  0.773333 m
+   Fins                   C_Na   10.79836  CP  0.685000 m
+   Fins (worst roll)      C_Na    9.17861  CP  0.685000 m
+   fin: A=5.600000e-03 m^2, MAC=0.086667, x_MAC,LE=0.033333, (C_Na)_1=5.63140, K_T(B)=1.278351
+   app: nose CP 0.069263, fin CP 0.685000, boat tail CP 0.773333
+-- components: independent vs OpenRocket (components csv)
+   component                    mass ind    mass OR       d%     CG ind      CG OR     d mm
+   Nose cone                    0.047209   0.047206    0.006   0.114912   0.114915   -0.003
+   Body tube                    0.103908   0.103908    0.000   0.450000   0.450000   -0.000
+   Fins (3)                     0.030240   0.030240   -0.000   0.706667   0.706667   -0.000
+   Rail buttons                 0.001113   0.001113   -0.022   0.575000   0.575000    0.000
+   Motor mount tube             0.004360   0.004360   -0.006   0.685000   0.685000    0.000
+   Centering ring 0.625         0.003864   0.003864    0.004   0.627500   0.627500    0.000
+   Centering ring 0.74          0.003864   0.003864    0.004   0.742500   0.742500   -0.000
+   Parachute                    0.030000   0.030000    0.000   0.330000   0.330000   -0.000
+   Payload mass                 0.050000   0.050000    0.000   0.225000   0.225000    0.000
+   Boat tail                    0.010929   0.010929   -0.002   0.773275   0.773275   -0.000
+   Motor at launch              0.129000   0.129000    0.000   0.688087   0.688088   -0.001
+   app nose cone: mass 0.047207 (-0.004 % vs ind), CG 0.114914
+   app boat tail: mass 0.010929 (-0.000 % vs ind), CG 0.773275
+====================================================================================================
+R3  (d_ref = 0.0254 m, Mach 0.3, alpha 0)
+quantity                            independent          app   OpenRocket  ind-OR %  app-OR % app-ind %
+liftoff mass kg                        0.171874     0.171874     0.171873    0.0007    0.0005   -0.0002
+liftoff CG m                           0.356247     0.356247     0.356248   -0.0003   -0.0002    0.0002
+burnout mass kg                        0.149174     0.149174     0.149173    0.0008    0.0006   -0.0002
+burnout CG m                           0.332089     0.332090     0.332091   -0.0005   -0.0004    0.0002
+CP m (unreduced 3.54)                  0.449197     0.449197     0.449111    0.0191    0.0191   -0.0000
+stability cal (unreduced)              3.659454     3.659433     3.656000    0.0945    0.0939   -0.0006
+CP m (worst roll, 3.54)                0.439761     0.439761            -         -         -   -0.0000
+stability cal (worst roll)             3.287974     3.287952            -         -         -   -0.0006
+burnout stability (unreduced)          4.610542     4.610519     4.607087    0.0750    0.0745   -0.0005
+total C_Na (unreduced)                14.579137    14.579137            -         -         -    0.0000
+total C_Na (worst roll)               12.692267    12.692267            -         -         -    0.0000
+-- aerodynamic contributions (independent)
+   Nose cone              C_Na    2.00000  CP  0.050000 m
+   Fins                   C_Na   12.57914  CP  0.512667 m
+   Fins (worst roll)      C_Na   10.69227  CP  0.512667 m
+   fin: A=1.750000e-03 m^2, MAC=0.052667, x_MAC,LE=0.019500, (C_Na)_1=6.62279, K_T(B)=1.266247
+   app: nose CP 0.050000, fin CP 0.512667
+-- components: independent vs OpenRocket (components csv)
+   component                    mass ind    mass OR       d%     CG ind      CG OR     d mm
+   Nose cone                    0.022738   0.022737    0.004   0.076407   0.076408   -0.001
+   Body tube                    0.045220   0.045220   -0.000   0.325000   0.325000    0.000
+   Fins (3)                     0.019425   0.019425   -0.000   0.525833   0.525833    0.000
+   Rail buttons                 0.000491   0.000491    0.070   0.400000   0.400000    0.000
+   Nose weight                  0.010000   0.010000    0.000   0.115000   0.115000    0.000
+   Parachute                    0.015000   0.015000    0.000   0.190000   0.190000    0.000
+   Motor at launch              0.059000   0.059000    0.000   0.515000   0.515000    0.000
+   app nose cone: mass 0.022738 (-0.001 % vs ind), CG 0.076407
+====================================================================================================
+R4  (d_ref = 0.066 m, Mach 0.3, alpha 0)
+quantity                            independent          app   OpenRocket  ind-OR %  app-OR % app-ind %
+liftoff mass kg                        1.365941     1.365937     1.365936    0.0003    0.0001   -0.0003
+liftoff CG m                           0.625036     0.625038     0.625038   -0.0003   -0.0001    0.0002
+burnout mass kg                        1.239605     1.239601     1.239600    0.0004    0.0001   -0.0003
+burnout CG m                           0.594669     0.594670     0.594671   -0.0004   -0.0001    0.0003
+CP m (unreduced 3.54)                  0.807973     0.807973     0.807795    0.0220    0.0220   -0.0000
+stability cal (unreduced)              2.771771     2.771749     2.769000    0.1001    0.0993   -0.0008
+CP m (worst roll, 3.54)                0.802012     0.802012            -         -         -   -0.0000
+stability cal (worst roll)             2.681448     2.681425            -         -         -   -0.0008
+burnout stability (unreduced)          3.231883     3.231860     3.229152    0.0846    0.0839   -0.0007
+total C_Na (unreduced)                15.193718    15.193718            -         -         -    0.0000
+total C_Na (worst roll)               14.402095    14.402095            -         -         -    0.0000
+-- aerodynamic contributions (independent)
+   Nose cone              C_Na    2.00000  CP  0.092507 m
+   Fins                   C_Na   13.19372  CP  0.916429 m
+   Fins (worst roll)      C_Na   12.40210  CP  0.916429 m
+   fin: A=8.400000e-03 m^2, MAC=0.111429, x_MAC,LE=0.038571, (C_Na)_1=5.10579, K_T(B)=1.292035
+   app: nose CP 0.092507, fin CP 0.916429
+-- components: independent vs OpenRocket (components csv)
+   component                    mass ind    mass OR       d%     CG ind      CG OR     d mm
+   Nose cone                    0.111644   0.111639    0.004   0.151868   0.151871   -0.003
+   Body tube                    0.595143   0.595143    0.000   0.600000   0.600000    0.000
+   Fins (4)                     0.080640   0.080640   -0.000   0.944286   0.944286   -0.000
+   Electronics bay mass         0.150000   0.150000    0.000   0.350000   0.350000    0.000
+   Bulkhead                     0.010869   0.010869   -0.003   0.453000   0.453000    0.000
+   Main parachute               0.100000   0.100000    0.000   0.540000   0.540000    0.000
+   Motor mount tube             0.024740   0.024740    0.000   0.900000   0.900000    0.000
+   Centering ring 0.81          0.006568   0.006568    0.002   0.813000   0.813000    0.000
+   Centering ring 0.984         0.006568   0.006568    0.002   0.987000   0.987000    0.000
+   Rail buttons                 0.001113   0.001113   -0.022   0.775000   0.775000   -0.000
+   Motor at launch              0.278656   0.278656    0.000   0.923000   0.923000    0.000
+   app nose cone: mass 0.111640 (-0.003 % vs ind), CG 0.151870
+====================================================================================================
+Sensitivity: shell wall measured radially (r_in = r_out - t) instead of normal to the surface
+   R2 ogive: radial-wall mass 0.046831 kg, CG 0.115363 m
+   R4 ogive: radial-wall mass 0.110902 kg, CG 0.152349 m

@@ -10,7 +10,7 @@
  * speed and approaches it as the fall lengthens). The table is printed for
  * the report.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -73,6 +73,8 @@ const options = (windX: number, dof: 3 | 6): SimulationOptions => ({
   aerodynamics: 'niskanen',
   finRollReduction: false,
   baseDragMotorRule: 'always',
+  baseDragMethod: 'niskanen',
+  largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(400),
   degreesOfFreedom: dof,
@@ -135,5 +137,64 @@ describe('ballistic descents of the reference rockets (plan 0023)', () => {
   it('prints the table', () => {
     console.log(lines.join('\n'));
     expect(lines.length).toBe(12);
+  });
+});
+
+/**
+ * v1.0 Part C item 9: the ballistic descents again with the DATCOM large-angle
+ * model (D-070), still air. A rocket launched exactly vertically arrives at
+ * apogee exactly tail-first: α = 180° is an equilibrium (C_N = 0 there), but an
+ * unstable one, because tail-first the CP stays aft of the CG (HA-10). A 0.1°
+ * pitch perturbation (the launch rail tilted 0.1°) must therefore grow until
+ * the rocket turns nose-down and lands nose-first.
+ */
+const datcomOptions = (tiltDeg: number): SimulationOptions => ({
+  ...options(0, 6),
+  rail: {
+    length: metres(1.5),
+    angleFromVertical: radians((tiltDeg * Math.PI) / 180),
+    azimuth: radians(0),
+  },
+  largeAngleMethod: 'datcom',
+});
+const flipLines: string[] = [
+  '| Rocket | rail tilt | apogee | end | flight time | landing speed | landing angle of attack | largest α after apogee | nose-down (α < 90°) from |',
+  '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+];
+
+describe('item 9: ballistic descents with the large-angle model, still air (D-070)', () => {
+  for (const c of ROCKETS) {
+    for (const tilt of [0, 0.1] as const) {
+      it(`${c.file}, rail tilt ${String(tilt)}°`, { timeout: 300_000 }, () => {
+        const r = simulateFlight(vehicle(c, false), datcomOptions(tilt));
+        expect(r.modes.largeAngleMethod).toBe('datcom');
+        expect(r.summary.endReason).toBe('landing');
+        const after = r.samples.filter(
+          (p) => p.time > r.summary.timeToApogee && p.phase !== 'landed',
+        );
+        const last = after[after.length - 1];
+        if (last === undefined) throw new Error('no descent samples');
+        const maxAoa = Math.max(...after.map((p) => p.angleOfAttack));
+        // The first sample after which the rocket stays nose-forward to the ground.
+        let flipIndex = after.length;
+        while (flipIndex > 0 && (after[flipIndex - 1]?.angleOfAttack ?? 0) < Math.PI / 2)
+          flipIndex -= 1;
+        const flip = after[flipIndex];
+        if (tilt > 0) {
+          // The perturbed rocket turns over and lands nose-first.
+          expect(last.angleOfAttack).toBeLessThan(Math.PI / 2);
+          expect(flip).toBeDefined();
+        }
+        flipLines.push(
+          `| ${c.file} | ${String(tilt)}° | ${r.summary.apogee.toFixed(1)} m | ${r.summary.endReason} | ${r.summary.flightTime.toFixed(2)} s | ${(r.summary.groundHitVelocity ?? Number.NaN).toFixed(1)} m/s | ${((last.angleOfAttack * 180) / Math.PI).toFixed(1)}° | ${((maxAoa * 180) / Math.PI).toFixed(1)}° | ${flip === undefined ? 'never' : `${(flip.time - r.summary.timeToApogee).toFixed(2)} s after apogee, ${flip.altitude.toFixed(0)} m`} |`,
+        );
+      });
+    }
+  }
+  it('prints the table', () => {
+    console.log(flipLines.join('\n'));
+    const path = process.env['BALLISTIC_REPORT'];
+    if (path !== undefined && path !== '') writeFileSync(path, `${flipLines.join('\n')}\n`);
+    expect(flipLines.length).toBe(12);
   });
 });

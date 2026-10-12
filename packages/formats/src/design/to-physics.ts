@@ -230,16 +230,22 @@ export function designSimulationOptions(
     wind: designWindModel(wind),
     gravity:
       mode === 'displayed'
-        ? STANDARD_GRAVITY_MODEL
+        ? site.latitude === undefined
+          ? STANDARD_GRAVITY_MODEL
+          : { altitudeDependence: 'wgs84', latitude: site.latitude }
         : { seaLevel: OPENROCKET_REFERENCE_GRAVITY_45N, altitudeDependence: 'inverse-square' },
     ...atmosphere,
     aerodynamics: 'niskanen',
     finRollReduction: mode === 'displayed',
     baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'always',
+    baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
+    largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,
     maxTime: design.simulation.maxTime,
     degreesOfFreedom: 6,
     recordInterval: design.simulation.recordInterval,
+    // Plan 0030: the in-flight margin is checked against the design's own "unstable below" threshold.
+    minimumStabilityMargin: design.stabilityThresholds.unstableBelow,
     ...(design.dragCurve === undefined ? {} : { dragCurve: design.dragCurve }),
   };
 }
@@ -293,15 +299,20 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       message: `Recovery deploys at ${s.deploymentVelocity.toFixed(1)} m/s, above ${String(t.maxDeploymentVelocity)} m/s: a fast deployment can tear the parachute or shock cord or zipper the airframe.`,
     });
   }
-  if (s.maxMach > 1.2) {
+  if (s.maxMach > 2) {
     out.push({
       code: 'supersonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the model is validated there against two wind tunnel models only; the centre of pressure is conservative (the margin shown is a lower bound) and the drag of thick fins is over-predicted (docs/reports/wind-tunnel-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is above 2.0, outside the validated range (Mach 0 to 2.0): the centre of pressure and drag have not been checked against measurements there (docs/reports/held-out-validation.md).`,
+    });
+  } else if (s.maxMach > 1.2) {
+    out.push({
+      code: 'supersonic',
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the centre of pressure is validated to Mach 2.0 against held-out wind tunnel data, but the supersonic drag is less certain than the subsonic, so apogee and velocities carry a larger error (docs/reports/held-out-validation.md).`,
     });
   } else if (s.maxMach > 0.8) {
     out.push({
       code: 'transonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime: the drag rise is predicted too early and the centre of pressure is within about 7 % of body length of wind tunnel data (docs/reports/wind-tunnel-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime (0.8 to 1.2), where the drag rises steeply and the fin force is an interpolation, so apogee and velocities carry a larger error (docs/reports/held-out-validation.md).`,
     });
   }
   if (design.recovery.length === 0) {

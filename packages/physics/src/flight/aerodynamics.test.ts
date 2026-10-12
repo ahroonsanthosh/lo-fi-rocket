@@ -19,7 +19,7 @@ import {
 } from './aerodynamics.js';
 import { vec3 } from './vector.js';
 
-const OR = { finRollReduction: false };
+const OR = { finRollReduction: false, largeAngleMethod: 'linear' } as const;
 const DEG5 = (5 * Math.PI) / 180;
 const fins = R1_COMPONENTS.find((p) => p.component.kind === 'finSet')
   ?.component as TrapezoidFinSetComponent;
@@ -205,5 +205,52 @@ describe('combined forces and moments (R1 at 50.25 m/s airspeed, Mach 0.3 table,
     });
     expect(r.forceBody.x).toBeLessThan(0);
     expect(r.warnings.join()).toContain('D-033');
+  });
+});
+
+describe('HA-3, HA-9, HA-10 the large-angle model (D-070), R1 at Mach 0.3', () => {
+  const DATCOM = { finRollReduction: false, largeAngleMethod: 'datcom' } as const;
+  const at = (deg: number): ReturnType<typeof normalForceAtAngle> =>
+    normalForceAtAngle(
+      R1_COMPONENTS,
+      mach(0.3),
+      radians((deg * Math.PI) / 180),
+      radians(0),
+      DATCOM,
+    );
+  it('at α = 0 it is the small-angle model: C_N = 0 and the same CP; at 0.01° the same C_N to 1e-3', () => {
+    const lin0 = normalForceAtAngle(R1_COMPONENTS, mach(0.3), radians(0), radians(0), OR);
+    expect(at(0).cn).toBe(0);
+    expect(at(0).cp).toBeCloseTo(lin0.cp, 12);
+    expect(at(0).cnAlpha).toBeCloseTo(lin0.cnAlpha, 12);
+    const small = (0.01 * Math.PI) / 180;
+    const lin = normalForceAtAngle(R1_COMPONENTS, mach(0.3), radians(small), radians(0), OR);
+    expect(Math.abs(at(0.01).cn / lin.cn - 1)).toBeLessThan(1e-3);
+  });
+  it('continuous through 90° (the potential terms vanish there and the fin CP is the area centroid either way)', () => {
+    const a = at(89.999);
+    const b = at(90.001);
+    expect(Math.abs(a.cn - b.cn)).toBeLessThan(1e-3);
+    expect(Math.abs(a.cp - b.cp)).toBeLessThan(1e-3);
+  });
+  it('C_N vanishes at 180° with a finite CP; over 0 to 180° C_N ≥ 0 and the CP stays on the body', () => {
+    expect(at(180).cn).toBeCloseTo(0, 12);
+    expect(Number.isFinite(at(180).cp)).toBe(true);
+    for (let d = 0; d <= 180; d += 1) {
+      const r = at(d);
+      expect(r.cn).toBeGreaterThanOrEqual(0);
+      expect(r.cp).toBeGreaterThan(0);
+      expect(r.cp).toBeLessThan(0.6);
+    }
+  });
+  it('tail first the CP stays aft of the CG, so the tail-first attitude is unstable (item 9); above 60° it warns', () => {
+    expect(at(170).cp).toBeGreaterThan(0.387);
+    expect(at(70).warnings.join()).toContain('above 60°');
+    expect(at(30).warnings.join()).not.toContain('above 60°');
+  });
+  it('above Mach 1 beyond 90° it throws instead of extrapolating', () => {
+    expect(() =>
+      normalForceAtAngle(R1_COMPONENTS, mach(1.5), radians(2), radians(0), DATCOM),
+    ).toThrow(/supersonic high-angle/);
   });
 });

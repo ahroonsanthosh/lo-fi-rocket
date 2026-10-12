@@ -1,5 +1,7 @@
-import type { DispersionResult, DispersionSettingsRecord } from '@lo-fi-rocket/formats';
+import type { DispersionSettingsRecord } from '@lo-fi-rocket/formats';
 import { useId, useState, type JSX } from 'react';
+import { describeProvenance } from '../build/provenance.js';
+import type { DispersionState } from './FlightViewer.js';
 import { useServices } from '../state/services.js';
 import { useStore } from '../state/store.js';
 import { displayValue, formatQuantity, unitFor, type QuantityKind } from '../units/display.js';
@@ -41,13 +43,25 @@ const VARIATION_FIELDS: readonly {
   },
 ];
 
-export function DispersionPanel(): JSX.Element {
+export interface DispersionPanelProps {
+  /** The batch, held by the App when given (plan 0034) so the 3D replay can show it; local otherwise. */
+  readonly result?: DispersionState | undefined;
+  readonly onResult?: ((d: DispersionState | undefined) => void) | undefined;
+}
+
+export function DispersionPanel(props: DispersionPanelProps = {}): JSX.Element {
   const { state, dispatch } = useStore();
   const services = useServices();
   const units = state.units;
   const design = state.design;
   const settings = design.dispersion ?? DEFAULT_DISPERSION;
-  const [result, setResult] = useState<DispersionResult | undefined>(undefined);
+  const [local, setLocal] = useState<DispersionState | undefined>(undefined);
+  const held = props.onResult === undefined ? local : props.result;
+  const result = held?.result;
+  const setHeld = (d: DispersionState | undefined): void => {
+    if (props.onResult === undefined) setLocal(d);
+    else props.onResult(d);
+  };
   const [progress, setProgress] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -58,13 +72,13 @@ export function DispersionPanel(): JSX.Element {
   const run = async (): Promise<void> => {
     setBusy(true);
     setError(undefined);
-    setResult(undefined);
+    setHeld(undefined);
     const outcome = await services.runner.runDispersion(design, settings, (done, total) => {
       setProgress(`${String(done)} of ${String(total)} runs`);
     });
     setBusy(false);
     setProgress(undefined);
-    if (outcome.ok) setResult(outcome.result);
+    if (outcome.ok) setHeld({ design, result: outcome.result, provenance: outcome.provenance });
     else setError(outcome.message);
   };
   const mUnit = unitFor('m', units);
@@ -145,6 +159,10 @@ export function DispersionPanel(): JSX.Element {
                 {String(summary.notLanded)}, failed {String(summary.failed)}), seed{' '}
                 {String(result.seed)}
               </dd>
+            </div>
+            <div>
+              <dt>Produced by</dt>
+              <dd>{held === undefined ? '—' : describeProvenance(held.provenance)}</dd>
             </div>
             <div>
               <dt>Apogee</dt>

@@ -1,0 +1,4079 @@
+{
+  "source": "USAF Stability and Control DATCOM (1978 revision), figures 4.3.1.2-11a (with afterbody) and 4.3.1.2-11b (no afterbody), METHOD 1, section 4.3.1.2 C; scan p. 1046 = page 126 of reference/docs/usaf-datcom-1978-dtic-adb072483-pp0921-1350.pdf. Applicability: section 4.3.1.2 C, scan p. 1041 (page 4.3.1.2-6).",
+  "quantity": "K_B(W) [beta (C_L_alpha)_e (lambda_e + 1) (b/d - 1)] with (C_L_alpha)_e per radian, against v = beta d / c_r_e, for curves of beta cot(Lambda_LE) ('inf' = unswept leading edge)",
+  "method": {
+    "calibration": "11a: x = 954 + 340 v, value = (1474 - y)/136; 11b: x = 955 + 339.75 v, value = (2679.5 - y)/134.9 (page pixels of the 300 dpi render)",
+    "figure_11a": "pass 1 and pass 2 are ordered-dark-run extractions at two different column sets; labels, legend and spurious clusters removed by hand (DROP_A), missing curves listed (MISSING_A); each pass interpolated linearly in v onto the grid; the curve labels between v = 0.45 and 0.6 leave no reading there, so both passes interpolate across that span",
+    "figure_11b": "below v = 0.9: pass 1 by-eye polylines, pass 2 polylines snapped to the drawn line; from v = 0.9: two column extractions (pass 1 at v = 1.2, 1.6, 2.0, 2.4 plus a by-eye column at v = 2.62; pass 2 every 0.2 from 0.9 to 2.7)",
+    "value": "mean of the passes where both read; uncertainty per curve = max(0.05, half the worst disagreement), in ordinate units",
+    "domain": "11a: v = 0.2 to 3.85. 11b: v = 0.25 to 2.6; the 11b curves start at v = 0.2 and run together above v = 2.7 in the scan"
+  },
+  "figure_11a": {
+    "afterbody": true,
+    "curves": {
+      "inf": {
+        "beta_cot_le": null,
+        "worst_disagreement": 0.046,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 6.759,
+            "pass2": 6.805,
+            "value": 6.782,
+            "disagreement": 0.046
+          },
+          {
+            "v": 0.3,
+            "pass1": 6.462,
+            "pass2": 6.462,
+            "value": 6.462,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.4,
+            "pass1": 6.226,
+            "pass2": 6.249,
+            "value": 6.237,
+            "disagreement": 0.023
+          },
+          {
+            "v": 0.5,
+            "pass1": 6.028,
+            "pass2": 6.048,
+            "value": 6.038,
+            "disagreement": 0.02
+          },
+          {
+            "v": 0.6,
+            "pass1": 5.83,
+            "pass2": 5.848,
+            "value": 5.839,
+            "disagreement": 0.018
+          },
+          {
+            "v": 0.7,
+            "pass1": 5.646,
+            "pass2": 5.648,
+            "value": 5.647,
+            "disagreement": 0.002
+          },
+          {
+            "v": 0.8,
+            "pass1": 5.506,
+            "pass2": 5.502,
+            "value": 5.504,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.9,
+            "pass1": 5.381,
+            "pass2": 5.381,
+            "value": 5.381,
+            "disagreement": 0.0
+          },
+          {
+            "v": 1.0,
+            "pass1": 5.249,
+            "pass2": 5.26,
+            "value": 5.255,
+            "disagreement": 0.011
+          },
+          {
+            "v": 1.2,
+            "pass1": 5.023,
+            "pass2": 5.018,
+            "value": 5.021,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.4,
+            "pass1": 4.825,
+            "pass2": 4.841,
+            "value": 4.833,
+            "disagreement": 0.016
+          },
+          {
+            "v": 1.6,
+            "pass1": 4.659,
+            "pass2": 4.663,
+            "value": 4.661,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.8,
+            "pass1": 4.505,
+            "pass2": 4.506,
+            "value": 4.506,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.0,
+            "pass1": 4.351,
+            "pass2": 4.357,
+            "value": 4.354,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.4,
+            "pass1": 4.104,
+            "pass2": 4.107,
+            "value": 4.106,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.8,
+            "pass1": 3.907,
+            "pass2": 3.906,
+            "value": 3.906,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.2,
+            "pass1": 3.753,
+            "pass2": 3.756,
+            "value": 3.754,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.6,
+            "pass1": 3.642,
+            "pass2": 3.645,
+            "value": 3.644,
+            "disagreement": 0.004
+          },
+          {
+            "v": 3.85,
+            "pass1": 3.584,
+            "pass2": 3.583,
+            "value": 3.583,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 6.782],
+          [0.3, 6.462],
+          [0.4, 6.237],
+          [0.5, 6.038],
+          [0.6, 5.839],
+          [0.7, 5.647],
+          [0.8, 5.504],
+          [0.9, 5.381],
+          [1.0, 5.255],
+          [1.2, 5.021],
+          [1.4, 4.833],
+          [1.6, 4.661],
+          [1.8, 4.506],
+          [2.0, 4.354],
+          [2.4, 4.106],
+          [2.8, 3.906],
+          [3.2, 3.754],
+          [3.6, 3.644],
+          [3.85, 3.583]
+        ]
+      },
+      "10": {
+        "beta_cot_le": 10.0,
+        "worst_disagreement": 0.061,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 6.356,
+            "pass2": 6.416,
+            "value": 6.386,
+            "disagreement": 0.061
+          },
+          {
+            "v": 0.3,
+            "pass1": 6.052,
+            "pass2": 6.016,
+            "value": 6.034,
+            "disagreement": 0.036
+          },
+          {
+            "v": 0.4,
+            "pass1": 5.817,
+            "pass2": 5.833,
+            "value": 5.825,
+            "disagreement": 0.017
+          },
+          {
+            "v": 0.5,
+            "pass1": 5.622,
+            "pass2": 5.638,
+            "value": 5.63,
+            "disagreement": 0.016
+          },
+          {
+            "v": 0.6,
+            "pass1": 5.427,
+            "pass2": 5.443,
+            "value": 5.435,
+            "disagreement": 0.016
+          },
+          {
+            "v": 0.7,
+            "pass1": 5.253,
+            "pass2": 5.248,
+            "value": 5.25,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.8,
+            "pass1": 5.102,
+            "pass2": 5.11,
+            "value": 5.106,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.9,
+            "pass1": 4.978,
+            "pass2": 4.998,
+            "value": 4.988,
+            "disagreement": 0.02
+          },
+          {
+            "v": 1.0,
+            "pass1": 4.863,
+            "pass2": 4.887,
+            "value": 4.875,
+            "disagreement": 0.024
+          },
+          {
+            "v": 1.2,
+            "pass1": 4.658,
+            "pass2": 4.664,
+            "value": 4.661,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.4,
+            "pass1": 4.493,
+            "pass2": 4.501,
+            "value": 4.497,
+            "disagreement": 0.008
+          },
+          {
+            "v": 1.6,
+            "pass1": 4.335,
+            "pass2": 4.338,
+            "value": 4.337,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.8,
+            "pass1": 4.19,
+            "pass2": 4.191,
+            "value": 4.191,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.0,
+            "pass1": 4.046,
+            "pass2": 4.049,
+            "value": 4.048,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.4,
+            "pass1": 3.831,
+            "pass2": 3.835,
+            "value": 3.833,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.8,
+            "pass1": 3.652,
+            "pass2": 3.651,
+            "value": 3.652,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.2,
+            "pass1": 3.486,
+            "pass2": 3.49,
+            "value": 3.488,
+            "disagreement": 0.004
+          },
+          {
+            "v": 3.6,
+            "pass1": 3.334,
+            "pass2": 3.338,
+            "value": 3.336,
+            "disagreement": 0.004
+          },
+          {
+            "v": 3.85,
+            "pass1": 3.254,
+            "pass2": 3.254,
+            "value": 3.254,
+            "disagreement": 0.0
+          }
+        ],
+        "points": [
+          [0.2, 6.386],
+          [0.3, 6.034],
+          [0.4, 5.825],
+          [0.5, 5.63],
+          [0.6, 5.435],
+          [0.7, 5.25],
+          [0.8, 5.106],
+          [0.9, 4.988],
+          [1.0, 4.875],
+          [1.2, 4.661],
+          [1.4, 4.497],
+          [1.6, 4.337],
+          [1.8, 4.191],
+          [2.0, 4.048],
+          [2.4, 3.833],
+          [2.8, 3.652],
+          [3.2, 3.488],
+          [3.6, 3.336],
+          [3.85, 3.254]
+        ]
+      },
+      "7": {
+        "beta_cot_le": 7.0,
+        "worst_disagreement": 0.05,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 6.173,
+            "pass2": 6.209,
+            "value": 6.191,
+            "disagreement": 0.036
+          },
+          {
+            "v": 0.3,
+            "pass1": 5.861,
+            "pass2": 5.81,
+            "value": 5.835,
+            "disagreement": 0.05
+          },
+          {
+            "v": 0.4,
+            "pass1": 5.622,
+            "pass2": 5.646,
+            "value": 5.634,
+            "disagreement": 0.023
+          },
+          {
+            "v": 0.5,
+            "pass1": 5.429,
+            "pass2": 5.456,
+            "value": 5.442,
+            "disagreement": 0.027
+          },
+          {
+            "v": 0.6,
+            "pass1": 5.236,
+            "pass2": 5.266,
+            "value": 5.251,
+            "disagreement": 0.031
+          },
+          {
+            "v": 0.7,
+            "pass1": 5.069,
+            "pass2": 5.076,
+            "value": 5.073,
+            "disagreement": 0.008
+          },
+          {
+            "v": 0.8,
+            "pass1": 4.94,
+            "pass2": 4.955,
+            "value": 4.947,
+            "disagreement": 0.015
+          },
+          {
+            "v": 0.9,
+            "pass1": 4.822,
+            "pass2": 4.841,
+            "value": 4.832,
+            "disagreement": 0.019
+          },
+          {
+            "v": 1.0,
+            "pass1": 4.704,
+            "pass2": 4.728,
+            "value": 4.716,
+            "disagreement": 0.023
+          },
+          {
+            "v": 1.2,
+            "pass1": 4.5,
+            "pass2": 4.5,
+            "value": 4.5,
+            "disagreement": 0.0
+          },
+          {
+            "v": 1.4,
+            "pass1": 4.322,
+            "pass2": 4.325,
+            "value": 4.323,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.6,
+            "pass1": 4.149,
+            "pass2": 4.149,
+            "value": 4.149,
+            "disagreement": 0.0
+          },
+          {
+            "v": 1.8,
+            "pass1": 4.008,
+            "pass2": 4.006,
+            "value": 4.007,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.0,
+            "pass1": 3.868,
+            "pass2": 3.875,
+            "value": 3.872,
+            "disagreement": 0.006
+          },
+          {
+            "v": 2.4,
+            "pass1": 3.673,
+            "pass2": 3.676,
+            "value": 3.674,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.8,
+            "pass1": 3.496,
+            "pass2": 3.498,
+            "value": 3.497,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.2,
+            "pass1": 3.326,
+            "pass2": 3.334,
+            "value": 3.33,
+            "disagreement": 0.008
+          },
+          {
+            "v": 3.6,
+            "pass1": 3.191,
+            "pass2": 3.196,
+            "value": 3.194,
+            "disagreement": 0.005
+          },
+          {
+            "v": 3.85,
+            "pass1": 3.113,
+            "pass2": 3.112,
+            "value": 3.113,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 6.191],
+          [0.3, 5.835],
+          [0.4, 5.634],
+          [0.5, 5.442],
+          [0.6, 5.251],
+          [0.7, 5.073],
+          [0.8, 4.947],
+          [0.9, 4.832],
+          [1.0, 4.716],
+          [1.2, 4.5],
+          [1.4, 4.323],
+          [1.6, 4.149],
+          [1.8, 4.007],
+          [2.0, 3.872],
+          [2.4, 3.674],
+          [2.8, 3.497],
+          [3.2, 3.33],
+          [3.6, 3.194],
+          [3.85, 3.113]
+        ]
+      },
+      "4": {
+        "beta_cot_le": 4.0,
+        "worst_disagreement": 0.037,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 5.793,
+            "pass2": 5.83,
+            "value": 5.812,
+            "disagreement": 0.037
+          },
+          {
+            "v": 0.3,
+            "pass1": 5.506,
+            "pass2": 5.493,
+            "value": 5.499,
+            "disagreement": 0.013
+          },
+          {
+            "v": 0.4,
+            "pass1": 5.284,
+            "pass2": 5.303,
+            "value": 5.293,
+            "disagreement": 0.019
+          },
+          {
+            "v": 0.5,
+            "pass1": 5.097,
+            "pass2": 5.116,
+            "value": 5.106,
+            "disagreement": 0.019
+          },
+          {
+            "v": 0.6,
+            "pass1": 4.91,
+            "pass2": 4.928,
+            "value": 4.919,
+            "disagreement": 0.018
+          },
+          {
+            "v": 0.7,
+            "pass1": 4.747,
+            "pass2": 4.741,
+            "value": 4.744,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.8,
+            "pass1": 4.605,
+            "pass2": 4.61,
+            "value": 4.607,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.9,
+            "pass1": 4.493,
+            "pass2": 4.511,
+            "value": 4.502,
+            "disagreement": 0.018
+          },
+          {
+            "v": 1.0,
+            "pass1": 4.393,
+            "pass2": 4.413,
+            "value": 4.403,
+            "disagreement": 0.02
+          },
+          {
+            "v": 1.2,
+            "pass1": 4.208,
+            "pass2": 4.216,
+            "value": 4.212,
+            "disagreement": 0.008
+          },
+          {
+            "v": 1.4,
+            "pass1": 4.041,
+            "pass2": 4.065,
+            "value": 4.053,
+            "disagreement": 0.023
+          },
+          {
+            "v": 1.6,
+            "pass1": 3.908,
+            "pass2": 3.913,
+            "value": 3.91,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.8,
+            "pass1": 3.781,
+            "pass2": 3.782,
+            "value": 3.782,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.0,
+            "pass1": 3.654,
+            "pass2": 3.659,
+            "value": 3.657,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.4,
+            "pass1": 3.449,
+            "pass2": 3.445,
+            "value": 3.447,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.8,
+            "pass1": 3.257,
+            "pass2": 3.26,
+            "value": 3.259,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.2,
+            "pass1": 3.086,
+            "pass2": 3.088,
+            "value": 3.087,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.6,
+            "pass1": 2.94,
+            "pass2": 2.934,
+            "value": 2.937,
+            "disagreement": 0.006
+          },
+          {
+            "v": 3.85,
+            "pass1": 2.848,
+            "pass2": 2.847,
+            "value": 2.848,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 5.812],
+          [0.3, 5.499],
+          [0.4, 5.293],
+          [0.5, 5.106],
+          [0.6, 4.919],
+          [0.7, 4.744],
+          [0.8, 4.607],
+          [0.9, 4.502],
+          [1.0, 4.403],
+          [1.2, 4.212],
+          [1.4, 4.053],
+          [1.6, 3.91],
+          [1.8, 3.782],
+          [2.0, 3.657],
+          [2.4, 3.447],
+          [2.8, 3.259],
+          [3.2, 3.087],
+          [3.6, 2.937],
+          [3.85, 2.848]
+        ]
+      },
+      "3": {
+        "beta_cot_le": 3.0,
+        "worst_disagreement": 0.047,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 5.508,
+            "pass2": 5.54,
+            "value": 5.524,
+            "disagreement": 0.032
+          },
+          {
+            "v": 0.3,
+            "pass1": 5.203,
+            "pass2": 5.222,
+            "value": 5.212,
+            "disagreement": 0.019
+          },
+          {
+            "v": 0.4,
+            "pass1": 4.968,
+            "pass2": 5.015,
+            "value": 4.991,
+            "disagreement": 0.047
+          },
+          {
+            "v": 0.5,
+            "pass1": 4.801,
+            "pass2": 4.848,
+            "value": 4.825,
+            "disagreement": 0.046
+          },
+          {
+            "v": 0.6,
+            "pass1": 4.635,
+            "pass2": 4.681,
+            "value": 4.658,
+            "disagreement": 0.046
+          },
+          {
+            "v": 0.7,
+            "pass1": 4.486,
+            "pass2": 4.514,
+            "value": 4.5,
+            "disagreement": 0.028
+          },
+          {
+            "v": 0.8,
+            "pass1": 4.363,
+            "pass2": 4.368,
+            "value": 4.366,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.9,
+            "pass1": 4.257,
+            "pass2": 4.27,
+            "value": 4.263,
+            "disagreement": 0.014
+          },
+          {
+            "v": 1.0,
+            "pass1": 4.153,
+            "pass2": 4.172,
+            "value": 4.162,
+            "disagreement": 0.019
+          },
+          {
+            "v": 1.2,
+            "pass1": 3.97,
+            "pass2": 3.976,
+            "value": 3.973,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.4,
+            "pass1": 3.795,
+            "pass2": 3.824,
+            "value": 3.809,
+            "disagreement": 0.029
+          },
+          {
+            "v": 1.6,
+            "pass1": 3.666,
+            "pass2": 3.672,
+            "value": 3.669,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.8,
+            "pass1": 3.549,
+            "pass2": 3.547,
+            "value": 3.548,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.0,
+            "pass1": 3.432,
+            "pass2": 3.431,
+            "value": 3.431,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.4,
+            "pass1": 3.247,
+            "pass2": 3.251,
+            "value": 3.249,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.8,
+            "pass1": 3.079,
+            "pass2": 3.081,
+            "value": 3.08,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.2,
+            "pass1": 2.937,
+            "pass2": 2.923,
+            "value": 2.93,
+            "disagreement": 0.014
+          },
+          {
+            "v": 3.6,
+            "pass1": 2.778,
+            "pass2": 2.781,
+            "value": 2.779,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.85,
+            "pass1": 2.694,
+            "pass2": 2.693,
+            "value": 2.694,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 5.524],
+          [0.3, 5.212],
+          [0.4, 4.991],
+          [0.5, 4.825],
+          [0.6, 4.658],
+          [0.7, 4.5],
+          [0.8, 4.366],
+          [0.9, 4.263],
+          [1.0, 4.162],
+          [1.2, 3.973],
+          [1.4, 3.809],
+          [1.6, 3.669],
+          [1.8, 3.548],
+          [2.0, 3.431],
+          [2.4, 3.249],
+          [2.8, 3.08],
+          [3.2, 2.93],
+          [3.6, 2.779],
+          [3.85, 2.694]
+        ]
+      },
+      "2": {
+        "beta_cot_le": 2.0,
+        "worst_disagreement": 0.033,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 5.118,
+            "pass2": 5.151,
+            "value": 5.135,
+            "disagreement": 0.033
+          },
+          {
+            "v": 0.3,
+            "pass1": 4.842,
+            "pass2": 4.826,
+            "value": 4.834,
+            "disagreement": 0.016
+          },
+          {
+            "v": 0.4,
+            "pass1": 4.633,
+            "pass2": 4.633,
+            "value": 4.633,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.5,
+            "pass1": 4.464,
+            "pass2": 4.47,
+            "value": 4.467,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.6,
+            "pass1": 4.295,
+            "pass2": 4.307,
+            "value": 4.301,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.7,
+            "pass1": 4.145,
+            "pass2": 4.143,
+            "value": 4.144,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.8,
+            "pass1": 4.022,
+            "pass2": 4.019,
+            "value": 4.021,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.9,
+            "pass1": 3.917,
+            "pass2": 3.927,
+            "value": 3.922,
+            "disagreement": 0.01
+          },
+          {
+            "v": 1.0,
+            "pass1": 3.816,
+            "pass2": 3.836,
+            "value": 3.826,
+            "disagreement": 0.02
+          },
+          {
+            "v": 1.2,
+            "pass1": 3.649,
+            "pass2": 3.652,
+            "value": 3.65,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.4,
+            "pass1": 3.5,
+            "pass2": 3.502,
+            "value": 3.501,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.6,
+            "pass1": 3.349,
+            "pass2": 3.351,
+            "value": 3.35,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.8,
+            "pass1": 3.236,
+            "pass2": 3.233,
+            "value": 3.234,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.0,
+            "pass1": 3.123,
+            "pass2": 3.125,
+            "value": 3.124,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.4,
+            "pass1": 2.964,
+            "pass2": 2.955,
+            "value": 2.96,
+            "disagreement": 0.009
+          },
+          {
+            "v": 2.8,
+            "pass1": 2.792,
+            "pass2": 2.794,
+            "value": 2.793,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.2,
+            "pass1": 2.641,
+            "pass2": 2.64,
+            "value": 2.641,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.6,
+            "pass1": 2.499,
+            "pass2": 2.504,
+            "value": 2.501,
+            "disagreement": 0.006
+          },
+          {
+            "v": 3.85,
+            "pass1": 2.419,
+            "pass2": 2.421,
+            "value": 2.42,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 5.135],
+          [0.3, 4.834],
+          [0.4, 4.633],
+          [0.5, 4.467],
+          [0.6, 4.301],
+          [0.7, 4.144],
+          [0.8, 4.021],
+          [0.9, 3.922],
+          [1.0, 3.826],
+          [1.2, 3.65],
+          [1.4, 3.501],
+          [1.6, 3.35],
+          [1.8, 3.234],
+          [2.0, 3.124],
+          [2.4, 2.96],
+          [2.8, 2.793],
+          [3.2, 2.641],
+          [3.6, 2.501],
+          [3.85, 2.42]
+        ]
+      },
+      "1.6": {
+        "beta_cot_le": 1.6,
+        "worst_disagreement": 0.032,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 4.779,
+            "pass2": 4.81,
+            "value": 4.794,
+            "disagreement": 0.032
+          },
+          {
+            "v": 0.3,
+            "pass1": 4.514,
+            "pass2": 4.507,
+            "value": 4.511,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.4,
+            "pass1": 4.312,
+            "pass2": 4.335,
+            "value": 4.323,
+            "disagreement": 0.022
+          },
+          {
+            "v": 0.5,
+            "pass1": 4.145,
+            "pass2": 4.165,
+            "value": 4.155,
+            "disagreement": 0.019
+          },
+          {
+            "v": 0.6,
+            "pass1": 3.978,
+            "pass2": 3.995,
+            "value": 3.987,
+            "disagreement": 0.017
+          },
+          {
+            "v": 0.7,
+            "pass1": 3.828,
+            "pass2": 3.825,
+            "value": 3.826,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.8,
+            "pass1": 3.703,
+            "pass2": 3.704,
+            "value": 3.704,
+            "disagreement": 0.002
+          },
+          {
+            "v": 0.9,
+            "pass1": 3.604,
+            "pass2": 3.616,
+            "value": 3.61,
+            "disagreement": 0.012
+          },
+          {
+            "v": 1.0,
+            "pass1": 3.511,
+            "pass2": 3.527,
+            "value": 3.519,
+            "disagreement": 0.016
+          },
+          {
+            "v": 1.2,
+            "pass1": 3.345,
+            "pass2": 3.349,
+            "value": 3.347,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.4,
+            "pass1": 3.21,
+            "pass2": 3.226,
+            "value": 3.218,
+            "disagreement": 0.016
+          },
+          {
+            "v": 1.6,
+            "pass1": 3.099,
+            "pass2": 3.103,
+            "value": 3.101,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.8,
+            "pass1": 3.003,
+            "pass2": 2.999,
+            "value": 3.001,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.0,
+            "pass1": 2.906,
+            "pass2": 2.901,
+            "value": 2.903,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.4,
+            "pass1": 2.735,
+            "pass2": 2.737,
+            "value": 2.736,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.8,
+            "pass1": 2.582,
+            "pass2": 2.582,
+            "value": 2.582,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.2,
+            "pass1": 2.462,
+            "pass2": 2.461,
+            "value": 2.461,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.6,
+            "pass1": 2.34,
+            "pass2": 2.348,
+            "value": 2.344,
+            "disagreement": 0.007
+          },
+          {
+            "v": 3.85,
+            "pass1": 2.283,
+            "pass2": 2.282,
+            "value": 2.283,
+            "disagreement": 0.002
+          }
+        ],
+        "points": [
+          [0.2, 4.794],
+          [0.3, 4.511],
+          [0.4, 4.323],
+          [0.5, 4.155],
+          [0.6, 3.987],
+          [0.7, 3.826],
+          [0.8, 3.704],
+          [0.9, 3.61],
+          [1.0, 3.519],
+          [1.2, 3.347],
+          [1.4, 3.218],
+          [1.6, 3.101],
+          [1.8, 3.001],
+          [2.0, 2.903],
+          [2.4, 2.736],
+          [2.8, 2.582],
+          [3.2, 2.461],
+          [3.6, 2.344],
+          [3.85, 2.283]
+        ]
+      },
+      "1.2": {
+        "beta_cot_le": 1.2,
+        "worst_disagreement": 0.03,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 4.415,
+            "pass2": null,
+            "value": 4.415,
+            "disagreement": null
+          },
+          {
+            "v": 0.3,
+            "pass1": 4.198,
+            "pass2": 4.168,
+            "value": 4.183,
+            "disagreement": 0.03
+          },
+          {
+            "v": 0.4,
+            "pass1": 4.018,
+            "pass2": 4.001,
+            "value": 4.009,
+            "disagreement": 0.017
+          },
+          {
+            "v": 0.5,
+            "pass1": 3.839,
+            "pass2": 3.844,
+            "value": 3.842,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.6,
+            "pass1": 3.661,
+            "pass2": 3.687,
+            "value": 3.674,
+            "disagreement": 0.026
+          },
+          {
+            "v": 0.7,
+            "pass1": 3.508,
+            "pass2": 3.53,
+            "value": 3.519,
+            "disagreement": 0.022
+          },
+          {
+            "v": 0.8,
+            "pass1": 3.393,
+            "pass2": 3.397,
+            "value": 3.395,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.9,
+            "pass1": 3.301,
+            "pass2": 3.304,
+            "value": 3.302,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.0,
+            "pass1": 3.212,
+            "pass2": 3.211,
+            "value": 3.212,
+            "disagreement": 0.0
+          },
+          {
+            "v": 1.2,
+            "pass1": 3.034,
+            "pass2": 3.026,
+            "value": 3.03,
+            "disagreement": 0.008
+          },
+          {
+            "v": 1.4,
+            "pass1": 2.901,
+            "pass2": 2.911,
+            "value": 2.906,
+            "disagreement": 0.01
+          },
+          {
+            "v": 1.6,
+            "pass1": 2.788,
+            "pass2": 2.796,
+            "value": 2.792,
+            "disagreement": 0.007
+          },
+          {
+            "v": 1.8,
+            "pass1": 2.689,
+            "pass2": 2.694,
+            "value": 2.691,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.0,
+            "pass1": 2.59,
+            "pass2": 2.596,
+            "value": 2.593,
+            "disagreement": 0.007
+          },
+          {
+            "v": 2.4,
+            "pass1": 2.457,
+            "pass2": 2.45,
+            "value": 2.454,
+            "disagreement": 0.007
+          },
+          {
+            "v": 2.8,
+            "pass1": 2.319,
+            "pass2": 2.319,
+            "value": 2.319,
+            "disagreement": 0.0
+          },
+          {
+            "v": 3.2,
+            "pass1": 2.192,
+            "pass2": 2.19,
+            "value": 2.191,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.6,
+            "pass1": 2.082,
+            "pass2": 2.084,
+            "value": 2.083,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.85,
+            "pass1": 2.012,
+            "pass2": 2.004,
+            "value": 2.008,
+            "disagreement": 0.007
+          }
+        ],
+        "points": [
+          [0.2, 4.415],
+          [0.3, 4.183],
+          [0.4, 4.009],
+          [0.5, 3.842],
+          [0.6, 3.674],
+          [0.7, 3.519],
+          [0.8, 3.395],
+          [0.9, 3.302],
+          [1.0, 3.212],
+          [1.2, 3.03],
+          [1.4, 2.906],
+          [1.6, 2.792],
+          [1.8, 2.691],
+          [2.0, 2.593],
+          [2.4, 2.454],
+          [2.8, 2.319],
+          [3.2, 2.191],
+          [3.6, 2.083],
+          [3.85, 2.008]
+        ]
+      },
+      "1.0": {
+        "beta_cot_le": 1.0,
+        "worst_disagreement": 0.026,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 4.096,
+            "pass2": 4.122,
+            "value": 4.109,
+            "disagreement": 0.026
+          },
+          {
+            "v": 0.3,
+            "pass1": 3.871,
+            "pass2": 3.865,
+            "value": 3.868,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.4,
+            "pass1": 3.691,
+            "pass2": 3.711,
+            "value": 3.701,
+            "disagreement": 0.02
+          },
+          {
+            "v": 0.5,
+            "pass1": 3.542,
+            "pass2": 3.559,
+            "value": 3.55,
+            "disagreement": 0.016
+          },
+          {
+            "v": 0.6,
+            "pass1": 3.394,
+            "pass2": 3.406,
+            "value": 3.4,
+            "disagreement": 0.012
+          },
+          {
+            "v": 0.7,
+            "pass1": 3.259,
+            "pass2": 3.254,
+            "value": 3.256,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.8,
+            "pass1": 3.143,
+            "pass2": 3.146,
+            "value": 3.145,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.9,
+            "pass1": 3.047,
+            "pass2": 3.06,
+            "value": 3.054,
+            "disagreement": 0.013
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.958,
+            "pass2": 2.975,
+            "value": 2.966,
+            "disagreement": 0.017
+          },
+          {
+            "v": 1.2,
+            "pass1": 2.802,
+            "pass2": 2.803,
+            "value": 2.802,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.4,
+            "pass1": 2.676,
+            "pass2": 2.686,
+            "value": 2.681,
+            "disagreement": 0.01
+          },
+          {
+            "v": 1.6,
+            "pass1": 2.571,
+            "pass2": 2.568,
+            "value": 2.57,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.8,
+            "pass1": 2.481,
+            "pass2": 2.476,
+            "value": 2.479,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.0,
+            "pass1": 2.391,
+            "pass2": 2.392,
+            "value": 2.392,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.4,
+            "pass1": 2.26,
+            "pass2": 2.261,
+            "value": 2.26,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.8,
+            "pass1": 2.136,
+            "pass2": 2.134,
+            "value": 2.135,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.2,
+            "pass1": 2.01,
+            "pass2": 2.015,
+            "value": 2.012,
+            "disagreement": 0.005
+          },
+          {
+            "v": 3.6,
+            "pass1": 1.918,
+            "pass2": 1.919,
+            "value": 1.919,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.85,
+            "pass1": 1.857,
+            "pass2": 1.859,
+            "value": 1.858,
+            "disagreement": 0.002
+          }
+        ],
+        "points": [
+          [0.2, 4.109],
+          [0.3, 3.868],
+          [0.4, 3.701],
+          [0.5, 3.55],
+          [0.6, 3.4],
+          [0.7, 3.256],
+          [0.8, 3.145],
+          [0.9, 3.054],
+          [1.0, 2.966],
+          [1.2, 2.802],
+          [1.4, 2.681],
+          [1.6, 2.57],
+          [1.8, 2.479],
+          [2.0, 2.392],
+          [2.4, 2.26],
+          [2.8, 2.135],
+          [3.2, 2.012],
+          [3.6, 1.919],
+          [3.85, 1.858]
+        ]
+      },
+      "0.9": {
+        "beta_cot_le": 0.9,
+        "worst_disagreement": 0.029,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 3.859,
+            "pass2": 3.888,
+            "value": 3.874,
+            "disagreement": 0.029
+          },
+          {
+            "v": 0.3,
+            "pass1": 3.67,
+            "pass2": 3.651,
+            "value": 3.66,
+            "disagreement": 0.019
+          },
+          {
+            "v": 0.4,
+            "pass1": 3.518,
+            "pass2": 3.493,
+            "value": 3.506,
+            "disagreement": 0.025
+          },
+          {
+            "v": 0.5,
+            "pass1": 3.367,
+            "pass2": 3.361,
+            "value": 3.364,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.6,
+            "pass1": 3.215,
+            "pass2": 3.229,
+            "value": 3.222,
+            "disagreement": 0.014
+          },
+          {
+            "v": 0.7,
+            "pass1": 3.074,
+            "pass2": 3.096,
+            "value": 3.085,
+            "disagreement": 0.023
+          },
+          {
+            "v": 0.8,
+            "pass1": 2.979,
+            "pass2": 2.984,
+            "value": 2.981,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.897,
+            "pass2": 2.903,
+            "value": 2.9,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.805,
+            "pass2": 2.822,
+            "value": 2.814,
+            "disagreement": 0.017
+          },
+          {
+            "v": 1.2,
+            "pass1": 2.657,
+            "pass2": 2.66,
+            "value": 2.659,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.4,
+            "pass1": 2.528,
+            "pass2": 2.55,
+            "value": 2.539,
+            "disagreement": 0.022
+          },
+          {
+            "v": 1.6,
+            "pass1": 2.443,
+            "pass2": 2.439,
+            "value": 2.441,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.8,
+            "pass1": 2.353,
+            "pass2": 2.348,
+            "value": 2.351,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.0,
+            "pass1": 2.263,
+            "pass2": 2.263,
+            "value": 2.263,
+            "disagreement": 0.0
+          },
+          {
+            "v": 2.4,
+            "pass1": 2.119,
+            "pass2": 2.12,
+            "value": 2.119,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.8,
+            "pass1": 1.99,
+            "pass2": 1.993,
+            "value": 1.991,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.2,
+            "pass1": 1.883,
+            "pass2": 1.882,
+            "value": 1.883,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.6,
+            "pass1": 1.787,
+            "pass2": 1.79,
+            "value": 1.789,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.85,
+            "pass1": 1.746,
+            "pass2": 1.746,
+            "value": 1.746,
+            "disagreement": 0.0
+          }
+        ],
+        "points": [
+          [0.2, 3.874],
+          [0.3, 3.66],
+          [0.4, 3.506],
+          [0.5, 3.364],
+          [0.6, 3.222],
+          [0.7, 3.085],
+          [0.8, 2.981],
+          [0.9, 2.9],
+          [1.0, 2.814],
+          [1.2, 2.659],
+          [1.4, 2.539],
+          [1.6, 2.441],
+          [1.8, 2.351],
+          [2.0, 2.263],
+          [2.4, 2.119],
+          [2.8, 1.991],
+          [3.2, 1.883],
+          [3.6, 1.789],
+          [3.85, 1.746]
+        ]
+      },
+      "0.8": {
+        "beta_cot_le": 0.8,
+        "worst_disagreement": 0.035,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 3.638,
+            "pass2": 3.674,
+            "value": 3.656,
+            "disagreement": 0.035
+          },
+          {
+            "v": 0.3,
+            "pass1": 3.428,
+            "pass2": 3.434,
+            "value": 3.431,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.4,
+            "pass1": 3.266,
+            "pass2": 3.26,
+            "value": 3.263,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.5,
+            "pass1": 3.131,
+            "pass2": 3.129,
+            "value": 3.13,
+            "disagreement": 0.002
+          },
+          {
+            "v": 0.6,
+            "pass1": 2.996,
+            "pass2": 2.998,
+            "value": 2.997,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.7,
+            "pass1": 2.868,
+            "pass2": 2.866,
+            "value": 2.867,
+            "disagreement": 0.002
+          },
+          {
+            "v": 0.8,
+            "pass1": 2.758,
+            "pass2": 2.757,
+            "value": 2.757,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.666,
+            "pass2": 2.681,
+            "value": 2.674,
+            "disagreement": 0.015
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.579,
+            "pass2": 2.605,
+            "value": 2.592,
+            "disagreement": 0.026
+          },
+          {
+            "v": 1.2,
+            "pass1": 2.445,
+            "pass2": 2.452,
+            "value": 2.449,
+            "disagreement": 0.007
+          },
+          {
+            "v": 1.4,
+            "pass1": 2.324,
+            "pass2": 2.344,
+            "value": 2.334,
+            "disagreement": 0.019
+          },
+          {
+            "v": 1.6,
+            "pass1": 2.229,
+            "pass2": 2.235,
+            "value": 2.232,
+            "disagreement": 0.007
+          },
+          {
+            "v": 1.8,
+            "pass1": 2.137,
+            "pass2": 2.143,
+            "value": 2.14,
+            "disagreement": 0.006
+          },
+          {
+            "v": 2.0,
+            "pass1": 2.046,
+            "pass2": 2.057,
+            "value": 2.051,
+            "disagreement": 0.011
+          },
+          {
+            "v": 2.4,
+            "pass1": 1.946,
+            "pass2": 1.937,
+            "value": 1.942,
+            "disagreement": 0.008
+          },
+          {
+            "v": 2.8,
+            "pass1": 1.836,
+            "pass2": 1.836,
+            "value": 1.836,
+            "disagreement": 0.0
+          },
+          {
+            "v": 3.2,
+            "pass1": 1.74,
+            "pass2": 1.741,
+            "value": 1.74,
+            "disagreement": 0.0
+          },
+          {
+            "v": 3.6,
+            "pass1": 1.665,
+            "pass2": 1.668,
+            "value": 1.666,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.85,
+            "pass1": 1.624,
+            "pass2": 1.625,
+            "value": 1.625,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 3.656],
+          [0.3, 3.431],
+          [0.4, 3.263],
+          [0.5, 3.13],
+          [0.6, 2.997],
+          [0.7, 2.867],
+          [0.8, 2.757],
+          [0.9, 2.674],
+          [1.0, 2.592],
+          [1.2, 2.449],
+          [1.4, 2.334],
+          [1.6, 2.232],
+          [1.8, 2.14],
+          [2.0, 2.051],
+          [2.4, 1.942],
+          [2.8, 1.836],
+          [3.2, 1.74],
+          [3.6, 1.666],
+          [3.85, 1.625]
+        ]
+      },
+      "0.7": {
+        "beta_cot_le": 0.7,
+        "worst_disagreement": 0.016,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 3.33,
+            "pass2": 3.346,
+            "value": 3.338,
+            "disagreement": 0.016
+          },
+          {
+            "v": 0.3,
+            "pass1": 3.141,
+            "pass2": 3.134,
+            "value": 3.137,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.4,
+            "pass1": 2.992,
+            "pass2": 2.989,
+            "value": 2.991,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.5,
+            "pass1": 2.862,
+            "pass2": 2.86,
+            "value": 2.861,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.6,
+            "pass1": 2.731,
+            "pass2": 2.732,
+            "value": 2.731,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.7,
+            "pass1": 2.607,
+            "pass2": 2.603,
+            "value": 2.605,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.8,
+            "pass1": 2.51,
+            "pass2": 2.504,
+            "value": 2.507,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.43,
+            "pass2": 2.434,
+            "value": 2.432,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.349,
+            "pass2": 2.364,
+            "value": 2.357,
+            "disagreement": 0.014
+          },
+          {
+            "v": 1.2,
+            "pass1": 2.222,
+            "pass2": 2.224,
+            "value": 2.223,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.4,
+            "pass1": 2.113,
+            "pass2": 2.127,
+            "value": 2.12,
+            "disagreement": 0.015
+          },
+          {
+            "v": 1.6,
+            "pass1": 2.015,
+            "pass2": 2.031,
+            "value": 2.023,
+            "disagreement": 0.016
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.951,
+            "pass2": 1.955,
+            "value": 1.953,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.0,
+            "pass1": 1.886,
+            "pass2": 1.885,
+            "value": 1.886,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.4,
+            "pass1": 1.77,
+            "pass2": 1.772,
+            "value": 1.771,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.8,
+            "pass1": 1.668,
+            "pass2": 1.669,
+            "value": 1.669,
+            "disagreement": 0.0
+          },
+          {
+            "v": 3.2,
+            "pass1": 1.568,
+            "pass2": 1.567,
+            "value": 1.568,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.6,
+            "pass1": 1.477,
+            "pass2": 1.486,
+            "value": 1.482,
+            "disagreement": 0.009
+          },
+          {
+            "v": 3.85,
+            "pass1": 1.439,
+            "pass2": 1.454,
+            "value": 1.447,
+            "disagreement": 0.015
+          }
+        ],
+        "points": [
+          [0.2, 3.338],
+          [0.3, 3.137],
+          [0.4, 2.991],
+          [0.5, 2.861],
+          [0.6, 2.731],
+          [0.7, 2.605],
+          [0.8, 2.507],
+          [0.9, 2.432],
+          [1.0, 2.357],
+          [1.2, 2.223],
+          [1.4, 2.12],
+          [1.6, 2.023],
+          [1.8, 1.953],
+          [2.0, 1.886],
+          [2.4, 1.771],
+          [2.8, 1.669],
+          [3.2, 1.568],
+          [3.6, 1.482],
+          [3.85, 1.447]
+        ]
+      },
+      "0.6": {
+        "beta_cot_le": 0.6,
+        "worst_disagreement": 0.036,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 2.931,
+            "pass2": 2.967,
+            "value": 2.949,
+            "disagreement": 0.036
+          },
+          {
+            "v": 0.3,
+            "pass1": 2.754,
+            "pass2": 2.749,
+            "value": 2.751,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.4,
+            "pass1": 2.611,
+            "pass2": 2.614,
+            "value": 2.612,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.5,
+            "pass1": 2.492,
+            "pass2": 2.499,
+            "value": 2.495,
+            "disagreement": 0.006
+          },
+          {
+            "v": 0.6,
+            "pass1": 2.374,
+            "pass2": 2.383,
+            "value": 2.378,
+            "disagreement": 0.009
+          },
+          {
+            "v": 0.7,
+            "pass1": 2.269,
+            "pass2": 2.268,
+            "value": 2.269,
+            "disagreement": 0.002
+          },
+          {
+            "v": 0.8,
+            "pass1": 2.183,
+            "pass2": 2.183,
+            "value": 2.183,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.109,
+            "pass2": 2.128,
+            "value": 2.118,
+            "disagreement": 0.019
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.039,
+            "pass2": 2.072,
+            "value": 2.055,
+            "disagreement": 0.033
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.953,
+            "pass2": 1.961,
+            "value": 1.957,
+            "disagreement": 0.008
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.863,
+            "pass2": 1.882,
+            "value": 1.873,
+            "disagreement": 0.019
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.797,
+            "pass2": 1.803,
+            "value": 1.8,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.735,
+            "pass2": 1.736,
+            "value": 1.736,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.0,
+            "pass1": 1.673,
+            "pass2": 1.674,
+            "value": 1.673,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.4,
+            "pass1": 1.566,
+            "pass2": 1.567,
+            "value": 1.566,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.8,
+            "pass1": 1.469,
+            "pass2": 1.476,
+            "value": 1.473,
+            "disagreement": 0.007
+          },
+          {
+            "v": 3.2,
+            "pass1": 1.356,
+            "pass2": 1.357,
+            "value": 1.356,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.6,
+            "pass1": 1.268,
+            "pass2": 1.272,
+            "value": 1.27,
+            "disagreement": 0.004
+          },
+          {
+            "v": 3.85,
+            "pass1": 1.224,
+            "pass2": 1.223,
+            "value": 1.223,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 2.949],
+          [0.3, 2.751],
+          [0.4, 2.612],
+          [0.5, 2.495],
+          [0.6, 2.378],
+          [0.7, 2.269],
+          [0.8, 2.183],
+          [0.9, 2.118],
+          [1.0, 2.055],
+          [1.2, 1.957],
+          [1.4, 1.873],
+          [1.6, 1.8],
+          [1.8, 1.736],
+          [2.0, 1.673],
+          [2.4, 1.566],
+          [2.8, 1.473],
+          [3.2, 1.356],
+          [3.6, 1.27],
+          [3.85, 1.223]
+        ]
+      },
+      "0.5": {
+        "beta_cot_le": 0.5,
+        "worst_disagreement": 0.023,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 2.6,
+            "pass2": 2.624,
+            "value": 2.612,
+            "disagreement": 0.023
+          },
+          {
+            "v": 0.3,
+            "pass1": 2.43,
+            "pass2": 2.44,
+            "value": 2.435,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.4,
+            "pass1": 2.298,
+            "pass2": 2.304,
+            "value": 2.301,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.5,
+            "pass1": 2.185,
+            "pass2": 2.196,
+            "value": 2.191,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.6,
+            "pass1": 2.073,
+            "pass2": 2.088,
+            "value": 2.08,
+            "disagreement": 0.015
+          },
+          {
+            "v": 0.7,
+            "pass1": 1.978,
+            "pass2": 1.979,
+            "value": 1.979,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.8,
+            "pass1": 1.896,
+            "pass2": 1.896,
+            "value": 1.896,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.9,
+            "pass1": 1.833,
+            "pass2": 1.845,
+            "value": 1.839,
+            "disagreement": 0.012
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.779,
+            "pass2": 1.795,
+            "value": 1.787,
+            "disagreement": 0.016
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.692,
+            "pass2": 1.694,
+            "value": 1.693,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.628,
+            "pass2": 1.634,
+            "value": 1.631,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.569,
+            "pass2": 1.574,
+            "value": 1.571,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.518,
+            "pass2": 1.522,
+            "value": 1.52,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.0,
+            "pass1": 1.467,
+            "pass2": 1.472,
+            "value": 1.469,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.4,
+            "pass1": 1.369,
+            "pass2": 1.371,
+            "value": 1.37,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.8,
+            "pass1": 1.254,
+            "pass2": 1.259,
+            "value": 1.257,
+            "disagreement": 0.005
+          },
+          {
+            "v": 3.2,
+            "pass1": 1.179,
+            "pass2": 1.173,
+            "value": 1.176,
+            "disagreement": 0.006
+          },
+          {
+            "v": 3.6,
+            "pass1": 1.099,
+            "pass2": 1.103,
+            "value": 1.101,
+            "disagreement": 0.005
+          },
+          {
+            "v": 3.85,
+            "pass1": 1.059,
+            "pass2": 1.06,
+            "value": 1.06,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 2.612],
+          [0.3, 2.435],
+          [0.4, 2.301],
+          [0.5, 2.191],
+          [0.6, 2.08],
+          [0.7, 1.979],
+          [0.8, 1.896],
+          [0.9, 1.839],
+          [1.0, 1.787],
+          [1.2, 1.693],
+          [1.4, 1.631],
+          [1.6, 1.571],
+          [1.8, 1.52],
+          [2.0, 1.469],
+          [2.4, 1.37],
+          [2.8, 1.257],
+          [3.2, 1.176],
+          [3.6, 1.101],
+          [3.85, 1.06]
+        ]
+      },
+      "0.4": {
+        "beta_cot_le": 0.4,
+        "worst_disagreement": 0.026,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 2.21,
+            "pass2": 2.221,
+            "value": 2.216,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.3,
+            "pass1": 2.057,
+            "pass2": 2.043,
+            "value": 2.05,
+            "disagreement": 0.013
+          },
+          {
+            "v": 0.4,
+            "pass1": 1.937,
+            "pass2": 1.963,
+            "value": 1.95,
+            "disagreement": 0.026
+          },
+          {
+            "v": 0.5,
+            "pass1": 1.837,
+            "pass2": 1.858,
+            "value": 1.847,
+            "disagreement": 0.021
+          },
+          {
+            "v": 0.6,
+            "pass1": 1.737,
+            "pass2": 1.752,
+            "value": 1.745,
+            "disagreement": 0.015
+          },
+          {
+            "v": 0.7,
+            "pass1": 1.651,
+            "pass2": 1.647,
+            "value": 1.649,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.8,
+            "pass1": 1.587,
+            "pass2": 1.582,
+            "value": 1.585,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.9,
+            "pass1": 1.539,
+            "pass2": 1.541,
+            "value": 1.54,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.496,
+            "pass2": 1.5,
+            "value": 1.498,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.418,
+            "pass2": 1.417,
+            "value": 1.417,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.354,
+            "pass2": 1.358,
+            "value": 1.356,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.295,
+            "pass2": 1.299,
+            "value": 1.297,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.241,
+            "pass2": 1.242,
+            "value": 1.242,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.0,
+            "pass1": 1.188,
+            "pass2": 1.186,
+            "value": 1.187,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.4,
+            "pass1": 1.09,
+            "pass2": 1.09,
+            "value": 1.09,
+            "disagreement": 0.0
+          },
+          {
+            "v": 2.8,
+            "pass1": 0.997,
+            "pass2": 1.0,
+            "value": 0.999,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.2,
+            "pass1": 0.917,
+            "pass2": 0.914,
+            "value": 0.916,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.6,
+            "pass1": 0.844,
+            "pass2": 0.846,
+            "value": 0.845,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.85,
+            "pass1": 0.807,
+            "pass2": 0.807,
+            "value": 0.807,
+            "disagreement": 0.0
+          }
+        ],
+        "points": [
+          [0.2, 2.216],
+          [0.3, 2.05],
+          [0.4, 1.95],
+          [0.5, 1.847],
+          [0.6, 1.745],
+          [0.7, 1.649],
+          [0.8, 1.585],
+          [0.9, 1.54],
+          [1.0, 1.498],
+          [1.2, 1.417],
+          [1.4, 1.356],
+          [1.6, 1.297],
+          [1.8, 1.242],
+          [2.0, 1.187],
+          [2.4, 1.09],
+          [2.8, 0.999],
+          [3.2, 0.916],
+          [3.6, 0.845],
+          [3.85, 0.807]
+        ]
+      },
+      "0.3": {
+        "beta_cot_le": 0.3,
+        "worst_disagreement": 0.02,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 1.707,
+            "pass2": 1.714,
+            "value": 1.711,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.3,
+            "pass1": 1.576,
+            "pass2": 1.576,
+            "value": 1.576,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.4,
+            "pass1": 1.475,
+            "pass2": 1.486,
+            "value": 1.48,
+            "disagreement": 0.012
+          },
+          {
+            "v": 0.5,
+            "pass1": 1.397,
+            "pass2": 1.406,
+            "value": 1.402,
+            "disagreement": 0.009
+          },
+          {
+            "v": 0.6,
+            "pass1": 1.32,
+            "pass2": 1.326,
+            "value": 1.323,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.7,
+            "pass1": 1.249,
+            "pass2": 1.246,
+            "value": 1.248,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.8,
+            "pass1": 1.192,
+            "pass2": 1.193,
+            "value": 1.192,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.9,
+            "pass1": 1.153,
+            "pass2": 1.161,
+            "value": 1.157,
+            "disagreement": 0.008
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.119,
+            "pass2": 1.129,
+            "value": 1.124,
+            "disagreement": 0.01
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.065,
+            "pass2": 1.066,
+            "value": 1.066,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.0,
+            "pass2": 1.02,
+            "value": 1.01,
+            "disagreement": 0.02
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.963,
+            "pass2": 0.974,
+            "value": 0.969,
+            "disagreement": 0.011
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.918,
+            "pass2": 0.924,
+            "value": 0.921,
+            "disagreement": 0.007
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.872,
+            "pass2": 0.873,
+            "value": 0.873,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.799,
+            "pass2": 0.8,
+            "value": 0.8,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.8,
+            "pass1": 0.743,
+            "pass2": 0.745,
+            "value": 0.744,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.2,
+            "pass1": 0.703,
+            "pass2": 0.7,
+            "value": 0.701,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.6,
+            "pass1": 0.665,
+            "pass2": 0.669,
+            "value": 0.667,
+            "disagreement": 0.004
+          },
+          {
+            "v": 3.85,
+            "pass1": 0.645,
+            "pass2": 0.643,
+            "value": 0.644,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.2, 1.711],
+          [0.3, 1.576],
+          [0.4, 1.48],
+          [0.5, 1.402],
+          [0.6, 1.323],
+          [0.7, 1.248],
+          [0.8, 1.192],
+          [0.9, 1.157],
+          [1.0, 1.124],
+          [1.2, 1.066],
+          [1.4, 1.01],
+          [1.6, 0.969],
+          [1.8, 0.921],
+          [2.0, 0.873],
+          [2.4, 0.8],
+          [2.8, 0.744],
+          [3.2, 0.701],
+          [3.6, 0.667],
+          [3.85, 0.644]
+        ]
+      },
+      "0.2": {
+        "beta_cot_le": 0.2,
+        "worst_disagreement": 0.013,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 1.222,
+            "pass2": 1.227,
+            "value": 1.225,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.3,
+            "pass1": 1.096,
+            "pass2": 1.099,
+            "value": 1.097,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.4,
+            "pass1": 1.003,
+            "pass2": 1.015,
+            "value": 1.009,
+            "disagreement": 0.013
+          },
+          {
+            "v": 0.5,
+            "pass1": 0.939,
+            "pass2": 0.95,
+            "value": 0.944,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.6,
+            "pass1": 0.875,
+            "pass2": 0.884,
+            "value": 0.879,
+            "disagreement": 0.009
+          },
+          {
+            "v": 0.7,
+            "pass1": 0.819,
+            "pass2": 0.818,
+            "value": 0.819,
+            "disagreement": 0.001
+          },
+          {
+            "v": 0.8,
+            "pass1": 0.781,
+            "pass2": 0.778,
+            "value": 0.779,
+            "disagreement": 0.003
+          },
+          {
+            "v": 0.9,
+            "pass1": 0.757,
+            "pass2": 0.76,
+            "value": 0.758,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.0,
+            "pass1": 0.736,
+            "pass2": 0.741,
+            "value": 0.738,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.2,
+            "pass1": 0.703,
+            "pass2": 0.704,
+            "value": 0.704,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.4,
+            "pass1": 0.672,
+            "pass2": 0.671,
+            "value": 0.671,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.635,
+            "pass2": 0.637,
+            "value": 0.636,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.603,
+            "pass2": 0.603,
+            "value": 0.603,
+            "disagreement": 0.0
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.572,
+            "pass2": 0.569,
+            "value": 0.57,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.518,
+            "pass2": 0.524,
+            "value": 0.521,
+            "disagreement": 0.006
+          },
+          {
+            "v": 2.8,
+            "pass1": 0.489,
+            "pass2": 0.493,
+            "value": 0.491,
+            "disagreement": 0.004
+          },
+          {
+            "v": 3.2,
+            "pass1": 0.471,
+            "pass2": 0.47,
+            "value": 0.471,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.6,
+            "pass1": 0.428,
+            "pass2": 0.431,
+            "value": 0.429,
+            "disagreement": 0.003
+          },
+          {
+            "v": 3.85,
+            "pass1": 0.409,
+            "pass2": 0.409,
+            "value": 0.409,
+            "disagreement": 0.0
+          }
+        ],
+        "points": [
+          [0.2, 1.225],
+          [0.3, 1.097],
+          [0.4, 1.009],
+          [0.5, 0.944],
+          [0.6, 0.879],
+          [0.7, 0.819],
+          [0.8, 0.779],
+          [0.9, 0.758],
+          [1.0, 0.738],
+          [1.2, 0.704],
+          [1.4, 0.671],
+          [1.6, 0.636],
+          [1.8, 0.603],
+          [2.0, 0.57],
+          [2.4, 0.521],
+          [2.8, 0.491],
+          [3.2, 0.471],
+          [3.6, 0.429],
+          [3.85, 0.409]
+        ]
+      },
+      "0.1": {
+        "beta_cot_le": 0.1,
+        "worst_disagreement": 0.016,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.2,
+            "pass1": 0.583,
+            "pass2": 0.594,
+            "value": 0.589,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.3,
+            "pass1": 0.509,
+            "pass2": 0.504,
+            "value": 0.506,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.4,
+            "pass1": 0.462,
+            "pass2": 0.477,
+            "value": 0.469,
+            "disagreement": 0.016
+          },
+          {
+            "v": 0.5,
+            "pass1": 0.422,
+            "pass2": 0.433,
+            "value": 0.427,
+            "disagreement": 0.011
+          },
+          {
+            "v": 0.6,
+            "pass1": 0.382,
+            "pass2": 0.389,
+            "value": 0.385,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.7,
+            "pass1": 0.347,
+            "pass2": 0.345,
+            "value": 0.346,
+            "disagreement": 0.002
+          },
+          {
+            "v": 0.8,
+            "pass1": 0.325,
+            "pass2": 0.325,
+            "value": 0.325,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.9,
+            "pass1": 0.32,
+            "pass2": 0.321,
+            "value": 0.32,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.0,
+            "pass1": 0.317,
+            "pass2": 0.317,
+            "value": 0.317,
+            "disagreement": 0.0
+          },
+          {
+            "v": 1.2,
+            "pass1": 0.307,
+            "pass2": 0.31,
+            "value": 0.308,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.4,
+            "pass1": 0.298,
+            "pass2": 0.301,
+            "value": 0.3,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.287,
+            "pass2": 0.293,
+            "value": 0.29,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.283,
+            "pass2": 0.284,
+            "value": 0.284,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.279,
+            "pass2": 0.275,
+            "value": 0.277,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.263,
+            "pass2": 0.264,
+            "value": 0.263,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.8,
+            "pass1": 0.241,
+            "pass2": 0.242,
+            "value": 0.242,
+            "disagreement": 0.001
+          },
+          {
+            "v": 3.2,
+            "pass1": 0.22,
+            "pass2": 0.218,
+            "value": 0.219,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.6,
+            "pass1": 0.201,
+            "pass2": 0.204,
+            "value": 0.203,
+            "disagreement": 0.002
+          },
+          {
+            "v": 3.85,
+            "pass1": 0.197,
+            "pass2": 0.196,
+            "value": 0.196,
+            "disagreement": 0.0
+          }
+        ],
+        "points": [
+          [0.2, 0.589],
+          [0.3, 0.506],
+          [0.4, 0.469],
+          [0.5, 0.427],
+          [0.6, 0.385],
+          [0.7, 0.346],
+          [0.8, 0.325],
+          [0.9, 0.32],
+          [1.0, 0.317],
+          [1.2, 0.308],
+          [1.4, 0.3],
+          [1.6, 0.29],
+          [1.8, 0.284],
+          [2.0, 0.277],
+          [2.4, 0.263],
+          [2.8, 0.242],
+          [3.2, 0.219],
+          [3.6, 0.203],
+          [3.85, 0.196]
+        ]
+      }
+    }
+  },
+  "figure_11b": {
+    "afterbody": false,
+    "curves": {
+      "inf": {
+        "beta_cot_le": null,
+        "worst_disagreement": 0.097,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 5.922,
+            "pass2": 5.903,
+            "value": 5.912,
+            "disagreement": 0.019
+          },
+          {
+            "v": 0.3,
+            "pass1": 5.622,
+            "pass2": 5.525,
+            "value": 5.573,
+            "disagreement": 0.097
+          },
+          {
+            "v": 0.4,
+            "pass1": 5.024,
+            "pass2": 4.957,
+            "value": 4.991,
+            "disagreement": 0.066
+          },
+          {
+            "v": 0.5,
+            "pass1": 4.52,
+            "pass2": 4.445,
+            "value": 4.482,
+            "disagreement": 0.075
+          },
+          {
+            "v": 0.6,
+            "pass1": 4.016,
+            "pass2": 3.986,
+            "value": 4.001,
+            "disagreement": 0.03
+          },
+          {
+            "v": 0.7,
+            "pass1": 3.617,
+            "pass2": 3.546,
+            "value": 3.581,
+            "disagreement": 0.071
+          },
+          {
+            "v": 0.8,
+            "pass1": 3.221,
+            "pass2": 3.181,
+            "value": 3.201,
+            "disagreement": 0.04
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.884,
+            "pass2": 2.872,
+            "value": 2.878,
+            "disagreement": 0.012
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.66,
+            "pass2": 2.63,
+            "value": 2.645,
+            "disagreement": 0.03
+          },
+          {
+            "v": 1.2,
+            "pass1": 2.214,
+            "pass2": 2.208,
+            "value": 2.211,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.943,
+            "pass2": 1.903,
+            "value": 1.923,
+            "disagreement": 0.04
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.673,
+            "pass2": 1.679,
+            "value": 1.676,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.503,
+            "pass2": 1.495,
+            "value": 1.499,
+            "disagreement": 0.007
+          },
+          {
+            "v": 2.0,
+            "pass1": 1.333,
+            "pass2": 1.337,
+            "value": 1.335,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.2,
+            "pass1": 1.224,
+            "pass2": 1.213,
+            "value": 1.219,
+            "disagreement": 0.011
+          },
+          {
+            "v": 2.4,
+            "pass1": 1.115,
+            "pass2": 1.114,
+            "value": 1.114,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.6,
+            "pass1": 1.009,
+            "pass2": 1.023,
+            "value": 1.016,
+            "disagreement": 0.015
+          }
+        ],
+        "points": [
+          [0.25, 5.912],
+          [0.3, 5.573],
+          [0.4, 4.991],
+          [0.5, 4.482],
+          [0.6, 4.001],
+          [0.7, 3.581],
+          [0.8, 3.201],
+          [0.9, 2.878],
+          [1.0, 2.645],
+          [1.2, 2.211],
+          [1.4, 1.923],
+          [1.6, 1.676],
+          [1.8, 1.499],
+          [2.0, 1.335],
+          [2.2, 1.219],
+          [2.4, 1.114],
+          [2.6, 1.016]
+        ]
+      },
+      "4": {
+        "beta_cot_le": 4.0,
+        "worst_disagreement": 0.037,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 5.004,
+            "pass2": 4.991,
+            "value": 4.998,
+            "disagreement": 0.013
+          },
+          {
+            "v": 0.3,
+            "pass1": 4.713,
+            "pass2": 4.706,
+            "value": 4.71,
+            "disagreement": 0.007
+          },
+          {
+            "v": 0.4,
+            "pass1": 4.134,
+            "pass2": 4.139,
+            "value": 4.136,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.5,
+            "pass1": 3.696,
+            "pass2": 3.723,
+            "value": 3.709,
+            "disagreement": 0.026
+          },
+          {
+            "v": 0.6,
+            "pass1": 3.324,
+            "pass2": 3.311,
+            "value": 3.318,
+            "disagreement": 0.013
+          },
+          {
+            "v": 0.7,
+            "pass1": 3.009,
+            "pass2": 2.982,
+            "value": 2.996,
+            "disagreement": 0.027
+          },
+          {
+            "v": 0.8,
+            "pass1": 2.695,
+            "pass2": 2.715,
+            "value": 2.705,
+            "disagreement": 0.02
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.417,
+            "pass2": 2.41,
+            "value": 2.414,
+            "disagreement": 0.007
+          },
+          {
+            "v": 1.0,
+            "pass1": 2.231,
+            "pass2": 2.209,
+            "value": 2.22,
+            "disagreement": 0.022
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.86,
+            "pass2": 1.862,
+            "value": 1.861,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.648,
+            "pass2": 1.611,
+            "value": 1.629,
+            "disagreement": 0.037
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.437,
+            "pass2": 1.426,
+            "value": 1.432,
+            "disagreement": 0.01
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.289,
+            "pass2": 1.277,
+            "value": 1.283,
+            "disagreement": 0.012
+          },
+          {
+            "v": 2.0,
+            "pass1": 1.142,
+            "pass2": 1.147,
+            "value": 1.144,
+            "disagreement": 0.006
+          },
+          {
+            "v": 2.2,
+            "pass1": 1.058,
+            "pass2": 1.043,
+            "value": 1.051,
+            "disagreement": 0.015
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.975,
+            "pass2": 0.978,
+            "value": 0.977,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.887,
+            "pass2": 0.909,
+            "value": 0.898,
+            "disagreement": 0.022
+          }
+        ],
+        "points": [
+          [0.25, 4.998],
+          [0.3, 4.71],
+          [0.4, 4.136],
+          [0.5, 3.709],
+          [0.6, 3.318],
+          [0.7, 2.996],
+          [0.8, 2.705],
+          [0.9, 2.414],
+          [1.0, 2.22],
+          [1.2, 1.861],
+          [1.4, 1.629],
+          [1.6, 1.432],
+          [1.8, 1.283],
+          [2.0, 1.144],
+          [2.2, 1.051],
+          [2.4, 0.977],
+          [2.6, 0.898]
+        ]
+      },
+      "2": {
+        "beta_cot_le": 2.0,
+        "worst_disagreement": 0.082,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 4.354,
+            "pass2": 4.359,
+            "value": 4.356,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.3,
+            "pass1": 4.083,
+            "pass2": 4.083,
+            "value": 4.083,
+            "disagreement": 0.0
+          },
+          {
+            "v": 0.4,
+            "pass1": 3.547,
+            "pass2": 3.594,
+            "value": 3.57,
+            "disagreement": 0.047
+          },
+          {
+            "v": 0.5,
+            "pass1": 3.259,
+            "pass2": 3.294,
+            "value": 3.276,
+            "disagreement": 0.035
+          },
+          {
+            "v": 0.6,
+            "pass1": 2.971,
+            "pass2": 2.947,
+            "value": 2.959,
+            "disagreement": 0.024
+          },
+          {
+            "v": 0.7,
+            "pass1": 2.683,
+            "pass2": 2.601,
+            "value": 2.642,
+            "disagreement": 0.082
+          },
+          {
+            "v": 0.8,
+            "pass1": 2.396,
+            "pass2": 2.314,
+            "value": 2.355,
+            "disagreement": 0.082
+          },
+          {
+            "v": 0.9,
+            "pass1": 2.108,
+            "pass2": 2.103,
+            "value": 2.105,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.945,
+            "pass2": 1.929,
+            "value": 1.937,
+            "disagreement": 0.016
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.621,
+            "pass2": 1.624,
+            "value": 1.622,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.422,
+            "pass2": 1.401,
+            "value": 1.411,
+            "disagreement": 0.021
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.223,
+            "pass2": 1.228,
+            "value": 1.226,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.8,
+            "pass1": 1.091,
+            "pass2": 1.079,
+            "value": 1.085,
+            "disagreement": 0.011
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.959,
+            "pass2": 0.961,
+            "value": 0.96,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.2,
+            "pass1": 0.887,
+            "pass2": 0.877,
+            "value": 0.882,
+            "disagreement": 0.01
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.816,
+            "pass2": 0.812,
+            "value": 0.814,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.758,
+            "pass2": 0.75,
+            "value": 0.754,
+            "disagreement": 0.008
+          }
+        ],
+        "points": [
+          [0.25, 4.356],
+          [0.3, 4.083],
+          [0.4, 3.57],
+          [0.5, 3.276],
+          [0.6, 2.959],
+          [0.7, 2.642],
+          [0.8, 2.355],
+          [0.9, 2.105],
+          [1.0, 1.937],
+          [1.2, 1.622],
+          [1.4, 1.411],
+          [1.6, 1.226],
+          [1.8, 1.085],
+          [2.0, 0.96],
+          [2.2, 0.882],
+          [2.4, 0.814],
+          [2.6, 0.754]
+        ]
+      },
+      "1": {
+        "beta_cot_le": 1.0,
+        "worst_disagreement": 0.078,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 3.474,
+            "pass2": 3.428,
+            "value": 3.451,
+            "disagreement": 0.046
+          },
+          {
+            "v": 0.3,
+            "pass1": 3.257,
+            "pass2": 3.179,
+            "value": 3.218,
+            "disagreement": 0.078
+          },
+          {
+            "v": 0.4,
+            "pass1": 2.858,
+            "pass2": 2.852,
+            "value": 2.855,
+            "disagreement": 0.005
+          },
+          {
+            "v": 0.5,
+            "pass1": 2.545,
+            "pass2": 2.536,
+            "value": 2.54,
+            "disagreement": 0.009
+          },
+          {
+            "v": 0.6,
+            "pass1": 2.244,
+            "pass2": 2.219,
+            "value": 2.231,
+            "disagreement": 0.025
+          },
+          {
+            "v": 0.7,
+            "pass1": 2.049,
+            "pass2": 1.99,
+            "value": 2.019,
+            "disagreement": 0.059
+          },
+          {
+            "v": 0.8,
+            "pass1": 1.854,
+            "pass2": 1.807,
+            "value": 1.83,
+            "disagreement": 0.047
+          },
+          {
+            "v": 0.9,
+            "pass1": 1.659,
+            "pass2": 1.657,
+            "value": 1.658,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.538,
+            "pass2": 1.524,
+            "value": 1.531,
+            "disagreement": 0.014
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.297,
+            "pass2": 1.296,
+            "value": 1.297,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.4,
+            "pass1": 1.15,
+            "pass2": 1.135,
+            "value": 1.142,
+            "disagreement": 0.015
+          },
+          {
+            "v": 1.6,
+            "pass1": 1.003,
+            "pass2": 1.017,
+            "value": 1.01,
+            "disagreement": 0.014
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.909,
+            "pass2": 0.915,
+            "value": 0.912,
+            "disagreement": 0.006
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.815,
+            "pass2": 0.821,
+            "value": 0.818,
+            "disagreement": 0.006
+          },
+          {
+            "v": 2.2,
+            "pass1": 0.75,
+            "pass2": 0.745,
+            "value": 0.747,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.685,
+            "pass2": 0.684,
+            "value": 0.684,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.605,
+            "pass2": 0.62,
+            "value": 0.612,
+            "disagreement": 0.015
+          }
+        ],
+        "points": [
+          [0.25, 3.451],
+          [0.3, 3.218],
+          [0.4, 2.855],
+          [0.5, 2.54],
+          [0.6, 2.231],
+          [0.7, 2.019],
+          [0.8, 1.83],
+          [0.9, 1.658],
+          [1.0, 1.531],
+          [1.2, 1.297],
+          [1.4, 1.142],
+          [1.6, 1.01],
+          [1.8, 0.912],
+          [2.0, 0.818],
+          [2.2, 0.747],
+          [2.4, 0.684],
+          [2.6, 0.612]
+        ]
+      },
+      "0.8": {
+        "beta_cot_le": 0.8,
+        "worst_disagreement": 0.096,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 2.939,
+            "pass2": 2.903,
+            "value": 2.921,
+            "disagreement": 0.036
+          },
+          {
+            "v": 0.3,
+            "pass1": 2.746,
+            "pass2": 2.683,
+            "value": 2.715,
+            "disagreement": 0.062
+          },
+          {
+            "v": 0.4,
+            "pass1": 2.362,
+            "pass2": 2.315,
+            "value": 2.339,
+            "disagreement": 0.047
+          },
+          {
+            "v": 0.5,
+            "pass1": 2.139,
+            "pass2": 2.077,
+            "value": 2.108,
+            "disagreement": 0.061
+          },
+          {
+            "v": 0.6,
+            "pass1": 1.915,
+            "pass2": 1.842,
+            "value": 1.878,
+            "disagreement": 0.073
+          },
+          {
+            "v": 0.7,
+            "pass1": 1.703,
+            "pass2": 1.606,
+            "value": 1.655,
+            "disagreement": 0.096
+          },
+          {
+            "v": 0.8,
+            "pass1": 1.51,
+            "pass2": 1.458,
+            "value": 1.484,
+            "disagreement": 0.052
+          },
+          {
+            "v": 0.9,
+            "pass1": 1.318,
+            "pass2": 1.315,
+            "value": 1.316,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.218,
+            "pass2": 1.208,
+            "value": 1.213,
+            "disagreement": 0.01
+          },
+          {
+            "v": 1.2,
+            "pass1": 1.02,
+            "pass2": 1.034,
+            "value": 1.027,
+            "disagreement": 0.015
+          },
+          {
+            "v": 1.4,
+            "pass1": 0.918,
+            "pass2": 0.913,
+            "value": 0.916,
+            "disagreement": 0.005
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.817,
+            "pass2": 0.817,
+            "value": 0.817,
+            "disagreement": 0.0
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.739,
+            "pass2": 0.743,
+            "value": 0.741,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.661,
+            "pass2": 0.668,
+            "value": 0.664,
+            "disagreement": 0.007
+          },
+          {
+            "v": 2.2,
+            "pass1": 0.599,
+            "pass2": 0.597,
+            "value": 0.598,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.538,
+            "pass2": 0.543,
+            "value": 0.54,
+            "disagreement": 0.005
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.497,
+            "pass2": 0.496,
+            "value": 0.496,
+            "disagreement": 0.001
+          }
+        ],
+        "points": [
+          [0.25, 2.921],
+          [0.3, 2.715],
+          [0.4, 2.339],
+          [0.5, 2.108],
+          [0.6, 1.878],
+          [0.7, 1.655],
+          [0.8, 1.484],
+          [0.9, 1.316],
+          [1.0, 1.213],
+          [1.2, 1.027],
+          [1.4, 0.916],
+          [1.6, 0.817],
+          [1.8, 0.741],
+          [2.0, 0.664],
+          [2.2, 0.598],
+          [2.4, 0.54],
+          [2.6, 0.496]
+        ]
+      },
+      "0.6": {
+        "beta_cot_le": 0.6,
+        "worst_disagreement": 0.064,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 2.502,
+            "pass2": 2.439,
+            "value": 2.471,
+            "disagreement": 0.064
+          },
+          {
+            "v": 0.3,
+            "pass1": 2.36,
+            "pass2": 2.329,
+            "value": 2.344,
+            "disagreement": 0.031
+          },
+          {
+            "v": 0.4,
+            "pass1": 2.074,
+            "pass2": 2.108,
+            "value": 2.091,
+            "disagreement": 0.034
+          },
+          {
+            "v": 0.5,
+            "pass1": 1.813,
+            "pass2": 1.833,
+            "value": 1.823,
+            "disagreement": 0.02
+          },
+          {
+            "v": 0.6,
+            "pass1": 1.562,
+            "pass2": 1.544,
+            "value": 1.553,
+            "disagreement": 0.017
+          },
+          {
+            "v": 0.7,
+            "pass1": 1.423,
+            "pass2": 1.411,
+            "value": 1.417,
+            "disagreement": 0.013
+          },
+          {
+            "v": 0.8,
+            "pass1": 1.289,
+            "pass2": 1.28,
+            "value": 1.284,
+            "disagreement": 0.009
+          },
+          {
+            "v": 0.9,
+            "pass1": 1.155,
+            "pass2": 1.148,
+            "value": 1.151,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.0,
+            "pass1": 1.076,
+            "pass2": 1.059,
+            "value": 1.067,
+            "disagreement": 0.017
+          },
+          {
+            "v": 1.2,
+            "pass1": 0.919,
+            "pass2": 0.901,
+            "value": 0.91,
+            "disagreement": 0.019
+          },
+          {
+            "v": 1.4,
+            "pass1": 0.805,
+            "pass2": 0.775,
+            "value": 0.79,
+            "disagreement": 0.03
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.69,
+            "pass2": 0.675,
+            "value": 0.683,
+            "disagreement": 0.015
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.596,
+            "pass2": 0.587,
+            "value": 0.591,
+            "disagreement": 0.008
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.502,
+            "pass2": 0.515,
+            "value": 0.508,
+            "disagreement": 0.014
+          },
+          {
+            "v": 2.2,
+            "pass1": 0.463,
+            "pass2": 0.465,
+            "value": 0.464,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.425,
+            "pass2": 0.433,
+            "value": 0.429,
+            "disagreement": 0.007
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.399,
+            "pass2": 0.405,
+            "value": 0.402,
+            "disagreement": 0.006
+          }
+        ],
+        "points": [
+          [0.25, 2.471],
+          [0.3, 2.344],
+          [0.4, 2.091],
+          [0.5, 1.823],
+          [0.6, 1.553],
+          [0.7, 1.417],
+          [0.8, 1.284],
+          [0.9, 1.151],
+          [1.0, 1.067],
+          [1.2, 0.91],
+          [1.4, 0.79],
+          [1.6, 0.683],
+          [1.8, 0.591],
+          [2.0, 0.508],
+          [2.2, 0.464],
+          [2.4, 0.429],
+          [2.6, 0.402]
+        ]
+      },
+      "0.4": {
+        "beta_cot_le": 0.4,
+        "worst_disagreement": 0.057,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 1.761,
+            "pass2": 1.726,
+            "value": 1.744,
+            "disagreement": 0.034
+          },
+          {
+            "v": 0.3,
+            "pass1": 1.66,
+            "pass2": 1.603,
+            "value": 1.632,
+            "disagreement": 0.057
+          },
+          {
+            "v": 0.4,
+            "pass1": 1.459,
+            "pass2": 1.421,
+            "value": 1.44,
+            "disagreement": 0.038
+          },
+          {
+            "v": 0.5,
+            "pass1": 1.297,
+            "pass2": 1.267,
+            "value": 1.282,
+            "disagreement": 0.03
+          },
+          {
+            "v": 0.6,
+            "pass1": 1.15,
+            "pass2": 1.13,
+            "value": 1.14,
+            "disagreement": 0.021
+          },
+          {
+            "v": 0.7,
+            "pass1": 1.043,
+            "pass2": 1.0,
+            "value": 1.022,
+            "disagreement": 0.043
+          },
+          {
+            "v": 0.8,
+            "pass1": 0.938,
+            "pass2": 0.904,
+            "value": 0.921,
+            "disagreement": 0.034
+          },
+          {
+            "v": 0.9,
+            "pass1": 0.832,
+            "pass2": 0.826,
+            "value": 0.829,
+            "disagreement": 0.007
+          },
+          {
+            "v": 1.0,
+            "pass1": 0.773,
+            "pass2": 0.761,
+            "value": 0.767,
+            "disagreement": 0.012
+          },
+          {
+            "v": 1.2,
+            "pass1": 0.655,
+            "pass2": 0.657,
+            "value": 0.656,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.4,
+            "pass1": 0.58,
+            "pass2": 0.574,
+            "value": 0.577,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.505,
+            "pass2": 0.511,
+            "value": 0.508,
+            "disagreement": 0.006
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.453,
+            "pass2": 0.462,
+            "value": 0.458,
+            "disagreement": 0.009
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.401,
+            "pass2": 0.403,
+            "value": 0.402,
+            "disagreement": 0.001
+          },
+          {
+            "v": 2.2,
+            "pass1": 0.362,
+            "pass2": 0.354,
+            "value": 0.358,
+            "disagreement": 0.008
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.323,
+            "pass2": 0.32,
+            "value": 0.322,
+            "disagreement": 0.003
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.296,
+            "pass2": 0.29,
+            "value": 0.293,
+            "disagreement": 0.006
+          }
+        ],
+        "points": [
+          [0.25, 1.744],
+          [0.3, 1.632],
+          [0.4, 1.44],
+          [0.5, 1.282],
+          [0.6, 1.14],
+          [0.7, 1.022],
+          [0.8, 0.921],
+          [0.9, 0.829],
+          [1.0, 0.767],
+          [1.2, 0.656],
+          [1.4, 0.577],
+          [1.6, 0.508],
+          [1.8, 0.458],
+          [2.0, 0.402],
+          [2.2, 0.358],
+          [2.4, 0.322],
+          [2.6, 0.293]
+        ]
+      },
+      "0.2": {
+        "beta_cot_le": 0.2,
+        "worst_disagreement": 0.045,
+        "uncertainty": 0.05,
+        "rows": [
+          {
+            "v": 0.25,
+            "pass1": 0.945,
+            "pass2": 0.905,
+            "value": 0.925,
+            "disagreement": 0.04
+          },
+          {
+            "v": 0.3,
+            "pass1": 0.886,
+            "pass2": 0.841,
+            "value": 0.863,
+            "disagreement": 0.045
+          },
+          {
+            "v": 0.4,
+            "pass1": 0.767,
+            "pass2": 0.723,
+            "value": 0.745,
+            "disagreement": 0.044
+          },
+          {
+            "v": 0.5,
+            "pass1": 0.665,
+            "pass2": 0.645,
+            "value": 0.655,
+            "disagreement": 0.02
+          },
+          {
+            "v": 0.6,
+            "pass1": 0.58,
+            "pass2": 0.566,
+            "value": 0.573,
+            "disagreement": 0.014
+          },
+          {
+            "v": 0.7,
+            "pass1": 0.496,
+            "pass2": 0.5,
+            "value": 0.498,
+            "disagreement": 0.004
+          },
+          {
+            "v": 0.8,
+            "pass1": 0.445,
+            "pass2": 0.462,
+            "value": 0.453,
+            "disagreement": 0.017
+          },
+          {
+            "v": 0.9,
+            "pass1": 0.402,
+            "pass2": 0.404,
+            "value": 0.403,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.0,
+            "pass1": 0.372,
+            "pass2": 0.369,
+            "value": 0.371,
+            "disagreement": 0.003
+          },
+          {
+            "v": 1.2,
+            "pass1": 0.313,
+            "pass2": 0.316,
+            "value": 0.314,
+            "disagreement": 0.002
+          },
+          {
+            "v": 1.4,
+            "pass1": 0.28,
+            "pass2": 0.281,
+            "value": 0.28,
+            "disagreement": 0.001
+          },
+          {
+            "v": 1.6,
+            "pass1": 0.246,
+            "pass2": 0.249,
+            "value": 0.248,
+            "disagreement": 0.004
+          },
+          {
+            "v": 1.8,
+            "pass1": 0.221,
+            "pass2": 0.222,
+            "value": 0.222,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.0,
+            "pass1": 0.196,
+            "pass2": 0.2,
+            "value": 0.198,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.2,
+            "pass1": 0.184,
+            "pass2": 0.182,
+            "value": 0.183,
+            "disagreement": 0.002
+          },
+          {
+            "v": 2.4,
+            "pass1": 0.173,
+            "pass2": 0.168,
+            "value": 0.171,
+            "disagreement": 0.004
+          },
+          {
+            "v": 2.6,
+            "pass1": 0.161,
+            "pass2": 0.155,
+            "value": 0.158,
+            "disagreement": 0.006
+          }
+        ],
+        "points": [
+          [0.25, 0.925],
+          [0.3, 0.863],
+          [0.4, 0.745],
+          [0.5, 0.655],
+          [0.6, 0.573],
+          [0.7, 0.498],
+          [0.8, 0.453],
+          [0.9, 0.403],
+          [1.0, 0.371],
+          [1.2, 0.314],
+          [1.4, 0.28],
+          [1.6, 0.248],
+          [1.8, 0.222],
+          [2.0, 0.198],
+          [2.2, 0.183],
+          [2.4, 0.171],
+          [2.6, 0.158]
+        ]
+      }
+    }
+  }
+}

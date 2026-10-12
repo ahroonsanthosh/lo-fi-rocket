@@ -12,13 +12,20 @@ import {
   type RocketDesign,
 } from '@lo-fi-rocket/formats';
 import { simulateFlight, type FlightResult } from '@lo-fi-rocket/physics';
+import { CURRENT_PROVENANCE, type BuildProvenance } from '../build/provenance.js';
 
 export type RunOutcome =
   | { readonly ok: true; readonly result: FlightResult; readonly millis: number }
   | { readonly ok: false; readonly message: string };
 
 export type DispersionOutcome =
-  | { readonly ok: true; readonly result: DispersionResult; readonly millis: number }
+  | {
+      readonly ok: true;
+      readonly result: DispersionResult;
+      readonly millis: number;
+      /** The app version and physics source hash that produced the batch (D-072). */
+      readonly provenance: BuildProvenance;
+    }
   | { readonly ok: false; readonly message: string };
 
 export interface Runner {
@@ -38,7 +45,12 @@ export function runDispersionNow(
   const start = performance.now();
   try {
     const result = runDispersion(design, settings, onProgress);
-    return { ok: true, result, millis: performance.now() - start };
+    return {
+      ok: true,
+      result,
+      millis: performance.now() - start,
+      provenance: CURRENT_PROVENANCE,
+    };
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }

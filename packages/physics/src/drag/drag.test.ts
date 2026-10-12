@@ -36,6 +36,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
     roughnessHeight: metres(60e-6),
     motor: { diameter: metres(0.024), thrusting: true },
     baseDragMotorRule: 'while-thrusting',
+    baseDragMethod: 'niskanen',
   };
   it('at 54.1456 m/s, Mach 0.159141, R = 2.2241·10⁶, thrusting: C_D0 = 0.75745', () => {
     // Friction: roughness-limited C_f = 5.07166·10⁻³ (R > R_crit = 7.304·10⁵), × (1 − 0.1 × 0.025326) = 5.05881·10⁻³;
@@ -75,6 +76,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       ...base,
       motor: { diameter: metres(0.024), thrusting: false },
       baseDragMotorRule: 'always',
+      baseDragMethod: 'niskanen',
     });
     // Full base: 0.123292 × 1 = 0.123292 against 0.094886 while thrusting: + 0.028406.
     expect(coasting.cd0 - base.components.length * 0 - dragCoefficient(base).cd0).toBeCloseTo(
@@ -91,6 +93,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       reynolds: 5e6,
       roughnessHeight: metres(60e-6),
       baseDragMotorRule: 'while-thrusting',
+      baseDragMethod: 'niskanen',
     });
     expect(r.terms.map((t) => t.kind)).toEqual([
       'noseCone',
@@ -107,6 +110,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       reynolds: 8e6,
       roughnessHeight: metres(60e-6),
       baseDragMotorRule: 'while-thrusting',
+      baseDragMethod: 'niskanen',
     });
     expect(t.warnings.join('\n')).toContain('transonic regime');
     expect(t.warnings.join('\n')).toContain('expansion fans');
@@ -167,6 +171,7 @@ describe('properties', () => {
     reynolds: re,
     roughnessHeight: metres(60e-6),
     baseDragMotorRule: 'while-thrusting',
+    baseDragMethod: 'niskanen',
   });
   it('C_D0 is positive and adding a launch lug never reduces it; results are deterministic', () => {
     fc.assert(

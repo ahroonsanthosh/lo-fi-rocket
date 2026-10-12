@@ -1,11 +1,25 @@
-import type { Component, NoseShape } from '@lo-fi-rocket/physics';
-import { metres, type Metres } from '@lo-fi-rocket/physics';
+import type {
+  Component,
+  FinCrossSection,
+  NoseShape,
+  TrapezoidFinSetComponent,
+} from '@lo-fi-rocket/physics';
+import { metres, pascals, TN4197_MATERIALS, type Metres } from '@lo-fi-rocket/physics';
 import type { DesignComponent } from '@lo-fi-rocket/formats';
 import { useId, type JSX } from 'react';
 import { COMPONENT_LABELS } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
 import { IntegerField, QuantityField, type FieldRule } from './QuantityField.js';
 import type { QuantityKind } from '../units/display.js';
+
+/** The fin set without a shear modulus (flutter not checked). */
+function withoutShearModulus(c: TrapezoidFinSetComponent): TrapezoidFinSetComponent {
+  const copy: { -readonly [K in keyof TrapezoidFinSetComponent]: TrapezoidFinSetComponent[K] } = {
+    ...c,
+  };
+  delete copy.shearModulus;
+  return copy;
+}
 
 const NOSE_SHAPES: readonly { value: NoseShape; label: string }[] = [
   { value: 'conical', label: 'Conical' },
@@ -134,6 +148,7 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
   const nameId = useId();
   const shapeId = useId();
   const sectionId = useId();
+  const materialId = useId();
   const hollowId = useId();
   const update = (component: Component): void => {
     dispatch({ type: 'update-component', id: item.id, component });
@@ -271,21 +286,71 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
       ))}
       {c.kind === 'finSet' ? (
         <div className="field">
-          <label htmlFor={sectionId}>Cross section (drag model only)</label>
+          <label htmlFor={sectionId}>Cross section (drag; supersonic fin force)</label>
           <div className="field-input">
             <select
               id={sectionId}
               value={c.crossSection ?? 'square'}
               onChange={(e) => {
-                update({ ...c, crossSection: e.target.value as 'square' | 'rounded' | 'airfoil' });
+                update({ ...c, crossSection: e.target.value as FinCrossSection });
               }}
             >
               <option value="square">Square (rectangular)</option>
               <option value="rounded">Rounded edges</option>
-              <option value="airfoil">Airfoil</option>
+              <option value="airfoil">Airfoil (sharp edges)</option>
+              <option value="wedge">Wedge (sharp leading edge, square trailing edge)</option>
+              <option value="double-wedge">Double wedge (sharp edges, ridge at mid-chord)</option>
             </select>
           </div>
         </div>
+      ) : null}
+      {c.kind === 'finSet' ? (
+        <div className="field">
+          <label htmlFor={materialId}>Fin material for the flutter check (NACA TN 4197)</label>
+          <div className="field-input">
+            <select
+              id={materialId}
+              value={
+                c.shearModulus === undefined
+                  ? 'none'
+                  : (TN4197_MATERIALS.find((mat) => mat.shearModulus === c.shearModulus)?.name ??
+                    'custom')
+              }
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'none') {
+                  update(withoutShearModulus(c));
+                } else if (v === 'custom') {
+                  update({ ...c, shearModulus: c.shearModulus ?? pascals(1e9) });
+                } else {
+                  const mat = TN4197_MATERIALS.find((x) => x.name === v);
+                  if (mat !== undefined) update({ ...c, shearModulus: pascals(mat.shearModulus) });
+                }
+              }}
+            >
+              <option value="none">Not set (flutter not checked)</option>
+              {TN4197_MATERIALS.map((mat) => (
+                <option key={mat.name} value={mat.name}>
+                  {mat.name}
+                </option>
+              ))}
+              <option value="custom">Other: enter the shear modulus</option>
+            </select>
+          </div>
+        </div>
+      ) : null}
+      {c.kind === 'finSet' && c.shearModulus !== undefined ? (
+        <QuantityField
+          label="Fin shear modulus G"
+          kind="modulus"
+          units={units}
+          value={c.shearModulus}
+          rule="positive"
+          hint="Effective shear modulus of the fin (TN 4197 eq. 12): the material's G for a solid fin. Composite and balsa values come from the supplier's data."
+          onChange={(si) => {
+            update({ ...c, shearModulus: pascals(si) });
+          }}
+        />
       ) : null}
       {c.kind === 'noseCone' ? <ShoulderEditor nose={c} onChange={update} units={units} /> : null}
       <div className="editor-actions">

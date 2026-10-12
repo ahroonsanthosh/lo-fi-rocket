@@ -15,6 +15,7 @@
   "dependencies": {
     "@lo-fi-rocket/formats": "workspace:*",
     "@lo-fi-rocket/physics": "workspace:*",
+    "@lo-fi-rocket/viewer": "workspace:*",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

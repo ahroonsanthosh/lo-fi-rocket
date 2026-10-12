@@ -1,5 +1,5 @@
 import { designFlightWarnings, type RocketDesign } from '@lo-fi-rocket/formats';
-import { validateLaunch, type FlightResult } from '@lo-fi-rocket/physics';
+import { validateLaunch, type FlightResult, type StabilityPoint } from '@lo-fi-rocket/physics';
 import { useState, type JSX } from 'react';
 import { resultToCsv } from '../simulation/csv-export.js';
 import { useServices } from '../state/services.js';
@@ -7,6 +7,7 @@ import { useStore } from '../state/store.js';
 import { formatQuantity, type UnitSystem } from '../units/display.js';
 import { ComparisonPanel } from './ComparisonPanel.js';
 import { DispersionPanel } from './DispersionPanel.js';
+import type { DispersionState } from './FlightViewer.js';
 import { LaunchEditor } from './LaunchEditor.js';
 
 export const FLIGHT_SELECTION_ID = 'flight';
@@ -20,6 +21,15 @@ export interface FlightState {
 export interface FlightPanelProps {
   readonly flight: FlightState | undefined;
   readonly onFlight: (f: FlightState | undefined) => void;
+  /** The Monte Carlo batch, lifted to the App so the 3D replay can show it (plan 0034). */
+  readonly dispersion?: DispersionState | undefined;
+  readonly onDispersion?: (d: DispersionState | undefined) => void;
+}
+
+/** The lowest margin of a phase at its Mach number and angle of attack (plan 0030). */
+function stabilityText(p: StabilityPoint | undefined, phase: string): string {
+  if (p === undefined) return '';
+  return `${p.calibers.toFixed(2)} cal ${phase} (t ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, α ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°)`;
 }
 
 function bearing(rad: number): string {
@@ -28,7 +38,12 @@ function bearing(rad: number): string {
 }
 
 /** Launch conditions, the run button, the summary, the events and the warnings (plan 0014). */
-export function FlightPanel({ flight, onFlight }: FlightPanelProps): JSX.Element {
+export function FlightPanel({
+  flight,
+  onFlight,
+  dispersion,
+  onDispersion,
+}: FlightPanelProps): JSX.Element {
   const { state } = useStore();
   const services = useServices();
   const units = state.units;
@@ -100,7 +115,7 @@ export function FlightPanel({ flight, onFlight }: FlightPanelProps): JSX.Element
         </>
       )}
       <ComparisonPanel simulatedApogee={flight?.result.summary.apogee} />
-      <DispersionPanel />
+      <DispersionPanel result={dispersion} onResult={onDispersion} />
     </section>
   );
 }
@@ -175,6 +190,14 @@ function Summary({
           <dd>
             {opt(s.deploymentTime, (t) => `${t.toFixed(2)} s`)} at{' '}
             {opt(s.deploymentVelocity, (v) => formatQuantity(v, 'velocity', units))}
+          </dd>
+        </div>
+        <div>
+          <dt>Lowest in-flight stability</dt>
+          <dd>
+            {stabilityText(s.minimumStability.powered, 'powered')}
+            {s.minimumStability.coast === undefined ? '' : '; '}
+            {stabilityText(s.minimumStability.coast, 'coast')}
           </dd>
         </div>
         <div>

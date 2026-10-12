@@ -42,7 +42,7 @@ test('a new user builds a basic rocket, picks a motor and reads an apogee', asyn
   await expect(page.getByRole('img', { name: 'Altitude above the pad' })).toBeVisible();
 });
 
-test('the example flies to the Phase 2 displayed apogee and survives a reload', async ({
+test('the example flies to the displayed apogee (DATCOM base drag, D-069) and survives a reload', async ({
   page,
 }) => {
   await page.goto('/');
@@ -50,8 +50,8 @@ test('the example flies to the Phase 2 displayed apogee and survives a reload', 
   await page.getByRole('listbox', { name: 'Flight' }).getByRole('option').click();
   await page.getByRole('button', { name: 'Simulate flight' }).click();
   const results = page.getByRole('region', { name: 'Flight' });
-  await expect(results.locator('dt:text-is("Apogee") + dd')).toHaveText('167.33 m');
-  await expect(results.locator('dt:text-is("Maximum velocity") + dd')).toHaveText('62.3 m/s');
+  await expect(results.locator('dt:text-is("Apogee") + dd')).toHaveText('172.94 m');
+  await expect(results.locator('dt:text-is("Maximum velocity") + dd')).toHaveText('63.0 m/s');
   await expect(results.getByText('No warnings.')).toBeVisible();
   // Rename, wait for the autosave, reload: the design comes back.
   await setField(page, 'Design name', 'Reloaded rocket');

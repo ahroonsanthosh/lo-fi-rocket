@@ -4,7 +4,12 @@ import { InvalidInputError, NotImplementedError } from '../errors.js';
 import type { NoseShape } from '../geometry/profiles.js';
 import { mach } from '../units/si.js';
 import { baseDragArea, launchLugDrag, railButtonDrag } from './base-parasitic.js';
-import { finPressureDrag, roundedLeadingEdgeDrag } from './fin-drag.js';
+import {
+  cylindricalLeadingEdgeDrag,
+  finPressureDrag,
+  ROUNDED_LEADING_EDGE_WARNING,
+  roundedLeadingEdgeDrag,
+} from './fin-drag.js';
 import {
   baseDragCoefficient,
   boatTailPressureDrag,
@@ -233,12 +238,33 @@ describe('DRAG-10 fin pressure drag, eqs. (3.89) to (3.93)', () => {
     expect(r.cd).toBeCloseTo(0.802893, 6);
   });
   it('rounded: half the base drag at the trailing edge; airfoil: none', () => {
+    // DRAG-20 (D-066): 1.28 × 0.125/(1 + 0.125) = 0.1422222 at Mach 0.5, Λ = 0 (eq. 3.89 gave 0.1274556).
     const rounded = finPressureDrag('rounded', 0, mach(0.5));
-    expect(rounded.leadingEdge).toBeCloseTo(0.1274556, 6);
+    expect(rounded.leadingEdge).toBeCloseTo(0.1422222, 6);
     expect(rounded.trailingEdge).toBeCloseTo(0.07625, 12);
+    expect(rounded.warnings).toEqual([]);
     const airfoil = finPressureDrag('airfoil', 0, mach(0.5));
     expect(airfoil.trailingEdge).toBe(0);
     expect(() => finPressureDrag('square', Math.PI / 2, mach(0.5))).toThrow(InvalidInputError);
+  });
+});
+
+describe('DRAG-20 cylindrical leading edge (DATCOM figure 4.1.5.1-30) and the wedge section (D-066)', () => {
+  it('1.28 M³ cos⁵Λ/(1 + M³ cos³Λ) on the fin frontal area', () => {
+    // M = 2, Λ = 0: 1.28 × 8/9 = 1.1377778.
+    expect(cylindricalLeadingEdgeDrag(mach(2), 0)).toBeCloseTo(1.1377778, 6);
+    // M = 1, Λ = 45°: cos⁵ = 0.1767767, cos³ = 0.3535534; 1.28 × 0.1767767/1.3535534 = 0.1671700.
+    expect(cylindricalLeadingEdgeDrag(mach(1), Math.PI / 4)).toBeCloseTo(0.16717, 5);
+  });
+  it('warns below Mach 0.5, where the correlation was not substantiated', () => {
+    expect(finPressureDrag('rounded', 0, mach(0.3)).warnings).toEqual([
+      ROUNDED_LEADING_EDGE_WARNING,
+    ]);
+  });
+  it('wedge: no leading-edge term, the full base drag at the trailing edge', () => {
+    const w = finPressureDrag('wedge', 0.3, mach(0.5));
+    expect(w.leadingEdge).toBe(0);
+    expect(w.trailingEdge).toBeCloseTo(0.1525, 12);
   });
 });
 

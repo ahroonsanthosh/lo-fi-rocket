@@ -31,7 +31,8 @@ const put = (positionInches: number, component: Component): PlacedComponent => (
  * reflexed lip (0.06 in, not modelled). Four trapezoidal fins, root 3.380 in,
  * tip 2.165 in, span 2.103 in, leading edge 30° from the normal (sweep
  * 1.214 in, trailing edge unswept), mean thickness 0.123 in, double wedge
- * (modelled as 'rounded'), root leading edge 1.78 d forward of the base.
+ * ('double-wedge' since D-066, 'rounded' before), root leading edge 1.78 d
+ * forward of the base.
  */
 export const ARCAS_BODY_LENGTH_INCHES = 40.95;
 export const ARCAS_DIAMETER_INCHES = 2.25;
@@ -61,7 +62,7 @@ export const ARCAS_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(36.945, {
     kind: 'finSet',
-    crossSection: 'rounded',
+    crossSection: 'double-wedge',
     count: 4,
     rootChord: metres(3.38 * INCH),
     tipChord: metres(2.165 * INCH),
@@ -85,13 +86,14 @@ export const ARCAS_REYNOLDS = {
  * with the trailing edge at the base: root 0.75 in, tip 0.375 in, exposed
  * semispan 0.125 in (from the 0.500 in tip-to-tip span), mean thickness
  * 0.0225 in (thickness ratio 0.04), asymmetric 20° wedge leading edge and
- * blunt trailing edge. `finCrossSection` selects the fin drag section used
- * (neither matches a sharp wedge with a blunt base; both are reported).
+ * blunt trailing edge. `finCrossSection` selects the fin section: 'wedge'
+ * (sharp leading edge, blunt base, since D-066) and 'square' (as before) are
+ * both reported.
  */
 export const NACA_A53D02_LENGTH_INCHES = 2.5;
 export const NACA_A53D02_DIAMETER_INCHES = 0.25;
 export function nacaA53d02Components(
-  finCrossSection: 'square' | 'rounded',
+  finCrossSection: 'square' | 'wedge',
 ): readonly PlacedComponent[] {
   const components: PlacedComponent[] = [
     put(0, {

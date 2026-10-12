@@ -10,6 +10,7 @@ import { ComponentList } from './components/ComponentList.js';
 import { Header } from './components/Header.js';
 import { FLIGHT_SELECTION_ID, FlightPanel, type FlightState } from './components/FlightPanel.js';
 import { FlightPlots } from './components/FlightPlots.js';
+import { FlightViewer, type DispersionState } from './components/FlightViewer.js';
 import { MOTOR_SELECTION_ID, MotorPanel } from './components/MotorPanel.js';
 import { RecoveryEditor } from './components/RecoveryEditor.js';
 import { keyValueStore } from './motors/library.js';
@@ -53,6 +54,7 @@ export function App(props: AppProps): JSX.Element {
     };
   });
   const [flight, setFlight] = useState<FlightState | undefined>(undefined);
+  const [dispersion, setDispersion] = useState<DispersionState | undefined>(undefined);
   // Loaded once, on mount: the stored design (or the example), and a notice if the stored one was invalid.
   const [start] = useState(() => {
     const units = storage === undefined ? 'metric' : loadUnits(storage);
@@ -119,18 +121,31 @@ export function App(props: AppProps): JSX.Element {
                 <MassPanel figures={figures} />
               </div>
               {flight === undefined ? null : (
-                <FlightPlots
-                  result={flight.result}
-                  units={state.units}
-                  recorded={state.design.recordedFlight}
-                />
+                <>
+                  <FlightViewer
+                    design={flight.design}
+                    result={flight.result}
+                    units={state.units}
+                    dispersion={dispersion}
+                  />
+                  <FlightPlots
+                    result={flight.result}
+                    units={state.units}
+                    recorded={state.design.recordedFlight}
+                  />
+                </>
               )}
             </section>
             <aside className="right">
               {state.selectedId === MOTOR_SELECTION_ID ? (
                 <MotorPanel />
               ) : state.selectedId === FLIGHT_SELECTION_ID ? (
-                <FlightPanel flight={flight} onFlight={setFlight} />
+                <FlightPanel
+                  flight={flight}
+                  onFlight={setFlight}
+                  dispersion={dispersion}
+                  onDispersion={setDispersion}
+                />
               ) : selectedComponent !== undefined ? (
                 <ComponentEditor key={selectedComponent.id} item={selectedComponent} />
               ) : selectedDevice !== undefined ? (
