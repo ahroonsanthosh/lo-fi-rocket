@@ -4,7 +4,6 @@
  * the drag property of CLAUDE.md 7.3. OpenRocket values from values.csv.
  */
 import { describe, expect, it } from 'vitest';
-import { NotImplementedError } from '../errors.js';
 import { R1_COMPONENTS, R5_COMPONENTS } from '../geometry/reference-rockets.js';
 import { D12 } from '../motor/motor.test.js';
 import {
@@ -197,19 +196,17 @@ describe('modes, wind and properties', () => {
     expect(rough).toBeLessThan(base);
     expect(lugged).toBeLessThan(base);
   });
-  it('R5 (Von Kármán nose, Mach 1.09) stops at Mach 0.8 at the fins with a clear NotImplementedError (D-039; the nose is covered by D-055)', () => {
+  it('R5 (Von Kármán nose, Mach 1.09) flies through the transonic band with the regime warnings (D-055, D-056, D-058)', () => {
     const r5: FlightVehicle = {
       components: R5_COMPONENTS,
       motor: { kind: 'ideal', thrust: newtons(238), burnTime: seconds(1.036) },
       recovery: [],
       roughnessHeight: metres(60e-6),
     };
-    expect(() =>
-      simulateFlight(r5, { ...OR, integrator: { kind: 'rk4', timeStep: seconds(0.005) } }),
-    ).toThrow(NotImplementedError);
-    expect(() =>
-      simulateFlight(r5, { ...OR, integrator: { kind: 'rk4', timeStep: seconds(0.005) } }),
-    ).toThrow(/fin|0\.8/);
+    const r = simulateFlight(r5, { ...OR, integrator: { kind: 'rk4', timeStep: seconds(0.005) } });
+    expect(r.summary.maxMach).toBeGreaterThan(0.8);
+    expect(r.warnings.join('\n')).toContain('transonic regime');
+    expect(r.warnings.filter((w) => w.includes('transonic regime')).length).toBeLessThanOrEqual(2);
   });
   it('gravity and site inputs are validated', () => {
     expect(() =>

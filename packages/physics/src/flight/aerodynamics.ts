@@ -10,17 +10,17 @@
  * §3.4.7 p. 53 (axial drag at angle of attack, DRAG-14).
  */
 import { axialDragScaling } from '../drag/drag.js';
-import { InvalidInputError, NotImplementedError } from '../errors.js';
+import { InvalidInputError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
 import {
+  busemannCoefficients,
   finSetTerm,
   maximumBodyDiameter,
   noseConeTerm,
-  prandtlBeta,
   transitionTerm,
   type AerodynamicTerm,
   DEFAULT_TRANSONIC_FIN_INTERPOLATION,
@@ -39,6 +39,12 @@ import type { Vec3 } from './vector.js';
 
 /** K ≈ 1.1 of eq. (3.26), p. 24 (Hoerner p. 3-11). */
 const BODY_LIFT_K = 1.1;
+
+/** Regime warnings naming the validation status (docs/reports/wind-tunnel-validation.md, D-057). */
+export const TRANSONIC_CP_WARNING =
+  'transonic regime (Mach 0.8 to 1.2): the centre of pressure is within about 7 % of body length of wind tunnel data (ARCAS), the fin force is an interpolation (BAR-12)';
+export const SUPERSONIC_CP_WARNING =
+  'supersonic regime (above Mach 1.2): the predicted centre of pressure moves forward faster than measured (conservative by 5 % of body length at Mach 1.5, 27 % at Mach 4.6 against ARCAS data), so the stability margin shown is a lower bound';
 
 export interface AeroModeOptions {
   /** Niskanen eq. (3.54) roll reduction on (displayed) or off (OpenRocket-equivalent, D-016). */
@@ -310,8 +316,8 @@ export function normalForceAtAngle(
       'at least one external component is needed',
     );
   const M: number = mach;
-  if (M >= 0.8 && M <= 1.2)
-    warnings.push(`transonic regime (Mach ${M.toFixed(3)}): lower accuracy`);
+  if (M >= 0.8 && M <= 1.2) warnings.push(TRANSONIC_CP_WARNING);
+  else if (M > 1.2) warnings.push(SUPERSONIC_CP_WARNING);
   const cp = sumCnAlpha > 0 ? sumMoment / sumCnAlpha : Number.NaN;
   if (!(sumCnAlpha > 0)) {
     throw new InvalidInputError(
@@ -386,10 +392,63 @@ export function pitchDampingMoment(
 }
 
 /**
- * AERO-5. Niskanen eqs. (3.69), (3.70), (3.38): roll damping moment of
- * uncanted fins at subsonic speed, C_ld q A_ref d = N (2π/β)(ω/v₀) q Σ,
- * Σ = (c_r + c_t) r_t² s/2 + (c_r + 2c_t) r_t s²/3 + (c_r + 3c_t) s³/12.
- * Opposes the roll rate. The supersonic form (3.72) is not implemented.
+ * AERO-6 helper: I_n = ∫₀ˢ c(y)(r_t + y)ⁿ dy for the trapezoid chord
+ * c(y) = c_r + (c_t − c_r) y/s, by the binomial expansion of (r_t + y)ⁿ:
+ * Σ_k C(n,k) r_t^(n−k) [c_r s^(k+1)/(k+1) + (c_t − c_r) s^(k+1)/(k+2)].
+ * I₂ is the thesis's closed form (3.70) (tested).
+ */
+function trapezoidStripIntegral(n: number, cr: number, ct: number, rt: number, s: number): number {
+  let total = 0;
+  let binomial = 1;
+  for (let k = 0; k <= n; k += 1) {
+    total +=
+      binomial *
+      rt ** (n - k) *
+      ((cr * s ** (k + 1)) / (k + 1) + ((ct - cr) * s ** (k + 1)) / (k + 2));
+    binomial = (binomial * (n - k)) / (k + 1);
+  }
+  return total;
+}
+
+/** AERO-5 subsonic form: N (2π/β)(ω/v₀) q I₂ with I₂ of (3.70). */
+function subsonicRollDamping(
+  fin: TrapezoidFinSetComponent,
+  M: number,
+  q: number,
+  r: number,
+): number {
+  const beta = Math.sqrt(1 - M * M);
+  const sum = trapezoidStripIntegral(2, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
+  return fin.count * ((2 * Math.PI) / beta) * r * q * sum;
+}
+
+/**
+ * AERO-6 supersonic form, eq. (3.72) with (3.41) and (3.62): the strip
+ * pressure coefficient C_Pi = K₁η + K₂η² + K₃η³ at the inclination
+ * η = |ω| ξ/v₀ summed over the strips, N q (K₁|r| I₂ + K₂ r² I₃ + K₃ |r|³ I₄),
+ * r = ω/v₀; the sign follows the roll rate.
+ */
+function supersonicRollDamping(
+  fin: TrapezoidFinSetComponent,
+  M: number,
+  q: number,
+  r: number,
+): number {
+  const { k1, k2, k3 } = busemannCoefficients(M);
+  const ar = Math.abs(r);
+  const i2 = trapezoidStripIntegral(2, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
+  const i3 = trapezoidStripIntegral(3, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
+  const i4 = trapezoidStripIntegral(4, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
+  return Math.sign(r) * fin.count * q * (k1 * ar * i2 + k2 * ar * ar * i3 + k3 * ar ** 3 * i4);
+}
+
+/**
+ * AERO-5 to AERO-7. Roll damping moment of uncanted fins, opposing the roll
+ * rate: Niskanen eqs. (3.69), (3.70), (3.38) below Mach 0.8 (C_ld q A_ref d =
+ * N (2π/β)(ω/v₀) q Σ, Σ = (c_r + c_t) r_t² s/2 + (c_r + 2c_t) r_t s²/3 +
+ * (c_r + 3c_t) s³/12); eq. (3.72) from Mach 1.2; linear in Mach between the
+ * two at 0.8 and 1.2 in the band (AERO-7, D-058: the thesis gives no
+ * transonic form).
  */
 export function rollDampingMoment(
   fins: readonly TrapezoidFinSetComponent[],
@@ -400,23 +459,16 @@ export function rollDampingMoment(
 ): number {
   if (rollRate === 0 || airspeed === 0) return 0;
   const M: number = mach;
-  if (M >= 0.8) {
-    throw new NotImplementedError(
-      `roll damping at Mach ${String(M)}: only the subsonic form (Niskanen eq. 3.69) is implemented`,
-    );
-  }
-  const beta = prandtlBeta(mach);
+  const r = rollRate / airspeed;
   let moment = 0;
   for (const fin of fins) {
-    const cr: number = fin.rootChord;
-    const ct: number = fin.tipChord;
-    const s: number = fin.span;
-    const rt: number = fin.bodyRadius;
-    const sum =
-      ((cr + ct) * rt * rt * s) / 2 +
-      ((cr + 2 * ct) * rt * s * s) / 3 +
-      ((cr + 3 * ct) * s ** 3) / 12;
-    moment += fin.count * ((2 * Math.PI) / beta) * (rollRate / airspeed) * dynamicPressure * sum;
+    if (M <= 0.8) moment += subsonicRollDamping(fin, M, dynamicPressure, r);
+    else if (M >= 1.2) moment += supersonicRollDamping(fin, M, dynamicPressure, r);
+    else {
+      const lo = subsonicRollDamping(fin, 0.8, dynamicPressure, r);
+      const hi = supersonicRollDamping(fin, 1.2, dynamicPressure, r);
+      moment += lo + ((hi - lo) * (M - 0.8)) / 0.4;
+    }
   }
   return finiteResult('roll damping moment', moment);
 }

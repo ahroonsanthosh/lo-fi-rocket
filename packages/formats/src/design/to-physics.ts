@@ -250,6 +250,7 @@ export interface DesignWarning {
     | 'thrust-to-weight'
     | 'deployment-velocity'
     | 'transonic'
+    | 'supersonic'
     | 'no-recovery'
     | 'max-time'
     | 'model-limit'
@@ -292,10 +293,15 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       message: `Recovery deploys at ${s.deploymentVelocity.toFixed(1)} m/s, above ${String(t.maxDeploymentVelocity)} m/s: a fast deployment can tear the parachute or shock cord or zipper the airframe.`,
     });
   }
-  if (s.maxMach > 0.8) {
+  if (s.maxMach > 1.2) {
+    out.push({
+      code: 'supersonic',
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the model is validated there against two wind tunnel models only; the centre of pressure is conservative (the margin shown is a lower bound) and the drag of thick fins is over-predicted (docs/reports/wind-tunnel-validation.md).`,
+    });
+  } else if (s.maxMach > 0.8) {
     out.push({
       code: 'transonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime: the drag model is less accurate between Mach 0.8 and 1.2 (docs/known-limitations.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime: the drag rise is predicted too early and the centre of pressure is within about 7 % of body length of wind tunnel data (docs/reports/wind-tunnel-validation.md).`,
     });
   }
   if (design.recovery.length === 0) {

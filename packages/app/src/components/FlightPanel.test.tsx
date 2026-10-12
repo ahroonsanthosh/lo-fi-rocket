@@ -119,7 +119,7 @@ describe('FlightPanel (plan 0014)', () => {
     expect(warnings).toHaveTextContent(/No recovery device/);
   });
 
-  it('a transonic design reports the model limit instead of a number', async () => {
+  it('a transonic design simulates and shows the regime warnings (D-055, D-056)', async () => {
     const base = exampleDesign('t');
     const mount = base.motorMount!;
     const definition = mount.motor!.definition;
@@ -148,9 +148,9 @@ describe('FlightPanel (plan 0014)', () => {
     const user = renderApp(fast);
     await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent(/The simulation could not run/);
-    expect(alert).toHaveTextContent(/Not implemented/);
+    const warnings = await screen.findByRole('list', { name: 'Warnings' });
+    expect(warnings).toHaveTextContent(/transonic|supersonic/);
+    expect(warnings).toHaveTextContent(/wind-tunnel-validation/);
   });
 
   it('exports the CSV through the save service', async () => {

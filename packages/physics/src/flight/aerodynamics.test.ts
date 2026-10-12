@@ -1,6 +1,6 @@
 /** Aerodynamic forces and moments at angle of attack (plan 0010 part A, AERO-1 to AERO-5). */
 import { describe, expect, it } from 'vitest';
-import { InvalidInputError, NotImplementedError } from '../errors.js';
+import { InvalidInputError } from '../errors.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
 import { R1_COMPONENTS } from '../geometry/reference-rockets.js';
 import {
@@ -131,9 +131,23 @@ describe('AERO-4, AERO-5 damping', () => {
     // Σ = 0.15 × 0.025² × 0.08/2 + 0.2 × 0.025 × 0.0064/3 + 0.25 × 0.000512/12 = 3.75e-6 + 1.0667e-5 + 1.0667e-5 = 2.5083e-5.
     expect(rollDampingMoment([fins], mach(0.147), 1531.25, 50, 20)).toBeCloseTo(0.29276, 4);
     expect(rollDampingMoment([fins], mach(0.147), 1531.25, 50, 0)).toBe(0);
-    expect(() => rollDampingMoment([fins], mach(0.85), 1531.25, 300, 1)).toThrow(
-      NotImplementedError,
-    );
+    // Supersonic (AERO-6), fin c_r 0.1, c_t 0.05, r_t 0.025, s 0.05 at Mach 2, q 1531.25, ω/v₀ = 20/300, N = 3:
+    // I₂ = 9.114583e-6 (= (3.70)), I₃ = 5.039063e-7, I₄ = 2.945964e-8; K₁ = 1.154701, K₂ = 0.733333, K₃ = 1.105091;
+    // 3 × 1531.25 × (K₁ r I₂ + K₂ r² I₃ + K₃ r³ I₄) = 0.0032308 N·m (linear part 0.0032232).
+    const trapezoid = {
+      ...fins,
+      rootChord: metres(0.1),
+      tipChord: metres(0.05),
+      span: metres(0.05),
+      bodyRadius: metres(0.025),
+      count: 3,
+    };
+    expect(rollDampingMoment([trapezoid], mach(2), 1531.25, 300, 20)).toBeCloseTo(0.0032308, 6);
+    expect(rollDampingMoment([trapezoid], mach(2), 1531.25, 300, -20)).toBeCloseTo(-0.0032308, 6);
+    // AERO-7: at Mach 1.0 the mean of the subsonic value at 0.8 (0.0292309) and the supersonic at 1.2 (0.0084632).
+    expect(rollDampingMoment([trapezoid], mach(0.8), 1531.25, 300, 20)).toBeCloseTo(0.0292309, 6);
+    expect(rollDampingMoment([trapezoid], mach(1.2), 1531.25, 300, 20)).toBeCloseTo(0.0084632, 6);
+    expect(rollDampingMoment([trapezoid], mach(1.0), 1531.25, 300, 20)).toBeCloseTo(0.018847, 6);
   });
 });
 

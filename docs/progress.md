@@ -61,9 +61,11 @@ Prompt 5 (after the roadmap): the owner's Part A answers (D-053) and the Part B 
 
 - Prompt 5 step 2 part 2 (plan 0021): the three transonic fin candidates (BAR-12) compared against the held-out ARCAS CP data, the cubic Hermite chosen (D-056); the wind tunnel validation of CLAUDE.md 6.7 item 1 against TN D-4013, TN D-4014 and NACA RM A53D02 with the errors by Mach regime (D-057, `docs/reports/wind-tunnel-validation.md`): CP within 3.5 % of body length subsonic, rms 5 % transonic, conservative by up to 27 % supersonic; drag over-predicted 15 to 20 % subsonic, the transonic rise too early, supersonic within 9 % for thin sharp fins and up to twofold for thick rounded-section fins. DATCOM proposed as an additional source. **Prompt 5 step 2 is complete.**
 
+- Prompt 5 step 3 (plan 0022): supersonic roll damping from eq. (3.72) with exact trapezoid strip integrals and a linear-in-Mach band (AERO-6, AERO-7, D-058); no regime stops a flight any more. R5 against OpenRocket: apogee +2.5 %, maximum velocity +0.8 %, rail exit −0.3 %, ground hit 0.0 % (both winds; `docs/reports/phase-2-acceptance.md` section 7). Regime warnings without the Mach number (one line per flight) and a supersonic warning, both naming the validation status; `designFlightWarnings` gains `supersonic`; shown in the app.
+
 ## In progress
 
-- Prompt 5 step 3: the supersonic roll damping (eq. 3.72) so that R5 can fly through the band with a roll rate; R5 against the Phase 2 tolerances; the regime warnings naming the validation status.
+- Prompt 5 step 4: large-angle fin force (D-046; Hoerner is not in `reference/`, alternatives to propose), ballistic descents of every reference rocket, golden flight time series.
 
 ## Next
 

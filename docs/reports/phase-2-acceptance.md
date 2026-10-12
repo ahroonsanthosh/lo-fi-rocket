@@ -12,7 +12,7 @@ Date: 2026-10-12. Branch `claude/inspiring-tesla-xxp0hh`, commits fad0f0d to 54b
 | Events and recovery                                       | Table 4.2 events located by bisection; descent under the deployed devices                                      |
 | Analytical cases pass                                     | yes (section 3)                                                                                                |
 | Step-size convergence shown                               | yes (section 2): halving the RK4 step changes the apogee by 0.010 m                                            |
-| Apogee within 5 % and velocities within 3 % of OpenRocket | yes for R1 to R4 with and without wind (section 1); R5 cannot be simulated (section 5)                         |
+| Apogee within 5 % and velocities within 3 % of OpenRocket | yes for R1 to R5 with and without wind (sections 1 and 7); R5 cannot be simulated (section 5)                  |
 
 ## 1. Reference comparison against OpenRocket (CLAUDE.md 7.4)
 
@@ -93,7 +93,7 @@ Test: `simulate.analytical.test.ts`, ideal motor (constant thrust, constant mass
 
 ## 5. Not verified, or outside this phase
 
-- **R5 (transonic, Mach 1.09) cannot be simulated past Mach 0.8.** Two gaps, both recorded as decisions and reported, not worked around: the transonic pressure drag of Haack, elliptical, parabolic and power-series noses comes from measured curves in NASA TR R-100 that CLAUDE.md lists as validation data only (D-034); and Niskanen does not give the transonic fin interpolation (D-039). The run stops with a `NotImplementedError` naming the component and the Mach number. OpenRocket's values for R5 (apogee 1560.5 m, maximum velocity 369.5 m/s) remain in `values.csv` for when the owner decides. This is the Phase 2 wind-tunnel validation work of CLAUDE.md 6.7 item 1, which also needs a decision on data use.
+- **R5 (transonic, Mach 1.09)** could not be simulated past Mach 0.8 when this report was written (D-034, D-039). Both gaps were closed on 2026-10-12 (D-055, D-056, D-058); the comparison is in section 7 below.
 - **Dormand and Prince (1980)** is not in `reference/`. The tableau is verified by the consistency sums and the order tests (D-037), which is an independent check but not a check against the document.
 - **Gravity latitude dependence** (D-030): only a sea-level value is accepted; the OpenRocket-equivalent value at 45° N is observed, not derived.
 - **Base-drag rule after burnout** (D-035): the source rule and OpenRocket's rule differ by 1 to 5 % in apogee; the comparison uses OpenRocket's, the display is the owner's choice.
@@ -125,3 +125,20 @@ The eight reference flights take about 20 s in the test suite (RK4 at 0.002 s, 1
 ## Open item: pull request
 
 Unchanged from the Phase 1 report: the repository has a single branch, `claude/inspiring-tesla-xxp0hh`, which is also its default branch, so GitHub cannot open a pull request from it until a separate default branch (for example `main`) exists.
+
+## 7. R5 added (2026-10-12, Prompt 5 step 3, plan 0022)
+
+R5 (`r5-transonic-min-dia-29.ork`, AeroTech H238T, 6 s delay, apogee deployment) in the same OpenRocket-equivalent modes as section 1, RK4 at 0.002 s. The transonic nose drag comes from the digitised TR R-100 curves (D-055), the fin force in the band from the BAR-12 cubic (D-056), the roll damping from D-058.
+
+| Figure                     | OpenRocket, wind 0 | ours, wind 0 | error   | OpenRocket, wind 5 m/s | ours, wind 5 m/s | error   | tolerance        |
+| -------------------------- | ------------------ | ------------ | ------- | ---------------------- | ---------------- | ------- | ---------------- |
+| Apogee, m                  | 1560.531           | 1599.29      | +2.5 %  | 1555.050               | 1593.64          | +2.5 %  | 5 %              |
+| Maximum velocity, m/s      | 369.487            | 372.46       | +0.8 %  | 369.220                | 372.20           | +0.8 %  | 3 %              |
+| Maximum Mach               | 1.0877             | 1.0967       | +0.8 %  | 1.0878                 | 1.0968           | +0.8 %  | (information)    |
+| Rail exit velocity, m/s    | 36.684             | 36.59        | −0.3 %  | 36.677                 | 36.59            | −0.2 %  | (observed 0.3 %) |
+| Maximum acceleration, m/s² | 516.866            | 517.00       | +0.03 % | 516.852                | 516.99           | +0.03 % | (information)    |
+| Time to apogee, s          | 14.516             | 14.63        | +0.8 %  | 14.504                 | 14.61            | +0.7 %  | (observed 2.5 %) |
+| Ground hit velocity, m/s   | 8.768              | 8.77         | +0.0 %  | 10.094                 | 10.09            | −0.0 %  | (observed 0.2 %) |
+| Flight time, s             | 186.551            | 190.80       | +2.3 %  | 186.039                | 190.26           | +2.3 %  | (observed 2.5 %) |
+
+Within every Phase 2 tolerance and every observed bound of section 1; the test `simulate.openrocket.test.ts` now carries R5. The +2.5 % apogee is the largest of the five rockets and has the same sign as R2 and R3 (our coast drag below OpenRocket's); the transonic part of the flight is short (Mach 0.8 to 1.097 for about 0.5 s). The result carries the transonic warnings naming the validation status (D-057). Not tuned.

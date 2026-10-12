@@ -344,6 +344,25 @@ const GAMMA_AIR = 1.4;
  * the same inclination α, (C_Nα)₁ = (A_fin/A_ref)(K₁ + K₂α + K₃α²) (eq. 3.49).
  * The fin-tip Mach cone correction is ignored as in the thesis (p. 30).
  */
+/**
+ * BAR-11. Eqs. (3.42) to (3.44) p. 30: the Busemann coefficients K₁ = 2/β,
+ * K₂ = ((γ+1)M⁴ − 4β²)/(4β⁴), K₃ = ((γ+1)M⁸ + (2γ² − 7γ − 5)M⁶ + 10(γ+1)M⁴ + 8)/(6β⁷),
+ * β = √(M² − 1), γ = 1.4, for M > 1. Shared by the fin normal force (3.49)
+ * and the supersonic roll damping (3.72, AERO-6).
+ */
+export function busemannCoefficients(M: number): { k1: number; k2: number; k3: number } {
+  if (!(M > 1)) throw new InvalidInputError('Mach number', M, 'must be greater than 1');
+  const beta = Math.sqrt(M * M - 1);
+  const g = GAMMA_AIR;
+  return {
+    k1: 2 / beta,
+    k2: ((g + 1) * M ** 4 - 4 * beta * beta) / (4 * beta ** 4),
+    k3:
+      ((g + 1) * M ** 8 + (2 * g * g - 7 * g - 5) * M ** 6 + 10 * (g + 1) * M ** 4 + 8) /
+      (6 * beta ** 7),
+  };
+}
+
 export function supersonicFinCnAlpha(
   mach: Mach,
   finArea: number,
@@ -357,13 +376,7 @@ export function supersonicFinCnAlpha(
       M,
       'must be greater than 1 for the supersonic fin formula',
     );
-  const beta = Math.sqrt(M * M - 1);
-  const g = GAMMA_AIR;
-  const k1 = 2 / beta;
-  const k2 = ((g + 1) * M ** 4 - 4 * beta * beta) / (4 * beta ** 4);
-  const k3 =
-    ((g + 1) * M ** 8 + (2 * g * g - 7 * g - 5) * M ** 6 + 10 * (g + 1) * M ** 4 + 8) /
-    (6 * beta ** 7);
+  const { k1, k2, k3 } = busemannCoefficients(M);
   const a = angleOfAttack;
   return finiteResult(
     'supersonic fin normal force',

@@ -123,6 +123,27 @@ const CASES: {
       flightTime: 118.045,
     },
   },
+  {
+    file: 'r5-transonic-min-dia-29',
+    motorFile: 'AeroTech_H238T',
+    delay: 6,
+    wind0: {
+      apogee: 1560.531,
+      timeToApogee: 14.516,
+      maxVelocity: 369.487,
+      railExit: 36.684,
+      groundHit: 8.768,
+      flightTime: 186.551,
+    },
+    wind5: {
+      apogee: 1555.05,
+      timeToApogee: 14.504,
+      maxVelocity: 369.22,
+      railExit: 36.677,
+      groundHit: 10.094,
+      flightTime: 186.039,
+    },
+  },
 ];
 
 function vehicleFor(c: (typeof CASES)[number]): FlightVehicle {

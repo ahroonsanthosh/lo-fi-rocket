@@ -39,6 +39,12 @@ import {
 } from './skin-friction.js';
 
 /** GEO-13. Wetted (lateral) area of a body of revolution: ∫ 2π r √(1 + r′²) dx. */
+/** Regime warnings naming the validation status (docs/reports/wind-tunnel-validation.md, D-057). */
+export const TRANSONIC_DRAG_WARNING =
+  'transonic regime (Mach 0.8 to 1.2): accuracy is lower than in subsonic flight (CLAUDE.md 6.3); against wind tunnel data the drag rise is predicted too early (up to +40 % at Mach 0.9, within 10 % from Mach 1.0 to 1.2)';
+export const SUPERSONIC_DRAG_WARNING =
+  'supersonic regime (above Mach 1.2): validated only against two models; the drag is within about 10 % for thin sharp fins and over-predicted up to twofold for thick fins with the rounded section (docs/reports/wind-tunnel-validation.md)';
+
 export function wettedArea(profile: Profile): number {
   return integrate(
     (x) => {
@@ -418,10 +424,8 @@ export function dragCoefficient(input: DragInputs): DragResult {
     referenceArea: aRef,
   });
 
-  if (M >= 0.8 && M <= 1.2)
-    warnings.push(
-      `transonic regime (Mach ${M.toFixed(3)}): accuracy is lower than in subsonic flight (CLAUDE.md 6.3, Niskanen Table 3.1)`,
-    );
+  if (M >= 0.8 && M <= 1.2) warnings.push(TRANSONIC_DRAG_WARNING);
+  else if (M > 1.2) warnings.push(SUPERSONIC_DRAG_WARNING);
 
   const cd0 = terms.reduce((sum, t) => sum + t.cd, 0) + frictionCd;
   return {
