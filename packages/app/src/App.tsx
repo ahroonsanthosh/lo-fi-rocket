@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useReducer, useState, type JSX } from 'react';
-import { exampleDesign, type RocketDesign } from '@lo-fi-rocket/formats';
+import {
+  exampleDesign,
+  type KeyValueStore,
+  type RocketDesign,
+  type Transport,
+} from '@lo-fi-rocket/formats';
 import { ComponentEditor } from './components/ComponentEditor.js';
 import { ComponentList } from './components/ComponentList.js';
 import { Header } from './components/Header.js';
+import { MOTOR_SELECTION_ID, MotorPanel } from './components/MotorPanel.js';
 import { RecoveryEditor } from './components/RecoveryEditor.js';
+import { keyValueStore } from './motors/library.js';
+import { browserServices, ServicesContext, type Services } from './state/services.js';
 import { SideView } from './components/SideView.js';
 import { computeFigures, MassPanel, StabilityPanel } from './components/StabilityPanel.js';
 import {
@@ -21,12 +29,22 @@ export interface AppProps {
   /** Injected in tests; the browser's local storage by default. */
   readonly storage?: Storage | undefined;
   readonly initialDesign?: RocketDesign;
+  /** Injected in tests: the ThrustCurve.org transport and the motor store. */
+  readonly transport?: Transport;
+  readonly motorStore?: KeyValueStore;
 }
 
 const AUTOSAVE_DELAY_MS = 300;
 
 export function App(props: AppProps): JSX.Element {
   const storage = props.storage ?? browserStorage();
+  const [services] = useState<Services>(() => {
+    const base = browserServices(
+      props.motorStore ??
+        (storage === undefined ? undefined : keyValueStore(storage as globalThis.Storage)),
+    );
+    return props.transport === undefined ? base : { ...base, transport: props.transport };
+  });
   // Loaded once, on mount: the stored design (or the example), and a notice if the stored one was invalid.
   const [start] = useState(() => {
     const units = storage === undefined ? 'metric' : loadUnits(storage);
@@ -66,43 +84,47 @@ export function App(props: AppProps): JSX.Element {
 
   return (
     <StoreContext.Provider value={store}>
-      <div className="app">
-        <Header />
-        {notice === undefined ? null : (
-          <p className="notice" role="status">
-            {notice}
-          </p>
-        )}
-        <main className="layout">
-          <aside className="left">
-            <ComponentList />
-          </aside>
-          <section className="centre" aria-label="Rocket">
-            <SideView
-              components={state.design.components}
-              selectedId={state.selectedId}
-              cg={figures.stability?.result.cgLiftoff}
-              cp={figures.stability?.result.centreOfPressure.cp}
-              onSelect={(id) => {
-                dispatch({ type: 'select', id });
-              }}
-            />
-            <div className="panels">
-              <StabilityPanel figures={figures} />
-              <MassPanel figures={figures} />
-            </div>
-          </section>
-          <aside className="right">
-            {selectedComponent !== undefined ? (
-              <ComponentEditor key={selectedComponent.id} item={selectedComponent} />
-            ) : selectedDevice !== undefined ? (
-              <RecoveryEditor key={selectedDevice.id} device={selectedDevice} />
-            ) : (
-              <p className="muted">Select a component to edit it, or add one from the list.</p>
-            )}
-          </aside>
-        </main>
-      </div>
+      <ServicesContext.Provider value={services}>
+        <div className="app">
+          <Header />
+          {notice === undefined ? null : (
+            <p className="notice" role="status">
+              {notice}
+            </p>
+          )}
+          <main className="layout">
+            <aside className="left">
+              <ComponentList />
+            </aside>
+            <section className="centre" aria-label="Rocket">
+              <SideView
+                components={state.design.components}
+                selectedId={state.selectedId}
+                cg={figures.stability?.result.cgLiftoff}
+                cp={figures.stability?.result.centreOfPressure.cp}
+                onSelect={(id) => {
+                  dispatch({ type: 'select', id });
+                }}
+              />
+              <div className="panels">
+                <StabilityPanel figures={figures} />
+                <MassPanel figures={figures} />
+              </div>
+            </section>
+            <aside className="right">
+              {state.selectedId === MOTOR_SELECTION_ID ? (
+                <MotorPanel />
+              ) : selectedComponent !== undefined ? (
+                <ComponentEditor key={selectedComponent.id} item={selectedComponent} />
+              ) : selectedDevice !== undefined ? (
+                <RecoveryEditor key={selectedDevice.id} device={selectedDevice} />
+              ) : (
+                <p className="muted">Select a component to edit it, or add one from the list.</p>
+              )}
+            </aside>
+          </main>
+        </div>
+      </ServicesContext.Provider>
     </StoreContext.Provider>
   );
 }

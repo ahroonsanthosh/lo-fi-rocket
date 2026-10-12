@@ -41,13 +41,15 @@ Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the 
 
 - Prompt 3 step 2 (plan 0012): the rocket builder UI in `packages/app`: reducer store with validated actions and new-component defaults, component list (listbox with arrow keys) and editors for every component kind and for recovery devices, numeric fields converting at the boundary with plain-language rejection messages, metric/imperial toggle (UNIT-5 to UNIT-11), live SVG side view with CG and CP markers, stability panel with the margins at liftoff and burnout, colours and guidance against the editable thresholds, mass and size panel, autosave to local storage with recovery of invalid saves (D-043); Testing Library tests in jsdom (the example shows the Phase 1 figures; a zero chord is rejected; the units toggle; autosave round trip; invalid autosave reported).
 
+- Prompt 3 step 3 (plan 0013): ThrustCurve.org client against `swagger.json` (metadata, search, download with RASP preferred and RockSim fallback, every field checked) with an injected transport; offline motor cache in local storage validated on read; custom thrust-curve CSV reader (D-044); the app's motor library (the eight bundled reference motors as build-time text, imported and downloaded motors), the motor panel (mount tube and overhang, figures labelled by their definitions, delay list from the RASP file, thrust-curve plot, diameter warning) and the picker tabs (library filtered to the mount, ThrustCurve search and download, `.eng`/`.rse` import, CSV import); `LinePlot` SVG chart (D-045). Tests: client fixtures, cache offline, CSV rules, picker flows in jsdom with injected transport and stores.
+
 ## In progress
 
-- Prompt 3 step 3 (plan 0013, to be written): motors (bundled set, file and CSV import, ThrustCurve.org client with offline cache, picker).
+- Prompt 3 step 4 (plan 0014, to be written): the simulation UI (launch conditions, worker, results, warnings, plots, CSV export).
 
 ## Next
 
-- Steps 4 and 5 of plan 0011: simulation UI, files and interoperability with the Playwright tests and the Phase 3 and 4 acceptance report.
+- Step 5 of plan 0011: files and interoperability with the Playwright tests and the Phase 3 and 4 acceptance report.
 
 ## Open questions
 

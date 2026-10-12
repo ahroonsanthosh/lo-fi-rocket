@@ -532,6 +532,11 @@ function warningThresholds(c: Ctx, path: string, v: unknown): WarningThresholds 
   };
 }
 
+/** Validate a stored motor selection (definition and provenance) on its own, for the motor cache. */
+export function validateMotorSelection(value: unknown, fileName?: string): MotorSelection {
+  return motorSelection(new Ctx(fileName), '$', value);
+}
+
 /**
  * Validate a parsed JSON value of the current schema version into a
  * RocketDesign. Throws DesignFileError naming the path and the problem.

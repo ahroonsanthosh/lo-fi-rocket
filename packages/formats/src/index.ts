@@ -91,3 +91,32 @@ export {
   exampleDesign,
   newDesign,
 } from './design/example.js';
+export { validateMotorSelection } from './design/validate.js';
+export {
+  CsvThrustCurveError,
+  parseThrustCurveCsv,
+  type CustomMotorMetadata,
+} from './motors/csv-thrust-curve.js';
+export {
+  downloadMotor,
+  fetchMetadata,
+  searchMotors,
+  THRUSTCURVE_BASE_URL,
+  ThrustCurveError,
+  type DownloadedMotor,
+  type Metadata,
+  type MotorSummary,
+  type SearchRequest,
+  type SearchResult,
+  type Transport,
+} from './thrustcurve/client.js';
+export {
+  cachedThrustCurveMotor,
+  getThrustCurveMotor,
+  listCachedMotors,
+  MOTOR_CACHE_PREFIX,
+  putCachedMotor,
+  removeCachedMotor,
+  type CachedMotor,
+  type KeyValueStore,
+} from './thrustcurve/cache.js';

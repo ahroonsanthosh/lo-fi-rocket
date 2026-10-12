@@ -2,6 +2,7 @@ import type { JSX, KeyboardEvent } from 'react';
 import { newId } from '@lo-fi-rocket/formats';
 import { COMPONENT_LABELS, type ComponentKind } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
+import { MOTOR_SELECTION_ID } from './MotorPanel.js';
 
 const ADD_ORDER: readonly ComponentKind[] = [
   'noseCone',
@@ -22,6 +23,7 @@ export function ComponentList(): JSX.Element {
   const { state, dispatch } = useStore();
   const items = state.design.components;
   const selected = state.selectedId;
+  const motor = state.design.motorMount?.motor;
 
   const onKey = (e: KeyboardEvent<HTMLUListElement>): void => {
     const i = items.findIndex((c) => c.id === selected);
@@ -80,6 +82,32 @@ export function ComponentList(): JSX.Element {
           ))}
         </ul>
       )}
+      <div className="list-header">
+        <h2>Motor</h2>
+      </div>
+      <ul role="listbox" aria-label="Motor" tabIndex={0}>
+        <li
+          role="option"
+          aria-selected={selected === MOTOR_SELECTION_ID}
+          className={selected === MOTOR_SELECTION_ID ? 'selected' : ''}
+          onClick={() => {
+            dispatch({ type: 'select', id: MOTOR_SELECTION_ID });
+          }}
+        >
+          <span className="item-name">
+            {motor === undefined
+              ? 'No motor'
+              : `${motor.definition.manufacturer} ${motor.definition.designation}`}
+          </span>
+          <span className="item-kind">
+            {motor === undefined
+              ? 'choose one'
+              : motor.ejectionDelay === undefined
+                ? 'plugged'
+                : `delay ${String(motor.ejectionDelay)} s`}
+          </span>
+        </li>
+      </ul>
       <div className="list-header">
         <h2>Recovery</h2>
         <button

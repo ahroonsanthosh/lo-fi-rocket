@@ -313,3 +313,77 @@ button.danger {
     overflow: auto;
   }
 }
+
+.plot {
+  width: 100%;
+  background: #fbfcfe;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.plot .grid {
+  stroke: #e3e7ec;
+}
+.plot .axis-line {
+  stroke: #6b7682;
+}
+.plot .tick {
+  font-size: 11px;
+  fill: var(--muted);
+}
+.plot .axis-label {
+  font-size: 12px;
+  fill: var(--ink);
+}
+.plot .plot-title {
+  font-size: 13px;
+  fill: var(--ink);
+  font-weight: 600;
+}
+.plot .marker-line {
+  stroke: #b26a00;
+  stroke-dasharray: 4 3;
+}
+.warning {
+  margin: 6px 0;
+  padding: 6px 8px;
+  background: #fff4d6;
+  border-left: 4px solid var(--overstable);
+  font-size: 13px;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tabs button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+}
+.tabs button.active {
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.motor-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.motor-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.motor-list li:last-child {
+  border-bottom: none;
+}
+.motor-summary {
+  margin: 8px 0;
+}
