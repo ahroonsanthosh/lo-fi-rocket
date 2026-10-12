@@ -7,3 +7,5 @@ coverage/
 *.log
 .env
 .env.*
+packages/app/test-results/
+packages/app/playwright-report/

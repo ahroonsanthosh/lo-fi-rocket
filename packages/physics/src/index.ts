@@ -236,6 +236,7 @@ export {
   type DormandPrinceStep,
 } from './flight/integrators.js';
 export type {
+  DragCurve,
   FlightVehicle,
   IntegratorOptions,
   MotorSource,
@@ -243,7 +244,10 @@ export type {
   SimulationOptions,
 } from './flight/vehicle.js';
 export {
+  AERO_MAX_ANGLE_OF_ATTACK,
+  dragCurveAt,
   simulateFlight,
+  validateDragCurve,
   type FlightEvent,
   type FlightEventKind,
   type FlightPhase,

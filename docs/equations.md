@@ -3,8 +3,8 @@
 Every physics equation implemented in this repository is listed here, per CLAUDE.md section 4.
 An equation that is not in this register must not be in the code.
 
-**Current phase:** Phase 3 (application), Prompt 3.
-**Current task:** plan 0014 (the simulation UI) done; step 5 (plan 0015, files and interoperability) next. No new equations in steps 2 to 5 except where noted. Phase 1 (plans 0001 to 0006), the motor model (plan 0007), frames, gravity and environment (plan 0008), the drag model (plan 0009) and the flight simulator (plan 0010) are implemented. File readers contain no physics equations; the motor rules they apply are the MOT entries below.
+**Current phase:** Phases 3 and 4 complete; Phase 5 (Prompt 4) starts on the next "continue".
+**Current task:** none in progress. No new equations in steps 2 to 5 except where noted. Phase 1 (plans 0001 to 0006), the motor model (plan 0007), frames, gravity and environment (plan 0008), the drag model (plan 0009) and the flight simulator (plan 0010) are implemented. File readers contain no physics equations; the motor rules they apply are the MOT entries below.
 
 Source abbreviations: **USSA76** = NOAA/NASA/USAF, _U.S. Standard Atmosphere, 1976_ (`reference/docs/ussa1976-nasa-ntrs-19770009539.pdf`; printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables). **SI9** = BIPM, _The International System of Units (SI)_, 9th edition 2019 (`reference/docs/si-brochure-9-en.pdf`). **N09** = Niskanen (2009), _Development of an Open Source model rocket simulation software_ (`reference/docs/niskanen-2009-openrocket-thesis.pdf`; printed page numbers; PDF page = printed + 10). **NIST SP 811** = Thompson and Taylor, _Guide for the Use of the International System of Units (SI)_, NIST Special Publication 811, 2008 (`reference/docs/nist-sp811-2008.pdf`; printed page numbers; PDF page = printed + 12 in Appendix B).
 

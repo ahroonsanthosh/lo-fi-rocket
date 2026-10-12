@@ -221,6 +221,7 @@ export function designSimulationOptions(
     maxTime: design.simulation.maxTime,
     degreesOfFreedom: 6,
     recordInterval: design.simulation.recordInterval,
+    ...(design.dragCurve === undefined ? {} : { dragCurve: design.dragCurve }),
   };
 }
 

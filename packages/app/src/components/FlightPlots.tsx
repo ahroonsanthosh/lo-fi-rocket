@@ -1,3 +1,4 @@
+import type { RecordedFlight } from '@lo-fi-rocket/formats';
 import type { FlightResult } from '@lo-fi-rocket/physics';
 import type { JSX } from 'react';
 import { displayValue, unitFor, type UnitSystem } from '../units/display.js';
@@ -6,9 +7,12 @@ import { LinePlot } from './LinePlot.js';
 export function FlightPlots({
   result,
   units,
+  recorded,
 }: {
   readonly result: FlightResult;
   readonly units: UnitSystem;
+  /** Recorded altimeter data drawn as a second altitude series (CLAUDE.md 7.5). */
+  readonly recorded?: RecordedFlight | undefined;
 }): JSX.Element {
   const s = result.samples;
   const markers = result.events
@@ -31,9 +35,19 @@ export function FlightPlots({
         yLabel={`Altitude (${m.label})`}
         series={[
           {
-            name: 'altitude',
+            name: 'simulated',
             points: s.map((p) => [p.time, displayValue(p.altitude, 'm', units)] as const),
           },
+          ...(recorded === undefined
+            ? []
+            : [
+                {
+                  name: `recorded: ${recorded.label}`,
+                  points: recorded.points.map(
+                    (p) => [p.time, displayValue(p.altitude, 'm', units)] as const,
+                  ),
+                },
+              ]),
         ]}
         markers={markers}
       />

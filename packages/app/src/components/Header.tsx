@@ -1,8 +1,9 @@
-import { exampleDesign, newDesign, newId } from '@lo-fi-rocket/formats';
 import type { JSX } from 'react';
+import type { Storage } from '../state/autosave.js';
 import { useStore } from '../state/store.js';
+import { FilesMenu } from './FilesMenu.js';
 
-export function Header(): JSX.Element {
+export function Header({ storage }: { readonly storage: Storage | undefined }): JSX.Element {
   const { state, dispatch } = useStore();
   return (
     <header className="app-header">
@@ -45,24 +46,7 @@ export function Header(): JSX.Element {
           Imperial
         </label>
       </fieldset>
-      <div className="header-actions">
-        <button
-          type="button"
-          onClick={() => {
-            dispatch({ type: 'replace-design', design: newDesign(newId(), 'New rocket') });
-          }}
-        >
-          New
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            dispatch({ type: 'replace-design', design: exampleDesign(newId()) });
-          }}
-        >
-          Load example
-        </button>
-      </div>
+      <FilesMenu storage={storage} />
     </header>
   );
 }

@@ -59,8 +59,23 @@ export type IntegratorOptions =
       readonly maxStep: Seconds;
     };
 
+/**
+ * An imported zero-angle-of-attack drag coefficient against Mach number
+ * (CLAUDE.md 6.7 item 2), referred to the rocket's reference area. It
+ * replaces the computed C_D0 (DRAG-13); the angle-of-attack scaling
+ * (DRAG-14) still applies. Interpolated linearly; a Mach number outside
+ * the table is an error, never clamped (D-047).
+ */
+export interface DragCurve {
+  readonly label: string;
+  /** Strictly increasing Mach numbers, C_D ≥ 0. */
+  readonly points: readonly { readonly mach: number; readonly cd: number }[];
+}
+
 export interface SimulationOptions {
   readonly site: LaunchSite;
+  /** Use this table instead of the drag model; results are labelled with it. */
+  readonly dragCurve?: DragCurve;
   readonly rail: LaunchRail;
   readonly wind: WindModel;
   readonly gravity: GravityModel;

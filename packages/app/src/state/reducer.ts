@@ -10,6 +10,7 @@ import {
   metres,
   seconds,
   type Component,
+  type DragCurve,
   type Metres,
 } from '@lo-fi-rocket/physics';
 import type {
@@ -17,6 +18,7 @@ import type {
   DesignRecoveryDevice,
   LaunchConditions,
   MotorMount,
+  RecordedFlight,
   RocketDesign,
   SimulationSettings,
   StabilityThresholds,
@@ -62,6 +64,8 @@ export type Action =
   | { readonly type: 'set-stability-thresholds'; readonly thresholds: StabilityThresholds }
   | { readonly type: 'set-warning-thresholds'; readonly thresholds: WarningThresholds }
   | { readonly type: 'set-launch'; readonly launch: LaunchConditions }
+  | { readonly type: 'set-drag-curve'; readonly dragCurve: DragCurve | undefined }
+  | { readonly type: 'set-recorded-flight'; readonly recordedFlight: RecordedFlight | undefined }
   | { readonly type: 'set-simulation'; readonly simulation: SimulationSettings };
 
 export const COMPONENT_LABELS: Record<ComponentKind, string> = {
@@ -390,6 +394,19 @@ export function reduce(state: AppState, action: Action): AppState {
       return withDesign(state, { ...d, warningThresholds: action.thresholds });
     case 'set-launch':
       return withDesign(state, { ...d, launch: action.launch });
+    case 'set-drag-curve': {
+      const next: RocketDesign = { ...d };
+      if (action.dragCurve === undefined) delete (next as { dragCurve?: DragCurve }).dragCurve;
+      else (next as { dragCurve?: DragCurve }).dragCurve = action.dragCurve;
+      return withDesign(state, next);
+    }
+    case 'set-recorded-flight': {
+      const next: RocketDesign = { ...d };
+      if (action.recordedFlight === undefined)
+        delete (next as { recordedFlight?: RecordedFlight }).recordedFlight;
+      else (next as { recordedFlight?: RecordedFlight }).recordedFlight = action.recordedFlight;
+      return withDesign(state, next);
+    }
     case 'set-simulation':
       return withDesign(state, { ...d, simulation: action.simulation });
   }

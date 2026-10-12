@@ -84,7 +84,7 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['**/*.test.ts', '**/*.test.tsx'],
+    files: ['**/*.test.ts', '**/*.test.tsx', '**/e2e/**/*.ts'],
     rules: {
       // Tests legitimately use magic numbers from hand calculations and may need
       // non-null assertions on fixture data.

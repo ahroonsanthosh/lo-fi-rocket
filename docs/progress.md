@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the Phase 2 report. Steps and plans in `docs/plans/0011-application-architecture-and-design-model.md`.
+Prompt 3 (roadmap): Phases 3 and 4, complete (see `docs/reports/phase-3-4-acceptance.md`). Prompt 4 starts on the owner's next "continue".
 
 ## Done
 
@@ -45,13 +45,15 @@ Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the 
 
 - Prompt 3 step 4 (plan 0014): the simulation UI: launch editor (site, optional temperature and pressure overrides, rail, wind, with the NAR warning live), simulation settings (integrator, tolerances or step, maximum time, recording interval), the simulator in a Web Worker with a synchronous runner for tests, the flight panel (summary values of CLAUDE.md 6.5, events, the thresholds and launch warnings with their reasons, modes used, stale-flight notice), four plots with event markers, CSV export with a modes comment line. Found and fixed while testing a ballistic flight: the fin normal force law applied past 90° angle of attack gave a spurious force in an undefined direction (RK4 tumbled, Dormand–Prince crawled); a six-degree-of-freedom flight now ends with the explicit reason "model-limit" at 90° (D-046) and the adaptive integrator throws `SimulationStalledError` instead of crawling.
 
+- Prompt 3 step 5 (plan 0015): imported drag curves in the simulator (D-047, linear in Mach, never extrapolated, results labelled), the design file's optional `dragCurve` and `recordedFlight`, CSV readers for drag tables and altimeter data, `orkToDesign` with motor matching against the library (D-048), the files menu (Save, Open, Designs, Import `.ork`), the comparison panel with the recorded altitude overlay, Playwright end-to-end tests (new-user flow, the example's figures, autosave across reload, the laptop layout) running in CI, and the Phase 3 and 4 acceptance report. **Prompt 3 (Phases 3 and 4) is complete.**
+
 ## In progress
 
-- Prompt 3 step 5 (plan 0015, to be written): files and interoperability (save and load, `.ork` import, altimeter overlay, imported drag curve, Playwright end-to-end tests, Phase 3 and 4 acceptance report).
+- Nothing. Prompt 3 is finished.
 
 ## Next
 
-- The Phase 3 and 4 acceptance report, then Prompt 4 on the owner's next "continue".
+- Prompt 4 (Phase 5: Monte Carlo dispersion and landing zones, wind profiles, liquid-engine mass profiles; the final audit) on the owner's next "continue".
 
 ## Open questions
 
@@ -63,7 +65,7 @@ Prompt 3 (roadmap): Phases 3 and 4, started on the owner's "continue" after the 
 - Fin normal force at large angles of attack (D-046): a six-degree-of-freedom flight now ends with an explicit "model-limit" reason when the angle of attack reaches 90°, because the fin term is a small-angle flat-plate law and no approved source gives a large-angle law. Ballistic flights and ejection-charge deployments after the turn-over therefore stop at the turn-over with the apogee reported. Approve a source for the large-angle fin force (for example Hoerner, Fluid-Dynamic Lift) if those flights must be simulated to landing.
 - Customary units source (D-040): NIST SP 811 was added to `reference/` for the inch, foot, pound, ounce, pound-force, mile per hour, foot per second and Fahrenheit behind the units toggle. Say if another source is preferred; the factors are definitional and would not change.
 - Deployment speed warning threshold (D-042): no default is given in CLAUDE.md; 20 m/s is a user-editable placeholder labelled as a rule of thumb. Please state the figure you want.
-- `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive.
+- `.CDX1` import (CLAUDE.md 6.7 item 3) needs sample RASAero II files; not scheduled until they arrive. The drag-curve CSV reader (D-047) should be checked against a real RASAero aero-plot export, which is not in `reference/`.
 
 - Dormand and Prince (1980) is not in `reference/`; the tableau is verified by the consistency sums and order tests (D-037). The owner may add the paper to close the verification formally. Not blocking.
 

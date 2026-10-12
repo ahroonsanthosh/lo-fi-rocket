@@ -120,3 +120,7 @@ export {
   type CachedMotor,
   type KeyValueStore,
 } from './thrustcurve/cache.js';
+export { DragCurveCsvError, parseDragCurveCsv } from './motors/drag-curve.js';
+export { FlightDataCsvError, parseFlightDataCsv } from './motors/flight-data.js';
+export { orkToDesign, type LibraryMotorRef, type OrkImport } from './design/from-ork.js';
+export type { RecordedFlight } from './design/model.js';

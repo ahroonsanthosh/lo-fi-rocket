@@ -6,6 +6,7 @@
  */
 import type {
   Component,
+  DragCurve,
   IntegratorOptions,
   Kelvin,
   Metres,
@@ -116,6 +117,13 @@ export interface WarningThresholds {
   readonly maxDeploymentVelocity: MetresPerSecond;
 }
 
+/** A recorded flight (altimeter data) kept with the design for the comparison view (CLAUDE.md 7.5). */
+export interface RecordedFlight {
+  readonly label: string;
+  /** Time from launch and altitude above the pad, SI. */
+  readonly points: readonly { readonly time: Seconds; readonly altitude: Metres }[];
+}
+
 export interface RocketDesign {
   readonly schemaVersion: typeof CURRENT_SCHEMA_VERSION;
   readonly id: string;
@@ -131,6 +139,9 @@ export interface RocketDesign {
   readonly simulation: SimulationSettings;
   readonly stabilityThresholds: StabilityThresholds;
   readonly warningThresholds: WarningThresholds;
+  /** An imported C_D versus Mach table used in place of the drag model (CLAUDE.md 6.7 item 2, D-047). */
+  readonly dragCurve?: DragCurve;
+  readonly recordedFlight?: RecordedFlight;
 }
 
 /** A fresh random id (RFC 4122 version 4) for designs, components and devices. */

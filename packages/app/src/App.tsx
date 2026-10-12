@@ -94,7 +94,7 @@ export function App(props: AppProps): JSX.Element {
     <StoreContext.Provider value={store}>
       <ServicesContext.Provider value={services}>
         <div className="app">
-          <Header />
+          <Header storage={storage} />
           {notice === undefined ? null : (
             <p className="notice" role="status">
               {notice}
@@ -119,7 +119,11 @@ export function App(props: AppProps): JSX.Element {
                 <MassPanel figures={figures} />
               </div>
               {flight === undefined ? null : (
-                <FlightPlots result={flight.result} units={state.units} />
+                <FlightPlots
+                  result={flight.result}
+                  units={state.units}
+                  recorded={state.design.recordedFlight}
+                />
               )}
             </section>
             <aside className="right">

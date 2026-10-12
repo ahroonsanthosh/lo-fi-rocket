@@ -7,6 +7,7 @@
  * package's and are applied when the design is used.
  */
 import {
+  type DragCurve,
   kelvin,
   kilograms,
   kilogramsPerCubicMetre,
@@ -27,6 +28,7 @@ import { DesignFileError } from './errors.js';
 import {
   CURRENT_SCHEMA_VERSION,
   type DeployEvent,
+  type RecordedFlight,
   type DesignComponent,
   type DesignRecoveryDevice,
   type LaunchConditions,
@@ -532,6 +534,38 @@ function warningThresholds(c: Ctx, path: string, v: unknown): WarningThresholds 
   };
 }
 
+function dragCurve(c: Ctx, path: string, v: unknown): DragCurve {
+  const o = c.object(path, v);
+  c.keys(path, o, ['label', 'points']);
+  return {
+    label: c.string(`${path}.label`, o['label']),
+    points: c.array(`${path}.points`, o['points']).map((p, i) => {
+      const pp = c.object(`${path}.points[${String(i)}]`, p);
+      c.keys(`${path}.points[${String(i)}]`, pp, ['mach', 'cd']);
+      return {
+        mach: c.number(`${path}.points[${String(i)}].mach`, pp['mach']),
+        cd: c.number(`${path}.points[${String(i)}].cd`, pp['cd']),
+      };
+    }),
+  };
+}
+
+function recordedFlight(c: Ctx, path: string, v: unknown): RecordedFlight {
+  const o = c.object(path, v);
+  c.keys(path, o, ['label', 'points']);
+  return {
+    label: c.string(`${path}.label`, o['label']),
+    points: c.array(`${path}.points`, o['points']).map((p, i) => {
+      const pp = c.object(`${path}.points[${String(i)}]`, p);
+      c.keys(`${path}.points[${String(i)}]`, pp, ['time', 'altitude']);
+      return {
+        time: seconds(c.number(`${path}.points[${String(i)}].time`, pp['time'])),
+        altitude: metres(c.number(`${path}.points[${String(i)}].altitude`, pp['altitude'])),
+      };
+    }),
+  };
+}
+
 /** Validate a stored motor selection (definition and provenance) on its own, for the motor cache. */
 export function validateMotorSelection(value: unknown, fileName?: string): MotorSelection {
   return motorSelection(new Ctx(fileName), '$', value);
@@ -559,7 +593,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       'stabilityThresholds',
       'warningThresholds',
     ],
-    ['motorMount', 'referenceDiameter'],
+    ['motorMount', 'referenceDiameter', 'dragCurve', 'recordedFlight'],
   );
   const version = c.integer('$.schemaVersion', o['schemaVersion']);
   if (version !== CURRENT_SCHEMA_VERSION) {
@@ -611,6 +645,14 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     'referenceDiameter' in o && o['referenceDiameter'] !== undefined
       ? metres(c.number('$.referenceDiameter', o['referenceDiameter']))
       : undefined;
+  const curve =
+    'dragCurve' in o && o['dragCurve'] !== undefined
+      ? dragCurve(c, '$.dragCurve', o['dragCurve'])
+      : undefined;
+  const recorded =
+    'recordedFlight' in o && o['recordedFlight'] !== undefined
+      ? recordedFlight(c, '$.recordedFlight', o['recordedFlight'])
+      : undefined;
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     id: c.nonEmptyString('$.id', o['id']),
@@ -626,5 +668,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     simulation: simulation(c, '$.simulation', o['simulation']),
     stabilityThresholds: stabilityThresholds(c, '$.stabilityThresholds', o['stabilityThresholds']),
     warningThresholds: warningThresholds(c, '$.warningThresholds', o['warningThresholds']),
+    ...(curve === undefined ? {} : { dragCurve: curve }),
+    ...(recorded === undefined ? {} : { recordedFlight: recorded }),
   };
 }

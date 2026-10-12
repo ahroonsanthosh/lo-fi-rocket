@@ -40,7 +40,58 @@ import {
 } from './integrators.js';
 import { quaternionMultiply, quaternionNormalise, type Quaternion } from './quaternion.js';
 import { add, cross, dot, norm, scale, sub, vec3, type Vec3 } from './vector.js';
-import type { FlightVehicle, RecoveryDevice, SimulationOptions } from './vehicle.js';
+import type { DragCurve, FlightVehicle, RecoveryDevice, SimulationOptions } from './vehicle.js';
+
+/** D-047: linear interpolation of an imported C_D table in Mach; outside the table is an error. */
+export function dragCurveAt(curve: DragCurve, machNumber: number): number {
+  const pts = curve.points;
+  const first = pts[0];
+  const last = pts[pts.length - 1];
+  if (first === undefined || last === undefined || pts.length < 2) {
+    throw new InvalidInputError('drag curve', pts.length, 'must have at least two points');
+  }
+  if (!(machNumber >= first.mach && machNumber <= last.mach)) {
+    throw new InvalidInputError(
+      `Mach number for the drag curve "${curve.label}"`,
+      machNumber,
+      `must lie within the table, ${String(first.mach)} to ${String(last.mach)} (the curve is not extrapolated)`,
+    );
+  }
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    if (a === undefined || b === undefined) continue;
+    if (machNumber <= b.mach) {
+      const f = (machNumber - a.mach) / (b.mach - a.mach);
+      return a.cd + f * (b.cd - a.cd);
+    }
+  }
+  return last.cd;
+}
+
+export function validateDragCurve(curve: DragCurve): void {
+  if (curve.points.length < 2) {
+    throw new InvalidInputError('drag curve', curve.points.length, 'must have at least two points');
+  }
+  let previous = Number.NEGATIVE_INFINITY;
+  curve.points.forEach((p, i) => {
+    if (!Number.isFinite(p.mach) || !(p.mach > previous)) {
+      throw new InvalidInputError(
+        `drag curve point ${String(i)} Mach`,
+        p.mach,
+        'must increase along the table',
+      );
+    }
+    if (!Number.isFinite(p.cd) || p.cd < 0) {
+      throw new InvalidInputError(
+        `drag curve point ${String(i)} C_D`,
+        p.cd,
+        'must be 0 or greater',
+      );
+    }
+    previous = p.mach;
+  });
+}
 
 export type FlightPhase = 'on-rail' | 'powered' | 'coast' | 'descent' | 'landed';
 
@@ -131,6 +182,8 @@ export interface FlightResult {
     readonly integrator: string;
     readonly degreesOfFreedom: 6 | 3;
     readonly gravitySeaLevel: number;
+    /** The label of the imported drag curve when one replaced the drag model (D-047). */
+    readonly dragCurve: string | undefined;
   };
 }
 
@@ -254,19 +307,23 @@ function derive(
       referenceLength: metres(ctx.rocketLength),
     });
     const thrusting = thrust > 0;
-    const drag = dragCoefficient({
-      components: ctx.vehicle.components,
-      mach: flight.mach,
-      reynolds: flight.reynolds,
-      roughnessHeight: ctx.vehicle.roughnessHeight,
-      ...(ctx.motorDiameter === undefined
-        ? {}
-        : { motor: { diameter: metres(ctx.motorDiameter), thrusting } }),
-      baseDragMotorRule: ctx.options.baseDragMotorRule,
-      referenceDiameter: metres(ctx.referenceDiameter),
-    });
-    cd0 = drag.cd0;
-    warnings.push(...drag.warnings);
+    if (ctx.options.dragCurve !== undefined) {
+      cd0 = dragCurveAt(ctx.options.dragCurve, flight.mach);
+    } else {
+      const drag = dragCoefficient({
+        components: ctx.vehicle.components,
+        mach: flight.mach,
+        reynolds: flight.reynolds,
+        roughnessHeight: ctx.vehicle.roughnessHeight,
+        ...(ctx.motorDiameter === undefined
+          ? {}
+          : { motor: { diameter: metres(ctx.motorDiameter), thrusting } }),
+        baseDragMotorRule: ctx.options.baseDragMotorRule,
+        referenceDiameter: metres(ctx.referenceDiameter),
+      });
+      cd0 = drag.cd0;
+      warnings.push(...drag.warnings);
+    }
     if (ctx.options.degreesOfFreedom === 3) {
       // Cross-check mode: axis along the airspeed, zero angle of attack, drag only.
       const vAir = flight.airspeedWorld;
@@ -389,6 +446,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   const maxTime: number = options.maxTime;
   if (!(maxTime > 0))
     throw new InvalidInputError('maximum simulation time', maxTime, 'must be greater than 0 s');
+  if (options.dragCurve !== undefined) validateDragCurve(options.dragCurve);
   const structure = structuralMassParts(vehicle.components);
   const rocketLength = vehicle.components.reduce((s, p) => {
     const c = p.component;
@@ -860,6 +918,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     summary,
     warnings: [...warnings],
     modes: {
+      dragCurve: options.dragCurve?.label,
       aerodynamics: options.aerodynamics,
       finRollReduction: options.finRollReduction,
       baseDragMotorRule: options.baseDragMotorRule,

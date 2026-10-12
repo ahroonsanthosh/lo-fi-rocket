@@ -435,3 +435,50 @@ button:disabled {
   cursor: pointer;
   font-weight: 600;
 }
+
+.files-menu {
+  margin-left: auto;
+  position: relative;
+}
+.file-button {
+  font-size: 14px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+.design-list {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  z-index: 10;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  min-width: 320px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.design-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.files-menu .notice {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  z-index: 9;
+  max-width: 480px;
+  border: 1px solid #e3c36a;
+  border-radius: 6px;
+}
+.comparison {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
