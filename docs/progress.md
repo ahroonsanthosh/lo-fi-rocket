@@ -4,7 +4,7 @@ Updated after every commit. Read this first when resuming.
 
 ## Current prompt
 
-Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the Phase 1 report. Phase 1 (Prompt 1) is complete.
+Prompt 2 (roadmap): all of Phase 2, complete (see `docs/reports/phase-2-acceptance.md`). Prompt 3 starts on the owner's next "continue".
 
 ## Done
 
@@ -35,13 +35,15 @@ Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the 
 
 - Phase 2 step 4 parts B and C (plan 0010, DYN-9 to DYN-15): `simulateFlight` with the 6DOF equations of motion (D-036), the rail constraint, RK4 and the adaptive Dormand–Prince pair (D-037), the orientation derivative (D-038), events located by bisection (launch, liftoff, rail exit, burnout, ejection charge, apogee, altitude, deployment, landing, max time), the 3DOF recovery descent, the full time series and summary, NaN and Infinity detection; the 3DOF cross-check mode. Analytical cases (constant-thrust kinematics, vacuum coast v²/2g, energy conservation), step-size convergence (R1 apogee 168.860 / 168.870 / 168.866 / 168.867 m at 0.01 / 0.005 / 0.002 / 0.001 s; Dormand–Prince 1e-8 168.867 m), and the OpenRocket comparison from the `.ork` and `.eng` files: R1 to R4 with and without wind, apogee within 2.5 % (tolerance 5 %), maximum velocity within 0.6 % (tolerance 3 %), ground-hit velocity within 0.01 %. R5 stops at Mach 0.8 (D-034, D-039). 422 tests.
 
+- Phase 2 acceptance report: `docs/reports/phase-2-acceptance.md` (R1 to R4 with and without wind: apogee within 2.5 %, maximum velocity within 0.6 %, ground hit within 0.01 %; convergence table; analytical cases; 422 tests, checks clean). **Phase 2 is complete** except R5, which cannot be simulated past Mach 0.8 until the owner decides on the transonic data (D-034, D-039).
+
 ## In progress
 
-- The Phase 2 acceptance report (`docs/reports/phase-2-acceptance.md`).
+- Nothing. Prompt 2 is finished.
 
 ## Next
 
-- Prompt 3 (Phases 3 and 4) on the owner's next "continue".
+- Prompt 3 (Phases 3 and 4: React application, file format, autosave, .ork import, ThrustCurve integration, flight data comparison) on the owner's next "continue". The first task is a plan `docs/plans/0011-...` for the application skeleton and the app's own file format.
 
 ## Open questions
 
