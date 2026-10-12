@@ -30,7 +30,8 @@ export type QuantityKind =
   | 'pressure'
   | 'angle'
   | 'time'
-  | 'ratio';
+  | 'ratio'
+  | 'modulus'; // shear modulus of fin materials (app plan 0031)
 
 export interface DisplayRule {
   /** Unit label shown after the value; empty for a plain number. */
@@ -55,6 +56,7 @@ export const UNIT_DISPLAY: Readonly<
     pressure: { unit: 'hPa', decimals: 1 },
     angle: { unit: '°', decimals: 1 },
     time: { unit: 's', decimals: 2 },
+    modulus: { unit: 'GPa', decimals: 2 },
     ratio: { unit: '', decimals: 2 },
   },
   imperial: {
@@ -68,6 +70,7 @@ export const UNIT_DISPLAY: Readonly<
     force: { unit: 'lbf', decimals: 2 },
     temperature: { unit: '°F', decimals: 1 },
     pressure: { unit: 'psi', decimals: 2 },
+    modulus: { unit: '10⁶ psi', decimals: 3 },
     angle: { unit: '°', decimals: 1 },
     time: { unit: 's', decimals: 2 },
     ratio: { unit: '', decimals: 2 },
@@ -101,20 +104,20 @@ export interface FigureRule extends DisplayRule {
 export const FIGURE_DISPLAY: Readonly<Record<FigureKind, FigureRule>> = {
   stabilityMargin: { unit: 'calibers', decimals: 2, from: 'StabilityPanel.tsx:90' },
   normalForceDerivative: { unit: 'per radian', decimals: 2, from: 'StabilityPanel.tsx:116' },
-  maxMach: { unit: '', decimals: 3, from: 'FlightPanel.tsx:155' },
-  timeToApogee: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:147' },
-  railExitTime: { unit: 's', decimals: 3, from: 'FlightPanel.tsx:164' },
-  burnoutTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:170' },
-  deploymentTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:176' },
-  flightTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:198' },
-  eventTime: { unit: 's', decimals: 3, from: 'FlightPanel.tsx:212' },
-  bearing: { unit: '°', decimals: 0, from: 'FlightPanel.tsx:27' },
+  maxMach: { unit: '', decimals: 3, from: 'FlightPanel.tsx:170' },
+  timeToApogee: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:162' },
+  railExitTime: { unit: 's', decimals: 3, from: 'FlightPanel.tsx:179' },
+  burnoutTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:185' },
+  deploymentTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:191' },
+  flightTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:221' },
+  eventTime: { unit: 's', decimals: 3, from: 'FlightPanel.tsx:235' },
+  bearing: { unit: '°', decimals: 0, from: 'FlightPanel.tsx:37' },
   totalImpulse: { unit: 'N·s', decimals: 2, from: 'MotorPanel.tsx:261' },
   totalImpulseInList: { unit: 'N·s', decimals: 1, from: 'MotorPanel.tsx:380' },
   averageThrustInList: { unit: 'N', decimals: 1, from: 'MotorPanel.tsx:536' },
   burnTime: { unit: 's', decimals: 2, from: 'MotorPanel.tsx:265' },
   recordedApogeeDifference: { unit: '%', decimals: 1, from: 'ComparisonPanel.tsx:95' },
-  runMillis: { unit: 'ms', decimals: 0, from: 'FlightPanel.tsx:228' },
+  runMillis: { unit: 'ms', decimals: 0, from: 'FlightPanel.tsx:251' },
 };
 
 /**

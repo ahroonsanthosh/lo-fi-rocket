@@ -75,21 +75,16 @@ describe.each(REFERENCE_ROCKETS)('readouts for $id', (rocket) => {
     expect(r.time).toBe(result.summary.timeToApogee);
   });
 
-  it('every event marker is at the stored step of the event time; only liftoff falls back to the nearest step', () => {
+  it('every event marker is at the stored step of the event time (the simulator records one at every event, D-063)', () => {
     const markers = eventMarkers(result);
     expect(markers).toHaveLength(result.events.length);
     for (const m of markers) {
       const stored = result.samples[m.index]!;
       expect(m.position).toBe(stored.position);
       expect(m.time).toBe(stored.time);
-      if (m.event.kind === 'liftoff') {
-        expect(m.exact).toBe(false);
-      } else {
-        expect(m.exact).toBe(true);
-        expect(Math.abs(m.time - m.event.time)).toBeLessThan(1e-9);
-      }
+      expect(m.exact).toBe(true);
+      expect(Math.abs(m.time - m.event.time)).toBeLessThan(1e-9);
     }
-    expect(markers.filter((m) => !m.exact).map((m) => m.event.kind)).toEqual(['liftoff']);
     const landing = markers.find((m) => m.event.kind === 'landing')!;
     expect(Math.hypot(landing.position.x, landing.position.y)).toBe(result.summary.landingDistance);
   });

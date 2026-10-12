@@ -113,8 +113,8 @@ describe('FlightViewer (plan 0034)', () => {
     await user.click(within(events).getByRole('button', { name: /^Apogee / }));
     // The replay time is the stored step's own time, not an interpolation.
     expect(screen.getByLabelText('Replay time')).toHaveValue(String(apogee.time));
-    // Liftoff has no stored step of its own and says so.
-    expect(within(events).getByRole('button', { name: /^Liftoff / })).toHaveTextContent(
+    // Every event has a stored step of its own (D-063), so no marker falls back to the nearest step.
+    expect(within(events).getByRole('button', { name: /^Liftoff / })).not.toHaveTextContent(
       'nearest stored step',
     );
   });
@@ -153,5 +153,6 @@ describe('FlightViewer (plan 0034)', () => {
     expect(readout(viewer, 'Stability margin')).toBe('not available in this phase');
     await user.selectOptions(picker, '');
     expect(readout(viewer, 'Shown')).toBe('This flight');
-  });
+    // 50 flights plus the replay: the same allowance as the dispersion test in FlightPanel.test.tsx.
+  }, 30000);
 });
