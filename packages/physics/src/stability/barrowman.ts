@@ -42,8 +42,12 @@ export interface AerodynamicTerm {
 }
 
 export interface FinSetTerm extends AerodynamicTerm {
-  /** (C_Nα)₁ of a single fin, eq. (3.40). */
+  /** (C_Nα)₁ of a single fin, eq. (3.40) subsonic or eq. (3.49) supersonic. */
   readonly cnAlphaSingleFin: number;
+  /** Fraction of the mean aerodynamic chord at which the CP lies, 0.25 below Mach 0.5 (BAR-10). */
+  readonly chordFraction: number;
+  /** 'subsonic' (3.40) or 'supersonic' (3.49). */
+  readonly regime: 'subsonic' | 'supersonic';
   /** Multiplier of (C_Nα)₁ for the fin count and roll angle, eq. (3.54). */
   readonly finCountFactor: number;
   /** K_T(B), eq. (3.56). */
@@ -217,6 +221,137 @@ export function finRollFactor(count: number, rollAngle: RollAngle, reduction: bo
   }
 }
 
+/** Aspect ratio A = 2s²/A_fin (p. 27, p. 29). */
+function aspectRatio(span: number, finArea: number): number {
+  return (2 * span * span) / finArea;
+}
+
+/**
+ * BAR-10. Niskanen eq. (3.35), p. 27: for M > 2 the CP lies at the fraction
+ * (Aβ − 0.67)/(2Aβ − 1) of the MAC, β = √(M² − 1). Between Mach 0.5 and 2
+ * a fifth-order polynomial p(M) with p(0.5) = 0.25, p′(0.5) = 0, p(2) = f(2),
+ * p′(2) = f′(2), p″(2) = 0, p‴(2) = 0 (eq. 3.36). Below Mach 0.5 the
+ * quarter chord (eq. 3.34).
+ */
+export function finChordFraction(mach: Mach, aspect: number): number {
+  const M: number = mach;
+  requireMach(M);
+  if (!(aspect > 0))
+    throw new InvalidInputError('fin aspect ratio', aspect, 'must be greater than 0');
+  if (M <= 0.5) return 0.25;
+  const f = (m: number): { value: number; slope: number } => {
+    const beta = Math.sqrt(m * m - 1);
+    const u = aspect * beta;
+    return {
+      value: (u - 0.67) / (2 * u - 1),
+      slope: ((0.34 / (2 * u - 1) ** 2) * aspect * m) / beta,
+    };
+  };
+  if (M >= 2) return finiteResult('fin chord fraction', f(M).value);
+  // Solve for the six coefficients of p(M) = Σ a_k M^k from the six constraints (a small linear system).
+  const f2 = f(2);
+  const rows: number[][] = [];
+  const rhs: number[] = [];
+  const powers = (m: number, d: number): number[] => {
+    // d-th derivative of M^k at m, for k = 0..5
+    const out: number[] = [];
+    for (let k = 0; k <= 5; k++) {
+      let coeff = 1;
+      for (let j = 0; j < d; j++) coeff *= k - j;
+      out.push(k - d >= 0 ? coeff * m ** (k - d) : 0);
+    }
+    return out;
+  };
+  rows.push(powers(0.5, 0));
+  rhs.push(0.25);
+  rows.push(powers(0.5, 1));
+  rhs.push(0);
+  rows.push(powers(2, 0));
+  rhs.push(f2.value);
+  rows.push(powers(2, 1));
+  rhs.push(f2.slope);
+  rows.push(powers(2, 2));
+  rhs.push(0);
+  rows.push(powers(2, 3));
+  rhs.push(0);
+  const a = solveLinear(rows, rhs);
+  let p = 0;
+  for (let k = 0; k <= 5; k++) p += (a[k] ?? 0) * M ** k;
+  return finiteResult('fin chord fraction', p);
+}
+
+/** Gaussian elimination with partial pivoting for the small systems above (deterministic). */
+function solveLinear(rows: number[][], rhs: number[]): number[] {
+  const n = rhs.length;
+  const m = rows.map((r, i) => [...r, rhs[i] ?? 0]);
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(m[r]?.[col] ?? 0) > Math.abs(m[pivot]?.[col] ?? 0)) pivot = r;
+    }
+    const pr = m[pivot];
+    const cr = m[col];
+    if (pr === undefined || cr === undefined) throw new Error('linear system malformed');
+    m[pivot] = cr;
+    m[col] = pr;
+    const p = pr[col] ?? 0;
+    if (p === 0)
+      throw new InvalidInputError('fin CP polynomial', p, 'the constraint system is singular');
+    for (let r = col + 1; r < n; r++) {
+      const row = m[r];
+      if (row === undefined) continue;
+      const factor = (row[col] ?? 0) / p;
+      for (let c = col; c <= n; c++) row[c] = (row[c] ?? 0) - factor * (pr[c] ?? 0);
+    }
+  }
+  const x = new Array<number>(n).fill(0);
+  for (let r = n - 1; r >= 0; r--) {
+    const row = m[r];
+    if (row === undefined) continue;
+    let sum = row[n] ?? 0;
+    for (let c = r + 1; c < n; c++) sum -= (row[c] ?? 0) * (x[c] ?? 0);
+    x[r] = sum / (row[r] ?? 1);
+  }
+  return x;
+}
+
+/** γ = 1.4 for eqs. (3.43), (3.44). */
+const GAMMA_AIR = 1.4;
+
+/**
+ * BAR-11. Niskanen eqs. (3.41) to (3.49), pp. 30 to 31: supersonic flat-plate
+ * fin, Busemann third-order expansion. K₁ = 2/β, K₂ = ((γ+1)M⁴ − 4β²)/(4β⁴),
+ * K₃ = ((γ+1)M⁸ + (2γ² − 7γ − 5)M⁶ + 10(γ+1)M⁴ + 8)/(6β⁷); with all strips at
+ * the same inclination α, (C_Nα)₁ = (A_fin/A_ref)(K₁ + K₂α + K₃α²) (eq. 3.49).
+ * The fin-tip Mach cone correction is ignored as in the thesis (p. 30).
+ */
+export function supersonicFinCnAlpha(
+  mach: Mach,
+  finArea: number,
+  referenceArea: number,
+  angleOfAttack: number,
+): number {
+  const M: number = mach;
+  if (!(M > 1))
+    throw new InvalidInputError(
+      'Mach number',
+      M,
+      'must be greater than 1 for the supersonic fin formula',
+    );
+  const beta = Math.sqrt(M * M - 1);
+  const g = GAMMA_AIR;
+  const k1 = 2 / beta;
+  const k2 = ((g + 1) * M ** 4 - 4 * beta * beta) / (4 * beta ** 4);
+  const k3 =
+    ((g + 1) * M ** 8 + (2 * g * g - 7 * g - 5) * M ** 6 + 10 * (g + 1) * M ** 4 + 8) /
+    (6 * beta ** 7);
+  const a = angleOfAttack;
+  return finiteResult(
+    'supersonic fin normal force',
+    (finArea / referenceArea) * (k1 + k2 * a + k3 * a * a),
+  );
+}
+
 /**
  * BAR-5, BAR-6, BAR-7, BAR-8 for a trapezoidal fin set.
  *
@@ -232,12 +367,13 @@ export function finSetTerm(
   mach: Mach,
   rollAngle: RollAngle,
   finRollReduction: boolean,
+  angleOfAttack = 0,
 ): FinSetTerm {
   const M: number = mach;
   requireMach(M);
-  if (M >= 0.5) {
+  if (M > 0.8 && M < 1.2) {
     throw new NotImplementedError(
-      `fin centre of pressure at Mach ${String(M)}: the shift above Mach 0.5 (Niskanen eqs. 3.35, 3.36) is Phase 2`,
+      `fin normal force at Mach ${String(M)}: the thesis gives the subsonic (3.40) and supersonic (3.49) formulas and only says the transonic region uses "some suitable interpolation function" (p. 19), which it does not specify (D-039)`,
     );
   }
   const cr: number = c.rootChord;
@@ -252,17 +388,29 @@ export function finSetTerm(
     throw new InvalidInputError('body radius at the fins', rt, 'must be 0 m or greater');
   if (!Number.isFinite(xt)) throw new InvalidInputError('fin sweep', xt, 'must be finite');
   const Aref: number = referenceArea;
-  const beta = prandtlBeta(mach);
   const Afin = ((cr + ct) / 2) * s;
-  // eq. (3.34)
-  const cpX =
+  // eq. (3.34): the quarter-MAC position; eq. (3.30) MAC c̄ = (2/3)(c_r² + c_r c_t + c_t²)/(c_r + c_t).
+  const quarterChord =
     ((xt / 3) * (cr + 2 * ct)) / (cr + ct) + (cr * cr + ct * ct + cr * ct) / (6 * (cr + ct));
-  // eq. (3.40)
-  const gammaC = Math.atan((xt + ct / 2 - cr / 2) / s);
-  const cnAlphaSingleFin =
-    (2 * Math.PI * s * s) /
-    Aref /
-    (1 + Math.sqrt(1 + ((beta * s * s) / (Afin * Math.cos(gammaC))) ** 2));
+  const mac = ((2 / 3) * (cr * cr + cr * ct + ct * ct)) / (cr + ct);
+  // BAR-10: the CP moves aft of the quarter chord above Mach 0.5 (eqs. 3.35, 3.36).
+  const chordFraction = finChordFraction(mach, aspectRatio(s, Afin));
+  const cpX = quarterChord + (chordFraction - 0.25) * mac;
+  let cnAlphaSingleFin: number;
+  let regime: 'subsonic' | 'supersonic';
+  if (M < 1) {
+    // eq. (3.40)
+    const beta = prandtlBeta(mach);
+    const gammaC = Math.atan((xt + ct / 2 - cr / 2) / s);
+    cnAlphaSingleFin =
+      (2 * Math.PI * s * s) /
+      Aref /
+      (1 + Math.sqrt(1 + ((beta * s * s) / (Afin * Math.cos(gammaC))) ** 2));
+    regime = 'subsonic';
+  } else {
+    cnAlphaSingleFin = supersonicFinCnAlpha(mach, Afin, Aref, angleOfAttack);
+    regime = 'supersonic';
+  }
   // eq. (3.54)
   const finCountFactor = finRollFactor(c.count, rollAngle, finRollReduction);
   // eqs. (3.55), (3.56)
@@ -271,6 +419,8 @@ export function finSetTerm(
     cnAlpha: interferenceFactor * finCountFactor * cnAlphaSingleFin,
     cpX,
     cnAlphaSingleFin,
+    chordFraction,
+    regime,
     finCountFactor,
     interferenceFactor,
     rollAngle: rollAngle === 'worst' ? worstRollAngle(c.count) : rollAngle,

@@ -190,8 +190,8 @@ describe('BAR-5, BAR-6, BAR-8 fin set, eqs. (3.34), (3.40), (3.55), (3.56): R1 b
     expect(display.cnAlpha).toBeCloseTo(13.133, 3);
     expect(display.rollAngle).toBe(0);
   });
-  it('Mach 0.5 and above is not implemented (CP shift); invalid geometry throws', () => {
-    expect(() => finSetTerm(fins, Aref, mach(0.5), 'worst', false)).toThrow(NotImplementedError);
+  it('the transonic band is not implemented (D-039); invalid geometry throws', () => {
+    expect(finSetTerm(fins, Aref, mach(0.5), 'worst', false).chordFraction).toBe(0.25);
     expect(() => finSetTerm(fins, Aref, mach(0.9), 'worst', false)).toThrow(NotImplementedError);
     expect(() => finSetTerm({ ...fins, span: metres(0) }, Aref, mach(0.3), 'worst', false)).toThrow(
       InvalidInputError,
@@ -304,7 +304,7 @@ describe('validation', () => {
     expect(() =>
       centreOfPressure(R1_COMPONENTS, { ...OR_MODE, referenceDiameter: metres(0) }),
     ).toThrow(InvalidInputError);
-    expect(() => centreOfPressure(R1_COMPONENTS, { ...OR_MODE, mach: mach(0.5) })).toThrow(
+    expect(() => centreOfPressure(R1_COMPONENTS, { ...OR_MODE, mach: mach(1.0) })).toThrow(
       NotImplementedError,
     );
     expect(() => stabilityMargin(metres(0.5), metres(0.4), metres(0))).toThrow(InvalidInputError);

@@ -133,8 +133,10 @@ export {
 export {
   bodyTerm,
   centreOfPressure,
+  finChordFraction,
   finRollFactor,
   finSetTerm,
+  supersonicFinCnAlpha,
   maximumBodyDiameter,
   noseConeTerm,
   prandtlBeta,
@@ -201,6 +203,16 @@ export {
   type DragResult,
   type DragTerm,
 } from './drag/drag.js';
+export {
+  aerodynamicForcesAndMoments,
+  normalForceAtAngle,
+  pitchDampingMoment,
+  rollDampingMoment,
+  type AeroContribution,
+  type AeroInputs,
+  type AeroModeOptions,
+  type AeroResult,
+} from './flight/aerodynamics.js';
 export {
   InvalidInputError,
   NonFiniteResultError,

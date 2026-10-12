@@ -31,9 +31,11 @@ Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the 
 
 - Phase 2 step 3: the drag model (plan 0009, DRAG-1 to DRAG-14, GEO-13): skin friction with roughness and compressibility, nose (conical and ogive through the transonic and supersonic regimes), shoulder and boat tail pressure drag, fin pressure drag for square, rounded and airfoil sections, base drag with the motor area, lugs and rail buttons, the total and the angle-of-attack scaling; per-component breakdown and warnings. Against OpenRocket's drag coefficient column: within 6 % while thrusting; after burnout OpenRocket keeps the motor area out of the base (D-035, OpenRocket-equivalent rule added). Decisions D-032 to D-035.
 
+- Phase 2 step 4 part A (plan 0010): forces and moments at angle of attack (AERO-1 to AERO-5): normal force with sin α/α, body lift and the moment sum, axial drag with the angle-of-attack scaling, pitch and roll damping; fin CP shift above Mach 0.5 (BAR-10) and the supersonic fin normal force (BAR-11); the transonic fin band throws (D-039).
+
 ## In progress
 
-- Phase 2 step 4: the flight simulator (plan 0010, to be written next): equations of motion, RK4 and RK45, rail, events by root finding, recovery, outputs, NaN detection, analytical cases, convergence, OpenRocket acceptance.
+- Phase 2 step 4 parts B and C (plan 0010): equations of motion, RK4 and Dormand–Prince, rail, events by root finding, recovery descent, outputs, NaN detection; analytical cases, convergence, OpenRocket acceptance.
 
 ## Next
 
