@@ -303,3 +303,94 @@ describe('validation and properties', () => {
     }
   });
 });
+
+describe('nose cone shoulder wall (review finding G-1)', () => {
+  const nose = (shoulderRadius: number, wall: number): Component => ({
+    kind: 'noseCone',
+    shape: 'conical',
+    length: metres(0.1),
+    baseRadius: metres(0.025),
+    wallThickness: metres(0.002),
+    density: kilogramsPerCubicMetre(1000),
+    aftShoulder: {
+      length: metres(0.03),
+      radius: metres(shoulderRadius),
+      wallThickness: metres(wall),
+    },
+  });
+
+  it('a 15 mm wall on a 20 mm shoulder adds the hollow cylinder of 0.035343 kg', () => {
+    // By hand: π (0.020² − 0.005²) × 0.030 × 1000 = π × 0.000375 × 30 = 0.0353429 kg.
+    const full = nose(0.02, 0.015);
+    if (full.kind !== 'noseCone') throw new Error('expected a nose cone');
+    const bare: Component = {
+      kind: 'noseCone',
+      shape: full.shape,
+      length: full.length,
+      baseRadius: full.baseRadius,
+      density: full.density,
+      ...(full.wallThickness === undefined ? {} : { wallThickness: full.wallThickness }),
+    };
+    const withShoulder = componentMassProperties(nose(0.02, 0.015));
+    const without = componentMassProperties(bare);
+    expect(withShoulder.mass - without.mass).toBeCloseTo(0.0353429, 7);
+  });
+
+  it('rejects a shoulder wall equal to or thicker than the shoulder radius', () => {
+    // The review's cases: 30 mm gave less than a solid shoulder, 50 mm gave −0.0322 kg.
+    for (const wall of [0.02, 0.03, 0.05]) {
+      expect(() => componentMassProperties(nose(0.02, wall))).toThrow(
+        /shoulder wall thickness.*less than the shoulder radius/,
+      );
+    }
+  });
+
+  it('rejects a shoulder wider than the nose base', () => {
+    expect(() => componentMassProperties(nose(0.026, 0.001))).toThrow(
+      /shoulder radius.*nose cone base radius/,
+    );
+    // Equal to the base radius is accepted.
+    expect(componentMassProperties(nose(0.025, 0.001)).mass).toBeGreaterThan(0);
+  });
+
+  it('property: any accepted nose with a shoulder has positive mass and inertia, more than without it', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.001, max: 1, noNaN: true }),
+        fc.double({ min: 0.001, max: 1, noNaN: true }),
+        fc.double({ min: 0.001, max: 0.999, noNaN: true }),
+        (radiusFraction, lengthMetres, wallFraction) => {
+          const radius = 0.025 * radiusFraction;
+          const n = {
+            kind: 'noseCone',
+            shape: 'conical',
+            length: metres(0.1),
+            baseRadius: metres(0.025),
+            density: kilogramsPerCubicMetre(1000),
+            aftShoulder: {
+              length: metres(lengthMetres),
+              radius: metres(radius),
+              wallThickness: metres(radius * wallFraction),
+            },
+          } as const;
+          const bare: Component = {
+            kind: n.kind,
+            shape: n.shape,
+            length: n.length,
+            baseRadius: n.baseRadius,
+            density: n.density,
+          };
+          const p = componentMassProperties(n);
+          const solidNose = componentMassProperties(bare);
+          return (
+            p.mass > solidNose.mass &&
+            p.inertiaRotational > 0 &&
+            p.inertiaLongitudinal > 0 &&
+            p.cgX > 0
+          );
+        },
+      ),
+      { seed: 20261012 },
+    );
+  });
+});
