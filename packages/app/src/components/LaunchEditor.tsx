@@ -295,7 +295,7 @@ export function LaunchEditor(): JSX.Element {
               }}
             >
               <option value="dormand-prince">Dormand–Prince RK5(4), adaptive step</option>
-              <option value="rk4">Classical RK4, fixed step</option>
+              <option value="rk4">Classical RK4, fixed step (advanced)</option>
             </select>
           </div>
         </div>
@@ -306,7 +306,7 @@ export function LaunchEditor(): JSX.Element {
             units={units}
             value={sim.integrator.timeStep}
             rule="positive"
-            hint="0.002 s reproduces the 0.001 s result within 0.001 m on the reference rockets"
+            hint="Advanced: a fixed step is checked every step against the rocket's roll, pitch and drag rates and the run stops with the safe step if it is too large (D-063). 0.002 s is safe on every reference rocket; 0.01 s is not on R2."
             onChange={(si) => {
               setSim({ ...sim, integrator: { kind: 'rk4', timeStep: seconds(si) } });
             }}

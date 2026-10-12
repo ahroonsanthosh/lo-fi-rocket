@@ -256,6 +256,10 @@ export {
   type AdaptiveOptions,
   type Derivative,
   type DormandPrinceStep,
+  rk4StabilityFunction,
+  rk4StableStep,
+  RK4_REAL_AXIS_LIMIT,
+  RK4_IMAGINARY_AXIS_LIMIT,
 } from './flight/integrators.js';
 export type {
   DragCurve,
@@ -276,6 +280,11 @@ export {
   type FlightResult,
   type FlightSample,
   type FlightSummary,
+  rk4StepCheck,
+  RK4_MAX_PITCH_AMPLITUDE_LOSS,
+  RK4_WARN_PITCH_AMPLITUDE_LOSS,
+  type LinearisedRates,
+  type StepCheck,
 } from './flight/simulate.js';
 export {
   InvalidInputError,
@@ -283,6 +292,7 @@ export {
   NotImplementedError,
   PhysicsError,
   SimulationStalledError,
+  IntegrationUnstableError,
 } from './errors.js';
 export {
   ARCAS_BODY_LENGTH_INCHES,

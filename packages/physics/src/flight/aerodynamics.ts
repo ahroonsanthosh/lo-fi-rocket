@@ -98,6 +98,10 @@ export interface AeroResult {
   readonly axialForce: number;
   readonly axialDragCoefficient: number;
   readonly pitchDampingMoment: number;
+  /** Pitch damping coefficient C_p of AERO-4: the damping moment is C_p ω_t², N·m·s². */
+  readonly pitchDampingCoefficient: number;
+  /** Roll damping coefficient of AERO-5 to AERO-7: the damping moment is C_r ω_x, N·m·s (0 at zero airspeed). */
+  readonly rollDampingCoefficient: number;
   readonly rollDampingMoment: number;
   readonly contributions: readonly AeroContribution[];
   readonly warnings: readonly string[];
@@ -516,6 +520,14 @@ export function aerodynamicForcesAndMoments(input: AeroInputs): AeroResult {
     .map((p) => p.component)
     .filter((c): c is TrapezoidFinSetComponent => c.kind === 'finSet');
   const rollDamping = rollDampingMoment(fins, input.mach, q, input.airspeed, w.x);
+  const pitchDampingCoefficient = pitchDampingMoment(
+    nf.bodyPieces,
+    nf.finCps,
+    input.cg,
+    input.density,
+    1,
+  );
+  const rollDampingCoefficient = rollDampingMoment(fins, input.mach, q, input.airspeed, 1);
   const warnings = [...nf.warnings];
   if (scaling.beyondSource)
     warnings.push(
@@ -541,6 +553,8 @@ export function aerodynamicForcesAndMoments(input: AeroInputs): AeroResult {
     axialForce,
     axialDragCoefficient: ca,
     pitchDampingMoment: pitchDamping,
+    pitchDampingCoefficient,
+    rollDampingCoefficient,
     rollDampingMoment: rollDamping,
     contributions: nf.contributions,
     warnings,

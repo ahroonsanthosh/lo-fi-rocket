@@ -14,7 +14,12 @@ import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/uss
 import { dragCoefficient } from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
 import { windField, type WindField } from '../environment/wind.js';
-import { InvalidInputError, NonFiniteResultError, SimulationStalledError } from '../errors.js';
+import {
+  IntegrationUnstableError,
+  InvalidInputError,
+  NonFiniteResultError,
+  SimulationStalledError,
+} from '../errors.js';
 import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
 import type { MassProperties } from '../geometry/revolution.js';
 import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.js';
@@ -37,6 +42,8 @@ import {
   nextStepSize,
   rk4Step,
   type Derivative,
+  rk4StabilityFunction,
+  rk4StableStep,
 } from './integrators.js';
 import { quaternionMultiply, quaternionNormalise, type Quaternion } from './quaternion.js';
 import { add, cross, dot, norm, scale, sub, vec3, type Vec3 } from './vector.js';
@@ -187,9 +194,32 @@ export interface FlightResult {
     /** The label of the imported drag curve when one replaced the drag model (D-047). */
     readonly dragCurve: string | undefined;
   };
+  /** Present for fixed-step RK4 runs: the stability and accuracy check that every step passed (D-063). */
+  readonly stepCheck: StepCheck | undefined;
 }
 
 // State vector layout: [x, y, z, vx, vy, vz, qw, qx, qy, qz, wx, wy, wz]
+
+/**
+ * DYN-17. Linearised rates of the state at an instant, s⁻¹, from the model's
+ * own force and moment laws, for the RK4 step check (D-063):
+ *  - roll: the roll damping moment of AERO-5 to AERO-7 is C_r ω_x, so
+ *    I_rot ω̇_x = −C_r ω_x decays at C_r/I_rot;
+ *  - pitchNatural: the restoring moment of AERO-1/AERO-2 about the CG at
+ *    small α is −q A_ref C_Nα (X_CP − X_CG) α, so I_long α̈ = −k α has the
+ *    natural frequency ω_n = √(q A_ref C_Nα (X_CP − X_CG)/I_long) (0 when the
+ *    margin is negative: a diverging true solution is not a step question);
+ *  - pitchDamping: the AERO-4 damping moment C_p ω_t² linearised about the
+ *    current transverse rate, 2 C_p |ω_t|/I_long;
+ *  - drag: the drag force ½ρ v² C A along the velocity linearised about v,
+ *    ρ v C A/m (the axial drag in flight, the deployed devices in descent).
+ */
+export interface LinearisedRates {
+  readonly roll: number;
+  readonly pitchNatural: number;
+  readonly pitchDamping: number;
+  readonly drag: number;
+}
 
 interface Derived {
   readonly mass: number;
@@ -201,6 +231,19 @@ interface Derived {
   readonly flight: FlightParameters | undefined;
   readonly accelerationWorld: Vec3;
   readonly warnings: readonly string[];
+  readonly rates: LinearisedRates;
+}
+
+/** Result of the RK4 step check over a run (DYN-16, DYN-17, D-063). */
+export interface StepCheck {
+  /** The smallest safe step found along the run (0.9 of the stability boundary over all modes), s. */
+  readonly minimumSafeStep: number;
+  readonly minimumSafeStepTime: number;
+  readonly minimumSafeStepMode: 'roll' | 'pitch' | 'drag';
+  /** The largest h ω_n met: the pitch oscillation's phase advance per step, rad. */
+  readonly maxPitchStepAngle: number;
+  /** The numerical amplitude loss of the pitch oscillation per step at that angle, 1 − |R(i h ω_n)|. */
+  readonly maxPitchAmplitudeLossPerStep: number;
 }
 
 interface Context {
@@ -293,6 +336,7 @@ function derive(
   let aeroForce = 0;
   let cd0 = Number.NaN;
   let cp = Number.NaN;
+  let rates: LinearisedRates = { roll: 0, pitchNatural: 0, pitchDamping: 0, drag: 0 };
   if (phase === 'descent') {
     // DYN-14: the deployed devices provide the whole drag: F = −½ ρ |v_air| v_air Σ C_D A.
     const vAir = sub(s.velocity, wind);
@@ -300,6 +344,7 @@ function derive(
     const drag = scale(vAir, -0.5 * atm.density * speed * ctx.deployedArea.area);
     forceWorld = add(forceWorld, drag);
     aeroForce = norm(drag);
+    rates = { ...rates, drag: (atm.density * speed * ctx.deployedArea.area) / m };
   } else if (ctx.options.aerodynamics === 'niskanen' && phase !== 'landed') {
     flight = flightParameters({
       velocityWorld: s.velocity,
@@ -368,6 +413,21 @@ function derive(
       momentBody = aero.momentBody;
       aeroForce = norm(aero.forceBody);
       cp = aero.cp;
+      // DYN-17: the linearised rates for the step check.
+      const aRef = (Math.PI * ctx.referenceDiameter ** 2) / 4;
+      const qDyn: number = flight.dynamicPressure;
+      const stiffness = qDyn * aRef * aero.cnAlpha * ((aero.cp as number) - (mp.cg as number));
+      const transverse = Math.hypot(wBody.y, wBody.z);
+      rates = {
+        roll: aero.rollDampingCoefficient / (mp.inertiaRotational as number),
+        pitchNatural: Math.sqrt(Math.max(0, stiffness / (mp.inertiaLongitudinal as number))),
+        pitchDamping:
+          (2 * aero.pitchDampingCoefficient * transverse) / (mp.inertiaLongitudinal as number),
+        drag:
+          flight.airspeed > 0
+            ? (atm.density * flight.airspeed * aero.axialDragCoefficient * aRef) / m
+            : 0,
+      };
     }
   }
 
@@ -425,9 +485,60 @@ function derive(
       flight,
       accelerationWorld: acceleration,
       warnings,
+      rates,
     },
   };
 }
+
+/**
+ * DYN-16, DYN-17 (D-063). The RK4 step check at one instant: the eigenvalues
+ * of the linearised roll, pitch and drag dynamics and the largest step for
+ * which every one lies inside the RK4 stability region, with a factor 0.9
+ * for the change of the rates within a step. Also the pitch oscillation's
+ * phase advance per step h ω_n and its numerical amplitude loss 1 − |R(i h ω_n)|.
+ */
+export function rk4StepCheck(
+  h: number,
+  rates: LinearisedRates,
+): {
+  safeStep: number;
+  limitedBy: 'roll' | 'pitch' | 'drag';
+  pitchStepAngle: number;
+  pitchAmplitudeLoss: number;
+} {
+  const modes: { mode: 'roll' | 'pitch' | 'drag'; re: number; im: number }[] = [
+    { mode: 'roll', re: -rates.roll, im: 0 },
+    { mode: 'drag', re: -rates.drag, im: 0 },
+  ];
+  // Pitch: λ² + λ_d λ + ω_n² = 0.
+  const disc = rates.pitchDamping ** 2 - 4 * rates.pitchNatural ** 2;
+  if (disc >= 0) {
+    modes.push({ mode: 'pitch', re: (-rates.pitchDamping - Math.sqrt(disc)) / 2, im: 0 });
+  } else {
+    modes.push({ mode: 'pitch', re: -rates.pitchDamping / 2, im: Math.sqrt(-disc) / 2 });
+  }
+  let safeStep = Number.POSITIVE_INFINITY;
+  let limitedBy: 'roll' | 'pitch' | 'drag' = 'pitch';
+  for (const m of modes) {
+    const hb = 0.9 * rk4StableStep(m.re, m.im);
+    if (hb < safeStep) {
+      safeStep = hb;
+      limitedBy = m.mode;
+    }
+  }
+  const pitchStepAngle = h * rates.pitchNatural;
+  return {
+    safeStep,
+    limitedBy,
+    pitchStepAngle,
+    pitchAmplitudeLoss: 1 - rk4StabilityFunction(0, pitchStepAngle),
+  };
+}
+
+/** D-063: the RK4 run stops when the pitch oscillation would lose more than this per step. */
+export const RK4_MAX_PITCH_AMPLITUDE_LOSS = 0.1;
+/** D-063: a warning is attached above this loss per step. */
+export const RK4_WARN_PITCH_AMPLITUDE_LOSS = 0.01;
 
 /** Cross-check mode: the axis follows the velocity (the rail direction before the rocket moves). */
 function velocityAlignedNose(v: Vec3, rail: Vec3): Vec3 {
@@ -629,6 +740,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let maxVelocity = 0;
   let maxMach = 0;
   let steps = 0;
+  let stepCheck: StepCheck | undefined;
+  let pitchLossWarned = false;
 
   while (phase !== 'landed' && !stopped && t < maxTime) {
     steps++;
@@ -657,6 +770,58 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         deployment = { t, v: norm(unpack(y).velocity) };
       record(true);
       continue;
+    }
+    if (options.integrator.kind === 'rk4') {
+      // D-063: never take an RK4 step outside the stability region of the linearised dynamics.
+      const check = rk4StepCheck(hTry, derive(ctx, phase, t, y).derived.rates);
+      if (
+        stepCheck === undefined ||
+        check.safeStep < stepCheck.minimumSafeStep ||
+        check.pitchStepAngle > stepCheck.maxPitchStepAngle
+      ) {
+        stepCheck = {
+          minimumSafeStep: Math.min(check.safeStep, stepCheck?.minimumSafeStep ?? Infinity),
+          minimumSafeStepTime:
+            stepCheck === undefined || check.safeStep < stepCheck.minimumSafeStep
+              ? t
+              : stepCheck.minimumSafeStepTime,
+          minimumSafeStepMode:
+            stepCheck === undefined || check.safeStep < stepCheck.minimumSafeStep
+              ? check.limitedBy
+              : stepCheck.minimumSafeStepMode,
+          maxPitchStepAngle: Math.max(check.pitchStepAngle, stepCheck?.maxPitchStepAngle ?? 0),
+          maxPitchAmplitudeLossPerStep: Math.max(
+            check.pitchAmplitudeLoss,
+            stepCheck?.maxPitchAmplitudeLossPerStep ?? 0,
+          ),
+        };
+      }
+      if (hTry > check.safeStep) {
+        throw new IntegrationUnstableError(
+          t,
+          `${check.limitedBy} dynamics`,
+          check.safeStep,
+          check.limitedBy === 'roll'
+            ? `the roll damping decays at ${derive(ctx, phase, t, y).derived.rates.roll.toFixed(0)} per second and RK4 is only stable for a step below 2.785 divided by that rate; a larger step makes the roll rate grow every step instead of decaying.`
+            : check.limitedBy === 'pitch'
+              ? `the pitch oscillation runs at ${derive(ctx, phase, t, y).derived.rates.pitchNatural.toFixed(0)} rad/s and RK4 is only stable for a step below 2.83 divided by that frequency.`
+              : `the drag decelerates at ${derive(ctx, phase, t, y).derived.rates.drag.toFixed(0)} per second and RK4 is only stable for a step below 2.785 divided by that rate.`,
+        );
+      }
+      if (check.pitchAmplitudeLoss > RK4_MAX_PITCH_AMPLITUDE_LOSS) {
+        throw new IntegrationUnstableError(
+          t,
+          'pitch accuracy',
+          (1.4 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9,
+          `the pitch oscillation advances ${check.pitchStepAngle.toFixed(2)} rad per step and RK4 would damp its amplitude by ${(check.pitchAmplitudeLoss * 100).toFixed(0)} % every step, a numerical loss, not the rocket's.`,
+        );
+      }
+      if (check.pitchAmplitudeLoss > RK4_WARN_PITCH_AMPLITUDE_LOSS && !pitchLossWarned) {
+        pitchLossWarned = true;
+        warnings.add(
+          `RK4 step check: the pitch oscillation advances up to ${check.pitchStepAngle.toFixed(2)} rad per step, so RK4 damps its amplitude numerically by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step (D-063); apogee and velocities are not affected on the reference rockets, the oscillation history is. Use a step below ${((1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9).toPrecision(2)} s or the Dormand–Prince integrator for the oscillation.`,
+        );
+      }
     }
     let attempt = stepOnce(hTry);
     if (options.integrator.kind === 'dormand-prince') {
@@ -788,8 +953,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const s = unpack(y);
     const speed = norm(s.velocity);
     maxVelocity = Math.max(maxVelocity, speed);
+    let liftoffNow = false;
     if (!liftedOff && speed > 0) {
       liftedOff = true;
+      liftoffNow = true;
       events.push({ kind: 'liftoff', time: seconds(t), detail: 'first motion on the rail' });
     }
     if (fired !== undefined) {
@@ -885,7 +1052,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const sample = derive(ctx, phase, t, y).derived;
     if (sample.flight !== undefined) maxMach = Math.max(maxMach, sample.flight.mach);
     maxAcceleration = Math.max(maxAcceleration, norm(sample.accelerationWorld));
-    record(fired !== undefined);
+    record(fired !== undefined || liftoffNow);
   }
   if (phase !== 'landed' && !stopped)
     events.push({
@@ -935,5 +1102,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       gravitySeaLevel: seaLevelGravity(options.gravity),
       windSeed: options.wind.kind === 'turbulent' ? options.wind.seed : undefined,
     },
+    stepCheck,
   };
 }
