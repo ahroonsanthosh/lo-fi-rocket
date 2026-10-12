@@ -378,3 +378,9 @@ Status: nothing physical is implemented yet. Entries below are placeholders for 
 
 - **Near apogee:** the coast minimum is usually near apogee, where the angle of attack grows as the airspeed falls (13° to 20° on the reference rockets) and body lift moves the CP forward. The dynamic pressure there is small, so a warning caused by it matters less than one early in the flight; the warning names the time, Mach number and angle of attack so the user can tell. Flights affected: every flight with wind or an angled rail.
 - **Angle-of-attack model:** the CP at angle of attack uses Niskanen's body lift (eq. 3.26) and linear fins; above about 10° the fin force is outside Barrowman's small-angle assumption (Part C item 8 extends it).
+
+## Fin flutter (plan 0031, D-068)
+
+- **Empirical criterion:** TN 4197's formula was "adjusted until a reasonable coherence" with the data of its figure 3, and the boundary between safe and unsafe wings is a shaded band; a ratio V_f/V near 1 is uncertain either way (R2 is at 1.10). It covers bending-torsion flutter of thin solid panels; it does not cover fin-can or root-joint flexibility, composite lay-ups (whose effective G_E must be measured, eq. 12), or stall flutter. Flights affected: every flight; the margin is a screening value, not a guarantee.
+- **Materials:** only wood, magnesium, aluminium, titanium and steel have sourced moduli (TN 4197 figure 3, read at about ±5 %); plywood is taken as wood; fibreglass, carbon and balsa need a user-entered value, without which the flight carries a "not checked" note.
+- **Constant thickness ratio:** the formula assumes constant t/c; model rocket fins have constant thickness, so t/c is evaluated on the mid-span chord.

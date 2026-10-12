@@ -11,6 +11,7 @@
  * crossing by bisection on the step (owner's requirement, D-017).
  */
 import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
+import { flutterGeometry, flutterVelocity } from '../stability/flutter.js';
 import { dragCoefficient } from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
 import { windField, type WindField } from '../environment/wind.js';
@@ -183,7 +184,22 @@ export interface FlightSummary {
     readonly powered: StabilityPoint | undefined;
     readonly coast: StabilityPoint | undefined;
   };
+  /** Per fin set (plan 0031): the lowest flutter-speed margin V_f/V of the ascent, or why it was not evaluated. */
+  readonly flutter: readonly FlutterMargin[];
 }
+
+export type FlutterMargin =
+  | {
+      readonly finIndex: number;
+      /** Lowest V_f/airspeed over powered flight and coast; below 1 the flight exceeds the TN 4197 flutter speed. */
+      readonly ratio: number;
+      readonly time: number;
+      readonly mach: number;
+      readonly airspeed: number;
+      /** V_f at that moment, m/s (local pressure and speed of sound). */
+      readonly flutterVelocity: number;
+    }
+  | { readonly finIndex: number; readonly ratio: undefined; readonly reason: string };
 
 export interface StabilityPoint {
   /** (CP − CG)/d, calibers. */
@@ -702,6 +718,19 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     powered: undefined,
     coast: undefined,
   };
+  // Plan 0031: the TN 4197 flutter speed of every fin set with a shear modulus, at the local atmosphere.
+  const flutterFins = vehicle.components.flatMap(({ component: c }, index) =>
+    c.kind === 'finSet'
+      ? [
+          {
+            index,
+            fin: c,
+            geometry: c.shearModulus === undefined ? undefined : flutterGeometry(c),
+          },
+        ]
+      : [],
+  );
+  const flutterLowest = new Map<number, Extract<FlutterMargin, { ratio: number }>>();
   const record = (force: boolean): void => {
     const recordNow = force || t - lastRecorded >= recordInterval - 1e-12;
     if (!recordNow && phase !== 'powered' && phase !== 'coast') return;
@@ -719,6 +748,26 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           cp: derived.cp,
           cg: derived.cg,
         };
+      }
+    }
+    if ((phase === 'powered' || phase === 'coast') && derived.flight !== undefined) {
+      const airspeed = derived.flight.airspeed;
+      const atm = ctx.atmosphere(metres((options.site.altitude as number) + unpack(y).position.z));
+      for (const { index, fin, geometry } of flutterFins) {
+        if (fin.shearModulus === undefined || geometry === undefined || !(airspeed > 0)) continue;
+        const vf = flutterVelocity(geometry, fin.shearModulus, atm.pressure, atm.speedOfSound);
+        const ratio = vf / airspeed;
+        const current = flutterLowest.get(index);
+        if (current === undefined || ratio < current.ratio) {
+          flutterLowest.set(index, {
+            finIndex: index,
+            ratio,
+            time: t,
+            mach: derived.flight.mach,
+            airspeed,
+            flutterVelocity: vf,
+          });
+        }
       }
     }
     if (!recordNow) return;
@@ -1140,7 +1189,35 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     flightTime: t,
     endReason,
     minimumStability: { powered: lowest.powered, coast: lowest.coast },
+    flutter: flutterFins.map(({ index, fin }): FlutterMargin => {
+      if (fin.shearModulus === undefined) {
+        return {
+          finIndex: index,
+          ratio: undefined,
+          reason: 'no shear modulus for the fin material',
+        };
+      }
+      return (
+        flutterLowest.get(index) ?? {
+          finIndex: index,
+          ratio: undefined,
+          reason: 'no powered or coasting flight with aerodynamics',
+        }
+      );
+    }),
   };
+  for (const f of summary.flutter) {
+    if (f.ratio === undefined) {
+      if (f.reason.startsWith('no shear modulus'))
+        warnings.add(
+          `Fin flutter not checked for the fin set at component ${String(f.finIndex)}: enter the fin material's shear modulus (NACA TN 4197).`,
+        );
+    } else if (f.ratio < 1) {
+      warnings.add(
+        `Fin flutter: the fin set at component ${String(f.finIndex)} reaches ${f.airspeed.toFixed(0)} m/s at t = ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}), above its NACA TN 4197 flutter speed of ${f.flutterVelocity.toFixed(0)} m/s there: the fins may flutter and fail. Thicker fins, a stiffer material, a smaller span or a slower flight raise the margin.`,
+      );
+    }
+  }
   for (const [name, p] of [
     ['powered flight', lowest.powered],
     ['coast', lowest.coast],

@@ -14,7 +14,7 @@
  */
 import { InvalidInputError } from '../errors.js';
 import { finiteResult } from '../numerics/finite.js';
-import type { Kilograms, KilogramsPerCubicMetre, Metres } from '../units/si.js';
+import type { Kilograms, KilogramsPerCubicMetre, Metres, Pascals } from '../units/si.js';
 import { noseProfile, transitionProfile, type NoseShape } from './profiles.js';
 import { integrate, revolutionMassProperties, type MassProperties } from './revolution.js';
 
@@ -97,8 +97,14 @@ export interface TrapezoidFinSetComponent {
   readonly density: KilogramsPerCubicMetre;
   /** Radius of the body at the fin root. */
   readonly bodyRadius: Metres;
-  /** Profile shape, used by the drag model (plan 0009); mass and stability ignore it. */
+  /** Profile shape, used by the drag model (plan 0009) and the supersonic fin force (D-065, D-066). */
   readonly crossSection?: FinCrossSection;
+  /**
+   * Effective shear modulus G_E of the fin, Pa (NACA TN 4197 eq. 12: the
+   * material's G for a solid fin). Used only for the flutter speed (plan
+   * 0031); when absent, flutter is not evaluated and the flight says so.
+   */
+  readonly shearModulus?: Pascals;
 }
 
 /** Rail buttons: base cylinder, shaft and flange stacked radially on the body surface. */

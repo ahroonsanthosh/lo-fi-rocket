@@ -294,9 +294,19 @@ export {
   RK4_MAX_PITCH_AMPLITUDE_LOSS,
   RK4_WARN_PITCH_AMPLITUDE_LOSS,
   type LinearisedRates,
+  type FlutterMargin,
   type StabilityPoint,
   type StepCheck,
 } from './flight/simulate.js';
+export {
+  flutterGeometry,
+  flutterVelocity,
+  TN4197_EPSILON,
+  TN4197_GAMMA,
+  TN4197_MATERIALS,
+  type FlutterGeometry,
+  type FlutterMaterial,
+} from './stability/flutter.js';
 export {
   InvalidInputError,
   NonFiniteResultError,

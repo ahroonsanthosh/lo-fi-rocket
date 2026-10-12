@@ -412,3 +412,10 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** Completion prompt Part C item 5. The static liftoff and burnout margins at Mach 0.3 and zero angle of attack do not show the effect of Mach number on the fins and body (BAR-10 to BAR-17) or of body lift at angle of attack.
 - **Results:** `docs/reports/in-flight-stability.md`: with a 2 m/s wind on a 5° rail the lowest margins are R1 1.71 (powered) and 1.87 (coast) calibers, R2 1.17 and 1.18, R3 2.86 and 1.85, R4 2.24 and 2.59, R5 2.01 and 1.10. The powered minima are just off the rail (3° to 7° angle of attack at low speed), the coast minima near apogee (13° to 20°).
 - **Consequences:** The summary gains `minimumStability`; samples are unchanged; the golden series are unchanged (the field is not part of them).
+
+## D-068 (2026-10-12): Fin flutter speed from NACA TN 4197 eq. (16) along the flight; material moduli from its figure 3 only
+
+- **Decision:** The flutter speed is TN 4197's eq. (16) with eq. (17) (FLUT-2), evaluated at every accepted step of powered flight and coast with the local pressure and speed of sound; the summary gives the lowest V_f/V per fin set and a ratio below 1 is a warning. A is the exposed panel's L/c₀.₅₀ and t/c is taken on the mid-span chord c₀.₅₀ (the report assumes constant t/c; a constant-thickness fin has its largest chord at the root, so the mid-span value sits between root and tip). Material shear moduli are those marked on TN 4197 figure 3: magnesium, aluminium, titanium as marked; wood and steel at the lower end of their ranges (lower G, lower V_f). Fibreglass, carbon fibre and balsa have no value in an approved source: the user enters G_E, and a fin set without one is reported as not checked.
+- **Why:** Completion prompt Part C item 6 ("material shear moduli (sourced)").
+- **Open question for the owner:** a sourced shear modulus for fibreglass (G10/FR-4) and carbon laminates would let R3, R5 and most high-power designs be checked by default (they need 0.18 and 0.42 GPa respectively).
+- **Results:** R1 V_f/V 3.41, R2 1.10, R4 2.37 (plywood as wood); R3 and R5 not evaluated.

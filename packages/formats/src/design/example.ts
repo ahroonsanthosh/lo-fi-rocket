@@ -13,6 +13,7 @@ import {
   seconds,
   type MotorDefinition,
 } from '@lo-fi-rocket/physics';
+import { pascals, TN4197_MATERIALS } from '@lo-fi-rocket/physics';
 import {
   CURRENT_SCHEMA_VERSION,
   type DesignComponent,
@@ -22,6 +23,9 @@ import {
   type WarningThresholds,
 } from './model.js';
 import { DEFAULT_ROUGHNESS_HEIGHT } from './to-physics.js';
+
+const PLYWOOD_SHEAR_MODULUS =
+  TN4197_MATERIALS.find((mat) => mat.name === 'wood (solid)')?.shearModulus ?? Number.NaN;
 
 /** CLAUDE.md 9: rules of thumb, labelled as such in the UI. */
 export const DEFAULT_STABILITY_THRESHOLDS: StabilityThresholds = {
@@ -152,6 +156,8 @@ export function exampleDesign(id = 'example-r1'): RocketDesign {
         thickness: m(0.003),
         density: PLYWOOD,
         bodyRadius: m(0.025),
+        // Plywood as NACA TN 4197's wood (lower end of its range) for the flutter check (plan 0031).
+        shearModulus: pascals(PLYWOOD_SHEAR_MODULUS),
       }),
       c('nose-weight', 'Nose weight', 0.1, {
         kind: 'massComponent',

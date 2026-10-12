@@ -12,6 +12,7 @@ import {
   centreOfPressure,
   mach,
   metres,
+  pascals,
   radians,
   seconds,
   simulateFlight,
@@ -19,6 +20,7 @@ import {
   type FlightVehicle,
   type SimulationOptions,
   type StabilityPoint,
+  TN4197_MATERIALS,
 } from '@lo-fi-rocket/physics';
 import { describe, expect, it, vi } from 'vitest';
 import { parseEng } from './eng.js';
@@ -90,6 +92,7 @@ const fmt = (p: StabilityPoint | undefined): string =>
     : `${p.calibers.toFixed(2)} cal at ${p.time.toFixed(2)} s (Mach ${p.mach.toFixed(2)}, α ${((p.angleOfAttack * 180) / Math.PI).toFixed(2)}°)`;
 
 const rows: string[] = [];
+const flutterRows: string[] = [];
 
 describe('minimum in-flight stability margin (plan 0030)', () => {
   for (const c of ROCKETS) {
@@ -128,11 +131,55 @@ describe('minimum in-flight stability margin (plan 0030)', () => {
     const ok = simulateFlight(v, OPTIONS);
     expect(ok.warnings.some((w) => w.startsWith('In-flight stability margin fell to'))).toBe(false);
   });
+  it('fin flutter (plan 0031): plywood fins as TN 4197 wood; the shear modulus every rocket needs', () => {
+    const wood = TN4197_MATERIALS.find((m) => m.name === 'wood (solid)');
+    if (wood === undefined) throw new Error('wood missing');
+    for (const c of ROCKETS) {
+      const v = vehicleFor(c);
+      const plywood =
+        c.file === 'r1-three-fin-conical' ||
+        c.file === 'r2-ogive-boattail' ||
+        c.file === 'r4-scratch-38mm';
+      const withG = (g: number): FlightVehicle => ({
+        ...v,
+        components: v.components.map((p) =>
+          p.component.kind === 'finSet'
+            ? { ...p, component: { ...p.component, shearModulus: pascals(g) } }
+            : p,
+        ),
+      });
+      // V_f ∝ √G_E (eq. 16), so with G = 1 GPa the lowest ratio r gives the modulus at which V_f = V: 1 GPa/r².
+      const unit = simulateFlight(withG(1e9), OPTIONS).summary.flutter[0];
+      if (unit?.ratio === undefined) throw new Error('flutter not evaluated');
+      const needed = 1e9 / unit.ratio ** 2;
+      let margin = 'not evaluated: fibreglass has no shear modulus in the approved sources';
+      if (plywood) {
+        const r = simulateFlight(withG(wood.shearModulus), OPTIONS);
+        const f = r.summary.flutter[0];
+        if (f?.ratio === undefined) throw new Error('flutter not evaluated');
+        // The ratio scales with √G exactly (same trajectory: G does not enter the dynamics).
+        expect(f.ratio).toBeCloseTo(unit.ratio * Math.sqrt(wood.shearModulus / 1e9), 9);
+        margin = `V_f/V = ${f.ratio.toFixed(2)} at ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}, V_f ${f.flutterVelocity.toFixed(0)} m/s)`;
+        expect(r.warnings.some((w) => w.startsWith('Fin flutter:'))).toBe(f.ratio < 1);
+      } else {
+        const r = simulateFlight(v, OPTIONS);
+        expect(r.summary.flutter[0]?.ratio).toBeUndefined();
+        expect(r.warnings.some((w) => w.startsWith('Fin flutter not checked'))).toBe(true);
+      }
+      flutterRows.push(
+        `| ${c.file} | ${plywood ? 'plywood (TN 4197 wood, 0.487 GPa)' : 'fibreglass'} | ${margin} | ${(needed / 1e9).toFixed(3)} GPa |`,
+      );
+    }
+  });
   it('writes the table', () => {
     const out = [
       '| rocket | lowest margin, powered flight | lowest margin, coast to apogee |',
       '| --- | --- | --- |',
       ...rows,
+      '',
+      '| rocket | fin material | lowest flutter margin | shear modulus at which V_f = V |',
+      '| --- | --- | --- | --- |',
+      ...flutterRows,
     ].join('\n');
     const path = process.env['STABILITY_REPORT'];
     if (path !== undefined && path !== '') writeFileSync(path, `${out}\n`);

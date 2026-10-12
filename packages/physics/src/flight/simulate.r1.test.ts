@@ -68,7 +68,10 @@ describe('R1 flight (OpenRocket-equivalent modes)', () => {
       'ejection-charge',
       'landing',
     ]);
-    expect(r.warnings).toEqual([]);
+    // The .ork fins carry no shear modulus, so the flutter check reports that it was not made (plan 0031).
+    expect(r.warnings).toEqual([
+      "Fin flutter not checked for the fin set at component 2: enter the fin material's shear modulus (NACA TN 4197).",
+    ]);
     expect(r.summary.endReason).toBe('landing');
     expect(r.summary.burnoutTime).toBe(1.65);
     expect(r.summary.deploymentTime).toBeCloseTo(r.summary.timeToApogee, 12);

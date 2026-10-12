@@ -257,11 +257,16 @@ function component(c: Ctx, path: string, v: unknown): Component {
           'density',
           'bodyRadius',
         ],
-        ['crossSection'],
+        ['crossSection', 'shearModulus'],
       );
       const crossSection = opt('crossSection', (x) =>
         c.oneOf(`${path}.crossSection`, x, FIN_SECTIONS),
       );
+      const shearModulus = opt('shearModulus', (x) => {
+        const g = c.number(`${path}.shearModulus`, x);
+        if (!(g > 0)) c.fail(`${path}.shearModulus`, 'must be greater than 0 Pa');
+        return pascals(g);
+      });
       return {
         kind,
         count: c.integer(`${path}.count`, o['count']),
@@ -273,6 +278,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
         density: kilogramsPerCubicMetre(m('density')),
         bodyRadius: metres(m('bodyRadius')),
         ...(crossSection === undefined ? {} : { crossSection }),
+        ...(shearModulus === undefined ? {} : { shearModulus }),
       };
     }
     case 'railButton': {
