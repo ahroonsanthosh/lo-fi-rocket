@@ -26,9 +26,68 @@ export {
   geopotentialToGeometric,
   molecularWeightRatio,
   standardAtmosphere1976,
+  atmosphereModel,
+  seaLevelEquivalent,
   ussa1976Layers,
+  type AtmosphereBaseConditions,
   type StandardAtmosphereState,
 } from './atmosphere/ussa1976.js';
+export * from './flight/vector.js';
+export {
+  advanceOrientation,
+  IDENTITY_QUATERNION,
+  quaternionBetween,
+  quaternionConjugate,
+  quaternionFromAxisAngle,
+  quaternionMultiply,
+  quaternionNorm,
+  quaternionNormalise,
+  rotateVector,
+  rotateVectorInverse,
+  rotationFromAngularVelocity,
+  type Quaternion,
+} from './flight/quaternion.js';
+export {
+  BODY_AFT,
+  BODY_NOSE,
+  bodyToWorld,
+  EAST,
+  flightParameters,
+  initialOrientation,
+  NORTH,
+  noseDirection,
+  railDirection,
+  REFERENCE_ORIENTATION,
+  UP,
+  velocityRegion,
+  worldToBody,
+  type FlightParameterInputs,
+  type FlightParameters,
+  type VelocityRegion,
+} from './flight/frames.js';
+export {
+  gravityAt,
+  GRAVITY_EFFECTIVE_EARTH_RADIUS,
+  OPENROCKET_REFERENCE_GRAVITY_45N,
+  STANDARD_GRAVITY,
+  STANDARD_GRAVITY_MODEL,
+  type GravityModel,
+} from './flight/gravity.js';
+export {
+  openRocketWind,
+  windVelocity,
+  type ConstantWind,
+  type VectorWind,
+  type WindModel,
+} from './environment/wind.js';
+export {
+  NAR_MAX_LAUNCH_ANGLE,
+  validateLaunch,
+  type LaunchRail,
+  type LaunchSite,
+  type LaunchWarning,
+  type ValidatedLaunch,
+} from './environment/launch.js';
 export { finiteResult } from './numerics/finite.js';
 export {
   noseProfile,

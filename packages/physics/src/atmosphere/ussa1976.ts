@@ -19,7 +19,7 @@
  * the same formulas is below 1e-13. Against the printed tables the limit is
  * the tables' own rounding (see ussa1976.tables.test.ts).
  */
-import { InvalidInputError } from '../errors.js';
+import { InvalidInputError, NotImplementedError } from '../errors.js';
 import { finiteResult } from '../numerics/finite.js';
 import {
   kelvin,
@@ -119,11 +119,18 @@ function pressureInLayer(layer: Layer, geopotential: number): number {
   return layer.basePressure * ratio ** (G0_M0_OVER_RSTAR / layer.gradient);
 }
 
-/** Builds the layer table once, chaining eq. 23 and eqs. 33a/33b from sea level. */
-function buildLayers(): readonly Layer[] {
+/**
+ * Builds the layer table, chaining eq. 23 and eqs. 33a/33b from the given
+ * sea-level base conditions (the standard's T₀ and P₀, or a launch-site
+ * override assigned to the first layer, ATM-11).
+ */
+function buildLayers(
+  seaLevelTemperature: number = USSA1976_CONSTANTS.seaLevelTemperatureT0, // T_M,0 = T₀, p. 10
+  seaLevelPressure: number = USSA1976_CONSTANTS.seaLevelPressureP0, // P_0, p. 12
+): readonly Layer[] {
   const layers: Layer[] = [];
-  let baseTemperature: number = USSA1976_CONSTANTS.seaLevelTemperatureT0; // T_M,0 = T₀, p. 10
-  let basePressure: number = USSA1976_CONSTANTS.seaLevelPressureP0; // P_0, p. 12
+  let baseTemperature = seaLevelTemperature;
+  let basePressure = seaLevelPressure;
   for (let b = 0; b < LAYER_BASES_KM.length; b++) {
     const baseKm = LAYER_BASES_KM[b];
     const gradientPerKm = LAYER_GRADIENTS_K_PER_KM[b];
@@ -148,10 +155,76 @@ function buildLayers(): readonly Layer[] {
 
 const LAYERS: readonly Layer[] = buildLayers();
 
+/**
+ * ATM-11. Launch-site conditions (Niskanen §4.1.1 p. 55): the user's
+ * temperature and pressure "are simply assigned to the first layer of the
+ * atmospheric model", given "either at mean sea level or at the altitude of
+ * the launch site". Humidity is ignored (p. 56, under 1 %).
+ */
+export interface AtmosphereBaseConditions {
+  /** Where the values apply: mean sea level, or a geometric altitude within the first layer. */
+  readonly at: 'sea-level' | { readonly altitude: Metres };
+  readonly temperature: Kelvin;
+  readonly pressure: Pascals;
+}
+
+/**
+ * Sea-level T₀ and P₀ equivalent to the given base conditions. For a site
+ * altitude, eq. 23 and eq. 33a of layer 0 are inverted: T₀ = T_site − L₀ H_site,
+ * P₀ = P_site (T_site/T₀)^(g₀′M₀/(R* L₀)). The site must lie in layer 0
+ * (H < 11 km′); anything higher is not covered by the thesis's statement.
+ */
+export function seaLevelEquivalent(base: AtmosphereBaseConditions): {
+  temperature: number;
+  pressure: number;
+} {
+  const t: number = base.temperature;
+  const p: number = base.pressure;
+  if (!(t > 0) || !Number.isFinite(t)) {
+    throw new InvalidInputError('base temperature', t, 'must be greater than 0 K');
+  }
+  if (!(p > 0) || !Number.isFinite(p)) {
+    throw new InvalidInputError('base pressure', p, 'must be greater than 0 Pa');
+  }
+  if (base.at === 'sea-level') return { temperature: t, pressure: p };
+  const z: number = base.at.altitude;
+  assertInDomain(z);
+  const h: number = geometricToGeopotential(base.at.altitude);
+  const layer0 = LAYERS[0];
+  const layer1 = LAYERS[1];
+  if (layer0 === undefined || layer1 === undefined)
+    throw new Error('USSA1976 layer table is malformed');
+  if (!(h < layer1.baseGeopotential)) {
+    throw new NotImplementedError(
+      `launch-site conditions above the first layer (site at ${String(z)} m, the first layer ends at 11 km′): Niskanen p. 55 assigns them to the first layer only`,
+    );
+  }
+  const L0 = layer0.gradient;
+  const t0 = t - L0 * h;
+  if (!(t0 > 0))
+    throw new InvalidInputError(
+      'base temperature',
+      t,
+      'implies a sea-level temperature at or below 0 K',
+    );
+  const p0 = p * (t / t0) ** (G0_M0_OVER_RSTAR / L0);
+  return {
+    temperature: finiteResult('sea-level equivalent temperature', t0),
+    pressure: finiteResult('sea-level equivalent pressure', p0),
+  };
+}
+
+/** Layer table for the given base conditions (the standard's when absent). */
+function layersFor(base: AtmosphereBaseConditions | undefined): readonly Layer[] {
+  if (base === undefined) return LAYERS;
+  const sl = seaLevelEquivalent(base);
+  return buildLayers(sl.temperature, sl.pressure);
+}
+
 /** The layer whose base is at or below `geopotential` (the first layer also serves H < 0, p. 12). */
-function layerAt(geopotential: number): Layer {
-  let found = LAYERS[0];
-  for (const layer of LAYERS) {
+function layerAt(layers: readonly Layer[], geopotential: number): Layer {
+  let found = layers[0];
+  for (const layer of layers) {
     if (geopotential >= layer.baseGeopotential) {
       found = layer;
     }
@@ -163,8 +236,8 @@ function layerAt(geopotential: number): Layer {
 }
 
 /** Reports the layer table for tests and documentation (base H in m′, L in K/m′, T_M,b in K, P_b in Pa). */
-export function ussa1976Layers(): readonly Layer[] {
-  return LAYERS;
+export function ussa1976Layers(base?: AtmosphereBaseConditions): readonly Layer[] {
+  return layersFor(base);
 }
 
 /**
@@ -271,11 +344,32 @@ export interface StandardAtmosphereState {
  * (eqs. 33a/33b), ATM-6 (eq. 42), ATM-7 (eq. 50), ATM-8 (eq. 51), ATM-9
  * (eq. 52), ATM-10 (eq. 22 with Table 8).
  */
-export function standardAtmosphere1976(geometricAltitude: Metres): StandardAtmosphereState {
+export function standardAtmosphere1976(
+  geometricAltitude: Metres,
+  base?: AtmosphereBaseConditions,
+): StandardAtmosphereState {
+  return atmosphereState(geometricAltitude, layersFor(base));
+}
+
+/**
+ * A reusable atmosphere for the given base conditions (ATM-11), built once.
+ * Returns the standard atmosphere when `base` is undefined.
+ */
+export function atmosphereModel(
+  base?: AtmosphereBaseConditions,
+): (geometricAltitude: Metres) => StandardAtmosphereState {
+  const layers = layersFor(base);
+  return (geometricAltitude) => atmosphereState(geometricAltitude, layers);
+}
+
+function atmosphereState(
+  geometricAltitude: Metres,
+  layers: readonly Layer[],
+): StandardAtmosphereState {
   const z: number = geometricAltitude;
   assertInDomain(z);
   const h: number = geometricToGeopotential(geometricAltitude);
-  const layer = layerAt(h);
+  const layer = layerAt(layers, h);
 
   // ATM-3, eq. 23 p. 10.
   const tM = finiteResult(

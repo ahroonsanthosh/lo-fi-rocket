@@ -165,3 +165,16 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** Each of these is left open by the guide. The checks turn the ambiguity into something the file itself must confirm, and refuse otherwise (CLAUDE.md rule 3). Observed facts in the seven ThrustCurve files: grams, `m` from `propWt` to 0, `cg` constant within 0.5 mm of half the length (H238T: 97.5 mm against 97.0; H128W: `len` 195 mm against the RASP 194 mm).
 - **Alternatives:** A plausibility threshold on the magnitude of `initWt` (a guess); reading RockSim's behaviour (closed source, not approved).
 - **Consequences:** Hybrid-motor files with a moving CG are rejected until the owner supplies a documented example; Phase 4's ThrustCurve download passes `massUnit: 'g'` only as a cross-check, the `Isp` attribute decides.
+
+## D-030 (2026-10-12): Gravity is the inverse-square law with a parameter for the sea-level value; no latitude formula yet
+
+- **Decision:** `gravityAt` applies USSA76 eq. (17), g = g₀ (r₀/(r₀ + Z))² with r₀ = 6 356 766 m, where g₀ is a parameter of the gravity model. Two named values are provided: the standard g_n = 9.80665 m/s² (SI Brochure) and the value OpenRocket used at 45° N, 9.8061992025 m/s² (observed, `settings.md`), for like-for-like comparisons (D-018). A constant-gravity variant exists for analytical test cases.
+- **Why:** The owner asked (D-018) that Phase 2 reproduce OpenRocket's latitude-dependent value "with its formula cited to a source". OpenRocket's formula uses constants that match neither WGS 84 nor GRS 80 exactly, and neither standard is an approved source, so the formula cannot be cited. Making the sea-level value a parameter reproduces the required value without an uncited formula; the altitude law is from an approved document. The latitude dependence changes g by 0.5 % between the equator and the poles.
+- **Alternatives:** Implementing the WGS 84 Somigliana formula from memory (rejected, rule 1); asking before continuing (not required by section 11, the comparison is possible).
+- **Consequences:** Open question for the owner (docs/progress.md): approve a source for latitude-dependent gravity (for example NIMA TR8350.2 or Moritz, "Geodetic Reference System 1980") so the user can enter a latitude instead of a value. The `LaunchSite.latitude` field is stored but unused until then.
+
+## D-031 (2026-10-12): Orientation updates use the half-angle quaternion of eq. (4.13)
+
+- **Decision:** The rotation applied to the orientation over a step (DYN-5) is the eq. (4.13) quaternion for the angle |ω|Δt, cos(|ω|Δt/2) + ω̂ sin(|ω|Δt/2), applied from the left and normalised, as Niskanen's text defines it ("the unit quaternion corresponding to the 3D rotation ω Δt as in equation (4.13)", p. 67).
+- **Why:** The printed eq. (4.24) omits the halves (checked on the page image, PDF p. 77). Taken literally it would rotate the rocket by twice the angle ω Δt per step, contradicting eq. (4.23) which it is said to implement. The test "a 90° rotation about z" shows eq. (4.13) rotates a vector by exactly the stated angle, so the text, not the typeset formula, is followed. This is an internal inconsistency of one source, resolved by its own definitions, not a conflict between sources.
+- **Consequences:** None beyond the note in the code and here.

@@ -27,14 +27,18 @@ Prompt 2 (roadmap): all of Phase 2, started on the owner's "continue" after the 
 
 - Phase 2 step 1: motor thrust and mass model (plan 0007, MOT-1 to MOT-5): format-independent `MotorDefinition` with three mass rules, RockSim `.rse` reader with the unit and column checks of D-029, `motorFromEng`/`motorFromRse`; Apogee's `.rse` format guide and the seven ThrustCurve `.rse` files added to `reference/` (the Prompt 0 "RockSim format page" was a saved 404 and its verification claim was corrected in `reference/SOURCES.md`); decisions D-028, D-029.
 
+- Phase 2 step 2: frames, orientation quaternions, gravity and environment (plan 0008, DYN-1 to DYN-8, GRAV-1, ATM-11, ENV-1, ENV-2): world ENU frame and reference orientation fixed in `docs/conventions.md`, quaternion algebra per Niskanen §4.2.2, launch rail direction and initial orientation, flight parameters (airspeed, angle of attack, lateral airflow angle, Mach, dynamic pressure, Reynolds), inverse-square gravity with a sea-level parameter (D-030), launch-site atmosphere conditions, constant wind, launch validation with the NAR 30° warning; D-031 on the printed eq. (4.24).
+
 ## In progress
 
-- Phase 2 step 2: frames, gravity and environment (plan 0008, to be written next).
+- Phase 2 step 3: the drag model (plan 0009, to be written next).
 
 ## Next
 
-- Phase 2 steps 3 and 4: drag model across Mach (plan 0009), 6DOF simulation with RK4 and RK45, events and recovery (plan 0010), then the Phase 2 acceptance report.
+- Phase 2 step 4: 6DOF simulation with RK4 and RK45, events and recovery (plan 0010), then the Phase 2 acceptance report.
 
 ## Open questions
+
+- Gravity latitude dependence (D-030): the owner is asked to approve a source for a latitude formula (NIMA TR8350.2 or Moritz, Geodetic Reference System 1980) so users can enter a latitude; until then the sea-level value is entered directly, with the OpenRocket-equivalent value available for comparisons. Not blocking.
 
 - Pull request: the repository has a single branch, `claude/inspiring-tesla-xxp0hh`, which is also its default branch, so no pull request can be opened until a separate default branch exists (see the Prompt 1 report).

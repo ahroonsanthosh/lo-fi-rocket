@@ -41,15 +41,17 @@ This file is the single definition of units, coordinate frames, numeric rules, a
 - Stability margin in calibers = (x_CP − x_CG) / d_ref where d_ref is the reference diameter (the maximum body diameter unless the user overrides it).
 - The CP is computed at a stated Mach number (the design condition is 0.3), zero angle of attack, and either a stated roll angle θ (θ = 0: one fin pointing into the lateral airflow, Niskanen p. 34) or the worst case over θ. Every CP result records the Mach number, the roll angle and whether Niskanen's roll-angle reduction was applied (D-016, D-027). The motor is not aerodynamic, so the CP is the same at liftoff and burnout; only the CG moves.
 
-### Flight frame (proposed, not yet approved)
+### Flight frame (fixed by plan 0008, DYN-6)
 
-The flight simulator (Phase 2) needs an inertial launch-site frame. Proposal, to be confirmed in the Phase 2 plan:
-
-- Origin: the launch pad at the base of the rail, at launch site altitude.
-- Flat, non-rotating Earth within the flight domain (see `docs/known-limitations.md` once implemented).
-- Axes: East, North, Up (ENU), right-handed. Altitude above the pad is the Up coordinate; altitude above sea level = pad altitude + Up.
-- Wind direction follows the meteorological convention (the direction the wind blows from, measured clockwise from North), converted to a velocity vector at the input boundary.
-- Attitude: unit quaternion from body frame to flight frame. Body frame for flight reuses the rocket body frame above but with the axis sign convention stated in the Phase 2 plan (Niskanen's convention or ours; this is an open decision, see `docs/decisions.md`).
+- Origin: the launch pad at the base of the rail, at launch site altitude (Niskanen §4.2.1 p. 61: "a fixed coordinate system with the origin at the position of launch").
+- Flat, non-rotating Earth within the flight domain, no Coriolis acceleration (Niskanen §4.2 p. 60; `docs/known-limitations.md`).
+- Axes: East, North, Up (ENU), right-handed; z up as in Niskanen p. 61. Altitude above the pad is the Up coordinate; altitude above sea level = pad altitude + Up.
+- Body frame for flight: the rocket body frame above (origin at the nose tip, x aft). The nose direction is body −x; fin 1 of a fin set lies in the +y half-plane.
+- Attitude: a unit quaternion q rotating body vectors into world vectors, v_world = q v_body q⁻¹ (Niskanen eqs. 4.14, 4.15). Reference orientation (Niskanen p. 62, nose along world +z): q_ref = rotation by +90° about the body y axis, so body +x → world −z, body y → north, body z → east.
+- Launch rail: tilted by θ from vertical towards the compass azimuth ψ (clockwise from north); rail direction d̂ = (sin θ sin ψ, sin θ cos ψ, cos θ); initial orientation q₀ = q_tilt q_ref with q_tilt the shortest rotation taking world +z to d̂.
+- Wind: given as the direction it blows from (meteorological, clockwise from north) and a speed; velocity v_wind = −speed (sin ψ, cos ψ, 0). A velocity vector may be given directly (OpenRocket comparisons use (v sin θ, v cos θ, 0) for OpenRocket's direction θ, `reference/rockets/settings.md`).
+- Angle of attack α ∈ [0, π]: the angle between the nose direction and the airspeed (velocity minus wind). Lateral airflow angle: the direction of the airspeed's body (y, z) component from +y towards +z; it is the roll angle θ of BAR-7.
+- Gravity acts along world −z with the magnitude of GRAV-1; its sea-level value is a parameter of the gravity model (D-030).
 
 ## Numerics
 
