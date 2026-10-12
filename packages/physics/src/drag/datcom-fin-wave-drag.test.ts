@@ -71,6 +71,11 @@ describe('DRAG-19 supersonic wave drag (eqs. 4.1.5.1-k, -l)', () => {
     expect(sectionFactorK('biconvex')).toBeCloseTo(16 / 3, 12);
     // Double wedge with the ridge at mid-chord: (c/x_t)/(1 − x_t/c) = 2/0.5 = 4.
     expect(sectionFactorK('double-wedge')).toBeCloseTo(4, 12);
+    // Single wedge (D-066): the forward-face term c/x_t of the double-wedge entry at x_t = c.
+    expect(sectionFactorK('wedge')).toBe(1);
+  });
+  it('wedge, t/c = 0.1, unswept at Mach √2: 1 × 0.01/1 = 0.01', () => {
+    expect(supersonicWaveDrag(Math.SQRT2, 0.1, 0, 'wedge')).toBeCloseTo(0.01, 9);
   });
   it('biconvex, t/c = 0.05, unswept at Mach 1.5: K (t/c)²/β = (16/3)(0.0025)/1.118034 = 0.0119257', () => {
     expect(supersonicWaveDrag(1.5, 0.05, 0, 'biconvex')).toBeCloseTo(0.0119257, 6);
@@ -116,6 +121,11 @@ describe('finWaveDrag: chart, fairing and supersonic branches', () => {
       mach: mach(0.95 / Math.sqrt(Math.cos(L))),
     }).cd;
     expect(swept).toBeCloseTo(unswept * Math.cos(L) ** 2.5, 9);
+  });
+  it('a wedge takes the transonic chart in the ratio of its K to the biconvex K (1 : 16/3, D-066)', () => {
+    const bic = finWaveDrag({ ...base, mach: mach(1) }).cd;
+    const wedge = finWaveDrag({ ...base, section: 'wedge', mach: mach(1) }).cd;
+    expect(wedge).toBeCloseTo((bic * 3) / 16, 12);
   });
   it('is continuous across the fairing from the chart at 1.2 to the formula at 1.4', () => {
     const atStart = finWaveDrag({ ...base, mach: mach(WAVE_DRAG_FAIRING.start) });

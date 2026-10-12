@@ -1,6 +1,6 @@
 # Held-out validation (version 1.0, Part B baseline)
 
-**Date:** 2026-10-12. **Status:** regenerated after Part C item 3 (plan 0028, D-065: DATCOM fin normal force and body carry-over; before it, transonic CP rms 5.4 and supersonic 9.9 % L); the baseline before Part C is recorded in D-061 and the item 1 state in D-062. The tables are written by `packages/formats/src/held-out.validation.test.ts` (`HELD_OUT_REPORT=<path>`), which reads `reference/digitised/held-out-v1.json`. Nothing in the model was built, chosen or tuned from these data (D-061); the ARCAS CP data of D-056 are no longer independent and are reported in `wind-tunnel-validation.md` instead.
+**Date:** 2026-10-12. **Status:** regenerated after Part C item 4 (plan 0029, D-066: wedge sections, DATCOM rounded leading edge) and item 3 (plan 0028, D-065: DATCOM fin normal force and body carry-over; before it, transonic CP rms 5.4 and supersonic 9.9 % L); the baseline before Part C is recorded in D-061 and the item 1 state in D-062. The tables are written by `packages/formats/src/held-out.validation.test.ts` (`HELD_OUT_REPORT=<path>`), which reads `reference/digitised/held-out-v1.json`. Nothing in the model was built, chosen or tuned from these data (D-061); the ARCAS CP data of D-056 are no longer independent and are reported in `wind-tunnel-validation.md` instead.
 
 ## Datasets, models and comparisons
 
@@ -26,11 +26,11 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 | 0.6  | subsonic  | 80.0          | 79.5      | -0.5  | 0.157              | 0.146     | -6 %  |
 | 0.7  | subsonic  | 80.0          | 80.1      | +0.1  | 0.170              | 0.152     | -11 % |
 | 0.8  | transonic | 80.6          | 81.0      | +0.4  | 0.183              | 0.159     | -13 % |
-| 0.85 | transonic | 81.7          | 80.5      | -1.1  |                    | 0.166     |       |
-| 0.9  | transonic | 83.1          | 80.1      | -3.0  | 0.199              | 0.172     | -14 % |
-| 0.95 | transonic | 84.5          | 79.8      | -4.8  | 0.212              | 0.178     | -16 % |
-| 1    | transonic | 85.5          | 79.4      | -6.1  | 0.228              | 0.184     | -19 % |
-| 1.03 | transonic | 84.5          | 79.1      | -5.4  | 0.199              | 0.187     | -6 %  |
+| 0.85 | transonic | 81.7          | 80.5      | -1.1  |                    | 0.165     |       |
+| 0.9  | transonic | 83.1          | 80.0      | -3.1  | 0.199              | 0.171     | -14 % |
+| 0.95 | transonic | 84.5          | 79.6      | -5.0  | 0.212              | 0.176     | -17 % |
+| 1    | transonic | 85.5          | 79.0      | -6.4  | 0.228              | 0.180     | -21 % |
+| 1.03 | transonic | 84.5          | 78.7      | -5.8  | 0.199              | 0.183     | -8 %  |
 
 ## NACA RM-10 (RM E50D28): x_cp in percent of the 73.25 in length (measured at alpha = 2 deg, in diameters ahead of the base)
 
@@ -45,10 +45,10 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 
 | Mach | regime     | measured x_cp | predicted | error | measured C_N_alpha | predicted | error |
 | ---- | ---------- | ------------- | --------- | ----- | ------------------ | --------- | ----- |
-| 1.79 | supersonic | 80.5          | 76.4      | -4.2  | 12.84              | 10.26     | -20 % |
-| 1.88 | supersonic | 79.7          | 75.6      | -4.0  | 12.73              | 10.03     | -21 % |
-| 1.98 | supersonic | 79.7          | 74.8      | -4.9  | 11.81              | 9.77      | -17 % |
-| 2    | supersonic | 79.7          | 74.6      | -5.1  | 11.45              | 9.72      | -15 % |
+| 1.79 | supersonic | 80.5          | 76.0      | -4.5  | 12.84              | 10.08     | -21 % |
+| 1.88 | supersonic | 79.7          | 75.4      | -4.2  | 12.73              | 9.92      | -22 % |
+| 1.98 | supersonic | 79.7          | 74.7      | -4.9  | 11.81              | 9.74      | -17 % |
+| 2    | supersonic | 79.7          | 74.6      | -5.1  | 11.45              | 9.70      | -15 % |
 | 2.06 | outside    | 79.2          | 74.2      | -5.0  | 10.88              | 9.54      | -12 % |
 | 2.38 | outside    | 77.7          | 72.3      | -5.4  | 10.52              | 8.77      | -17 % |
 | 2.78 | outside    | 76.1          | 70.0      | -6.1  | 9.51               | 8.05      | -15 % |
@@ -65,11 +65,11 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 
 | Mach | regime    | measured forebody C_A | predicted forebody | error   | measured C_A,b | predicted base term | error (base) |
 | ---- | --------- | --------------------- | ------------------ | ------- | -------------- | ------------------- | ------------ |
-| 0.6  | subsonic  | 0.354                 | 0.506              | +43.0 % | 0.154          | 0.167               | +8.6 %       |
-| 0.8  | transonic | 0.426                 | 0.557              | +30.7 % | 0.173          | 0.203               | +17.5 %      |
-| 0.9  | transonic | 0.505                 | 0.611              | +20.8 % | 0.203          | 0.225               | +11.3 %      |
-| 1    | transonic | 0.712                 | 0.722              | +1.4 %  | 0.441          | 0.250               | -43.2 %      |
-| 1.03 | transonic | 0.724                 | 0.760              | +4.9 %  | 0.429          | 0.243               | -43.4 %      |
+| 0.6  | subsonic  | 0.354                 | 0.341              | -3.5 %  | 0.154          | 0.167               | +8.6 %       |
+| 0.8  | transonic | 0.426                 | 0.380              | -10.7 % | 0.173          | 0.203               | +17.5 %      |
+| 0.9  | transonic | 0.505                 | 0.429              | -15.2 % | 0.203          | 0.225               | +11.3 %      |
+| 1    | transonic | 0.712                 | 0.539              | -24.4 % | 0.441          | 0.250               | -43.2 %      |
+| 1.03 | transonic | 0.724                 | 0.581              | -19.8 % | 0.429          | 0.243               | -43.4 %      |
 
 ## NACA RM-10 (RM E50D28): total C_D at alpha = 0 (the balance drag includes the base; sting interference judged negligible by the report)
 
@@ -113,23 +113,23 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 
 ## TN D-3182 model A: C_A at zero normal force (sting mounted with base pressure taps; the extracted text does not say whether C_A is adjusted for the base, so the total is compared and the forebody shown)
 
-| Mach | regime     | Re      | measured | predicted total | error    | predicted forebody |
-| ---- | ---------- | ------- | -------- | --------------- | -------- | ------------------ |
-| 1.79 | supersonic | 2.76e+7 | 0.524    | 0.645           | +23.1 %  | 0.506              |
-| 1.88 | supersonic | 2.75e+7 | 0.497    | 0.637           | +28.3 %  | 0.504              |
-| 1.98 | supersonic | 2.69e+7 | 0.467    | 0.630           | +34.9 %  | 0.503              |
-| 2    | supersonic | 1.37e+7 | 0.452    | 0.638           | +41.4 %  | 0.513              |
-| 2.06 | outside    | 2.76e+7 | 0.450    | 0.623           | +38.5 %  | 0.501              |
-| 2.38 | outside    | 1.36e+7 | 0.402    | 0.610           | +51.7 %  | 0.505              |
-| 2.78 | outside    | 1.29e+7 | 0.349    | 0.587           | +68.0 %  | 0.497              |
-| 3.17 | outside    | 1.32e+7 | 0.306    | 0.567           | +85.4 %  | 0.488              |
-| 3.47 | outside    | 1.36e+7 | 0.264    | 0.554           | +109.8 % | 0.482              |
+| Mach | regime     | Re      | measured | predicted total | error   | predicted forebody |
+| ---- | ---------- | ------- | -------- | --------------- | ------- | ------------------ |
+| 1.79 | supersonic | 2.76e+7 | 0.524    | 0.376           | -28.3 % | 0.236              |
+| 1.88 | supersonic | 2.75e+7 | 0.497    | 0.363           | -27.0 % | 0.230              |
+| 1.98 | supersonic | 2.69e+7 | 0.467    | 0.350           | -25.0 % | 0.224              |
+| 2    | supersonic | 1.37e+7 | 0.452    | 0.358           | -20.7 % | 0.233              |
+| 2.06 | outside    | 2.76e+7 | 0.450    | 0.340           | -24.4 % | 0.218              |
+| 2.38 | outside    | 1.36e+7 | 0.402    | 0.316           | -21.3 % | 0.211              |
+| 2.78 | outside    | 1.29e+7 | 0.349    | 0.284           | -18.6 % | 0.194              |
+| 3.17 | outside    | 1.32e+7 | 0.306    | 0.258           | -15.5 % | 0.180              |
+| 3.47 | outside    | 1.36e+7 | 0.264    | 0.242           | -8.3 %  | 0.170              |
 
 ## TM X-1661 configuration 1 at Mach 2.01: C_A at alpha = 0 (ogive nose, basic fins; +-0.015 from the overlapping symbols)
 
 | Mach | measured | predicted total | predicted forebody | error (total) |
 | ---- | -------- | --------------- | ------------------ | ------------- |
-| 2.01 | 0.422    | 0.588           | 0.536              | +39.5 %       |
+| 2.01 | 0.422    | 0.350           | 0.297              | -17.1 %       |
 
 ## NACA RM L8A05 (fineness ratio 7.87, model A): total C_D in free flight (base included)
 
@@ -165,7 +165,7 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 
 | dataset                                             | measured rise Mach | predicted | difference | target 0.05 |
 | --------------------------------------------------- | ------------------ | --------- | ---------- | ----------- |
-| Blue Scout forebody (points at 0.8, 0.9, 1.0, 1.03) | 0.894              | 0.917     | +2.3 /100  | met         |
+| Blue Scout forebody (points at 0.8, 0.9, 1.0, 1.03) | 0.894              | 0.923     | +2.9 /100  | met         |
 | RM-10 flight (TN 2944)                              | 0.972              | 0.952     | -2.0 /100  | met         |
 | L8A05 model A                                       | 0.996              | 0.942     | -5.5 /100  | NOT MET     |
 
@@ -173,20 +173,20 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 
 | regime               | CP n | CP rms    | target | CP worst  | target | largest non-conservative | C_D n | C_D rms          | target |
 | -------------------- | ---- | --------- | ------ | --------- | ------ | ------------------------ | ----- | ---------------- | ------ |
-| subsonic             | 2    | 0.4 (met) | 3      | 0.5 (met) | 6      | 0.1                      | 7     | 38.3 % (NOT MET) | 7 %    |
-| transonic            | 6    | 4.1 (met) | 5      | 6.1 (met) | 8      | 0.4                      | 33    | 36.8 % (NOT MET) | 10 %   |
-| supersonic           | 9    | 3.7 (met) | 4      | 5.1 (met) | 7      | 3.6                      | 20    | 19.0 % (NOT MET) | 8 %    |
-| outside (above 2.01) | 5    | 6.4       |        | 8.3       |        | 0.0                      | 10    | 53.2 %           |        |
+| subsonic             | 2    | 0.4 (met) | 3      | 0.5 (met) | 6      | 0.1                      | 7     | 34.7 % (NOT MET) | 7 %    |
+| transonic            | 6    | 4.3 (met) | 5      | 6.4 (met) | 8      | 0.4                      | 33    | 36.8 % (NOT MET) | 10 %   |
+| supersonic           | 9    | 3.8 (met) | 4      | 5.1 (met) | 7      | 3.6                      | 20    | 14.6 % (NOT MET) | 8 %    |
+| outside (above 2.01) | 5    | 6.4       |        | 8.3       |        | 0.0                      | 10    | 13.8 %           |        |
 
 Per dataset:
 
-- CP Blue Scout: n=8 rms 3.5 %L worst 6.1 %L mean -2.6 %L
+- CP Blue Scout: n=8 rms 3.7 %L worst 6.4 %L mean -2.7 %L
 - CP RM-10: n=4 rms 3.1 %L worst 3.6 %L mean +3.1 %L
-- CP TN D-3182 A: n=9 rms 5.7 %L worst 8.3 %L mean -5.5 %L
+- CP TN D-3182 A: n=9 rms 5.7 %L worst 8.3 %L mean -5.6 %L
 - CP TM X-1661: n=1 rms 0.9 %L worst 0.9 %L mean -0.9 %L
-- C_D Blue Scout (forebody): n=5 rms 25.5 % worst 43.0 % mean +20.1 %
+- C_D Blue Scout (forebody): n=5 rms 16.4 % worst 24.4 % mean -14.7 %
 - C_D RM-10 tunnel: n=4 rms 6.5 % worst 10.2 % mean +4.6 %
 - C_D RM-10 flight: n=26 rms 12.2 % worst 28.9 % mean +4.8 %
-- C_D TN D-3182 A: n=9 rms 60.0 % worst 109.8 % mean +53.5 %
-- C_D TM X-1661: n=1 rms 39.5 % worst 39.5 % mean +39.5 %
+- C_D TN D-3182 A: n=9 rms 21.8 % worst 28.3 % mean -21.0 %
+- C_D TM X-1661: n=1 rms 17.1 % worst 17.1 % mean -17.1 %
 - C_D L8A05: n=25 rms 44.4 % worst 84.9 % mean +34.5 %

@@ -268,15 +268,23 @@ export function waveDragChart(aspectParameter: number, xi: number): ChartReading
 }
 
 /** Sharp-nosed section shapes of the DATCOM K table (p. 4.1.5.1-16) that the fin model offers. */
-export type WaveDragSection = 'biconvex' | 'double-wedge';
+export type WaveDragSection = 'biconvex' | 'double-wedge' | 'wedge';
 
-/** K of table p. 4.1.5.1-16: biconvex 16/3; double wedge (c/x_t)/(1 − x_t/c), the ridge at mid-chord. */
+/**
+ * K of table p. 4.1.5.1-16: biconvex 16/3; double wedge (c/x_t)/(1 − x_t/c)
+ * = c/x_t + c/(c − x_t), the ridge at mid-chord. The two terms are the
+ * forward and the rearward faces; a single wedge (ridge at the trailing edge,
+ * x_t = c) keeps the forward-face term c/x_t = 1 and its blunt base is the
+ * trailing-edge base drag of DRAG-10 instead of the rear faces (D-066).
+ */
 export function sectionFactorK(section: WaveDragSection): number {
   switch (section) {
     case 'biconvex':
       return 16 / 3;
     case 'double-wedge':
       return 1 / 0.5 / (1 - 0.5);
+    case 'wedge':
+      return 1;
   }
 }
 
@@ -332,7 +340,12 @@ function transonicWaveDrag(input: FinWaveDragInput, M: number): { cd: number; cl
   // Stretch in Mach by 1/√cos Λ (eqs. 4.1.5.1-d, -f) and scale by (cos Λ)^2.5 (eq. -e).
   const unsweptMach = M * Math.sqrt(cosL);
   const reading = waveDragChart(input.aspectRatio * p, xiOf(unsweptMach, p));
-  return { cd: reading.value * tc ** (5 / 3) * cosL ** 2.5, clamped: reading.clamped };
+  // The chart is the biconvex family's (D-062); other sections take it in the ratio of their supersonic K (D-066).
+  const sectionScale = sectionFactorK(input.section) / sectionFactorK('biconvex');
+  return {
+    cd: reading.value * tc ** (5 / 3) * cosL ** 2.5 * sectionScale,
+    clamped: reading.clamped,
+  };
 }
 
 /**

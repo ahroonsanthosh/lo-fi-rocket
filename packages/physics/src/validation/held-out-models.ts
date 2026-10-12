@@ -29,7 +29,7 @@ const put = (positionInches: number, component: Component): PlacedComponent => (
  * fins, root 2.42, tip 0.47, span 2.40, leading edge swept 45° (sweep length
  * 2.40 − 0.47 = 1.93 in from the drawing's 45° leading edge and the 0.63 in
  * tip offset), single wedge 8° included angle (mean thickness 0.17 in, blunt
- * base: 'square'), root leading edge at 54.76. Reference diameter 2.67 in.
+ * base: 'wedge', 'square' until D-066), root leading edge at 54.76. Reference diameter 2.67 in.
  */
 export const BLUE_SCOUT_LENGTH_INCHES = 57.72;
 export const BLUE_SCOUT_DIAMETER_INCHES = 2.67;
@@ -65,7 +65,7 @@ export const BLUE_SCOUT_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(54.76, {
     kind: 'finSet',
-    crossSection: 'square',
+    crossSection: 'wedge',
     count: 4,
     rootChord: metres(2.42 * INCH),
     tipChord: metres(0.47 * INCH),
@@ -131,7 +131,7 @@ export const RM10_COMPONENTS: readonly PlacedComponent[] = [
  * cylinder to the base at 65.9; four fins: root 9.15, tip 6.54, span 4.38,
  * leading edge swept 45° (sweep 4.38), trailing edge at the base (root
  * leading edge at 56.75), 10° included-angle wedge with a blunt trailing
- * edge (mean thickness 0.69 in, 'square').
+ * edge (mean thickness 0.69 in, 'wedge'; 'square' until D-066).
  */
 export const TN_D3182_DIAMETER_INCHES = 6;
 export const TN_D3182_LENGTH_INCHES = 65.9;
@@ -153,7 +153,7 @@ export const TN_D3182_MODEL_A_COMPONENTS: readonly PlacedComponent[] = [
   }),
   put(56.75, {
     kind: 'finSet',
-    crossSection: 'square',
+    crossSection: 'wedge',
     count: 4,
     rootChord: metres(9.15 * INCH),
     tipChord: metres(6.54 * INCH),

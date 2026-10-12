@@ -241,6 +241,39 @@ describe('finSetTerm with the DATCOM method', () => {
     expect(below.cnAlpha).toBeCloseTo(at.cnAlpha, 6);
     expect(below.cpX).toBeCloseTo(at.cpX, 6);
   });
+  it('a wedge fin gets the sonic-leading-edge correction; a square one a warning instead', () => {
+    // Swept 45° (c 0.1, s 0.1, x_t 0.1), t 0.005, Mach √2: β = tan Λ, z = 1. Wedge: tan δ⊥ = (0.005/0.2)√2
+    // = 0.0353553, δ⊥ = atan(0.0353553) = 2.02487°; figure 4.1.3.2-60 at z = 1: 4° curve 0.9005, so
+    // the factor is 1 − 0.0995 × 2.02487/4 = 0.949631 on the fin panels' own force (the carry-over chart value does not
+    // depend on the wing slope).
+    const swept = { ...fins, span: metres(0.1), sweep: metres(0.1), thickness: metres(0.005) };
+    const opts = { method: 'datcom', afterbodyLength: 0 } as const;
+    const wedge = finSetTerm(
+      { ...swept, crossSection: 'wedge' },
+      squareMetres(0.01),
+      mach(Math.SQRT2),
+      radians(0),
+      false,
+      0,
+      undefined,
+      opts,
+    );
+    const square = finSetTerm(
+      { ...swept, crossSection: 'square' },
+      squareMetres(0.01),
+      mach(Math.SQRT2),
+      radians(0),
+      false,
+      0,
+      undefined,
+      opts,
+    );
+    const finPart = (t: typeof wedge): number => t.cnAlpha - t.carryOver.cnAlpha;
+    expect(finPart(wedge) / finPart(square)).toBeCloseTo(0.949631, 5);
+    expect(wedge.carryOver.cnAlpha).toBeCloseTo(square.carryOver.cnAlpha, 9);
+    expect(wedge.warnings.some((w) => w.startsWith('Blunt'))).toBe(false);
+    expect(square.warnings.some((w) => w.startsWith('Blunt'))).toBe(true);
+  });
   it("the 'niskanen' method is unchanged: no carry-over", () => {
     const t = finSetTerm(fins, squareMetres(0.01), mach(2), radians(0), false);
     expect(t.supersonicMethod).toBe('niskanen');

@@ -481,8 +481,19 @@ export function finSetTerm(
   // BAR-15 to BAR-17: the DATCOM single-fin slope (C_Nα)₁ = C_Nα A_fin/A_ref and the carry-over at Mach m.
   const wing = exposedWing(cr, ct, s, xt);
   // Step 2 of DATCOM 4.1.3.2 C: 'airfoil' fins as circular-arc sections on the MAC (D-065); blunt edges uncorrected.
-  const sharp = c.crossSection === 'airfoil';
-  const deltaPerp = sharp ? circularArcSemiwedge(c.thickness, mac, wing.tanLeadingEdge) : undefined;
+  // A single wedge's faces rise t/(2 c̄) along the chord, a double wedge's t/c̄ over the forward half; normal to
+  // the leading edge tan δ⊥ = that/cos Λ_LE.
+  const sharp =
+    c.crossSection === 'airfoil' || c.crossSection === 'wedge' || c.crossSection === 'double-wedge';
+  const deltaPerp =
+    c.crossSection === 'airfoil'
+      ? circularArcSemiwedge(c.thickness, mac, wing.tanLeadingEdge)
+      : c.crossSection === 'wedge' || c.crossSection === 'double-wedge'
+        ? Math.atan(
+            ((c.thickness as number) / ((c.crossSection === 'wedge' ? 2 : 1) * mac)) *
+              Math.sqrt(1 + wing.tanLeadingEdge ** 2),
+          )
+        : undefined;
   const datcomCompute = (m: number): DatcomFinAtMach => {
     const notes: string[] = [];
     const w = wingSupersonicCnAlpha(wing, m, deltaPerp);

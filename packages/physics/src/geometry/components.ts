@@ -76,8 +76,13 @@ export interface MassItemComponent {
   readonly radius: Metres;
 }
 
-/** Fin profile shapes of Niskanen §3.4.4 p. 49 (square = rectangular, rounded edges, airfoil). */
-export type FinCrossSection = 'square' | 'rounded' | 'airfoil';
+/**
+ * Fin profile shapes: Niskanen §3.4.4 p. 49 (square = rectangular, rounded
+ * edges, airfoil), 'wedge', a single wedge with a sharp leading edge and a
+ * blunt trailing edge of the full thickness, and 'double-wedge', sharp at
+ * both edges with the ridge at mid-chord (plan 0029, D-066).
+ */
+export type FinCrossSection = 'square' | 'rounded' | 'airfoil' | 'wedge' | 'double-wedge';
 
 export interface TrapezoidFinSetComponent {
   readonly kind: 'finSet';

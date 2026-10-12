@@ -330,7 +330,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           throw new InvalidInputError(
             'fin cross-section',
             c.crossSection,
-            'must be square, rounded or airfoil for the drag model (Niskanen §3.4.4)',
+            'must be square, rounded, airfoil, wedge or double-wedge for the drag model (Niskanen §3.4.4, D-066)',
           );
         }
         finSets.push({
@@ -339,6 +339,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           meanChord: st.finMeanChord,
         });
         const r = finPressureDrag(c.crossSection, st.finSweepAngle, input.mach);
+        warnings.push(...r.warnings);
         terms.push({
           index,
           kind: c.kind,
@@ -350,7 +351,8 @@ export function dragCoefficient(input: DragInputs): DragResult {
         if (c.crossSection !== 'square') {
           // DRAG-18/19: wave drag of the section (DATCOM 4.1.5.1 B and C) on the
           // planform area of the N fins; the airfoil profile is taken as
-          // biconvex and the rounded one as a round-nosed biconvex (D-062).
+          // biconvex and the rounded one as a round-nosed biconvex (D-062), the
+          // wedges with their own K (D-066).
           const cr: number = c.rootChord;
           const ct: number = c.tipChord;
           const s: number = c.span;
@@ -361,7 +363,10 @@ export function dragCoefficient(input: DragInputs): DragResult {
             aspectRatio: (2 * s * s) / planform,
             quarterChordSweep: Math.atan(((c.sweep as number) + ct / 4 - cr / 4) / s),
             leadingEdgeSweep: st.finSweepAngle,
-            section: 'biconvex',
+            section:
+              c.crossSection === 'wedge' || c.crossSection === 'double-wedge'
+                ? c.crossSection
+                : 'biconvex',
           });
           warnings.push(...w.warnings);
           const area = c.count * planform;

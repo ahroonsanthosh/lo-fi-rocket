@@ -1,4 +1,4 @@
-import type { Component, NoseShape } from '@lo-fi-rocket/physics';
+import type { Component, FinCrossSection, NoseShape } from '@lo-fi-rocket/physics';
 import { metres, type Metres } from '@lo-fi-rocket/physics';
 import type { DesignComponent } from '@lo-fi-rocket/formats';
 import { useId, type JSX } from 'react';
@@ -271,18 +271,20 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
       ))}
       {c.kind === 'finSet' ? (
         <div className="field">
-          <label htmlFor={sectionId}>Cross section (drag model only)</label>
+          <label htmlFor={sectionId}>Cross section (drag; supersonic fin force)</label>
           <div className="field-input">
             <select
               id={sectionId}
               value={c.crossSection ?? 'square'}
               onChange={(e) => {
-                update({ ...c, crossSection: e.target.value as 'square' | 'rounded' | 'airfoil' });
+                update({ ...c, crossSection: e.target.value as FinCrossSection });
               }}
             >
               <option value="square">Square (rectangular)</option>
               <option value="rounded">Rounded edges</option>
-              <option value="airfoil">Airfoil</option>
+              <option value="airfoil">Airfoil (sharp edges)</option>
+              <option value="wedge">Wedge (sharp leading edge, square trailing edge)</option>
+              <option value="double-wedge">Double wedge (sharp edges, ridge at mid-chord)</option>
             </select>
           </div>
         </div>

@@ -142,7 +142,7 @@ const MASS_RULES: readonly MotorMassRule[] = [
   'mass-profile',
 ];
 const SOURCE_FORMATS = ['RASP', 'RockSim', 'custom'] as const;
-const FIN_SECTIONS = ['square', 'rounded', 'airfoil'] as const;
+const FIN_SECTIONS = ['square', 'rounded', 'airfoil', 'wedge', 'double-wedge'] as const;
 
 function component(c: Ctx, path: string, v: unknown): Component {
   const o = c.object(path, v);

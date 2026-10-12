@@ -144,7 +144,7 @@ function arcasDrag(M: number, reynolds: number): { total: number; forebody: numb
   const base = r.terms.filter((t) => t.kind === 'base').reduce((a, t) => a + t.cd, 0);
   return { total: r.cd0, forebody: r.cd0 - base };
 }
-function nacaDrag(M: number, reynolds: number, section: 'square' | 'rounded'): number {
+function nacaDrag(M: number, reynolds: number, section: 'square' | 'wedge'): number {
   return dragCoefficient({
     components: nacaA53d02Components(section),
     mach: mach(M),
@@ -328,19 +328,19 @@ describe('NACA RM A53D02 zero-lift drag (figure 11, free flight)', () => {
         measured: p.cd,
         reynolds: re,
         square: nacaDrag(p.mach, re, 'square'),
-        rounded: nacaDrag(p.mach, re, 'rounded'),
+        wedge: nacaDrag(p.mach, re, 'wedge'),
       };
     });
     log('## NACA RM A53D02 C_D at zero lift (free flight, base included; digitisation ±0.01)');
     log('');
     log(
-      '| Mach | regime | Re | measured | square fins | rounded fins | error (square) | error (rounded) |\n| --- | --- | --- | --- | --- | --- | --- | --- |',
+      '| Mach | regime | Re | measured | square fins | wedge fins | error (square) | error (wedge) |\n| --- | --- | --- | --- | --- | --- | --- | --- |',
     );
     for (const r of rows)
       log(
-        `| ${String(r.mach)} | ${regime(r.mach)} | ${r.reynolds.toExponential(2)} | ${r.measured.toFixed(3)} | ${r.square.toFixed(3)} | ${r.rounded.toFixed(3)} | ${(((r.square - r.measured) / r.measured) * 100).toFixed(0)} % | ${(((r.rounded - r.measured) / r.measured) * 100).toFixed(0)} % |`,
+        `| ${String(r.mach)} | ${regime(r.mach)} | ${r.reynolds.toExponential(2)} | ${r.measured.toFixed(3)} | ${r.square.toFixed(3)} | ${r.wedge.toFixed(3)} | ${(((r.square - r.measured) / r.measured) * 100).toFixed(0)} % | ${(((r.wedge - r.measured) / r.measured) * 100).toFixed(0)} % |`,
       );
-    for (const section of ['square', 'rounded'] as const) {
+    for (const section of ['square', 'wedge'] as const) {
       const by = byRegime(
         rows.map((r) => ({ mach: r.mach, measured: r.measured, predicted: r[section] })),
         true,
