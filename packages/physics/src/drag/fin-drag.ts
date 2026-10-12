@@ -30,10 +30,15 @@ export interface FinPressureDrag {
 }
 
 /**
- * DRAG-10. Leading edge: rounded and airfoil profiles use eq. (3.89); a
- * square profile uses the stagnation drag (3.90). Both × cos²Γ_L for the
- * leading-edge sweep (3.91). Trailing edge (3.92): square = base drag
- * (3.94), rounded = half of it, airfoil = 0. Sum (3.93).
+ * DRAG-10. Leading edge: a rounded profile uses eq. (3.89); a square profile
+ * the stagnation drag (3.90); both × cos²Γ_L for the leading-edge sweep
+ * (3.91). An airfoil (sharp-nosed) profile carries no leading-edge pressure
+ * drag: the DATCOM refers the leading-edge pressure drag to the leading-edge
+ * frontal area 2 r_LE b/cos Λ (figure 4.1.5.1-30 and eq. 4.1.5.1-n), which
+ * is zero for a sharp edge; its wave drag comes from DRAG-18/19 instead
+ * (D-062; the thesis applied (3.89) to the whole thickness, the cause of the
+ * early transonic drag rise found in plan 0025). Trailing edge (3.92):
+ * square = base drag (3.94), rounded = half of it, airfoil = 0. Sum (3.93).
  */
 export function finPressureDrag(
   crossSection: FinCrossSection,
@@ -48,7 +53,11 @@ export function finPressureDrag(
     );
   }
   const perpendicular =
-    crossSection === 'square' ? stagnationDragCoefficient(mach) : roundedLeadingEdgeDrag(mach);
+    crossSection === 'square'
+      ? stagnationDragCoefficient(mach)
+      : crossSection === 'rounded'
+        ? roundedLeadingEdgeDrag(mach)
+        : 0;
   const leadingEdge = perpendicular * Math.cos(leadingEdgeSweep) ** 2;
   const base = baseDragCoefficient(mach);
   const trailingEdge = crossSection === 'square' ? base : crossSection === 'rounded' ? base / 2 : 0;

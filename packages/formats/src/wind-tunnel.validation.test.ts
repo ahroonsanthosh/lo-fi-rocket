@@ -7,7 +7,7 @@
  * that moves them is flagged (CLAUDE.md 7.6); the tables are printed for
  * `docs/reports/wind-tunnel-validation.md`.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -363,6 +363,8 @@ describe('NACA RM A53D02 zero-lift drag (figure 11, free flight)', () => {
 
 describe('report', () => {
   it('prints the tables', () => {
+    const report = process.env['WIND_TUNNEL_REPORT'];
+    if (report !== undefined && report !== '') writeFileSync(report, lines.join('\n') + '\n');
     console.log(lines.join('\n'));
     expect(lines.length).toBeGreaterThan(0);
   });

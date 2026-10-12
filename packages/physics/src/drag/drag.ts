@@ -25,6 +25,7 @@ import {
 } from '../units/si.js';
 import { baseDragArea, launchLugDrag, railButtonDrag } from './base-parasitic.js';
 import { finPressureDrag } from './fin-drag.js';
+import { finWaveDrag } from './datcom-fin-wave-drag.js';
 import {
   baseDragCoefficient,
   boatTailPressureDrag,
@@ -346,6 +347,33 @@ export function dragCoefficient(input: DragInputs): DragResult {
           area: st.area,
           cd: (r.cd * st.area) / aRef,
         });
+        if (c.crossSection !== 'square') {
+          // DRAG-18/19: wave drag of the section (DATCOM 4.1.5.1 B and C) on the
+          // planform area of the N fins; the airfoil profile is taken as
+          // biconvex and the rounded one as a round-nosed biconvex (D-062).
+          const cr: number = c.rootChord;
+          const ct: number = c.tipChord;
+          const s: number = c.span;
+          const planform = ((cr + ct) / 2) * s;
+          const w = finWaveDrag({
+            mach: input.mach,
+            thicknessRatio: st.finThickness / st.finMeanChord,
+            aspectRatio: (2 * s * s) / planform,
+            quarterChordSweep: Math.atan(((c.sweep as number) + ct / 4 - cr / 4) / s),
+            leadingEdgeSweep: st.finSweepAngle,
+            section: 'biconvex',
+          });
+          warnings.push(...w.warnings);
+          const area = c.count * planform;
+          terms.push({
+            index,
+            kind: c.kind,
+            source: `fin wave drag (DATCOM ${w.method})`,
+            cdComponent: w.cd,
+            area,
+            cd: (w.cd * area) / aRef,
+          });
+        }
         break;
       }
       case 'launchLug': {

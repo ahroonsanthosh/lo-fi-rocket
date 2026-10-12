@@ -307,3 +307,15 @@ export {
   TN_D3182_LENGTH_INCHES,
   TN_D3182_MODEL_A_COMPONENTS,
 } from './validation/held-out-models.js';
+export {
+  DATCOM_FIGURE_4151_29,
+  finWaveDrag,
+  sectionFactorK,
+  supersonicWaveDrag,
+  WAVE_DRAG_FAIRING,
+  waveDragChart,
+  type FinWaveDrag,
+  type FinWaveDragInput,
+  type WaveDragCurve,
+  type WaveDragSection,
+} from './drag/datcom-fin-wave-drag.js';
