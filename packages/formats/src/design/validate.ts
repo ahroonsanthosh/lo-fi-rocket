@@ -424,15 +424,30 @@ function motorSelection(c: Ctx, path: string, v: unknown): MotorSelection {
 
 function motorMount(c: Ctx, path: string, v: unknown): MotorMount {
   const o = c.object(path, v);
-  c.keys(path, o, ['componentId', 'overhang'], ['motor']);
+  c.keys(path, o, ['componentId', 'overhang'], ['motor', 'cluster']);
   const motor =
     'motor' in o && o['motor'] !== undefined
       ? motorSelection(c, `${path}.motor`, o['motor'])
       : undefined;
+  // Plan 0057: one offset per motor, finite, at least one.
+  const cluster =
+    'cluster' in o && o['cluster'] !== undefined
+      ? c.array(`${path}.cluster`, o['cluster']).map((item, i) => {
+          const p = `${path}.cluster[${String(i)}]`;
+          const off = c.object(p, item);
+          c.keys(p, off, ['y', 'z']);
+          return {
+            y: metres(c.number(`${p}.y`, off['y'])),
+            z: metres(c.number(`${p}.z`, off['z'])),
+          };
+        })
+      : undefined;
+  if (cluster?.length === 0) c.fail(`${path}.cluster`, 'must list at least one motor offset');
   return {
     componentId: c.nonEmptyString(`${path}.componentId`, o['componentId']),
     overhang: metres(c.number(`${path}.overhang`, o['overhang'])),
     ...(motor === undefined ? {} : { motor }),
+    ...(cluster === undefined ? {} : { cluster }),
   };
 }
 

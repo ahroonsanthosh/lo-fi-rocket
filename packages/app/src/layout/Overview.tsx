@@ -4,7 +4,7 @@
  * small tables of the motor and the airframe. Every figure is the
  * physics' own; the dials only picture it on a stated scale (D-UI-7).
  */
-import { designThrustToWeight, type RocketDesign } from '@lo-fi-rocket/formats';
+import { designMotorCount, designThrustToWeight, type RocketDesign } from '@lo-fi-rocket/formats';
 import { PhysicsError } from '@lo-fi-rocket/physics';
 import { Button, FIGURE_DISPLAY, Gauge, SeverityTag, type Severity } from '@lo-fi-rocket/ui';
 import type { JSX, ReactNode } from 'react';
@@ -90,6 +90,8 @@ export function Overview(props: OverviewProps): JSX.Element {
   const length = figures.length === 0 ? undefined : len.fromSI(figures.length);
   const notYet = stale ? 'out of date: simulate again' : 'simulate to see';
   const motorFig = motor === undefined ? undefined : motorFigures(motor.definition);
+  // Plan 0057: a cluster of identical motors is named with its count; figures are per motor.
+  const motorCount = designMotorCount(design);
   const status = s === undefined ? undefined : LEVEL_STATUS[s.liftoff.level];
 
   return (
@@ -171,12 +173,12 @@ export function Overview(props: OverviewProps): JSX.Element {
               <Row label="Motor">
                 {motor === undefined
                   ? 'none chosen'
-                  : `${motor.definition.manufacturer} ${motor.definition.designation}`}
+                  : `${motorCount > 1 ? `${String(motorCount)} × ` : ''}${motor.definition.manufacturer} ${motor.definition.designation}`}
               </Row>
               <Row label="Total impulse">
                 {motorFig === undefined
                   ? '—'
-                  : `${motorFig.totalImpulse.toFixed(FIGURE_DISPLAY.totalImpulse.decimals)} N·s`}
+                  : `${motorFig.totalImpulse.toFixed(FIGURE_DISPLAY.totalImpulse.decimals)} N·s${motorCount > 1 ? ' each' : ''}`}
               </Row>
               <Row label="Burn time">
                 {motorFig === undefined

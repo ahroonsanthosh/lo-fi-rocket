@@ -95,6 +95,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Step 1: the confidence report (`fidelity.ts`, `FlightResult.approximations` and `confidence`, shown with the results).
   - Step 3 part 1 (plan 0056, D-084): the import approximates parts inside the rocket and part settings instead of refusing; approximations travel with parts and the design to every result; lug instances and transition shoulders exact against OpenRocket probes.
   - D-085: `.ork` fin cant read in degrees (CantProbe); the cant approximation now states the real angle. OpenRocket's example designs: 10 of 17 import (multi-stage and clusters remain).
+  - Step 3 part 2a (plan 0057, D-086): motor clusters in the physics (GEO-15, n motors' thrust and base area), the design file and the `.ork` import; three D12s against OpenRocket: mass and CG within 1e-5, apogee +1.0 %, maximum velocity +0.4 %. OpenRocket's "Clustered motors" example imports (11 of 17).
 
 ## In progress
 
@@ -102,7 +103,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0055, in order: step 3 part 2 (parts outside the body and the motor: pods, stages, clusters, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
+- Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
 - The owner's answers to the open questions below decide the follow-up work, in this suggested order: the transonic model sources (D-034, D-039) and then the wind tunnel validation of CLAUDE.md 6.7; the large-angle fin force (D-046); `.CDX1` samples; altimeter data for 7.5; golden flight time series (7.6).
 

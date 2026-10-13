@@ -101,15 +101,17 @@ export function orkToDesign(
                 ...(delay === undefined ? {} : { ejectionDelay: delay }),
               },
             }),
+        ...(mount.cluster === undefined ? {} : { cluster: mount.cluster }),
       },
     };
+    const motors = mount.cluster === undefined ? '' : `${String(mount.cluster.length)} × `;
     if (match === undefined) {
       notices.push(
-        `The file names the motor ${mount.manufacturer} ${mount.designation} (${String(Math.round(mount.diameter * 1000))} mm, ${delayText}) but carries no thrust curve and no motor of that name is in the library: choose it in the motor panel.`,
+        `The file names the motor ${motors}${mount.manufacturer} ${mount.designation} (${String(Math.round(mount.diameter * 1000))} mm, ${delayText}) but carries no thrust curve and no motor of that name is in the library: choose it in the motor panel.`,
       );
     } else {
       notices.push(
-        `Motor ${match.definition.manufacturer} ${match.definition.designation} taken from the library, ${delay === undefined ? 'plugged as in the file (no ejection charge)' : `with the file's delay of ${String(delay)} s`}.`,
+        `Motor ${motors}${match.definition.manufacturer} ${match.definition.designation} taken from the library, ${delay === undefined ? 'plugged as in the file (no ejection charge)' : `with the file's delay of ${String(delay)} s`}.`,
       );
     }
   }

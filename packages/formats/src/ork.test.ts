@@ -392,9 +392,22 @@ describe('inputs are refused, reported as malformed or approximated, by element 
       ),
       /more than one motor mount/,
     );
-    unsupported(
+    // Plan 0057: a cluster is n tubes holding the same motor, at OpenRocket's layout offsets.
+    const double = parseOrk(
       edit(r1, '<clusterconfiguration>single', '<clusterconfiguration>double'),
-      /motor clusters/,
+      'edited.ork',
+    );
+    expect(double.components.filter((c) => c.element === 'innertube')).toHaveLength(2);
+    // "double": unit points (∓0.5, 0) times the 0.025 m tube diameter.
+    expect(double.motorMount?.cluster).toEqual([
+      { y: -0.0125, z: 0 },
+      { y: 0.0125, z: 0 },
+    ]);
+    // An unknown layout flies as one motor, listed as major.
+    approximated(
+      edit(r1, '<clusterconfiguration>single', '<clusterconfiguration>7-hex'),
+      /the motor cluster layout "7-hex"/,
+      'major',
     );
   });
 

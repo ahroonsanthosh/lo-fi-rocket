@@ -10,11 +10,12 @@ import { stagnationDragCoefficient } from './pressure-drag.js';
 /**
  * DRAG-11 reference area: the base area minus the area of the thrusting
  * motors (p. 51: "subtracting the area of the thrusting motors from the base
- * reference area"); never negative.
+ * reference area"), `motorCount` of them for a cluster (plan 0057); never negative.
  */
 export function baseDragArea(
   baseRadius: number,
   thrustingMotorDiameter: number | undefined,
+  motorCount = 1,
 ): number {
   if (!(baseRadius >= 0))
     throw new InvalidInputError('base radius', baseRadius, 'must be 0 m or greater');
@@ -22,7 +23,10 @@ export function baseDragArea(
   if (thrustingMotorDiameter === undefined) return base;
   if (!(thrustingMotorDiameter >= 0))
     throw new InvalidInputError('motor diameter', thrustingMotorDiameter, 'must be 0 m or greater');
-  return Math.max(0, base - (Math.PI * thrustingMotorDiameter * thrustingMotorDiameter) / 4);
+  if (!(Number.isInteger(motorCount) && motorCount >= 1))
+    throw new InvalidInputError('motor count', motorCount, 'must be a whole number, 1 or more');
+  const one = (Math.PI * thrustingMotorDiameter * thrustingMotorDiameter) / 4;
+  return Math.max(0, base - motorCount * one);
 }
 
 export interface ParasiticDrag {

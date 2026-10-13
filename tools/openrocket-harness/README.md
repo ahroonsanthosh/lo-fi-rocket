@@ -62,3 +62,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Cant probe
 
 `src/CantProbe.java` (D-085) saves a fin set canted 2° and shows the value written in the file (2.0: degrees) and the cant OpenRocket reads back (0.0349 rad); output in `reference/rockets/cant-probe/`.
+
+## Cluster probe
+
+`src/ClusterProbe.java` (plan 0057) prints OpenRocket's motor cluster layouts and measures a rocket with one Estes D12 and with three in a "3-ring" (plain, rotated and scaled, and with a mass override on the tubes): offsets, mass, CG and inertias of the structure and the motors, and a flight with the reference harness's settings; output in `reference/rockets/cluster-probe/`. Compile it with `src/ReferenceHarness.java`.

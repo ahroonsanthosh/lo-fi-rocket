@@ -153,11 +153,13 @@ export {
   REFERENCE_MOTORS,
 } from './geometry/reference-rockets.js';
 export {
+  clusterSums,
   combineRocket,
   motorMassPart,
   overriddenMassProperties,
   rocketMassProperties,
   structuralMassParts,
+  type ClusterOffset,
   type MassOverride,
   type MotorMass,
   type PlacedComponent,
@@ -438,6 +440,7 @@ export {
   type LargeAngleMethod,
 } from './flight/aerodynamics.js';
 export {
+  clusterApproximations,
   componentApproximations,
   confidenceOf,
   type Approximation,
