@@ -72,6 +72,7 @@ export {
   designFlightWarnings,
   designMassProperties,
   designMotor,
+  designMotorFitProblems,
   designMotorMass,
   designPlacedComponents,
   designSimulationOptions,
