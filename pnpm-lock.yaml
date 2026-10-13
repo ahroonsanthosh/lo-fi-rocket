@@ -41,12 +41,18 @@ importers:
 
   packages/app:
     dependencies:
+      '@fontsource/lato':
+        specifier: 5.2.7
+        version: 5.2.7
       '@lo-fi-rocket/formats':
         specifier: workspace:*
         version: link:../formats
       '@lo-fi-rocket/physics':
         specifier: workspace:*
         version: link:../physics
+      '@lo-fi-rocket/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@lo-fi-rocket/viewer':
         specifier: workspace:*
         version: link:../viewer
@@ -289,6 +295,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource/lato@5.2.7':
+    resolution: {integrity: sha512-k5mum1ADbDW5cTw1Ett1eQVWeoZ6gq0ct6SFBibEhB4LRxhniChJZTBgd6ph5yBxLkN1fcnsnmicBNA4S/3nbw==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1494,6 +1503,8 @@ snapshots:
       levn: 0.4.1
 
   '@exodus/bytes@1.16.0': {}
+
+  '@fontsource/lato@5.2.7': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

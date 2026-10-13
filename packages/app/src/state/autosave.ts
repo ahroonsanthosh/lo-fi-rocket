@@ -11,6 +11,7 @@ const DESIGN_KEY = (id: string): string => `${STORAGE_PREFIX}design:${id}`;
 const RECOVERED_KEY = (id: string): string => `${STORAGE_PREFIX}recovered:${id}`;
 const LAST_KEY = `${STORAGE_PREFIX}last`;
 const UNITS_KEY = `${STORAGE_PREFIX}units`;
+const THEME_KEY = `${STORAGE_PREFIX}theme`;
 
 export interface Storage {
   getItem(key: string): string | null;
@@ -49,6 +50,17 @@ export function saveUnits(storage: Storage, units: 'metric' | 'imperial'): void 
 
 export function loadUnits(storage: Storage): 'metric' | 'imperial' {
   return storage.getItem(UNITS_KEY) === 'imperial' ? 'imperial' : 'metric';
+}
+
+export type Theme = 'dark' | 'light';
+
+export function saveTheme(storage: Storage, theme: Theme): void {
+  storage.setItem(THEME_KEY, theme);
+}
+
+/** The colour theme; dark (the instrument-panel look) unless light was chosen (D-UI-6). */
+export function loadTheme(storage: Storage): Theme {
+  return storage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
 }
 
 /** The browser's local storage, or undefined where it is unavailable (private mode, tests without jsdom). */

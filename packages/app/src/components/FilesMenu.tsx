@@ -8,7 +8,8 @@ import {
   parseOrk,
   serializeDesign,
 } from '@lo-fi-rocket/formats';
-import { useId, useState, type JSX } from 'react';
+import { Icon } from '@lo-fi-rocket/ui';
+import { useEffect, useId, useRef, useState, type JSX } from 'react';
 import { bundledMotors, storedMotors } from '../motors/library.js';
 import {
   deleteStoredDesign,
@@ -23,14 +24,54 @@ function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
-/** Save, open, switch between stored designs, import OpenRocket files (plan 0015). */
-export function FilesMenu({ storage }: { readonly storage: Storage | undefined }): JSX.Element {
+/** What a file action reports: a note (opened, imported) or a failure, shown in the checks column. */
+export interface FileNotice {
+  readonly kind: 'note' | 'error';
+  readonly text: string;
+}
+
+export interface FilesMenuProps {
+  readonly storage: Storage | undefined;
+  readonly onNotice: (notice: FileNotice) => void;
+}
+
+/** Save, open, switch between stored designs, import OpenRocket files (plan 0015), behind a File menu. */
+export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
   const { state, dispatch } = useStore();
   const services = useServices();
-  const [notice, setNotice] = useState<string | undefined>(undefined);
+  const setNotice = (text: string, kind: FileNotice['kind'] = 'note'): void => {
+    onNotice({ kind, text });
+  };
   const [listOpen, setListOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const openId = useId();
   const orkId = useId();
+  const menuId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const close = (): void => {
+    setMenuOpen(false);
+    setListOpen(false);
+  };
+  // The menu closes on a click outside it and on Escape, which returns focus to the File button.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent): void => {
+      if (e.target instanceof Node && rootRef.current?.contains(e.target) !== true) close();
+    };
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        close();
+        buttonRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   const save = (): void => {
     const name = state.design.name.trim() === '' ? 'rocket' : state.design.name.trim();
@@ -46,7 +87,7 @@ export function FilesMenu({ storage }: { readonly storage: Storage | undefined }
       dispatch({ type: 'replace-design', design });
       setNotice(`Opened ${file.name}.`);
     } catch (e) {
-      setNotice(errorText(e));
+      setNotice(errorText(e), 'error');
     }
   };
   const importOrk = async (file: File): Promise<void> => {
@@ -63,124 +104,149 @@ export function FilesMenu({ storage }: { readonly storage: Storage | undefined }
         [`Imported ${file.name} (OpenRocket ${rocket.formatVersion}).`, ...notices].join(' '),
       );
     } catch (e) {
-      setNotice(errorText(e));
+      setNotice(errorText(e), 'error');
     }
   };
   const stored = listOpen && storage !== undefined ? listStoredDesigns(storage) : [];
 
   return (
-    <div className="files-menu">
-      <div className="header-actions">
-        <button type="button" onClick={save}>
-          Save
-        </button>
-        <label className="file-button" htmlFor={openId}>
-          Open
-        </label>
-        <input
-          id={openId}
-          type="file"
-          accept=".json"
-          aria-label="Open a design file"
-          className="visually-hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f !== undefined) void open(f);
-            e.target.value = '';
-          }}
-        />
-        <label className="file-button" htmlFor={orkId}>
-          Import .ork
-        </label>
-        <input
-          id={orkId}
-          type="file"
-          accept=".ork,.xml"
-          aria-label="Import an OpenRocket file"
-          className="visually-hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f !== undefined) void importOrk(f);
-            e.target.value = '';
-          }}
-        />
-        <button
-          type="button"
-          aria-expanded={listOpen}
-          onClick={() => {
-            setListOpen((v) => !v);
-          }}
-        >
-          Designs
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            dispatch({ type: 'replace-design', design: newDesign(newId(), 'New rocket') });
-          }}
-        >
-          New
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            dispatch({ type: 'replace-design', design: exampleDesign(newId()) });
-          }}
-        >
-          Load example
-        </button>
-      </div>
-      {listOpen ? (
-        <ul className="design-list" aria-label="Stored designs">
-          {stored.length === 0 ? (
-            <li className="muted">No designs stored in this browser yet.</li>
-          ) : null}
-          {stored.map((d) => (
-            <li key={d.id}>
-              <span>
-                {d.name}
-                {d.id === state.design.id ? ' (current)' : ''}
-              </span>
-              <span>
-                <button
-                  type="button"
-                  aria-label={`Open ${d.name}`}
-                  disabled={storage === undefined || d.id === state.design.id}
-                  onClick={() => {
-                    if (storage === undefined) return;
-                    try {
-                      dispatch({ type: 'replace-design', design: loadStoredDesign(storage, d.id) });
+    <div className="files-menu" ref={rootRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="toolbar-button"
+        aria-expanded={menuOpen}
+        aria-controls={menuId}
+        onClick={() => {
+          if (menuOpen) close();
+          else setMenuOpen(true);
+        }}
+      >
+        <Icon name="file" size={18} />
+        File
+        <Icon name="chevron" size={16} />
+      </button>
+      <div id={menuId} className="file-menu" hidden={!menuOpen}>
+        <div className="header-actions">
+          <button
+            type="button"
+            onClick={() => {
+              save();
+              close();
+            }}
+          >
+            Save
+          </button>
+          <label className="file-button" htmlFor={openId}>
+            Open
+          </label>
+          <input
+            id={openId}
+            type="file"
+            accept=".json"
+            aria-label="Open a design file"
+            className="visually-hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f !== undefined) void open(f);
+              e.target.value = '';
+              close();
+            }}
+          />
+          <label className="file-button" htmlFor={orkId}>
+            Import .ork
+          </label>
+          <input
+            id={orkId}
+            type="file"
+            accept=".ork,.xml"
+            aria-label="Import an OpenRocket file"
+            className="visually-hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f !== undefined) void importOrk(f);
+              e.target.value = '';
+              close();
+            }}
+          />
+          <button
+            type="button"
+            aria-expanded={listOpen}
+            onClick={() => {
+              setListOpen((v) => !v);
+            }}
+          >
+            Designs
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: 'replace-design', design: newDesign(newId(), 'New rocket') });
+              close();
+            }}
+          >
+            New
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              dispatch({ type: 'replace-design', design: exampleDesign(newId()) });
+              close();
+            }}
+          >
+            Load example
+          </button>
+        </div>
+        {listOpen ? (
+          <ul className="design-list" aria-label="Stored designs">
+            {stored.length === 0 ? (
+              <li className="muted">No designs stored in this browser yet.</li>
+            ) : null}
+            {stored.map((d) => (
+              <li key={d.id}>
+                <span>
+                  {d.name}
+                  {d.id === state.design.id ? ' (current)' : ''}
+                </span>
+                <span>
+                  <button
+                    type="button"
+                    aria-label={`Open ${d.name}`}
+                    disabled={storage === undefined || d.id === state.design.id}
+                    onClick={() => {
+                      if (storage === undefined) return;
+                      try {
+                        dispatch({
+                          type: 'replace-design',
+                          design: loadStoredDesign(storage, d.id),
+                        });
+                        close();
+                      } catch (e) {
+                        setNotice(errorText(e), 'error');
+                      }
+                    }}
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    aria-label={`Delete ${d.name}`}
+                    disabled={storage === undefined || d.id === state.design.id}
+                    onClick={() => {
+                      if (storage !== undefined) deleteStoredDesign(storage, d.id);
                       setListOpen(false);
-                    } catch (e) {
-                      setNotice(errorText(e));
-                    }
-                  }}
-                >
-                  Open
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  aria-label={`Delete ${d.name}`}
-                  disabled={storage === undefined || d.id === state.design.id}
-                  onClick={() => {
-                    if (storage !== undefined) deleteStoredDesign(storage, d.id);
-                    setListOpen(false);
-                    setListOpen(true);
-                  }}
-                >
-                  Delete
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {notice === undefined ? null : (
-        <p className="notice" role="status">
-          {notice}
-        </p>
-      )}
+                      setListOpen(true);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
 }

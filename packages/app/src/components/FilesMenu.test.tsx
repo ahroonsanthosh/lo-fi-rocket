@@ -50,6 +50,7 @@ describe('files (plan 0015)', () => {
       />,
     );
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(saved[0]).toBe('Example: three-fin sport rocket (R1).lofi.json');
     expect(parseDesign(saved[1] ?? '').id).toBe('s');
@@ -58,15 +59,17 @@ describe('files (plan 0015)', () => {
       screen.getByLabelText('Open a design file'),
       new File([serializeDesign(other)], 'other.lofi.json', { type: 'application/json' }),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent('Opened other.lofi.json.');
+    // File notes and failures are listed in the checks column (docs/ui/redesign.md section 5).
+    const warnings = screen.getByRole('region', { name: 'Warnings' });
+    expect(await within(warnings).findByText('Opened other.lofi.json.')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Design name' })).toHaveValue('Opened rocket');
     await user.upload(
       screen.getByLabelText('Open a design file'),
       new File(['{"schemaVersion":1}'], 'bad.lofi.json'),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /bad\.lofi\.json, \$: missing required field "id"/,
-    );
+    expect(
+      await within(warnings).findByText(/bad\.lofi\.json, \$: missing required field "id"/),
+    ).toBeInTheDocument();
   });
 
   it('lists stored designs and switches between them', async () => {
@@ -85,6 +88,7 @@ describe('files (plan 0015)', () => {
       />,
     );
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'File' }));
     await user.click(screen.getByRole('button', { name: 'Designs' }));
     const list = screen.getByRole('list', { name: 'Stored designs' });
     expect(within(list).getByText('Alpha (current)')).toBeInTheDocument();
@@ -122,8 +126,8 @@ describe('files (plan 0015)', () => {
       screen.getByLabelText('Import an OpenRocket file'),
       new File([bytes], 'r1.ork'),
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      /Imported r1\.ork \(OpenRocket 1\.\d+\)\. Motor Estes D12 taken from the library/,
+    expect(await screen.findByRole('region', { name: 'Warnings' })).toHaveTextContent(
+      /Imported r1\.ork \(OpenRocket 1\.\d+\)\. ?Motor Estes D12 taken from the library/,
     );
     const stability = screen.getByRole('region', { name: 'Stability' });
     expect(within(stability).getByText('1.84')).toBeInTheDocument();

@@ -1,14 +1,14 @@
-import { designFlightWarnings, type RocketDesign } from '@lo-fi-rocket/formats';
-import { validateLaunch, type FlightResult, type StabilityPoint } from '@lo-fi-rocket/physics';
-import { useState, type JSX } from 'react';
+import type { RocketDesign } from '@lo-fi-rocket/formats';
+import type { FlightResult, StabilityPoint } from '@lo-fi-rocket/physics';
+import { Button, FIGURE_DISPLAY, ResultCard, ResultGrid } from '@lo-fi-rocket/ui';
+import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react';
 import { resultToCsv } from '../simulation/csv-export.js';
 import { useServices } from '../state/services.js';
 import { useStore } from '../state/store.js';
-import { formatQuantity, type UnitSystem } from '../units/display.js';
+import { formatQuantity, unitFor, type UnitSystem } from '../units/display.js';
 import { ComparisonPanel } from './ComparisonPanel.js';
 import { DispersionPanel } from './DispersionPanel.js';
 import type { DispersionState } from './FlightViewer.js';
-import { LaunchEditor } from './LaunchEditor.js';
 
 export const FLIGHT_SELECTION_ID = 'flight';
 
@@ -24,6 +24,12 @@ export interface FlightPanelProps {
   /** The Monte Carlo batch, lifted to the App so the 3D replay can show it (plan 0034). */
   readonly dispersion?: DispersionState | undefined;
   readonly onDispersion?: (d: DispersionState | undefined) => void;
+  /** Lifted to the App so the checks column and the status bar show it too. */
+  readonly error?: string | undefined;
+  readonly onError?: (message: string | undefined) => void;
+  /** The 3D replay and the plots of the flight, shown under the results (App). */
+  readonly replay?: ReactNode;
+  readonly plots?: ReactNode;
 }
 
 /** The lowest margin of a phase at its Mach number and angle of attack (plan 0030). */
@@ -37,19 +43,34 @@ function bearing(rad: number): string {
   return `${deg.toFixed(0)}°`;
 }
 
-/** Launch conditions, the run button, the summary, the events and the warnings (plan 0014). */
+/**
+ * The run button, the summary and the events (plan 0014), then the 3D
+ * replay, the plots, the recorded-flight comparison and the Monte Carlo
+ * dispersion. Simulate is at the top so it is never below the fold
+ * (docs/ui/redesign.md section 3); the warnings are in the checks column
+ * and the launch conditions have their own view.
+ */
 export function FlightPanel({
   flight,
   onFlight,
   dispersion,
   onDispersion,
+  error: liftedError,
+  onError,
+  replay,
+  plots,
 }: FlightPanelProps): JSX.Element {
   const { state } = useStore();
   const services = useServices();
   const units = state.units;
   const design = state.design;
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [localError, setLocalError] = useState<string | undefined>(undefined);
+  const error = onError === undefined ? localError : liftedError;
+  const setError = (m: string | undefined): void => {
+    setLocalError(m);
+    onError?.(m);
+  };
 
   const run = async (): Promise<void> => {
     setBusy(true);
@@ -64,37 +85,47 @@ export function FlightPanel({
   };
 
   const stale = flight !== undefined && flight.design !== design;
+  // A new flight brings its results into view, below the 3D replay it also opens.
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const shown = useRef(flight);
+  useEffect(() => {
+    const el = resultsRef.current;
+    // jsdom has no scrollIntoView; every browser the app runs in does.
+    if (flight !== undefined && flight !== shown.current && el !== null && 'scrollIntoView' in el) {
+      el.scrollIntoView({ block: 'start' });
+    }
+    shown.current = flight;
+  }, [flight]);
   const noMotor = design.motorMount?.motor === undefined;
 
   return (
     <section className="editor" aria-label="Flight">
-      <h2>Launch and flight</h2>
-      <LaunchEditor />
-      <div className="editor-actions">
-        <button
-          type="button"
-          className="primary"
-          disabled={busy || noMotor}
-          onClick={() => {
-            void run();
-          }}
-        >
-          {busy ? 'Simulating…' : 'Simulate flight'}
-        </button>
-        {flight === undefined ? null : (
-          <button
-            type="button"
+      <div className="editor-title">
+        <h2>Simulate and results</h2>
+        <div className="editor-actions">
+          <Button
+            variant="primary"
+            disabled={busy || noMotor}
             onClick={() => {
-              services.saveFile(
-                `${design.name || 'flight'}.csv`,
-                resultToCsv(flight.result, flight.design.name),
-                'text/csv',
-              );
+              void run();
             }}
           >
-            Export CSV
-          </button>
-        )}
+            {busy ? 'Simulating…' : 'Simulate flight'}
+          </Button>
+          {flight === undefined ? null : (
+            <Button
+              onClick={() => {
+                services.saveFile(
+                  `${design.name || 'flight'}.csv`,
+                  resultToCsv(flight.result, flight.design.name),
+                  'text/csv',
+                );
+              }}
+            >
+              Export CSV
+            </Button>
+          )}
+        </div>
       </div>
       {noMotor ? <p className="muted">Select a motor before simulating.</p> : null}
       {error === undefined ? null : (
@@ -111,7 +142,15 @@ export function FlightPanel({
               again to update.
             </p>
           ) : null}
-          <Summary flight={flight} units={units} />
+          <div ref={resultsRef} className="results-anchor">
+            <Summary flight={flight} units={units} stale={stale} />
+          </div>
+        </>
+      )}
+      {flight === undefined ? null : (
+        <>
+          {replay}
+          {plots}
         </>
       )}
       <ComparisonPanel simulatedApogee={flight?.result.summary.apogee} />
@@ -123,111 +162,127 @@ export function FlightPanel({
 function Summary({
   flight,
   units,
+  stale,
 }: {
   readonly flight: FlightState;
   readonly units: UnitSystem;
+  readonly stale: boolean;
 }): JSX.Element {
   const r = flight.result;
   const s = r.summary;
-  const d = flight.design;
-  const warnings = [
-    ...designFlightWarnings(d, r).map((w) => w.message),
-    ...validateLaunch({ altitude: d.launch.site.altitude }, d.launch.rail).warnings.map(
-      (w) => w.message,
-    ),
-  ];
-  const opt = (v: number | undefined, f: (x: number) => string): string =>
-    v === undefined ? '—' : f(v);
+  const m = unitFor('m', units);
+  const v = unitFor('velocity', units);
+  const a = unitFor('acceleration', units);
+  const fd = FIGURE_DISPLAY;
+  const opt = (x: number | undefined, f: (y: number) => string): string =>
+    x === undefined ? '—' : f(x);
   return (
     <div className="results" aria-label="Flight results">
-      <h3>Results</h3>
-      {warnings.length === 0 ? (
-        <p className="ok">No warnings.</p>
-      ) : (
-        <ul className="warnings" aria-label="Warnings">
-          {warnings.map((w) => (
-            <li key={w} className="warning">
-              {w}
-            </li>
-          ))}
-        </ul>
-      )}
-      <dl className="figures">
-        <div>
-          <dt>Apogee</dt>
-          <dd>{formatQuantity(s.apogee, 'm', units)}</dd>
-        </div>
-        <div>
-          <dt>Time to apogee</dt>
-          <dd>{s.timeToApogee.toFixed(2)} s</dd>
-        </div>
-        <div>
-          <dt>Maximum velocity</dt>
-          <dd>{formatQuantity(s.maxVelocity, 'velocity', units)}</dd>
-        </div>
-        <div>
-          <dt>Maximum Mach</dt>
-          <dd>{s.maxMach.toFixed(3)}</dd>
-        </div>
-        <div>
-          <dt>Maximum acceleration</dt>
-          <dd>{formatQuantity(s.maxAcceleration, 'acceleration', units)}</dd>
-        </div>
-        <div>
-          <dt>Rail exit velocity</dt>
-          <dd>
-            {formatQuantity(s.railExitVelocity, 'velocity', units)} at {s.railExitTime.toFixed(3)} s
-          </dd>
-        </div>
-        <div>
-          <dt>Burnout</dt>
-          <dd>
-            {s.burnoutTime.toFixed(2)} s, {formatQuantity(s.burnoutVelocity, 'velocity', units)}
-          </dd>
-        </div>
-        <div>
-          <dt>Deployment</dt>
-          <dd>
-            {opt(s.deploymentTime, (t) => `${t.toFixed(2)} s`)} at{' '}
-            {opt(s.deploymentVelocity, (v) => formatQuantity(v, 'velocity', units))}
-          </dd>
-        </div>
-        <div>
-          <dt>Lowest in-flight stability</dt>
-          <dd>
-            {stabilityText(s.minimumStability.powered, 'powered')}
-            {s.minimumStability.coast === undefined ? '' : '; '}
-            {stabilityText(s.minimumStability.coast, 'coast')}
-          </dd>
-        </div>
-        <div>
-          <dt>Descent rate at landing</dt>
-          <dd>{opt(s.descentRate, (v) => formatQuantity(v, 'velocity', units))}</dd>
-        </div>
-        <div>
-          <dt>Landing</dt>
-          <dd>
-            {opt(s.landingDistance, (x) => formatQuantity(x, 'm', units))}
-            {s.landingDirection === undefined ||
-            s.landingDistance === undefined ||
-            s.landingDistance < 0.01
-              ? ''
-              : ` towards ${bearing(s.landingDirection)}`}
-          </dd>
-        </div>
-        <div>
-          <dt>Flight time</dt>
-          <dd>
-            {s.flightTime.toFixed(2)} s (
-            {s.endReason === 'landing'
-              ? 'landed'
+      <ResultGrid label="Flight results">
+        <ResultCard
+          label="Apogee"
+          term="apogee"
+          value={m.fromSI(s.apogee)}
+          decimals={m.decimals}
+          unit={m.label}
+          stale={stale}
+        />
+        <ResultCard
+          label="Time to apogee"
+          value={s.timeToApogee}
+          decimals={fd.timeToApogee.decimals}
+          unit={fd.timeToApogee.unit}
+          stale={stale}
+        />
+        <ResultCard
+          label="Maximum velocity"
+          value={v.fromSI(s.maxVelocity)}
+          decimals={v.decimals}
+          unit={v.label}
+          stale={stale}
+        />
+        <ResultCard
+          label="Maximum Mach"
+          term="mach"
+          value={s.maxMach}
+          decimals={fd.maxMach.decimals}
+          unit={fd.maxMach.unit}
+          stale={stale}
+        />
+        <ResultCard
+          label="Maximum acceleration"
+          value={a.fromSI(s.maxAcceleration)}
+          decimals={a.decimals}
+          unit={a.label}
+          stale={stale}
+        />
+        <ResultCard
+          label="Rail exit velocity"
+          term="railExitVelocity"
+          value={v.fromSI(s.railExitVelocity)}
+          decimals={v.decimals}
+          unit={v.label}
+          detail={`at ${s.railExitTime.toFixed(fd.railExitTime.decimals)} s`}
+          stale={stale}
+        />
+        <ResultCard
+          label="Burnout"
+          term="burnTime"
+          value={s.burnoutTime}
+          decimals={fd.burnoutTime.decimals}
+          unit={fd.burnoutTime.unit}
+          detail={`at ${formatQuantity(s.burnoutVelocity, 'velocity', units)}`}
+          stale={stale}
+        />
+        <ResultCard
+          label="Deployment"
+          term="deploymentVelocity"
+          value={s.deploymentTime}
+          decimals={fd.deploymentTime.decimals}
+          unit={fd.deploymentTime.unit}
+          detail={`at ${opt(s.deploymentVelocity, (x) => formatQuantity(x, 'velocity', units))}`}
+          stale={stale}
+        />
+        <ResultCard
+          label="Descent rate at landing"
+          term="descentRate"
+          value={s.descentRate === undefined ? undefined : v.fromSI(s.descentRate)}
+          decimals={v.decimals}
+          unit={v.label}
+          stale={stale}
+        />
+        <ResultCard
+          label="Landing"
+          value={s.landingDistance === undefined ? undefined : m.fromSI(s.landingDistance)}
+          decimals={m.decimals}
+          unit={m.label}
+          {...(s.landingDirection === undefined ||
+          s.landingDistance === undefined ||
+          s.landingDistance < 0.01
+            ? {}
+            : { detail: `towards ${bearing(s.landingDirection)}` })}
+          stale={stale}
+        />
+        <ResultCard
+          label="Flight time"
+          value={s.flightTime}
+          decimals={fd.flightTime.decimals}
+          unit={fd.flightTime.unit}
+          detail={
+            s.endReason === 'landing'
+              ? '(landed)'
               : s.endReason === 'max-time'
-                ? 'stopped at the maximum time'
-                : 'stopped at the model limit, not landed'}
-            )
-          </dd>
-        </div>
-      </dl>
+                ? '(stopped at the maximum time)'
+                : '(stopped at the model limit, not landed)'
+          }
+          stale={stale}
+        />
+      </ResultGrid>
+      <p className="muted small">
+        Lowest in-flight stability: {stabilityText(s.minimumStability.powered, 'powered')}
+        {s.minimumStability.coast === undefined ? '' : '; '}
+        {stabilityText(s.minimumStability.coast, 'coast')}
+      </p>
       <h3>Events</h3>
       <ol className="events" aria-label="Events">
         {r.events.map((e) => (

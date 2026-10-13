@@ -22,6 +22,7 @@ async function shot(page: Page, name: string): Promise<void> {
 
 async function simulateExample(page: Page): Promise<void> {
   await page.goto('/');
+  await page.getByRole('button', { name: 'File' }).click();
   await page.getByRole('button', { name: 'Load example' }).click();
   await page.getByRole('listbox', { name: 'Flight' }).getByRole('option').click();
   await page.getByRole('button', { name: 'Simulate flight' }).click();
@@ -39,7 +40,12 @@ test('the replay shows the stored apogee figure of the flight panel at the apoge
   await expect(viewer.locator('.viewer-label-wind')).toHaveText(/Wind|No wind/);
   await shot(page, '3d-viewer-start');
   const results = page.getByRole('region', { name: 'Flight' });
-  const apogee = await results.locator('dt:text-is("Apogee") + dd').textContent();
+  // Apogee's label is a glossary term (a button with a tooltip), so match the button.
+  const apogee = await results
+    .locator('dt')
+    .filter({ has: page.getByRole('button', { name: 'Apogee', exact: true }) })
+    .locator('xpath=following-sibling::dd[1]')
+    .textContent();
   const toApogee = await results.locator('dt:text-is("Time to apogee") + dd').textContent();
   await viewer.getByRole('button', { name: /^Apogee / }).click();
   await expect(viewer.locator('dt:text-is("Altitude") + dd')).toHaveText(apogee ?? '');
@@ -85,6 +91,7 @@ test('the replay shows the stored apogee figure of the flight panel at the apoge
 
 test('the Monte Carlo landing points appear and a run replays', async ({ page }) => {
   await page.goto('/');
+  await page.getByRole('button', { name: 'File' }).click();
   await page.getByRole('button', { name: 'Load example' }).click();
   await page.getByRole('listbox', { name: 'Flight' }).getByRole('option').click();
   // The dispersion settings are part of the design: set them before the flight so both share it.
