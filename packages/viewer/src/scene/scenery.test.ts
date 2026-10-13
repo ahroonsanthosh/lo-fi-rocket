@@ -73,7 +73,8 @@ describe.each(REFERENCE_ROCKETS)('the flat ground covers the flight of $id', (ro
       expect(Math.hypot(s.position.x, s.position.y)).toBeLessThanOrEqual(layout.flatRadius - 30);
       expect(terrainHeight(s.position.x, s.position.y, layout)).toBe(0);
     }
-  });
+    // A full six-degree-of-freedom flight of each reference rocket: R5 alone takes over 5 s.
+  }, 30000);
 });
 
 describe('terrainGeometry', () => {

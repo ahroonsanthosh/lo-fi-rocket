@@ -14,6 +14,7 @@ import { formatQuantity, type UnitSystem } from '../units/display.js';
 export const CODE_SEVERITY: Readonly<Record<DesignWarning['code'], WarningSeverity>> = {
   'rail-exit-velocity': 'danger',
   'deployment-velocity': 'danger',
+  'ejection-velocity': 'danger',
   'no-recovery': 'danger',
   'thrust-to-weight': 'caution',
   'max-time': 'caution',

@@ -106,7 +106,7 @@ export interface FigureRule extends DisplayRule {
 
 /** Figures the app shows with a fixed number of decimals outside the unit table. */
 export const FIGURE_DISPLAY: Readonly<Record<FigureKind, FigureRule>> = {
-  stabilityMargin: { unit: 'calibers', decimals: 2, from: 'formats/src/design/to-physics.ts:102' },
+  stabilityMargin: { unit: 'calibers', decimals: 2, from: 'formats/src/design/to-physics.ts:103' },
   normalForceDerivative: {
     unit: 'per radian',
     decimals: 2,
@@ -130,7 +130,7 @@ export const FIGURE_DISPLAY: Readonly<Record<FigureKind, FigureRule>> = {
     from: 'app/src/components/ComparisonPanel.tsx:95',
   },
   runMillis: { unit: 'ms', decimals: 0, from: 'app/src/components/FlightPanel.tsx:306' },
-  thrustToWeight: { unit: ': 1', decimals: 1, from: 'formats/src/design/to-physics.ts:293' },
+  thrustToWeight: { unit: ': 1', decimals: 1, from: 'formats/src/design/to-physics.ts:295' },
 };
 
 /**
