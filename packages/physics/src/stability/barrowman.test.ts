@@ -301,7 +301,10 @@ describe('validation', () => {
     };
     expect(() => centreOfPressure([tube], OR_MODE)).toThrow(InvalidInputError);
     expect(() => centreOfPressure([], OR_MODE)).toThrow(InvalidInputError);
-    const boatTailOnly = R2_COMPONENTS.filter((p) => p.component.kind === 'transition');
+    // A lone boat tail (moved to the nose tip so that it passes the fit checks, D-074) has a negative C_Nα.
+    const boatTailOnly = R2_COMPONENTS.filter((p) => p.component.kind === 'transition').map(
+      (p) => ({ ...p, position: metres(0) }),
+    );
     expect(() => centreOfPressure(boatTailOnly, OR_MODE)).toThrow(/must be greater than 0/);
     expect(() =>
       centreOfPressure(R1_COMPONENTS, { ...OR_MODE, referenceDiameter: metres(0) }),

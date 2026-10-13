@@ -22,6 +22,7 @@ import {
   SimulationStalledError,
 } from '../errors.js';
 import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
+import { validateComponentFit } from '../geometry/fit.js';
 import type { MassProperties } from '../geometry/revolution.js';
 import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.js';
 import { finiteResult } from '../numerics/finite.js';
@@ -650,6 +651,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   if (!(maxTime > 0))
     throw new InvalidInputError('maximum simulation time', maxTime, 'must be greater than 0 s');
   if (options.dragCurve !== undefined) validateDragCurve(options.dragCurve);
+  validateComponentFit(vehicle.components);
   const structure = structuralMassParts(vehicle.components);
   const rocketLength = vehicle.components.reduce((s, p) => {
     const c = p.component;

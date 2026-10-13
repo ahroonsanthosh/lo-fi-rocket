@@ -162,6 +162,7 @@ export {
   type PlacedComponent,
   type RocketMassProperties,
 } from './geometry/assembly.js';
+export { FIT_TOLERANCE, validateComponentFit } from './geometry/fit.js';
 export {
   bodyTerm,
   centreOfPressure,
