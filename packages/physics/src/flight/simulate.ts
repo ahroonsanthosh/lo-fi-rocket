@@ -10,6 +10,12 @@
  * is rigid-body mechanics (D-036). Events are located at their exact
  * crossing by bisection on the step (owner's requirement, D-017).
  */
+import {
+  componentApproximations,
+  confidenceOf,
+  type Approximation,
+  type Confidence,
+} from '../fidelity.js';
 import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
 import { flutterGeometry, flutterVelocity } from '../stability/flutter.js';
 import { dragCoefficient } from '../drag/drag.js';
@@ -274,6 +280,12 @@ export interface FlightResult {
    * IDs), for a "details" view. They do not change what the user should do; the warnings carry that.
    */
   readonly notes: readonly string[];
+  /**
+   * Everything this flight did not model exactly, with the method used instead and its effect
+   * (D-083, CLAUDE.md 1 rule 3), and the overall confidence they give.
+   */
+  readonly approximations: readonly Approximation[];
+  readonly confidence: Confidence;
   readonly modes: {
     readonly aerodynamics: 'niskanen' | 'none';
     readonly finRollReduction: boolean;
@@ -1545,6 +1557,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       : [
           `This rocket is unstable: at ${unstable.time.toFixed(2)} s its centre of pressure is ${(-unstable.calibers).toFixed(2)} calibers ahead of its centre of mass, so it turns sideways or tumbles instead of flying straight. The apogee, speeds and landing point shown are not a prediction of its flight. Add or enlarge the fins, or add nose weight, until the margin is positive (1 to 2 calibers is the usual target).`,
         ];
+  const approximations = componentApproximations(
+    vehicle.components.map((c, i) => ({
+      ...(vehicle.componentNames?.[i] === undefined ? {} : { name: vehicle.componentNames[i] }),
+      component: c.component,
+    })),
+  );
   return {
     samples,
     events,
@@ -1552,6 +1570,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     // When unstable, the statement is always the first warning (formats relies on this, issue #17).
     warnings: [...unstableStatement, ...warnings],
     notes: [...notes],
+    approximations,
+    confidence: confidenceOf(approximations),
     modes: {
       dragCurve: options.dragCurve?.label,
       aerodynamics: options.aerodynamics,

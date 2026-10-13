@@ -117,3 +117,28 @@ export function flightWarningItems(
       item(`flight-${w.code}-${String(i)}`, CODE_SEVERITY[w.code], w.message, 'Flight results'),
     );
 }
+
+/**
+ * The flight's approximations (D-083) for the checks column: one limitation each, with the
+ * method and its effect, led by the overall confidence when anything is approximated.
+ */
+export function approximationItems(result: FlightResult): WarningItem[] {
+  if (result.approximations.length === 0) return [];
+  const level = result.confidence.level;
+  const lead: WarningItem = {
+    id: 'confidence',
+    severity: level === 'low' ? 'caution' : level === 'medium' ? 'limitation' : 'info',
+    ...splitMessage(result.confidence.summary),
+    origin: 'Flight results',
+  };
+  return [
+    lead,
+    ...result.approximations.map((a, i) => ({
+      id: `approximation-${String(i)}-${a.subject}`,
+      severity: 'limitation' as const,
+      title: `${a.subject}: ${a.what}`,
+      reason: `Simulated with ${a.method}; ${a.effect}.`,
+      origin: 'Approximation',
+    })),
+  ];
+}
