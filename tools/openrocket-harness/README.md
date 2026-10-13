@@ -18,3 +18,7 @@ Sensitivity runs: `-Dharness.timeStep=0.05` (pass through `java` directly; see `
 ## What it pins
 
 Every OpenRocket option that affects the results is set explicitly in `ReferenceHarness.java` and documented in `reference/rockets/settings.md`. If OpenRocket is upgraded, update the version, URL and hash in `build.sh` and `reference/SOURCES.md`, regenerate, and explain any changed value in the commit message.
+
+## Override probe
+
+`src/OverrideProbe.java` (D-073) asks OpenRocket how it applies component mass and CG overrides; the comment at its top gives the commands. Its output and four of its `.ork` files are in `reference/rockets/override-probe/`.

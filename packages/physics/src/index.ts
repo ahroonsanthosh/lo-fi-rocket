@@ -154,8 +154,10 @@ export {
 export {
   combineRocket,
   motorMassPart,
+  overriddenMassProperties,
   rocketMassProperties,
   structuralMassParts,
+  type MassOverride,
   type MotorMass,
   type PlacedComponent,
   type RocketMassProperties,

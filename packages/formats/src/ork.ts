@@ -21,6 +21,7 @@ import {
   seconds,
   type Component,
   type KilogramsPerCubicMetre,
+  type MassOverride,
   type Metres,
   type NoseShape,
   type PlacedComponent,
@@ -384,6 +385,46 @@ function readShoulder(el: Element, prefix: 'fore' | 'aft'): Shoulder | undefined
   return { radius: metres(radius), length: metres(length), wallThickness: metres(thickness) };
 }
 
+/**
+ * Mass and CG overrides (D-073). `<overridemass>` is the total mass of the
+ * component over all its instances and `<overridecg>` its CG from the
+ * component's forward end, as OpenRocket 24.12 computes them
+ * (reference/rockets/override-probe/values.txt). An override that also covers the
+ * subcomponents is rejected when there are subcomponents: OpenRocket then
+ * reports a mass without the children but inertias with them (probe cases 5,
+ * 7 and 8), so there is no consistent reading to reproduce. A drag
+ * coefficient override is not supported. For a parachute `<overridemass>` is
+ * its mass itself and is read by the parachute reader.
+ */
+function readMassOverride(el: Element, massIsComponentMass: boolean): MassOverride | undefined {
+  if (el.has('overridecd')) throw el.unsupported('drag coefficient override (<overridecd>)');
+  if (el.has('overridesubcomponentscd') && el.boolean('overridesubcomponentscd')) {
+    throw el.unsupported('drag coefficient override of subcomponents (<overridesubcomponentscd>)');
+  }
+  const children = el.node.children.find((c) => c.name === 'subcomponents')?.children ?? [];
+  for (const flag of [
+    'overridesubcomponents',
+    'overridesubcomponentsmass',
+    'overridesubcomponentscg',
+  ]) {
+    if (el.has(flag) && el.boolean(flag) && children.length > 0) {
+      throw el.unsupported(
+        `a mass or CG override that includes the subcomponents (<${flag}> true on a component with subcomponents); set the override on the component alone, or override each subcomponent`,
+      );
+    }
+  }
+  const mass = massIsComponentMass ? undefined : el.optionalNumber('overridemass');
+  const cg = el.optionalNumber('overridecg');
+  if (mass !== undefined && !(mass >= 0)) {
+    throw el.parseError(`<overridemass> must be 0 kg or more, got ${String(mass)}`);
+  }
+  if (mass === undefined && cg === undefined) return undefined;
+  return {
+    ...(mass === undefined ? {} : { mass: kilograms(mass) }),
+    ...(cg === undefined ? {} : { cg: metres(cg) }),
+  };
+}
+
 class Reader {
   readonly components: OrkPlacedComponent[] = [];
   readonly recoveryDevices: OrkRecoveryDevice[] = [];
@@ -392,11 +433,13 @@ class Reader {
   maxBodyRadius = 0;
 
   private place(el: Element, component: Component, position: number): number {
+    const massOverride = readMassOverride(el, component.kind === 'parachute');
     this.components.push({
       name: el.optionalText('name') ?? '',
       element: el.node.name,
       component,
       position: metres(position),
+      ...(massOverride === undefined ? {} : { massOverride }),
     });
     return this.components.length - 1;
   }

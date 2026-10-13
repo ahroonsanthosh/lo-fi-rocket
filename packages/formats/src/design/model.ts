@@ -9,6 +9,7 @@ import type {
   DragCurve,
   IntegratorOptions,
   Kelvin,
+  MassOverride,
   Metres,
   MetresPerSecond,
   MotorDefinition,
@@ -26,6 +27,8 @@ export interface DesignComponent {
   /** x of the component's forward end from the nose tip (docs/conventions.md). */
   readonly position: Metres;
   readonly component: Component;
+  /** Optional mass and CG override (D-073); the CG is from the component's forward end. */
+  readonly massOverride?: MassOverride;
 }
 
 /** Where a motor's data came from, for display and for refreshing from the source. */

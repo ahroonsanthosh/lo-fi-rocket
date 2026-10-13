@@ -42,6 +42,7 @@ export function designPlacedComponents(design: RocketDesign): PlacedComponent[] 
   return design.components.map((c: DesignComponent) => ({
     component: c.component,
     position: c.position,
+    ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
   }));
 }
 
