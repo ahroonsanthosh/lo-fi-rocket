@@ -1344,6 +1344,47 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       );
     }),
   };
+  // F-4: every apogee- or altitude-triggered device that did not open, with the reason, so that a ballistic
+  // landing is never presented as a recovered one. (Ejection-charge devices: M-4.)
+  const ended =
+    endReason === 'landing'
+      ? `the rocket landed at ${t.toFixed(2)} s`
+      : endReason === 'max-time'
+        ? `the simulation stopped at its time limit, ${t.toFixed(2)} s`
+        : `the flight ended at ${t.toFixed(2)} s`;
+  for (const d of vehicle.recovery) {
+    if (deployed.has(d)) continue;
+    const delay: number = d.deploy.delay;
+    let reason: string | undefined;
+    if (d.deploy.event === 'apogee') {
+      reason =
+        apogee === undefined
+          ? `it opens at apogee, which was not reached before ${ended}`
+          : `it opens ${delay.toFixed(2)} s after apogee (at ${(apogee.t + delay).toFixed(2)} s), but ${ended} first. Use a shorter delay`;
+    } else if (d.deploy.event === 'altitude' && d.deploy.altitude !== undefined) {
+      const alt: number = d.deploy.altitude;
+      if (apogee === undefined) {
+        reason = `it opens when descending through ${alt.toFixed(1)} m, which is only checked after apogee, and apogee was not reached before ${ended}`;
+      } else if (alt >= apogee.z) {
+        reason = `it is set to open at ${alt.toFixed(1)} m on the way down, but the apogee is only ${apogee.z.toFixed(1)} m. Set it below the apogee`;
+      } else if (alt <= 0) {
+        reason = `it is set to open at ${alt.toFixed(1)} m above the pad, which the rocket reaches only on landing. Set it above the ground`;
+      } else {
+        const crossing = events.find(
+          (e) => e.kind === 'altitude' && e.detail.startsWith(`altitude ${alt.toFixed(3)} m`),
+        );
+        reason =
+          crossing === undefined
+            ? `it opens when descending through ${alt.toFixed(1)} m, but ${ended} before reaching that height`
+            : `it opens ${delay.toFixed(2)} s after descending through ${alt.toFixed(1)} m (at ${((crossing.time as number) + delay).toFixed(2)} s), but ${ended} first. Use a shorter delay`;
+      }
+    }
+    if (reason !== undefined) {
+      warnings.add(
+        `"${d.name}" never opened: ${reason}. The landing speed and drift shown are for a rocket coming down without it.`,
+      );
+    }
+  }
   for (const f of summary.flutter) {
     if (f.ratio === undefined) {
       if (f.reason.startsWith('no shear modulus'))
