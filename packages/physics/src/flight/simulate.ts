@@ -171,7 +171,7 @@ export interface FlightSummary {
   readonly railExitTime: number;
   readonly burnoutTime: number;
   readonly burnoutVelocity: number;
-  /** Speed at the first deployment of any recovery device, whatever its trigger (review F-1). */
+  /** Airspeed |v − v_wind| at the first deployment of any recovery device, whatever its trigger (review F-1, F-3). */
   readonly deploymentVelocity: number | undefined;
   readonly deploymentTime: number | undefined;
   /** Vertical speed at landing (positive down). */
@@ -700,13 +700,19 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   const deployed = new Set<RecoveryDevice>();
   // F-1: the first deployment, whatever its trigger (apogee, altitude, ejection charge, launch, delay).
   let deployment: { t: number; v: number } | undefined;
+  // F-3: the speed relative to the air, |v − v_wind| (DYN-7, Niskanen §4.2.4 p. 65), which sets the deployment load
+  // through the dynamic pressure; the descent drag of DYN-14 already uses it.
+  const airspeedAt = (tt: number, yy: readonly number[]): number => {
+    const st = unpack(yy);
+    return norm(sub(st.velocity, ctx.wind(st.position.z, Math.max(0, tt))));
+  };
 
   const deploy = (device: RecoveryDevice, at: number, why: string): void => {
     if (deployed.has(device)) return;
     deployed.add(device);
     // Every caller deploys at the current state: a timed action runs at its step boundary, an event
     // handler after the state has been advanced to the bisected crossing.
-    deployment ??= { t: at, v: norm(unpack(y).velocity) };
+    deployment ??= { t: at, v: airspeedAt(at, y) };
     const area = (Math.PI * (device.diameter as number) ** 2) / 4;
     ctx.deployedArea.area += device.dragCoefficient * area;
     events.push({
@@ -875,7 +881,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       angularVelocity: s.angularVelocity,
       altitude: s.position.z,
       speed: norm(s.velocity),
-      airspeed: derived.flight?.airspeed ?? norm(s.velocity),
+      // F-3: without flight parameters (descent, landed), the airspeed is still |v − v_wind|, not the ground speed.
+      airspeed: derived.flight?.airspeed ?? airspeedAt(t, y),
       mach: derived.flight?.mach ?? Number.NaN,
       angleOfAttack: derived.flight?.angleOfAttack ?? Number.NaN,
       acceleration: acc,
