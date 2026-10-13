@@ -15,10 +15,28 @@ Updated by the review session after every pull request. See "Parallel sessions" 
   - descent rate 6.9 m/s from C_D·A = 0.0565 m²
 - Flights of the five reference .ork files against `reference/rockets/values.csv`: apogee R1 +3.5 %, R2 -0.8 %, R3 -3.5 %, R4 +2.6 %. Max velocity and rail-exit velocity are within 2 %. R5 runs with transonic warnings.
 
+- 2026-10-13: Second pass. Covered:
+  - motor import (.eng, .rse, custom CSV, including malformed files)
+  - altimeter comparison and drag-curve import (in range, out of range, negative C_D)
+  - every recovery deployment mode, and two parachutes
+  - rail angle, wind profile, turbulence (repeat runs bit-identical with the same seed), RK4 against Dormand–Prince (same apogee to 0.01 m), latitude gravity, pad altitude
+  - stored designs
+
+  Filed issues #32 to #42.
+  - Critical: #32 "At launch" deployment never leaves the pad and shows NaN, #33 no warning when the parachute never opens, #34 deployment before apogee shows "— at —" and NaN with no speed warning.
+  - Major: #35, #36, #37, #38, #39.
+  - Minor: #40, #41, #42.
+  - Added a comment to #23.
+- Checks that passed in the second pass:
+  - custom curve impulse 41.00 N·s (trapezoid by hand)
+  - clear errors for malformed thrust CSV and .eng files
+  - drag curve refused outside its Mach range instead of extrapolated
+  - deployment-speed and rail-angle warnings for apogee deployments
+
 ## Next
 
 - Re-test the fixed issues once they are merged.
-- Second pass: custom thrust-curve CSV and .eng import, altimeter CSV comparison, drag-curve import, wind profile results, and autosave migration.
+- Not yet covered: .ork files with unsupported parts, autosave migration from an older schema version, contrast and screen-reader pass, Monte Carlo with every dispersion input.
 
 ## Open questions
 
