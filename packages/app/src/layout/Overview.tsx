@@ -6,7 +6,7 @@
  */
 import { designThrustToWeight, type RocketDesign } from '@lo-fi-rocket/formats';
 import { PhysicsError } from '@lo-fi-rocket/physics';
-import { FIGURE_DISPLAY, Gauge, SeverityTag, type Severity } from '@lo-fi-rocket/ui';
+import { Button, FIGURE_DISPLAY, Gauge, SeverityTag, type Severity } from '@lo-fi-rocket/ui';
 import type { JSX, ReactNode } from 'react';
 import type { FlightState } from '../components/FlightPanel.js';
 import type { Figures } from '../components/StabilityPanel.js';
@@ -31,6 +31,8 @@ export interface OverviewProps {
   readonly stale: boolean;
   readonly selectedId: string | undefined;
   readonly onSelect: (id: string) => void;
+  /** Opens the first step of the guide; offered when the design has nothing to draw. */
+  readonly onStart: () => void;
 }
 
 /** Thrust to weight for the dial, or the reason it has none. */
@@ -61,7 +63,7 @@ function Row({
 }
 
 export function Overview(props: OverviewProps): JSX.Element {
-  const { figures, design, units, flight, stale, selectedId, onSelect } = props;
+  const { figures, design, units, flight, stale, selectedId, onSelect, onStart } = props;
   const s = figures.stability;
   const thresholds = design.stabilityThresholds;
   const warn = design.warningThresholds;
@@ -94,7 +96,7 @@ export function Overview(props: OverviewProps): JSX.Element {
     <div className="overview">
       <div className="overview__row">
         <Gauge
-          label="Stability · liftoff"
+          label="Liftoff margin"
           value={s?.result.marginLiftoff}
           min={range.min}
           max={range.max}
@@ -105,7 +107,7 @@ export function Overview(props: OverviewProps): JSX.Element {
           {...(s === undefined ? {} : { status: LEVEL_STATUS[s.liftoff.level] })}
         />
         <Gauge
-          label="Stability · burnout"
+          label="Burnout margin"
           value={s === undefined || s.noMotor ? undefined : s.result.marginBurnout}
           min={range.min}
           max={range.max}
@@ -116,7 +118,7 @@ export function Overview(props: OverviewProps): JSX.Element {
           {...(s === undefined || s.noMotor ? {} : { status: LEVEL_STATUS[s.burnout.level] })}
         />
         <Gauge
-          label="Thrust to weight"
+          label="Thrust : weight"
           value={twr}
           min={0}
           max={twice(twrMin)}
@@ -130,7 +132,7 @@ export function Overview(props: OverviewProps): JSX.Element {
           {...(twrStatus === undefined ? {} : { status: twrStatus })}
         />
         <Gauge
-          label="Maximum Mach"
+          label="Max Mach"
           value={summary?.maxMach}
           min={MACH_SCALE.min}
           max={MACH_SCALE.max}
@@ -204,6 +206,11 @@ export function Overview(props: OverviewProps): JSX.Element {
                 : formatQuantity(s.result.centreOfPressure.cp, 'mm', units)
             }
             onSelect={onSelect}
+            emptyAction={
+              <Button variant="primary" onClick={onStart}>
+                Start with the body tube
+              </Button>
+            }
           />
           <p className="overview__caption">
             <span className="overview__caption-key">Stability:</span>{' '}
@@ -275,7 +282,9 @@ export function Overview(props: OverviewProps): JSX.Element {
           <section className="spec" aria-label="Airframe">
             <h3 className="lfr-section-title">Airframe</h3>
             <dl>
-              <Row label="Length">{formatQuantity(figures.length, 'mm', units)}</Row>
+              <Row label="Length">
+                {figures.length === 0 ? '—' : formatQuantity(figures.length, 'mm', units)}
+              </Row>
               <Row label="Reference diameter">
                 {s === undefined
                   ? '—'

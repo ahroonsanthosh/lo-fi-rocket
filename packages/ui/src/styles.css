@@ -121,7 +121,7 @@
     overflow: hidden;
     border-radius: var(--lfr-radius-screen);
     box-shadow: var(--lfr-shadow);
-    grid-template-columns: clamp(250px, 21vw, 300px) minmax(0, 1fr) clamp(290px, 24vw, 350px);
+    grid-template-columns: clamp(236px, 18vw, 300px) minmax(0, 1fr) clamp(286px, 22vw, 350px);
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       'header header header'
@@ -1040,15 +1040,11 @@
   color: var(--lfr-text);
 }
 
-/* Gauge: an instrument dial for one figure */
+/* Gauge: an instrument dial for one figure, in a square tile */
 .lfr-gauge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  position: relative;
   min-width: 0;
-  padding: var(--lfr-space-3) var(--lfr-space-2) var(--lfr-space-2);
-  text-align: center;
+  padding: 8px;
   background: var(--lfr-tile);
   border: 1px solid var(--lfr-tile-edge);
   border-radius: 12px;
@@ -1056,8 +1052,8 @@
 .lfr-gauge__dial {
   position: relative;
   width: 100%;
-  max-width: 124px;
   aspect-ratio: 1;
+  text-align: center;
 }
 .lfr-gauge__svg {
   display: block;
@@ -1074,24 +1070,24 @@
 }
 .lfr-gauge__tick {
   stroke: var(--lfr-track);
-  stroke-width: 0.8;
+  stroke-width: 0.7;
 }
 .lfr-gauge__track {
   stroke: none;
 }
 .lfr-gauge__value {
   stroke: var(--lfr-accent);
-  stroke-width: 3.2;
+  stroke-width: 3;
   stroke-linecap: round;
 }
 .lfr-gauge__zone {
-  stroke-width: 1;
-  opacity: 0.55;
+  stroke-width: 0.9;
+  opacity: 0.5;
 }
 .lfr-gauge__mark {
   stroke: var(--lfr-text);
-  stroke-width: 1.1;
-  opacity: 0.7;
+  stroke-width: 1;
+  opacity: 0.6;
 }
 .lfr-gauge__zone--safe,
 .lfr-gauge--safe .lfr-gauge__value {
@@ -1114,27 +1110,29 @@
 }
 .lfr-gauge__readout {
   position: absolute;
-  inset: 0;
+  inset: 0 0 10% 0;
   margin: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-top: 2px;
 }
 .lfr-gauge__label {
-  max-width: 76%;
-  font-size: 9.5px;
+  max-width: 86%;
+  font-size: 8.5px;
   line-height: 12px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--lfr-text-muted);
+  color: color-mix(in srgb, var(--lfr-text) 80%, var(--lfr-text-muted));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lfr-gauge__number {
-  margin-top: 3px;
-  font-size: 27px;
-  line-height: 31px;
+  margin-top: 2px;
+  font-size: 26px;
+  line-height: 30px;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
@@ -1143,26 +1141,37 @@
 }
 .lfr-gauge__unit {
   font-size: var(--lfr-font-small);
-  line-height: var(--lfr-line-small);
+  line-height: 17px;
   color: color-mix(in srgb, var(--lfr-text) 82%, var(--lfr-text-muted));
 }
+/* The status sits in the open bottom of the dial, where the arc leaves a gap. */
 .lfr-gauge__foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-height: 20px;
+  gap: 1px;
 }
 .lfr-gauge__foot .lfr-tag {
   background: transparent;
   padding: 0;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 10.5px;
+  line-height: 14px;
+}
+.lfr-gauge__foot .lfr-tag .lfr-icon {
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
 }
 .lfr-gauge__off,
 .lfr-gauge__empty {
   margin: 0;
-  font-size: 11px;
-  line-height: 15px;
+  font-size: 10.5px;
+  line-height: 13px;
   color: var(--lfr-text-muted);
 }
 .lfr-gauge__off {

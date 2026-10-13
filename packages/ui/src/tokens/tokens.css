@@ -102,7 +102,7 @@
     --lfr-neutral-indicator: #8b91b3;
     --lfr-cg-marker: #4b97ff;
     --lfr-cp-marker: #ff6b6b;
-    --lfr-glow: rgb(98 104 214 / 0.42);
+    --lfr-glow: rgb(150 156 255 / 0.38);
     --lfr-glow-soft: rgb(75 151 255 / 0.12);
     --lfr-glass: rgb(20 23 48 / 0.86);
     --lfr-tile: rgb(255 255 255 / 0.028);
@@ -110,10 +110,11 @@
     --lfr-track: rgb(255 255 255 / 0.1);
     --lfr-page: linear-gradient(160deg, #262b4b 0%, #3a3f6e 55%, #2b2f55 100%);
     --lfr-screen: radial-gradient(
-      120% 75% at 50% 100%,
-      #3d4185 0%,
-      #262a5a 30%,
-      #161a3a 62%,
+      105% 72% at 50% 100%,
+      #565b99 0%,
+      #3a3e7b 22%,
+      #24285c 46%,
+      #171a3d 72%,
       #12152b 100%
     );
     --lfr-shadow: 0 30px 80px rgb(4 6 20 / 0.55);
@@ -150,7 +151,7 @@
   --lfr-neutral-indicator: #8b91b3;
   --lfr-cg-marker: #4b97ff;
   --lfr-cp-marker: #ff6b6b;
-  --lfr-glow: rgb(98 104 214 / 0.42);
+  --lfr-glow: rgb(150 156 255 / 0.38);
   --lfr-glow-soft: rgb(75 151 255 / 0.12);
   --lfr-glass: rgb(20 23 48 / 0.86);
   --lfr-tile: rgb(255 255 255 / 0.028);
@@ -158,10 +159,11 @@
   --lfr-track: rgb(255 255 255 / 0.1);
   --lfr-page: linear-gradient(160deg, #262b4b 0%, #3a3f6e 55%, #2b2f55 100%);
   --lfr-screen: radial-gradient(
-    120% 75% at 50% 100%,
-    #3d4185 0%,
-    #262a5a 30%,
-    #161a3a 62%,
+    105% 72% at 50% 100%,
+    #565b99 0%,
+    #3a3e7b 22%,
+    #24285c 46%,
+    #171a3d 72%,
     #12152b 100%
   );
   --lfr-shadow: 0 30px 80px rgb(4 6 20 / 0.55);

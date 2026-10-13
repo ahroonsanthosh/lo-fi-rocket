@@ -130,7 +130,7 @@ describe('App (plan 0012)', () => {
     const design = exampleDesign('o');
     render(<App storage={memory()} initialDesign={design} />);
     const main = screen.getByRole('main');
-    expect(within(main).getByText('Stability · liftoff')).toBeInTheDocument();
+    expect(within(main).getByText('Liftoff margin')).toBeInTheDocument();
     const twr = designThrustToWeight(design);
     if (twr === undefined) throw new Error('the example has a motor');
     expect(within(main).getByText(twr.toFixed(1))).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import { useId, type JSX } from 'react';
+import { useId, type JSX, type ReactNode } from 'react';
 import type { DesignComponent } from '@lo-fi-rocket/formats';
 import { componentShapes, extentOf, type Shape } from './side-view-geometry.js';
 
@@ -12,6 +12,8 @@ export interface VehicleViewProps {
   readonly cgText: string | undefined;
   readonly cpText: string | undefined;
   readonly onSelect: (id: string) => void;
+  /** Offered when there is nothing to draw yet, for example a button to add the body tube. */
+  readonly emptyAction?: ReactNode;
 }
 
 /** Outside parts only: the hero shows the rocket as it stands on the pad. */
@@ -36,7 +38,7 @@ const MM = 1000;
  * Clicking a part selects it; the parts list is the keyboard equivalent.
  */
 export function VehicleView(props: VehicleViewProps): JSX.Element {
-  const { components, selectedId, cg, cp, cgText, cpText, onSelect } = props;
+  const { components, selectedId, cg, cp, cgText, cpText, onSelect, emptyAction } = props;
   const uid = useId().replace(/:/g, '');
   const shapes = componentShapes(components).filter(
     (s) => OUTSIDE.has(s.kind) && !s.id.endsWith('-shoulder'),
@@ -44,7 +46,12 @@ export function VehicleView(props: VehicleViewProps): JSX.Element {
   if (shapes.length === 0) {
     return (
       <div className="vehicle vehicle--empty">
+        <svg className="vehicle__ghost" viewBox="0 0 40 160" aria-hidden="true">
+          <path d="M20 4c7 12 10 26 10 40v86H10V44c0-14 3-28 10-40z" />
+          <path d="M10 112 2 128v20l8-6M30 112l8 16v20l-8-6" />
+        </svg>
         <p>Add a body tube and a nose cone to see your rocket here.</p>
+        {emptyAction}
       </div>
     );
   }
@@ -95,11 +102,13 @@ export function VehicleView(props: VehicleViewProps): JSX.Element {
               y1={0}
               y2={0}
             >
+              {/* A cylinder lit from the upper left: dark edges, a bright band left of centre. */}
               <stop offset="0" className="vehicle__shade-0" />
-              <stop offset="0.2" className="vehicle__shade-1" />
-              <stop offset="0.46" className="vehicle__shade-2" />
-              <stop offset="0.58" className="vehicle__shade-3" />
-              <stop offset="0.8" className="vehicle__shade-1" />
+              <stop offset="0.16" className="vehicle__shade-1" />
+              <stop offset="0.34" className="vehicle__shade-2" />
+              <stop offset="0.42" className="vehicle__shade-3" />
+              <stop offset="0.58" className="vehicle__shade-2" />
+              <stop offset="0.84" className="vehicle__shade-1" />
               <stop offset="1" className="vehicle__shade-0" />
             </linearGradient>
             <linearGradient id={`${uid}-fin`} x1="0" x2="1" y1="0" y2="1">
@@ -156,7 +165,8 @@ export function VehicleView(props: VehicleViewProps): JSX.Element {
             className="vehicle__label vehicle__label--cg"
             style={{ top: pct(cg), right: `calc(100% - ${beside} + 26px)` }}
           >
-            <span className="vehicle__label-key">CG</span> {cgText}
+            <span className="vehicle__label-key">CG</span>
+            <span>{cgText}</span>
           </p>
         )}
         {cp === undefined || cpText === undefined ? null : (
@@ -164,7 +174,8 @@ export function VehicleView(props: VehicleViewProps): JSX.Element {
             className="vehicle__label vehicle__label--cp"
             style={{ top: pct(cp), left: `calc(100% - ${beside} + 26px)` }}
           >
-            <span className="vehicle__label-key">CP</span> {cpText}
+            <span className="vehicle__label-key">CP</span>
+            <span>{cpText}</span>
           </p>
         )}
       </div>

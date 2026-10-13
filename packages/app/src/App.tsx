@@ -281,6 +281,9 @@ export function App(props: AppProps): JSX.Element {
             stale={stale}
             selectedId={state.selectedId}
             onSelect={onSelectPart}
+            onStart={() => {
+              openStep('body');
+            }}
           />
         );
       case 'airframe':
@@ -337,7 +340,6 @@ export function App(props: AppProps): JSX.Element {
           <section className="view-card" aria-label="Editor">
             {stepStrip}
             <section className="editor" aria-label="Launch">
-              <h2>Launch site, rail and wind</h2>
               <LaunchEditor />
             </section>
           </section>

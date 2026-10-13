@@ -46,7 +46,9 @@ describe('VehicleView', () => {
         onSelect={() => undefined}
       />,
     );
-    expect(screen.getByText('387.0 mm', { exact: false })).toHaveClass('vehicle__label--cg');
+    expect(screen.getByText('387.0 mm').closest('.vehicle__label')).toHaveClass(
+      'vehicle__label--cg',
+    );
     const cg = container.querySelector<HTMLElement>('.vehicle__label--cg');
     const cp = container.querySelector<HTMLElement>('.vehicle__label--cp');
     // The CP is aft of the CG, so it sits lower on the upright rocket.

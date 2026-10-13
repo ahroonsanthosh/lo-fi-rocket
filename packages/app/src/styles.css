@@ -65,7 +65,7 @@ body {
 }
 @media (min-width: 1100px) {
   .app-header {
-    grid-template-columns: clamp(250px, 21vw, 300px) minmax(0, 1fr) clamp(290px, 24vw, 350px);
+    grid-template-columns: clamp(236px, 18vw, 300px) minmax(0, 1fr) clamp(286px, 22vw, 350px);
     margin: 0 calc(-1 * var(--lfr-space-5));
     width: calc(100% + 2 * var(--lfr-space-5));
     padding: 0 var(--lfr-space-5);
@@ -457,20 +457,26 @@ li[role='option'].selected::before {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 14px;
 }
+.overview {
+  --tile: clamp(116px, 8.8vw, 168px);
+  --tile-gap: clamp(10px, 0.9vw, 18px);
+}
 .overview .lfr-gauge {
-  width: 140px;
+  width: var(--tile);
 }
 .overview__row {
   display: grid;
-  grid-template-columns: repeat(4, 140px);
+  grid-template-columns: repeat(4, var(--tile));
   justify-content: center;
-  gap: 16px;
+  gap: var(--tile-gap);
 }
 .overview__stage {
   position: relative;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(250px, 300px) minmax(0, 1fr);
+  grid-template-columns:
+    minmax(calc(2 * var(--tile) + var(--tile-gap)), 1fr) minmax(170px, 300px)
+    minmax(calc(2 * var(--tile) + var(--tile-gap)), 1fr);
   gap: 8px;
 }
 .overview__stage::before {
@@ -494,14 +500,15 @@ li[role='option'].selected::before {
 }
 .overview__pair {
   display: grid;
-  grid-template-columns: repeat(2, 140px);
-  gap: 16px;
+  grid-template-columns: repeat(2, var(--tile));
+  gap: var(--tile-gap);
 }
-.overview__side--left .overview__pair {
-  justify-content: start;
+/* The side dials and tables keep close to the rocket, as in the reference. */
+.overview__side--left {
+  align-items: flex-end;
 }
-.overview__side--right .overview__pair {
-  justify-content: end;
+.overview__side--right {
+  align-items: flex-start;
 }
 .overview__vehicle {
   position: relative;
@@ -531,11 +538,8 @@ li[role='option'].selected::before {
 
 /* A small two-column table, like the reference's "Connections" */
 .spec {
-  max-width: 300px;
-}
-.overview__side--right .spec {
-  align-self: flex-end;
-  width: 100%;
+  width: calc(2 * var(--tile) + var(--tile-gap));
+  max-width: 100%;
 }
 .spec dl {
   margin: 8px 0 0;
@@ -575,9 +579,24 @@ li[role='option'].selected::before {
 }
 .vehicle--empty {
   justify-content: center;
+  gap: 14px;
   text-align: center;
   color: var(--muted);
   font-size: 13px;
+}
+.vehicle--empty p {
+  margin: 0;
+  max-width: 220px;
+}
+.vehicle__ghost {
+  width: 70px;
+  height: auto;
+  max-height: 55%;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+  opacity: 0.8;
 }
 .vehicle__frame {
   position: relative;
@@ -614,22 +633,22 @@ li[role='option'].selected::before {
   fill: #5c6185;
 }
 .vehicle__shade-0 {
-  stop-color: #6b7096;
+  stop-color: #4a4f74;
 }
 .vehicle__shade-1 {
-  stop-color: #c4c7dc;
+  stop-color: #b6b9d3;
 }
 .vehicle__shade-2 {
-  stop-color: #fbfbfe;
+  stop-color: #f7f8fd;
 }
 .vehicle__shade-3 {
   stop-color: #ffffff;
 }
 .vehicle__fin-0 {
-  stop-color: #f1f2f8;
+  stop-color: #f4f5fb;
 }
 .vehicle__fin-1 {
-  stop-color: #9a9ebd;
+  stop-color: #8c90b2;
 }
 .vehicle__marker circle {
   vector-effect: non-scaling-stroke;
@@ -654,14 +673,20 @@ li[role='option'].selected::before {
 .vehicle__label {
   position: absolute;
   margin: 0;
+  display: flex;
+  flex-direction: column;
   transform: translateY(-50%);
   white-space: nowrap;
   font-size: 11px;
   line-height: 14px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: var(--ink);
   pointer-events: none;
+}
+.vehicle__label--cg {
+  align-items: flex-end;
+  text-align: right;
 }
 .vehicle__label::before {
   content: '';
@@ -679,8 +704,9 @@ li[role='option'].selected::before {
   right: calc(100% + 4px);
 }
 .vehicle__label-key {
+  font-size: 10px;
   color: var(--muted);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
 }
 .vehicle__floor {
   width: 90%;
@@ -872,10 +898,10 @@ li[role='option'].selected::before {
 .field-input input,
 .field-input select,
 .add-menu select,
-.editor select,
-.editor input[type='text'],
-.editor input:not([type]),
-.editor input[type='number'] {
+.editor .field select,
+.editor .field input[type='text'],
+.editor .field input:not([type]),
+.editor .field input[type='number'] {
   flex: 1;
   min-height: 32px;
   padding: 4px 8px;
@@ -1254,4 +1280,35 @@ button:disabled {
 .replay-mismatch ul {
   margin: 4px 0 0;
   padding-left: 18px;
+}
+
+/* Below the console width: the columns stack, and their contents use the width in two columns. */
+@media (max-width: 1099.98px) {
+  .telemetry {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px 40px;
+  }
+  .checks-scroll {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    align-items: start;
+  }
+  .lfr-shell__nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    align-items: start;
+  }
+  .nav-scroll {
+    display: contents;
+  }
+  .overview {
+    min-height: 0;
+  }
+  .overview__stage {
+    min-height: 0;
+  }
+  .vehicle__frame {
+    height: min(520px, 70vh);
+  }
 }

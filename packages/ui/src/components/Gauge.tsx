@@ -131,23 +131,23 @@ export function Gauge(props: GaugeProps): JSX.Element {
           )}
           <span className="lfr-gauge__unit">{unit}</span>
         </p>
-      </div>
-      <div className="lfr-gauge__foot">
-        {value !== undefined && !finite ? (
-          <p className="lfr-gauge__off lfr-nonfinite">not a finite number</p>
-        ) : pos?.off === undefined ? null : (
-          <p className="lfr-gauge__off">
-            {pos.off === 'below'
-              ? `below the dial (${withUnit(formatFixed(min, decimals), unit)})`
-              : `above the dial (${withUnit(formatFixed(max, decimals), unit)})`}
-          </p>
-        )}
-        {status === undefined ? null : (
-          <SeverityTag severity={status.severity} label={status.label} />
-        )}
-        {value === undefined && emptyText !== undefined ? (
-          <p className="lfr-gauge__empty">{emptyText}</p>
-        ) : null}
+        <div className="lfr-gauge__foot">
+          {value !== undefined && !finite ? (
+            <p className="lfr-gauge__off lfr-nonfinite">not a finite number</p>
+          ) : pos?.off === undefined ? null : (
+            <p className="lfr-gauge__off">
+              {pos.off === 'below'
+                ? `below the dial (${withUnit(formatFixed(min, decimals), unit)})`
+                : `above the dial (${withUnit(formatFixed(max, decimals), unit)})`}
+            </p>
+          )}
+          {status === undefined ? null : (
+            <SeverityTag severity={status.severity} label={status.label} />
+          )}
+          {value === undefined && emptyText !== undefined ? (
+            <p className="lfr-gauge__empty">{emptyText}</p>
+          ) : null}
+        </div>
       </div>
     </div>
   );
