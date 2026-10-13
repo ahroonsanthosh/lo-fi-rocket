@@ -164,6 +164,7 @@ export function designVehicle(design: RocketDesign): FlightVehicle {
   }
   return {
     components: designPlacedComponents(design),
+    componentNames: design.components.map((c) => c.name),
     motor: {
       kind: 'definition',
       definition: m.selection.definition,
@@ -263,6 +264,7 @@ export interface DesignWarning {
     | 'no-recovery'
     | 'max-time'
     | 'model-limit'
+    | 'large-angle'
     | 'model';
   /** What happened and why it matters, in one or two sentences. */
   readonly message: string;
@@ -317,17 +319,17 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
   if (s.maxMach > 2) {
     out.push({
       code: 'supersonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is above 2.0, outside the validated range (Mach 0 to 2.0): the centre of pressure and drag have not been checked against measurements there (docs/reports/held-out-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic and above 2.0, outside the validated range (Mach 0 to 2.0): the centre of pressure and drag have not been checked against measurements there, so treat apogee and speeds as rough.`,
     });
   } else if (s.maxMach > 1.2) {
     out.push({
       code: 'supersonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the centre of pressure is validated to Mach 2.0 against held-out wind tunnel data, but the supersonic drag is less certain than the subsonic, so apogee and velocities carry a larger error (docs/reports/held-out-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the centre of pressure is validated to Mach 2.0 against held-out wind tunnel data, but the supersonic drag is less certain than the subsonic, so apogee and velocities carry a larger error.`,
     });
   } else if (s.maxMach > 0.8) {
     out.push({
       code: 'transonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime (0.8 to 1.2), where the drag rises steeply and the fin force is an interpolation, so apogee and velocities carry a larger error (docs/reports/held-out-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime (0.8 to 1.2), where the drag rises steeply and the fin force is an interpolation, so apogee and velocities carry a larger error.`,
     });
   }
   if (design.recovery.length === 0) {
@@ -346,7 +348,14 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
   if (s.endReason === 'model-limit') {
     out.push({
       code: 'model-limit',
-      message: `The flight ended at ${s.flightTime.toFixed(2)} s, before landing, because the rocket turned past 90° angle of attack (flying backwards or tumbling), which the aerodynamic model does not cover (D-046). The apogee and the ascent are valid; a recovery device deploying at apogee lets the descent be simulated.`,
+      message: `The flight ended at ${s.flightTime.toFixed(2)} s, before landing, because the rocket turned past 90° angle of attack (flying backwards or tumbling), which the aerodynamic model does not cover. The apogee and the ascent are valid; a recovery device deploying at apogee lets the descent be simulated.`,
+    });
+  }
+  if (s.regimes.largeAngle) {
+    out.push({
+      code: 'large-angle',
+      message:
+        'Part of the flight is at angles of attack above 60° (the rocket tumbling or flying backwards), where the aerodynamic model is approximate, so that part of the path is rough.',
     });
   }
   for (const w of unstable ? result.warnings.slice(1) : result.warnings)

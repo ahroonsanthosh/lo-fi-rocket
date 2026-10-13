@@ -72,7 +72,7 @@ describe('R1 flight (OpenRocket-equivalent modes)', () => {
     ]);
     // The .ork fins carry no shear modulus, so the flutter check reports that it was not made (plan 0031).
     expect(r.warnings).toEqual([
-      "Fin flutter not checked for the fin set at component 2: enter the fin material's shear modulus (NACA TN 4197).",
+      "Fin flutter not checked for the fin set (component 2): enter the fin material's shear modulus (its stiffness) to check whether the fins can flutter.",
     ]);
     expect(r.summary.endReason).toBe('landing');
     expect(r.summary.burnoutTime).toBe(1.65);
@@ -211,8 +211,11 @@ describe('modes, wind and properties', () => {
     };
     const r = simulateFlight(r5, { ...OR, integrator: { kind: 'rk4', timeStep: seconds(0.005) } });
     expect(r.summary.maxMach).toBeGreaterThan(0.8);
-    expect(r.warnings.join('\n')).toContain('transonic regime');
-    expect(r.warnings.filter((w) => w.includes('transonic regime')).length).toBeLessThanOrEqual(2);
+    // Issue #19: the regime is a summary flag (the design warnings give the plain message); the model's
+    // accuracy statements are notes, not warnings.
+    expect(r.summary.regimes.transonic).toBe(true);
+    expect(r.notes.join('\n')).toContain('transonic regime');
+    expect(r.warnings.some((w) => w.includes('transonic regime'))).toBe(false);
   });
   it('gravity and site inputs are validated', () => {
     expect(() =>

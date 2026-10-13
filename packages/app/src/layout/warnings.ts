@@ -12,6 +12,7 @@ import { formatQuantity, type UnitSystem } from '../units/display.js';
 
 /** Severity of each flight warning code (D-UI-5). The thresholds behind them are unchanged. */
 export const CODE_SEVERITY: Readonly<Record<DesignWarning['code'], WarningSeverity>> = {
+  unstable: 'danger',
   'rail-exit-velocity': 'danger',
   'deployment-velocity': 'danger',
   'ejection-velocity': 'danger',
@@ -21,6 +22,7 @@ export const CODE_SEVERITY: Readonly<Record<DesignWarning['code'], WarningSeveri
   transonic: 'limitation',
   supersonic: 'limitation',
   'model-limit': 'limitation',
+  'large-angle': 'limitation',
   model: 'limitation',
 };
 
