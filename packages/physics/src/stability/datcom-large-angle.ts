@@ -45,6 +45,7 @@ import {
   type LabelledCurve,
   type TwoFamilyChart,
 } from './datcom-large-angle-data.js';
+import { trapezoidOf } from '../geometry/fin-planform.js';
 import { exposedWing, tableValue } from './datcom-fin.js';
 
 /** A chart reading, with `held` set when the argument lay beyond the drawn curve and the end value was used. */
@@ -389,7 +390,9 @@ const PLANFORM_CACHE = new WeakMap<
   [WingPlanform | undefined, WingPlanform | undefined]
 >();
 
-function computeWingPlanform(fin: TrapezoidFinSetComponent, reverse: boolean): WingPlanform {
+function computeWingPlanform(shaped: TrapezoidFinSetComponent, reverse: boolean): WingPlanform {
+  // D-087: a trapezoid method; other planforms use their equivalent trapezoid.
+  const fin = trapezoidOf(shaped);
   const cr: number = fin.rootChord;
   const ct: number = fin.tipChord;
   const s: number = fin.span;
@@ -643,9 +646,10 @@ export function wingCentreOfPressure(
 }
 
 /** C_Nα of the wing per radian at Mach M < 1: 2πA/(2 + √(4 + β²A²/cos²Λ_c/2)) (DATCOM 4.1.3.2, κ = 1; Niskanen eq. 3.40). */
-export function wingLiftCurveSlope(fin: TrapezoidFinSetComponent, mach: number): number {
+export function wingLiftCurveSlope(shaped: TrapezoidFinSetComponent, mach: number): number {
   if (!(mach >= 0 && mach < 1))
     throw new InvalidInputError('Mach number', mach, 'must be between 0 and 1');
+  const fin = trapezoidOf(shaped);
   const cr: number = fin.rootChord;
   const ct: number = fin.tipChord;
   const s: number = fin.span;

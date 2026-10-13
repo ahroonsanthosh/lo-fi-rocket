@@ -96,6 +96,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Step 3 part 1 (plan 0056, D-084): the import approximates parts inside the rocket and part settings instead of refusing; approximations travel with parts and the design to every result; lug instances and transition shoulders exact against OpenRocket probes.
   - D-085: `.ork` fin cant read in degrees (CantProbe); the cant approximation now states the real angle. OpenRocket's example designs: 10 of 17 import (multi-stage and clusters remain).
   - Step 3 part 2a (plan 0057, D-086): motor clusters in the physics (GEO-15, n motors' thrust and base area), the design file and the `.ork` import; three D12s against OpenRocket: mass and CG within 1e-5, apogee +1.0 %, maximum velocity +0.4 %. OpenRocket's "Clustered motors" example imports (11 of 17).
+  - Step 2 physics (plan 0058, D-087): elliptical and freeform fins by Niskanen's general-planform method (BAR-18, GEO-16); trapezoids unchanged; the trapezoid-only methods use an equivalent trapezoid (listed, minor). Next: their `.ork` import and app display (plan 0059).
 
 ## In progress
 

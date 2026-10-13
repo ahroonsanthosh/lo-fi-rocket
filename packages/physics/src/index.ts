@@ -165,6 +165,13 @@ export {
   type PlacedComponent,
   type RocketMassProperties,
 } from './geometry/assembly.js';
+export {
+  finPlanform,
+  trapezoidOf,
+  type FinPlanform,
+  type FinPoint,
+  type FinShape,
+} from './geometry/fin-planform.js';
 export { FIT_TOLERANCE, validateComponentFit } from './geometry/fit.js';
 export {
   bodyTerm,

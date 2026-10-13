@@ -84,6 +84,18 @@ export function componentApproximations(
   for (const { name, component, approximations } of components) {
     // Approximations a part carries from where it came from (an import, D-084).
     out.push(...(approximations ?? []));
+    if (component.kind === 'finSet' && component.shape !== undefined) {
+      // D-087: Niskanen's general-planform methods use the real outline; the methods written for
+      // trapezoids only use the equivalent trapezoid (same span, root chord, area and CP).
+      out.push({
+        subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
+        what: `the ${component.shape.kind} planform in the methods written for trapezoids (DATCOM large-angle and supersonic fin forces, fin wave drag, TN 4197 flutter)`,
+        method: 'a trapezoid with the same span, root chord, area and centre of pressure',
+        effect:
+          'small at subsonic speeds and angles of attack, where Niskanen’s methods for any planform are used; the supersonic fin force, the fin forces past about 10° and the flutter speed are those of the trapezoid',
+        impact: 'minor',
+      });
+    }
     if (
       component.kind === 'finSet' &&
       (component.crossSection === 'rounded' || component.crossSection === 'airfoil')
