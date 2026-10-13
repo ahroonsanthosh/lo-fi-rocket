@@ -33,6 +33,7 @@ export {
   FormatError,
   OrkParseError,
   OrkUnsupportedError,
+  OrkUnsupportedFeaturesError,
   RseParseError,
   RseUnsupportedError,
 } from './errors.js';
