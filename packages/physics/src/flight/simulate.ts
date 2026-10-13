@@ -181,6 +181,15 @@ export interface FlightSummary {
   /** Bearing of the landing point from the pad, clockwise from north, radians. */
   readonly landingDirection: number | undefined;
   readonly flightTime: number;
+  /**
+   * When the motor's ejection charge fired, the airspeed |v − v_wind| and the
+   * vertical velocity (positive up) at that instant; undefined when it did not
+   * fire (plugged motor, or the flight ended first). Issue #9: without an
+   * altimeter the charge is the deployment, whatever the devices are set to.
+   */
+  readonly ejectionCharge:
+    | { readonly time: number; readonly airspeed: number; readonly verticalVelocity: number }
+    | undefined;
   /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
   readonly endReason: 'landing' | 'max-time' | 'model-limit';
   /**
@@ -713,6 +722,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     vec3(0, 0, 0),
   );
   const timed: PendingTimed[] = [];
+  let ejectionCharge: FlightSummary['ejectionCharge'];
   let apogeeReached = false;
   let liftedOff = false;
   const deployed = new Set<RecoveryDevice>();
@@ -775,6 +785,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       kind: 'ejection-charge',
       detail: `ejection charge at ${tE.toFixed(3)} s`,
       action: () => {
+        const st = unpack(y);
+        ejectionCharge = {
+          time: tE,
+          airspeed: norm(sub(st.velocity, ctx.wind(st.position.z, tE))),
+          verticalVelocity: st.velocity.z,
+        };
         scheduleDeployments('ejection', tE);
       },
     });
@@ -1325,6 +1341,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ? undefined
         : (Math.atan2(landing.x, landing.y) + 2 * Math.PI) % (2 * Math.PI),
     flightTime: t,
+    ejectionCharge,
     endReason,
     minimumStability: { powered: lowest.powered, coast: lowest.coast },
     flutter: flutterFins.map(({ index, fin }): FlutterMargin => {
@@ -1406,6 +1423,18 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (t = ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there. The margin uses the CP at that Mach number and angle of attack (plan 0030).`,
       );
     }
+  }
+  // Issue #9: a charge that fires while the rocket still climbs. Without an altimeter the charge is the
+  // deployment, so the recovery would open at this speed; the devices' own trigger does not change that.
+  if (ejectionCharge !== undefined && ejectionCharge.verticalVelocity > 0) {
+    const e = ejectionCharge;
+    const toApogee =
+      apogee === undefined
+        ? ''
+        : `, ${(apogee.t - e.time).toFixed(1)} s before apogee (a delay of about ${(apogee.t - motorBurn).toFixed(1)} s after burnout would fire it near apogee)`;
+    warnings.add(
+      `The motor's ejection charge fires at ${e.time.toFixed(2)} s while the rocket is still climbing at ${e.airspeed.toFixed(1)} m/s${toApogee}. If the charge deploys the recovery (no altimeter), the parachute opens at that speed and may tear, strip or zipper the airframe; choose a longer delay. If an altimeter deploys the recovery and the charge is only a backup, this still fires the charge early.`,
+    );
   }
   return {
     samples,
