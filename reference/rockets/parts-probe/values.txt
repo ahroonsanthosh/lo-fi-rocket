@@ -1,0 +1,6 @@
+NoseCone "Nose Cone" absX0=0.000000000 length=0.100000 mass=0.010471976 cgAbs=0.074999989
+BodyTube "Body Tube" absX0=0.100000000 length=0.500000 mass=0.053878314 cgAbs=0.350000000
+Parachute "Chute" absX0=0.120000000 length=0.060000 mass=0.026143804 cgAbs=0.150000000 cd=0.800000000 cdAutomatic=true
+ShockCord "Cord" absX0=0.190000000 length=0.030000 mass=0.007500000 cgAbs=0.205000000
+TubeCoupler "Coupler" absX0=0.310000000 length=0.080000 mass=0.012271061 cgAbs=0.350000000 outer=0.024000 inner=0.022500
+EngineBlock "Block" absX0=0.524000000 length=0.006000 mass=0.000633345 cgAbs=0.527000000 outer=0.009500 inner=0.006500
