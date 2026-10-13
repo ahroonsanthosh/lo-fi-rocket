@@ -71,3 +71,17 @@ describe('an unstable rocket is reported first (issue #17)', () => {
     expect(r.warnings.some((w) => w.startsWith('This rocket is unstable'))).toBe(false);
   });
 });
+
+describe('the in-flight margin covers the ascent only (plan 0030)', () => {
+  it('R1 with no recovery falling after apogee (large-angle model): no margin after apogee, not unstable', () => {
+    const ballistic: FlightVehicle = { ...r1(R1_COMPONENTS), recovery: [] };
+    const r = simulateFlight(ballistic, { ...OPTIONS, largeAngleMethod: 'datcom' });
+    expect(r.summary.endReason).toBe('landing');
+    const coast = r.summary.minimumStability.coast;
+    expect(coast).toBeDefined();
+    // Before the fix the fall after apogee set the coast minimum (0.73 calibers at Mach 0.04, 54°).
+    expect(coast?.time ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(r.summary.timeToApogee);
+    expect(r.summary.unstable).toBeUndefined();
+    expect(r.warnings.some((w) => w.startsWith('In-flight stability margin fell to'))).toBe(false);
+  });
+});

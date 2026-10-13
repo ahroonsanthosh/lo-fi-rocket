@@ -819,8 +819,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         model = 'linear';
       }
     }
+    // Plan 0030: the ascent only (rail exit to apogee). A rocket with no open recovery device stays in
+    // 'coast' after apogee; its fall is not flight along the stability axis and must not count, or a
+    // stable rocket falling tail first would be reported unstable (issue #17).
     if (
       (phase === 'powered' || phase === 'coast') &&
+      !apogeeReached &&
       Number.isFinite(cp) &&
       (f === undefined || (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK)
     ) {

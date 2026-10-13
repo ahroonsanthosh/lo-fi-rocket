@@ -26,3 +26,9 @@ Not done: the issue's suggestion of a seeded initial disturbance so that the 6DO
 - formats `unstable-warning.test.ts`: the finless example leads with `unstable`, once; the shipped example has none.
 
 No golden output changes: the five reference rockets stay stable.
+
+## Follow-up: the margin covers the ascent only
+
+Found while checking issue #33: a rocket with no open recovery device stays in the `coast` phase after apogee, and its fall was counted in the coast minimum margin (0.73 calibers at Mach 0.04 and 54° on the example). That contradicts plan 0030 and the `minimumStability` documentation (burnout to apogee). It would also have let a stable rocket falling tail first be reported unstable. The minimum is now taken only before apogee.
+
+Test: R1 with no recovery on the large-angle model lands; its coast minimum is at or before apogee; it is not reported unstable; and there is no in-flight margin warning. No golden output changes: the reference flights deploy at apogee.
