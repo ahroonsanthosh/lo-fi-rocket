@@ -1,0 +1,12 @@
+NoseCone "Nose Cone" absX0=0.000000000 length=0.150000 mass=0.031509560 cgAbs=0.094312441
+Bulkhead "Nose bulkhead aft" absX0=0.145000000 length=0.005000 mass=0.004973997 cgAbs=0.147500000 outer=0.022972972 inner=0.000000000
+Bulkhead "Nose bulkhead fore" absX0=0.030000000 length=0.005000 mass=0.000483332 cgAbs=0.032500000 outer=0.007161225 inner=0.000000000
+BodyTube "Body Tube" absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+InnerTube "Motor tube" absX0=0.580000000 length=0.070000 mass=0.001423927 cgAbs=0.615000000 outer=0.009500000 inner=0.009000000
+CenteringRing "Ring fore" absX0=0.580000000 length=0.005000 mass=0.004578086 cgAbs=0.582500000 outer=0.024000000 inner=0.009500000
+CenteringRing "Ring aft" absX0=0.645000000 length=0.005000 mass=0.004578086 cgAbs=0.647500000 outer=0.024000000 inner=0.009500000
+CenteringRing "Ring clear" absX0=0.400000000 length=0.005000 mass=0.005428672 cgAbs=0.402500000 outer=0.024000000 inner=0.000000000
+Bulkhead "Body bulkhead" absX0=0.250000000 length=0.006000 mass=0.006514407 cgAbs=0.253000000 outer=0.024000000 inner=0.000000000
+TubeCoupler "Coupler" absX0=0.150000000 length=0.080000 mass=0.000000000 cgAbs=0.190000000 outer=0.024000000 inner=0.024000000
+Bulkhead "Coupler bulkhead" absX0=0.188000000 length=0.004000 mass=0.004342938 cgAbs=0.190000000 outer=0.024000000 inner=0.000000000
+MassComponent "Coupler mass" absX0=0.200000000 length=0.020000 mass=0.025000000 cgAbs=0.210000000

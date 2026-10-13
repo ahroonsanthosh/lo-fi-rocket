@@ -445,14 +445,17 @@ describe('rejected inputs name the element and component', () => {
       edit(r2, '<instanceseparation>0.25</instanceseparation>', ''),
       /<instanceseparation> is required/,
     );
-    unsupported(
+    // An automatic inner radius fits the motor tube the ring surrounds (D-080): R1's first ring
+    // was written with 0.0125 m, the tube's outer radius.
+    const autoRing = parseOrk(
       edit(
         r1,
         '<innerradius>0.0125</innerradius>\n              </centeringring>\n\n              <centeringring>',
         '<innerradius>auto</innerradius>\n              </centeringring>\n\n              <centeringring>',
       ),
-      /<innerradius> "auto"/,
-    );
+      'edited.ork',
+    ).components.find((c) => c.element === 'centeringring')?.component;
+    expect(autoRing?.kind === 'centeringRing' && autoRing.innerRadius).toBe(0.0125);
     unsupported(
       edit(
         r1,
@@ -811,5 +814,89 @@ describe('parachute materials, shock cords, couplers and engine blocks (D-079)',
     const m = massCg(part('engineblock'));
     expect(m.mass).toBeCloseTo(0.000633345, 9);
     expect(m.cg).toBeCloseTo(0.527, 12);
+  });
+});
+
+/**
+ * Automatic ("auto") ring, bulkhead and coupler radii and components inside a
+ * tube coupler (D-080), against a file OpenRocket 24.12 saved and reloaded
+ * (tools/openrocket-harness/src/AutoRingProbe.java,
+ * reference/rockets/auto-ring-probe/values.txt).
+ */
+describe('automatic ring radii and parts inside a coupler (D-080)', () => {
+  const rocket = parseOrk(bytes(join('auto-ring-probe', 'autoring.ork')), 'autoring.ork');
+  const named = (name: string): OrkPlacedComponent => {
+    const c = rocket.components.find((x) => x.name === name);
+    if (c === undefined) throw new Error(`no ${name}`);
+    return c;
+  };
+  const radii = (name: string): [number, number] => {
+    const c = named(name).component;
+    if (c.kind !== 'centeringRing' && c.kind !== 'bulkhead')
+      throw new Error(`${name} is not a ring`);
+    return [c.outerRadius, c.innerRadius];
+  };
+
+  it('in the body tube: outer radius = the tube inner radius 0.025 − 0.001; inner = the motor tube it overlaps, else 0', () => {
+    expect(radii('Ring fore')).toEqual([0.024, 0.0095]);
+    expect(radii('Ring aft')).toEqual([0.024, 0.0095]);
+    expect(radii('Ring clear')).toEqual([0.024, 0]);
+    expect(radii('Body bulkhead')[0]).toBe(0.024);
+  });
+
+  it('in an ogive nose: the nose radius at the fore face less the wall, as OpenRocket', () => {
+    // Tangent ogive L = 0.15, R = 0.025: ρ = (R² + L²)/(2R) = 0.4625;
+    // y(x) = √(ρ² − (L − x)²) + R − ρ. y(0.030) = √(0.21390625 − 0.0144) − 0.4375 = 0.0091612,
+    // less 0.002 = 0.0071612; y(0.145) = 0.0249730, less 0.002 = 0.0229730.
+    // OpenRocket: 0.007161225 and 0.022972972.
+    expect(radii('Nose bulkhead fore')[0]).toBeCloseTo(0.007161225, 8);
+    expect(radii('Nose bulkhead aft')[0]).toBeCloseTo(0.022972972, 8);
+  });
+
+  it('in a coupler: children positioned against the coupler, automatic radius = its inner radius', () => {
+    // Coupler at 0.150 to 0.230 m (outer radius auto = 0.024, wall 0 as saved). Bulkhead 0.004 m in
+    // the middle: 0.150 + (0.08 − 0.004)/2 = 0.188; mass 0.025 kg, bottom −0.01: 0.230 − 0.01 − 0.02 = 0.200.
+    expect(named('Coupler bulkhead').position).toBeCloseTo(0.188, 12);
+    expect(radii('Coupler bulkhead')[0]).toBe(0.024);
+    expect(named('Coupler mass').position).toBeCloseTo(0.2, 12);
+  });
+
+  it("every part has OpenRocket's mass and CG", () => {
+    // values.txt: name, mass (kg), CG (m).
+    const OPENROCKET: readonly (readonly [string, number, number])[] = [
+      ['Nose bulkhead aft', 0.004973997, 0.1475],
+      ['Nose bulkhead fore', 0.000483332, 0.0325],
+      ['Ring fore', 0.004578086, 0.5825],
+      ['Ring aft', 0.004578086, 0.6475],
+      ['Ring clear', 0.005428672, 0.4025],
+      ['Body bulkhead', 0.006514407, 0.253],
+      ['Coupler bulkhead', 0.004342938, 0.19],
+      ['Coupler mass', 0.025, 0.21],
+    ];
+    for (const [name, mass, cg] of OPENROCKET) {
+      const m = rocketMassProperties([named(name)]);
+      expect(m.mass, name).toBeCloseTo(mass, 8);
+      expect(m.cg, name).toBeCloseTo(cg, 8);
+    }
+  });
+});
+
+describe('a radially offset mass component (D-080)', () => {
+  it('is placed on the axis at the same axial position, with a notice', () => {
+    const r1 = strFromU8(
+      unzipSync(bytes('r1-three-fin-conical.ork'))['rocket.ork'] ?? new Uint8Array(),
+    );
+    const plain = parseOrk(r1, 'r1.ork');
+    const offset = parseOrk(
+      r1.replace(
+        '<packedradius>0.02</packedradius>\n                <radialposition>0.0</radialposition>',
+        '<packedradius>0.02</packedradius>\n                <radialposition>0.012</radialposition>',
+      ),
+      'r1.ork',
+    );
+    const weight = (r: OrkRocket): OrkPlacedComponent | undefined =>
+      r.components.find((c) => c.element === 'masscomponent');
+    expect(weight(offset)).toEqual(weight(plain));
+    expect(offset.notices.join(' ')).toMatch(/12 mm off the rocket's axis/);
   });
 });

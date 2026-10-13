@@ -38,3 +38,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Parts probe
 
 `src/PartsProbe.java` (D-079) measures a parachute's mass from its materials, the automatic parachute C_D, and the mass and CG of a shock cord, a tube coupler and an engine block; output in `reference/rockets/parts-probe/`.
+
+## Automatic ring probe
+
+`src/AutoRingProbe.java` (D-080) measures the radii OpenRocket gives rings, bulkheads and couplers written with a bare "auto", and parts inside a tube coupler; output in `reference/rockets/auto-ring-probe/`.

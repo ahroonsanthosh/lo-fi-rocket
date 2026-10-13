@@ -18,6 +18,7 @@ import {
   kilograms,
   kilogramsPerCubicMetre,
   metres,
+  noseProfile,
   seconds,
   type Component,
   type KilogramsPerCubicMetre,
@@ -223,6 +224,17 @@ class Element {
     return this.toNumber(name, t.startsWith('auto ') ? t.slice(5) : t);
   }
 
+  /**
+   * A radius that may be a bare "auto" (D-080): `resolve` gives OpenRocket's value for it, or
+   * undefined where the rule is not known, which is refused.
+   */
+  radiusOrAuto(name: string, resolve: () => number | undefined): number {
+    if (this.text(name) !== 'auto') return this.length(name);
+    const value = resolve();
+    if (value === undefined) throw this.unsupported(`<${name}> "auto" here`);
+    return value;
+  }
+
   /** A wall thickness that may be "filled". */
   thickness(name: string): number | 'filled' {
     const t = this.text(name);
@@ -338,6 +350,32 @@ interface Parent {
   readonly position: number;
   readonly length: number;
   readonly radius: number;
+  /**
+   * The radius an automatic outer radius takes for a part spanning [fore, aft] (absolute), or
+   * undefined where OpenRocket's rule is not known (D-080).
+   */
+  readonly autoOuterRadius?: (fore: number, aft: number) => number | undefined;
+  /** The inner tubes among the children, for automatic centering ring inner radii (D-080). */
+  readonly innerTubes?: readonly { fore: number; aft: number; outerRadius: number }[];
+}
+
+/**
+ * The inner tubes among a parent's children, read ahead of the other children so that a centering
+ * ring with an automatic inner radius can fit the tube it surrounds whatever the file order. Reads
+ * through a separate wrapper, so the children's own reading and checks are unaffected.
+ */
+function innerTubeSpans(
+  subcomponents: Element,
+  parent: Parent,
+): { fore: number; aft: number; outerRadius: number }[] {
+  return subcomponents.node.children
+    .filter((n) => n.name === 'innertube')
+    .map((n) => {
+      const el = subcomponents.wrap(n);
+      const length = el.number('length');
+      const fore = axialPosition(el, parent, length);
+      return { fore, aft: fore + length, outerRadius: el.length('outerradius') };
+    });
 }
 
 /**
@@ -745,22 +783,39 @@ class Reader {
    */
   private readTubeCoupler(el: Element, parent: Parent): void {
     el.requireZero('radialposition', 'radially offset tube couplers');
-    const sub = el.optionalChild('subcomponents');
-    if (sub !== undefined && sub.node.children.length > 0) {
-      throw sub.unsupported('components inside a tube coupler');
-    }
     const length = el.number('length');
+    const fore = axialPosition(el, parent, length);
+    const outer = el.radiusOrAuto('outerradius', () =>
+      parent.autoOuterRadius?.(fore, fore + length),
+    );
+    const wall = el.number('thickness');
     this.place(
       el,
       {
         kind: 'innerTube',
         length: metres(length),
-        outerRadius: metres(el.length('outerradius')),
-        wallThickness: metres(el.number('thickness')),
+        outerRadius: metres(outer),
+        wallThickness: metres(wall),
         density: el.bulkDensity(),
       },
-      axialPosition(el, parent, length),
+      fore,
     );
+    // D-080: children of a coupler are positioned against the coupler, like those of a body tube,
+    // and an automatic outer radius inside it is its inner radius (auto-ring-probe).
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined) {
+      const parentOfChildren: Parent = {
+        position: fore,
+        length,
+        radius: outer,
+        autoOuterRadius: () => outer - wall,
+      };
+      this.readNoseInternal(
+        sub,
+        { ...parentOfChildren, innerTubes: innerTubeSpans(sub, parentOfChildren) },
+        'a tube coupler',
+      );
+    }
     el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
   }
 
@@ -772,7 +827,10 @@ class Reader {
     el.requireValue('instancecount', '1', 'more than one engine block instance');
     el.requireZero('radialposition', 'radially offset engine blocks');
     const length = el.number('length');
-    const outer = el.length('outerradius');
+    const fore = axialPosition(el, parent, length);
+    const outer = el.radiusOrAuto('outerradius', () =>
+      parent.autoOuterRadius?.(fore, fore + length),
+    );
     const thickness = el.number('thickness');
     if (!(thickness > 0 && thickness <= outer)) {
       throw el.parseError(
@@ -788,7 +846,7 @@ class Reader {
         innerRadius: metres(outer - thickness),
         density: el.bulkDensity(),
       },
-      axialPosition(el, parent, length),
+      fore,
     );
     el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
   }
@@ -820,13 +878,26 @@ class Reader {
     el.requireZero('radialposition', `radially offset ${kind}`);
     const length = el.number('length');
     const position = axialPosition(el, parent, length);
+    const aft = position + length;
+    // D-080: an automatic inner radius fits the largest inner tube the ring overlaps, else 0.
+    const autoInner = (): number =>
+      Math.max(
+        0,
+        ...(parent.innerTubes ?? [])
+          .filter((t) => position < t.aft && aft > t.fore)
+          .map((t) => t.outerRadius),
+      );
     this.place(
       el,
       {
         kind,
         length: metres(length),
-        outerRadius: metres(el.length('outerradius')),
-        innerRadius: metres(kind === 'centeringRing' ? el.length('innerradius') : 0),
+        outerRadius: metres(
+          el.radiusOrAuto('outerradius', () => parent.autoOuterRadius?.(position, aft)),
+        ),
+        innerRadius: metres(
+          kind === 'centeringRing' ? el.radiusOrAuto('innerradius', autoInner) : 0,
+        ),
         density: el.bulkDensity(),
       },
       position,
@@ -835,7 +906,14 @@ class Reader {
   }
 
   private readMassComponent(el: Element, parent: Parent): void {
-    el.requireZero('radialposition', 'radially offset mass components');
+    // D-080: the physics model is axisymmetric; a radially offset mass is placed on the axis, keeping
+    // its mass and axial position, and the import says so.
+    const radial = el.optionalNumber('radialposition') ?? 0;
+    if (radial !== 0) {
+      this.notices.push(
+        `Mass component "${el.optionalText('name') ?? ''}" sits ${String(Math.round(radial * 1000))} mm off the rocket's axis in the file. This app models the rocket as symmetric about its axis, so the mass is placed on the axis at the same position along the rocket; its sideways offset, which tilts the rocket slightly, is not modelled.`,
+      );
+    }
     const length = el.number('packedlength');
     const position = axialPosition(el, parent, length);
     this.place(
@@ -984,7 +1062,24 @@ class Reader {
       this.placeShoulderCap(el, aftShoulder, x + length + aftShoulder.length, 'aft');
     }
     const sub = el.optionalChild('subcomponents');
-    if (sub !== undefined) this.readNoseInternal(sub, { position: x, length, radius: baseRadius });
+    if (sub !== undefined) {
+      // D-080: an automatic outer radius inside a hollow nose cone is the cone's radius less its
+      // wall, at the end of the part where that is smaller (the fore end on a nose); unknown when
+      // filled.
+      const profile = noseProfile(shape, metres(length), metres(baseRadius), shapeParameter);
+      const radiusAt = (at: number): number =>
+        profile.radius(Math.min(Math.max(at - x, 0), length)) - (thickness as number);
+      const parent: Parent = {
+        position: x,
+        length,
+        radius: baseRadius,
+        autoOuterRadius:
+          thickness === 'filled'
+            ? () => undefined
+            : (fore, aft) => Math.min(radiusAt(fore), radiusAt(aft)),
+      };
+      this.readNoseInternal(sub, { ...parent, innerTubes: innerTubeSpans(sub, parent) });
+    }
     el.finish([...IGNORED_COMMON]);
     return x + length;
   }
@@ -997,7 +1092,7 @@ class Reader {
    * parent's radius are read: fins, lugs, rail buttons and inner tubes would
    * need the body radius, which varies along a nose cone.
    */
-  private readNoseInternal(subcomponents: Element, parent: Parent): void {
+  private readNoseInternal(subcomponents: Element, parent: Parent, where = 'a nose cone'): void {
     for (const node of subcomponents.node.children) {
       const el = subcomponents.wrap(node);
       switch (node.name) {
@@ -1023,7 +1118,7 @@ class Reader {
           this.readEngineBlock(el, parent);
           break;
         default:
-          throw el.unsupported(`element <${node.name}> inside a nose cone`);
+          throw el.unsupported(`element <${node.name}> inside ${where}`);
       }
     }
   }
@@ -1081,7 +1176,12 @@ class Reader {
     );
     this.readMotorMount(el, index, x + length);
     const sub = el.optionalChild('subcomponents');
-    if (sub !== undefined) this.readInternal(sub, { position: x, length, radius });
+    if (sub !== undefined) {
+      // D-080: an automatic outer radius inside a body tube is the tube's inner radius.
+      const inner = radius - el.number('thickness');
+      const parent: Parent = { position: x, length, radius, autoOuterRadius: () => inner };
+      this.readInternal(sub, { ...parent, innerTubes: innerTubeSpans(sub, parent) });
+    }
     el.finish([...IGNORED_COMMON]);
     return x + length;
   }
