@@ -255,6 +255,7 @@ export interface DesignWarning {
     | 'rail-exit-velocity'
     | 'thrust-to-weight'
     | 'deployment-velocity'
+    | 'ejection-velocity'
     | 'transonic'
     | 'supersonic'
     | 'no-recovery'
@@ -297,6 +298,15 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
     out.push({
       code: 'deployment-velocity',
       message: `Recovery deploys at ${s.deploymentVelocity.toFixed(1)} m/s, above ${String(t.maxDeploymentVelocity)} m/s: a fast deployment can tear the parachute or shock cord or zipper the airframe.`,
+    });
+  }
+  // Issue #9: the motor's charge at a high airspeed (too short or too long a delay). Without an altimeter it
+  // deploys the recovery; when a device already deploys at that instant the deployment warning covers it.
+  const e = s.ejectionCharge;
+  if (e !== undefined && e.airspeed > t.maxDeploymentVelocity && s.deploymentTime !== e.time) {
+    out.push({
+      code: 'ejection-velocity',
+      message: `The motor's ejection charge fires at ${e.time.toFixed(2)} s at ${e.airspeed.toFixed(1)} m/s, above ${String(t.maxDeploymentVelocity)} m/s: if the charge deploys the recovery, it opens fast enough to tear the parachute or shock cord or zipper the airframe. Choose a delay that fires near apogee.`,
     });
   }
   if (s.maxMach > 2) {
