@@ -681,6 +681,19 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, warnings),
   };
 
+  // M-4: a device on the ejection charge needs a charge. A plugged motor (no delay) or the ideal motor of the
+  // analytical cases has none, so the device can never open; say so before the flight, not only after it.
+  const ejectionDevices = vehicle.recovery.filter((d) => d.deploy.event === 'ejection');
+  const hasEjectionCharge =
+    vehicle.motor.kind === 'definition' && vehicle.motor.ejectionDelay !== undefined;
+  if (!hasEjectionCharge) {
+    for (const d of ejectionDevices) {
+      warnings.add(
+        `"${d.name}" is set to open at the motor's ejection charge, but ${vehicle.motor.kind === 'ideal' ? 'this motor model has no ejection charge' : 'the motor is plugged (it has no ejection delay)'}, so it never opens and the rocket comes down without it. Set it to open at apogee or at an altitude (with an altimeter), or choose a motor with an ejection delay.`,
+      );
+    }
+  }
+
   const events: FlightEvent[] = [];
   const samples: FlightSample[] = [];
   let phase: FlightPhase = 'on-rail';
@@ -1258,6 +1271,18 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       time: seconds(t),
       detail: `maximum simulation time ${String(maxTime)} s reached in phase ${phase}`,
     });
+  // M-4: the charge was due after the flight ended (a delay longer than the flight), so its devices never opened.
+  if (hasEjectionCharge && !events.some((e) => e.kind === 'ejection-charge')) {
+    const due = motorBurn + (vehicle.motor.ejectionDelay as number);
+    const ended =
+      endReason === 'landing' ? `landed at ${t.toFixed(2)} s` : `ended at ${t.toFixed(2)} s`;
+    for (const d of ejectionDevices) {
+      if (deployed.has(d)) continue;
+      warnings.add(
+        `"${d.name}" is set to open at the motor's ejection charge, due at ${due.toFixed(2)} s, but the flight ${ended}, before the charge fired, so it never opened. Choose a shorter ejection delay; one that fires near apogee (${apogee === undefined ? 'not reached' : `${apogee.t.toFixed(2)} s, ${(apogee.t - motorBurn).toFixed(1)} s after burnout`}) is usual.`,
+      );
+    }
+  }
 
   const apogeeZ = samples.reduce((m, s) => Math.max(m, s.altitude), 0);
   const summary: FlightSummary = {
