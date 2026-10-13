@@ -8,6 +8,7 @@ import {
   listCachedMotors,
   motorFromEng,
   parseEng,
+  parseRse,
   type CachedMotor,
   type KeyValueStore,
   type MotorProvenance,
@@ -56,11 +57,14 @@ export function bundledMotors(): LibraryMotor[] {
   });
 }
 
-/** Delays a cached motor's RASP file lists, re-read from the stored text. */
+/** Delays a cached motor's RASP or RockSim file lists, re-read from the stored text. */
 function delaysOf(entry: CachedMotor): LibraryMotor['delays'] {
-  if (entry.fileText === undefined || entry.definition.sourceFormat !== 'RASP') return undefined;
+  if (entry.fileText === undefined) return undefined;
   try {
-    return parseEng(entry.fileText)[0]?.delays;
+    if (entry.definition.sourceFormat === 'RASP') return parseEng(entry.fileText)[0]?.delays;
+    if (entry.definition.sourceFormat === 'RockSim')
+      return parseRse(entry.fileText, {}, 'cached motor')[0]?.delays;
+    return undefined;
   } catch {
     return undefined;
   }
