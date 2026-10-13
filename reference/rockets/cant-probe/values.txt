@@ -1,0 +1,2 @@
+set 2 degrees; loaded cant = 0.034906585 rad
+written in the file: <cant>2.0</cant>

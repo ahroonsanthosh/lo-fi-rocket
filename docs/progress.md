@@ -94,6 +94,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - `.ork` import of OpenRocket's example designs, plans 0048 to 0054 (D-076 to D-082): nose cone children, configurations and cross-sections, automatic sizes and shoulders, parachute materials, shock cords, couplers, engine blocks, automatic ring radii, fin tabs, plugged and reloadable motors, every problem listed at once.
   - Step 1: the confidence report (`fidelity.ts`, `FlightResult.approximations` and `confidence`, shown with the results).
   - Step 3 part 1 (plan 0056, D-084): the import approximates parts inside the rocket and part settings instead of refusing; approximations travel with parts and the design to every result; lug instances and transition shoulders exact against OpenRocket probes.
+  - D-085: `.ork` fin cant read in degrees (CantProbe); the cant approximation now states the real angle. OpenRocket's example designs: 10 of 17 import (multi-stage and clusters remain).
 
 ## In progress
 

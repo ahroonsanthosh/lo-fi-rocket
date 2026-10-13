@@ -987,11 +987,12 @@ class Reader {
         `<instancecount> ${String(instances)} differs from <fincount> ${String(count)}`,
       );
     }
+    // OpenRocket writes the cant in degrees (D-085, reference/rockets/cant-probe/values.txt).
     const cant = el.optionalNumber('cant') ?? 0;
     if (cant !== 0) {
       // D-084: the roll forcing of canted fins is not yet modelled (plan 0055 step 6).
       this.note(el, {
-        what: `the fins’ ${String(Math.round(((cant * 180) / Math.PI) * 10) / 10)}° cant`,
+        what: `the fins’ ${String(Math.round(cant * 10) / 10)}° cant`,
         method: 'the fins flown straight: no roll forcing',
         effect:
           'the spin the cant gives is not simulated; the trajectory and stability change little, the roll rate is not shown',

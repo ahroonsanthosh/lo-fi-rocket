@@ -58,3 +58,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Stage override probe
 
 `src/StageOverrideProbe.java` (D-084) measures what a mass or CG override on the stage does to the rocket's structure mass, CG and inertias, with and without the override covering the subcomponents; output in `reference/rockets/stage-override-probe/`.
+
+## Cant probe
+
+`src/CantProbe.java` (D-085) saves a fin set canted 2° and shows the value written in the file (2.0: degrees) and the cant OpenRocket reads back (0.0349 rad); output in `reference/rockets/cant-probe/`.
