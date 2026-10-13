@@ -101,7 +101,8 @@ describe('ballistic descents of the reference rockets (plan 0023)', () => {
         expect(Number.isFinite(last6.altitude)).toBe(true);
         if (wind === 0) {
           expect(six.summary.endReason).toBe('model-limit');
-          expect(six.warnings.join('\n')).toContain('90°');
+          // The technical reason is a note (issue #19); the plain message is the design warning.
+          expect(six.notes.join('\n')).toContain('90°');
         } else {
           expect(six.summary.endReason).toBe('landing');
           const afterRail = six.samples.filter(

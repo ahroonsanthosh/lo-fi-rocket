@@ -45,7 +45,9 @@ describe('angle-of-attack limit of the aerodynamic model (D-046)', () => {
     const last = r.events.at(-1);
     expect(last?.kind).toBe('model-limit');
     expect(last?.detail).toMatch(/angle of attack .* 90°/);
-    expect(r.warnings.some((w) => w.includes('small-angle normal force model'))).toBe(true);
+    // Issue #19: the technical reason is a note; the design warnings give the plain message for the end reason.
+    expect(r.notes.some((w) => w.includes('small-angle normal force model'))).toBe(true);
+    expect(r.warnings.some((w) => w.includes('small-angle normal force model'))).toBe(false);
     // Every moving sample before the limit point stays within the model; at the bisected apogee the
     // velocity is ~0 and its direction (hence the angle) is not meaningful, and the last sample is the limit state.
     for (const s of r.samples.slice(0, -1)) {
@@ -58,7 +60,8 @@ describe('angle-of-attack limit of the aerodynamic model (D-046)', () => {
     expect(r.summary.endReason).toBe('landing');
     expect(r.summary.apogee).toBeCloseTo(168.866, 1);
     expect(r.summary.groundHitVelocity).toBeGreaterThan(0);
-    expect(r.warnings.some((w) => w.includes('above 60°'))).toBe(true);
+    expect(r.summary.regimes.largeAngle).toBe(true);
+    expect(r.notes.some((w) => w.includes('above 60°'))).toBe(true);
   });
   it('the adaptive integrator reaches the same limit quickly instead of stalling', () => {
     const start = performance.now();

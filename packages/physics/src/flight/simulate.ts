@@ -179,6 +179,17 @@ export interface FlightSummary {
   /** Bearing of the landing point from the pad, clockwise from north, radians. */
   readonly landingDirection: number | undefined;
   readonly flightTime: number;
+  /**
+   * The flight regimes met in powered flight and coast (issue #19): Mach 0.8 to 1.2, 1.2 to 2, above 2,
+   * and angle of attack above 60°. The design warnings turn these into plain messages; the model's
+   * technical notes on each are in `FlightResult.notes`.
+   */
+  readonly regimes: {
+    readonly transonic: boolean;
+    readonly supersonic: boolean;
+    readonly beyondValidated: boolean;
+    readonly largeAngle: boolean;
+  };
   /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
   readonly endReason: 'landing' | 'max-time' | 'model-limit';
   /**
@@ -235,7 +246,16 @@ export interface FlightResult {
   readonly samples: readonly FlightSample[];
   readonly events: readonly FlightEvent[];
   readonly summary: FlightSummary;
+  /**
+   * What the user should know about this flight, one plain sentence or two each, saying what it means and
+   * what to do (CLAUDE.md 9, issue #19). No decision or chart references.
+   */
   readonly warnings: readonly string[];
+  /**
+   * Technical notes on the models used (chart limits, fairings, reading uncertainty, sources and decision
+   * IDs), for a "details" view. They do not change what the user should do; the warnings carry that.
+   */
+  readonly notes: readonly string[];
   readonly modes: {
     readonly aerodynamics: 'niskanen' | 'none';
     readonly finRollReduction: boolean;
@@ -624,7 +644,7 @@ interface PendingTimed {
 function effectiveLargeAngleMethod(
   vehicle: FlightVehicle,
   options: SimulationOptions,
-  warnings: Set<string>,
+  notes: Set<string>,
 ): LargeAngleMethod {
   const requested = options.largeAngleMethod ?? DEFAULT_LARGE_ANGLE_METHOD;
   if (requested === 'linear') return 'linear';
@@ -632,7 +652,7 @@ function effectiveLargeAngleMethod(
     if (p.component.kind !== 'finSet') continue;
     const av = finLargeAngleAvailability(p.component);
     if (!av.available) {
-      warnings.add(
+      notes.add(
         `The large-angle model (DATCOM, D-070) does not cover this fin set: ${av.reason}. The small-angle model is used instead, and the flight ends if the angle of attack passes 90° (D-046).`,
       );
       return 'linear';
@@ -645,6 +665,20 @@ function effectiveLargeAngleMethod(
 export function simulateFlight(vehicle: FlightVehicle, options: SimulationOptions): FlightResult {
   const launch = validateLaunch(options.site, options.rail);
   const warnings = new Set<string>(launch.warnings.map((w) => w.message));
+  // Issue #19: model provenance goes to the notes; the warnings say what matters and what to do.
+  const notes = new Set<string>();
+  const finName = (index: number): string => {
+    const name = vehicle.componentNames?.[index];
+    return name === undefined || name === ''
+      ? `the fin set (component ${String(index)})`
+      : `"${name}"`;
+  };
+  const regimes = {
+    transonic: false,
+    supersonic: false,
+    beyondValidated: false,
+    largeAngle: false,
+  };
   if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
   const maxTime: number = options.maxTime;
   if (!(maxTime > 0))
@@ -678,7 +712,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     deployedArea: { area: 0 },
     motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
-    largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, warnings),
+    largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, notes),
   };
 
   const events: FlightEvent[] = [];
@@ -851,6 +885,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         }
       }
     }
+    // Issue #19: the regimes met, for one plain warning each at the end (every accepted ascent step).
+    if (derived.flight !== undefined && (phase === 'powered' || phase === 'coast')) {
+      const m: number = derived.flight.mach;
+      if (m >= 0.8 && m <= 1.2) regimes.transonic = true;
+      else if (m > 1.2 && m <= 2) regimes.supersonic = true;
+      else if (m > 2) regimes.beyondValidated = true;
+      if ((derived.flight.angleOfAttack as number) > Math.PI / 3) regimes.largeAngle = true;
+    }
     if (!recordNow) return;
     const s = unpack(y);
     const acc = norm(derived.accelerationWorld);
@@ -879,7 +921,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       cp: derived.cp,
       stabilityCalibers: Number.isNaN(cp) ? Number.NaN : (cp - derived.cg) / referenceDiameter,
     });
-    for (const w of derived.warnings) warnings.add(w);
+    for (const w of derived.warnings) notes.add(w);
     lastRecorded = t;
   };
 
@@ -1005,8 +1047,15 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       }
       if (check.pitchAmplitudeLoss > RK4_WARN_PITCH_AMPLITUDE_LOSS && !pitchLossWarned) {
         pitchLossWarned = true;
+        const betterStep = (
+          (1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) *
+          0.9
+        ).toPrecision(2);
         warnings.add(
-          `RK4 step check: the pitch oscillation advances up to ${check.pitchStepAngle.toFixed(2)} rad per step, so RK4 damps its amplitude numerically by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step (D-063); apogee and velocities are not affected on the reference rockets, the oscillation history is. Use a step below ${((1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9).toPrecision(2)} s or the Dormand–Prince integrator for the oscillation.`,
+          `RK4 step check: the time step is coarse for this rocket's pitch oscillation, so the calculation damps the wobble by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step. Apogee and speeds are not affected; to see the oscillation, use a step below ${betterStep} s or the Dormand–Prince integrator.`,
+        );
+        notes.add(
+          `RK4 step check: the pitch oscillation advances up to ${check.pitchStepAngle.toFixed(2)} rad per step, so RK4 damps its amplitude numerically by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step (D-063); apogee and velocities are not affected on the reference rockets, the oscillation history is. Use a step below ${betterStep} s or the Dormand–Prince integrator for the oscillation.`,
         );
       }
     }
@@ -1230,7 +1279,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
               ? `angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above, beyond the large-angle model (D-070); the flight is not continued`
               : `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
           });
-          warnings.add(
+          // Issue #19: the plain message is the design warning for endReason 'model-limit'.
+          notes.add(
             supersonic
               ? `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above: the large-angle model (DATCOM, D-070) covers fins beyond 90° only below Mach 1, and the DATCOM supersonic high-angle charts are not implemented. The rocket was flying backwards or tumbling at supersonic speed.`
               : `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
@@ -1280,6 +1330,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ? undefined
         : (Math.atan2(landing.x, landing.y) + 2 * Math.PI) % (2 * Math.PI),
     flightTime: t,
+    regimes: { ...regimes },
     endReason,
     minimumStability: { powered: lowest.powered, coast: lowest.coast },
     flutter: flutterFins.map(({ index, fin }): FlutterMargin => {
@@ -1303,11 +1354,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (f.ratio === undefined) {
       if (f.reason.startsWith('no shear modulus'))
         warnings.add(
-          `Fin flutter not checked for the fin set at component ${String(f.finIndex)}: enter the fin material's shear modulus (NACA TN 4197).`,
+          `Fin flutter not checked for ${finName(f.finIndex)}: enter the fin material's shear modulus (its stiffness) to check whether the fins can flutter.`,
         );
     } else if (f.ratio < 1) {
       warnings.add(
-        `Fin flutter: the fin set at component ${String(f.finIndex)} reaches ${f.airspeed.toFixed(0)} m/s at t = ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}), above its NACA TN 4197 flutter speed of ${f.flutterVelocity.toFixed(0)} m/s there: the fins may flutter and fail. Thicker fins, a stiffer material, a smaller span or a slower flight raise the margin.`,
+        `Fin flutter: ${finName(f.finIndex)} reaches ${f.airspeed.toFixed(0)} m/s at t = ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}), above the estimated flutter speed of ${f.flutterVelocity.toFixed(0)} m/s there, so the fins may flutter and break. Thicker fins, a stiffer material, a smaller span or a slower flight raise the margin.`,
+      );
+      notes.add(
+        `Fin flutter speed of component ${String(f.finIndex)} from NACA TN 4197 eq. (12) at the local pressure and speed of sound (plan 0031).`,
       );
     }
   }
@@ -1317,7 +1371,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   ] as const) {
     if (p !== undefined && p.calibers < minimumMargin) {
       warnings.add(
-        `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (t = ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there. The margin uses the CP at that Mach number and angle of attack (plan 0030).`,
+        `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (at ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there.`,
+      );
+      notes.add(
+        `The in-flight margin uses the centre of pressure at the flight's Mach number and angle of attack, with the ${p.model === 'datcom' ? 'DATCOM large-angle' : 'small-angle'} normal force model (plan 0030, D-070).`,
       );
     }
   }
@@ -1326,6 +1383,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     events,
     summary,
     warnings: [...warnings],
+    notes: [...notes],
     modes: {
       dragCurve: options.dragCurve?.label,
       aerodynamics: options.aerodynamics,

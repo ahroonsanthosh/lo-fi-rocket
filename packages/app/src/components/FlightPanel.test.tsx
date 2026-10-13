@@ -151,7 +151,8 @@ describe('FlightPanel (plan 0014)', () => {
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const warnings = await screen.findByRole('list', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/transonic|supersonic/);
-    expect(warnings).toHaveTextContent(/held-out-validation/);
+    // Issue #19: plain language, no document paths in the warnings.
+    expect(warnings).not.toHaveTextContent(/held-out-validation/);
   });
 
   it('exports the CSV through the save service', async () => {
