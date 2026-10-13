@@ -63,6 +63,45 @@ export function designMotor(
   return { selection: mount.motor, aftEnd: aftEnd as Metres };
 }
 
+/**
+ * Issue #36: whether the selected motor fits its mount tube. Returns one
+ * plain sentence per problem, empty when it fits or no motor is selected.
+ * Diameter: the motor against the tube's inside diameter 2 (r − t). Length:
+ * the motor's forward end, aftEnd − length, against the tube's forward end.
+ * Lengths are compared within 1 µm (as the component fit checks, D-074).
+ */
+export function designMotorFitProblems(design: RocketDesign): string[] {
+  const m = designMotor(design);
+  const mount = design.motorMount;
+  if (m === undefined || mount === undefined) return [];
+  const holder = design.components.find((c) => c.id === mount.componentId);
+  if (
+    holder === undefined ||
+    (holder.component.kind !== 'innerTube' && holder.component.kind !== 'bodyTube')
+  ) {
+    return [];
+  }
+  const tube = holder.component;
+  const def = m.selection.definition;
+  const mm = (x: number): string => (x * 1000).toFixed(1);
+  const out: string[] = [];
+  const inside = 2 * ((tube.outerRadius as number) - (tube.wallThickness as number));
+  const diameter: number = def.diameter;
+  if (diameter > inside + 1e-6) {
+    out.push(
+      `The motor is ${mm(diameter)} mm wide but the mount tube "${holder.name}" is ${mm(inside)} mm inside, so it does not fit: the mass, CG, stability and flight shown are for a rocket that cannot be built. Choose a ${mm(inside)} mm motor or a wider mount tube.`,
+    );
+  }
+  const motorFore = (m.aftEnd as number) - (def.length as number);
+  const tubeFore: number = holder.position;
+  if (motorFore < tubeFore - 1e-6) {
+    out.push(
+      `The motor is ${mm(def.length)} mm long and its front end sits ${mm(tubeFore - motorFore)} mm ahead of the front of the mount tube "${holder.name}", so it does not fit: lengthen the mount tube, let the motor overhang the back more, or choose a shorter motor.`,
+    );
+  }
+  return out;
+}
+
 export type MassCondition = 'liftoff' | 'burnout' | 'no-motor';
 
 /** Motor mass at liftoff or burnout, or undefined without a motor. */
@@ -252,6 +291,7 @@ export function designSimulationOptions(
 
 export interface DesignWarning {
   readonly code:
+    | 'motor-fit'
     | 'rail-exit-velocity'
     | 'thrust-to-weight'
     | 'deployment-velocity'
@@ -293,6 +333,8 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       message: `Average thrust to liftoff weight is ${twr.toFixed(1)}:1, below ${String(t.minThrustToWeight)}:1: the rocket accelerates slowly off the pad and is sensitive to wind at rail exit.`,
     });
   }
+  // Issue #36: a motor that does not fit makes every figure that of a rocket that cannot be built.
+  for (const message of designMotorFitProblems(design)) out.push({ code: 'motor-fit', message });
   if (s.deploymentVelocity !== undefined && s.deploymentVelocity > t.maxDeploymentVelocity) {
     out.push({
       code: 'deployment-velocity',
