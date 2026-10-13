@@ -57,6 +57,7 @@ export function orkToDesign(
     components,
     referenceDiameter: metres(2 * rocket.maxBodyRadius),
     ...(rocket.approximations.length === 0 ? {} : { approximations: rocket.approximations }),
+    ...(rocket.asBuilt === undefined ? {} : { asBuilt: rocket.asBuilt }),
     recovery: rocket.recoveryDevices.map((d, i) => ({
       id: `ork-recovery-${String(i)}`,
       name: d.name,

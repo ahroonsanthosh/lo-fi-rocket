@@ -1,7 +1,14 @@
 import fc from 'fast-check';
-import { exampleDesign, newDesign, validateDesign } from '@lo-fi-rocket/formats';
+import {
+  exampleDesign,
+  newDesign,
+  parseDesign,
+  serializeDesign,
+  validateDesign,
+} from '@lo-fi-rocket/formats';
 import { metres } from '@lo-fi-rocket/physics';
 import { describe, expect, it } from 'vitest';
+import { withAsBuiltFigure } from '../components/AsBuiltEditor.js';
 import {
   COMPONENT_LABELS,
   initialState,
@@ -89,5 +96,31 @@ describe('reducer (plan 0012)', () => {
     expect(nose?.kind === 'noseCone' ? nose.length : Number.NaN).toBeCloseTo(0.075, 12);
     expect(body?.position).toBeCloseTo(0.075, 12);
     expect(() => validateDesign(JSON.parse(JSON.stringify(s.design)))).not.toThrow();
+  });
+});
+
+describe('set-as-built (D-089)', () => {
+  it('sets and clears the weighed mass and balance point; the design stays valid', () => {
+    const s0 = initialState(exampleDesign());
+    const s1 = reduce(s0, {
+      type: 'set-as-built',
+      asBuilt: withAsBuiltFigure(undefined, 'mass', 0.2),
+    });
+    expect(s1.design.asBuilt).toEqual({ mass: 0.2 });
+    const s2 = reduce(s1, {
+      type: 'set-as-built',
+      asBuilt: withAsBuiltFigure(s1.design.asBuilt, 'cg', 0.35),
+    });
+    expect(s2.design.asBuilt).toEqual({ mass: 0.2, cg: 0.35 });
+    expect(parseDesign(serializeDesign(s2.design))).toEqual(s2.design);
+    const s3 = reduce(s2, {
+      type: 'set-as-built',
+      asBuilt: withAsBuiltFigure(
+        withAsBuiltFigure(s2.design.asBuilt, 'mass', undefined),
+        'cg',
+        undefined,
+      ),
+    });
+    expect('asBuilt' in s3.design).toBe(false);
   });
 });

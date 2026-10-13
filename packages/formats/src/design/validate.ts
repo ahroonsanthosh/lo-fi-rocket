@@ -8,6 +8,7 @@
  */
 import {
   type Approximation,
+  type AsBuilt,
   type FinShape,
   type DragCurve,
   kelvin,
@@ -764,6 +765,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       'recordedFlight',
       'dispersion',
       'approximations',
+      'asBuilt',
     ],
   );
   const version = c.integer('$.schemaVersion', o['schemaVersion']);
@@ -857,5 +859,23 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     ...('approximations' in o && o['approximations'] !== undefined
       ? { approximations: approximationList(c, '$.approximations', o['approximations']) }
       : {}),
+    ...('asBuilt' in o && o['asBuilt'] !== undefined
+      ? { asBuilt: asBuiltOf(c, '$.asBuilt', o['asBuilt']) }
+      : {}),
+  };
+}
+
+/** D-089: a positive mass and/or a finite CG from the nose tip; at least one. */
+function asBuiltOf(c: Ctx, path: string, v: unknown): AsBuilt {
+  const o = c.object(path, v);
+  c.keys(path, o, [], ['mass', 'cg']);
+  const mass =
+    'mass' in o && o['mass'] !== undefined ? c.number(`${path}.mass`, o['mass']) : undefined;
+  const cg = 'cg' in o && o['cg'] !== undefined ? c.number(`${path}.cg`, o['cg']) : undefined;
+  if (mass === undefined && cg === undefined) c.fail(path, 'needs a mass, a CG or both');
+  if (mass !== undefined && !(mass > 0)) c.fail(`${path}.mass`, 'must be greater than 0 kg');
+  return {
+    ...(mass === undefined ? {} : { mass: kilograms(mass) }),
+    ...(cg === undefined ? {} : { cg: metres(cg) }),
   };
 }

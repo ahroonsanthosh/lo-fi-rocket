@@ -59,6 +59,24 @@ describe('App (plan 0012)', () => {
     expect(Number.parseFloat(cpText)).toBeGreaterThan(478.9);
   });
 
+  it("as built: the weighed mass replaces the parts' total, motor out (D-089)", async () => {
+    const user = userEvent.setup();
+    render(<App storage={memory()} />);
+    await user.click(screen.getByRole('option', { name: /Fins/ }));
+    await user.click(screen.getByText(/As built: the weighed mass and balance point/));
+    await user.click(screen.getByLabelText('Use the weighed mass (motor out)'));
+    // R1 empty: 190.904 g at liftoff less the D12's 42.6 g = 148.304 g, offered as the start.
+    const field = screen.getByLabelText('Weighed mass, motor out');
+    expect(field).toHaveValue('148.304');
+    await user.clear(field);
+    await user.type(field, '200');
+    // Liftoff 200 + 42.6 = 242.6 g.
+    const mass = screen.getByRole('region', { name: 'Mass and size' });
+    expect(within(mass).getByText('242.6 g')).toBeInTheDocument();
+    await user.click(screen.getByLabelText('Use the weighed mass (motor out)'));
+    expect(within(mass).getByText('190.9 g')).toBeInTheDocument();
+  });
+
   it('the units toggle shows the chord in inches and restores it in millimetres', async () => {
     const user = userEvent.setup();
     render(<App storage={memory()} />);

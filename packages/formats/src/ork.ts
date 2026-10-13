@@ -19,8 +19,10 @@ import {
   kilogramsPerCubicMetre,
   metres,
   noseProfile,
+  rocketMassProperties,
   seconds,
   type Approximation,
+  type AsBuilt,
   type ClusterOffset,
   type Component,
   type FinShape,
@@ -93,6 +95,8 @@ export interface OrkRocket {
    * applied. Approximations of one part are on that part (`components[i].approximations`).
    */
   readonly approximations: readonly Approximation[];
+  /** The stage's mass or CG override as the design's as-built mass and CG (D-089). */
+  readonly asBuilt?: AsBuilt;
   /**
    * What the reader chose or approximated, in plain words: the motor
    * configuration used when the file has several (D-077), and differences
@@ -824,6 +828,8 @@ class Reader {
   readonly problems: OrkUnsupportedError[] = [];
   /** Approximations of the design as a whole (D-084). */
   readonly approximations: Approximation[] = [];
+  /** The stage's mass or CG override as the as-built mass and CG (D-089). */
+  asBuilt: AsBuilt | undefined;
   /** Approximations noted for an element before its part is placed (D-084). */
   private readonly pending = new Map<XmlNode, Approximation[]>();
   /** The index of the (first) part placed for each element. */
@@ -1678,31 +1684,78 @@ class Reader {
       });
     }
     this.length = x;
-    // D-084: a stage-level override is not applied yet (the parts' own masses and drag are used)
-    // and is listed for the design as a whole. OpenRocket makes a stage mass override the stage's
-    // total, or adds it as a point mass, and moves the CG to an overridden one
-    // (reference/rockets/stage-override-probe/values.txt), often to enter a measured weight: so a
-    // mass or CG override is major, a drag override moderate.
-    const stageOverrides = ['overridemass', 'overridecg', 'overridecd'].filter((n) => stage.has(n));
-    if (stageOverrides.length > 0) {
-      for (const n of [
-        ...stageOverrides,
-        'overridesubcomponents',
-        'overridesubcomponentsmass',
-        'overridesubcomponentscg',
-        'overridesubcomponentscd',
-      ])
-        stage.optional(n);
+    this.readStageOverride(stage);
+    stage.finish([...IGNORED_COMMON]);
+  }
+
+  /**
+   * D-089: a stage mass or CG override as the design's as-built mass and CG (GEO-17), as OpenRocket
+   * applies it (reference/rockets/stage-override-probe/values.txt): covering the parts, the stage's
+   * total mass (case 4) and CG (cases 5, 6); not covering them, a point mass added at the stage's CG
+   * or at the overridden CG (cases 1, 3), here spread over the parts in proportion (minor); a CG
+   * override alone not covering the parts does nothing (case 2). A drag override stays listed
+   * (D-084). The stage's front is the nose tip, as it is the only stage.
+   */
+  private readStageOverride(stage: Element): void {
+    const flag = (name: string): boolean | undefined =>
+      stage.has(name) ? stage.boolean(name) : undefined;
+    const both = flag('overridesubcomponents');
+    const coversMass = flag('overridesubcomponentsmass') ?? both ?? false;
+    const coversCg = flag('overridesubcomponentscg') ?? both ?? false;
+    // Read so that it is not reported as unknown; a drag override is listed either way.
+    flag('overridesubcomponentscd');
+    const mass = stage.optionalNumber('overridemass');
+    const cg = stage.optionalNumber('overridecg');
+    const cd = stage.optionalNumber('overridecd');
+    if (cd !== undefined) {
       this.approximations.push({
         subject: subjectOf(stage),
-        what: `the stage’s ${stageOverrides.map((n) => ({ overridemass: 'mass', overridecg: 'CG', overridecd: 'drag' })[n]).join(' and ')} override`,
-        method: 'the masses and drag of the stage’s parts, without the override',
+        what: `the stage’s drag coefficient override (${String(cd)})`,
+        method: 'the drag of the stage’s parts, without the override',
         effect:
-          'the mass, CG or drag differ from what the file’s author set for the whole stage, often a measured weight; enter the measured masses on the parts to use them',
-        impact: stageOverrides.some((n) => n !== 'overridecd') ? 'major' : 'moderate',
+          'the drag differs from what the file’s author set for the whole stage, which moves the apogee',
+        impact: 'moderate',
       });
     }
-    stage.finish([...IGNORED_COMMON]);
+    if (mass !== undefined && !(mass > 0)) {
+      throw stage.parseError(`<overridemass> must be greater than 0 kg, got ${String(mass)}`);
+    }
+    if (mass === undefined && (cg === undefined || !coversCg)) return;
+    if (mass !== undefined && !coversMass) {
+      // Cases 1 and 3: OpenRocket adds the mass as a point at the stage's CG, or at the overridden CG.
+      const parts = rocketMassProperties(this.components);
+      const total = parts.mass + mass;
+      const at = cg ?? parts.cg;
+      this.asBuilt = {
+        mass: kilograms(total),
+        cg: metres((parts.mass * parts.cg + mass * at) / total),
+      };
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what: `the stage’s mass override (${String(Math.round(mass * 1e4) / 10)} g added at ${String(Math.round(at * 1e4) / 10)} mm from the nose)`,
+        method:
+          'the added mass spread over the parts in proportion to theirs, at the same total and CG',
+        effect:
+          'the mass and CG are OpenRocket’s; the pitch inertia differs a little from a point mass, so the pitching motion changes slightly',
+        impact: 'minor',
+      });
+      return;
+    }
+    // Cases 4 to 6: the stage's total and CG.
+    this.asBuilt = {
+      ...(mass === undefined ? {} : { mass: kilograms(mass) }),
+      ...(cg === undefined || !coversCg ? {} : { cg: metres(cg) }),
+    };
+    if (cg !== undefined && !coversCg) {
+      // A CG override for the stage alone beside a total mass: not observed in OpenRocket.
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what: `the stage’s CG override (${String(Math.round(cg * 1e4) / 10)} mm), set for the stage alone beside a mass for the whole stage`,
+        method: 'the parts’ own CG, at the stage’s total mass',
+        effect: 'the CG, and so the stability margin, may differ from the file author’s',
+        impact: 'moderate',
+      });
+    }
   }
 
   private readNoseCone(el: Element, x: number): number {
@@ -1972,6 +2025,7 @@ class Reader {
       motorMount: this.motorMount,
       recoveryDevices: this.recoveryDevices,
       approximations: this.approximations,
+      ...(this.asBuilt === undefined ? {} : { asBuilt: this.asBuilt }),
       notices: this.notices,
     };
   }

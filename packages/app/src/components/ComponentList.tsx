@@ -25,6 +25,7 @@ export function ComponentList(): JSX.Element {
   const items = state.design.components;
   const selected = state.selectedId;
   const motor = state.design.motorMount?.motor;
+  const motorCount = state.design.motorMount?.cluster?.length ?? 1;
 
   const onKey = (e: KeyboardEvent<HTMLUListElement>): void => {
     const i = items.findIndex((c) => c.id === selected);
@@ -98,7 +99,7 @@ export function ComponentList(): JSX.Element {
           <span className="item-name">
             {motor === undefined
               ? 'No motor'
-              : `${motor.definition.manufacturer} ${motor.definition.designation}`}
+              : `${motorCount > 1 ? `${String(motorCount)} × ` : ''}${motor.definition.manufacturer} ${motor.definition.designation}`}
           </span>
           <span className="item-kind">
             {motor === undefined
