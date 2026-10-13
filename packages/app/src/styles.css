@@ -782,39 +782,44 @@ li[role='option'].selected::before {
   color: var(--muted);
 }
 
-/* The side view */
+/* The side view: the shaded rocket on its side, internal parts as dashed outlines */
 .side-view {
   display: block;
   width: 100%;
   max-height: 46vh;
+  overflow: visible;
 }
 .side-view .axis {
   stroke: var(--line);
   stroke-dasharray: 6 4;
 }
 .side-view .shape polygon {
-  stroke: var(--ink);
-  stroke-opacity: 0.75;
-  stroke-width: 1.2;
-  fill: var(--panel);
+  stroke: rgb(18 21 43 / 0.45);
+  stroke-width: 1;
   cursor: pointer;
 }
-.side-view .internal polygon {
-  fill: var(--lfr-caution-bg);
+/* A light rim keeps the outline readable where the shading meets the dark screen. */
+.side-view .external polygon,
+.side-view .kind-finSet polygon {
+  stroke: rgb(214 218 240 / 0.55);
+}
+.side-view .internal:not(.kind-finSet) polygon {
+  fill: rgb(247 161 40 / 0.16);
   stroke: var(--overstable);
   stroke-dasharray: 4 3;
 }
 .side-view .kind-finSet polygon {
-  fill: var(--lfr-info-bg);
   stroke-dasharray: none;
+}
+.side-view .shape:hover polygon {
+  filter: brightness(1.08);
 }
 .side-view .selected polygon {
   stroke: var(--accent);
-  stroke-opacity: 1;
   stroke-width: 2.5;
 }
 .side-view .marker.cg circle {
-  fill: var(--panel);
+  fill: #ffffff;
   stroke: var(--lfr-cg-marker);
   stroke-width: 1.5;
 }
@@ -822,7 +827,7 @@ li[role='option'].selected::before {
   fill: var(--lfr-cg-marker);
 }
 .side-view .marker.cp circle {
-  fill: none;
+  fill: rgb(255 255 255 / 0.85);
   stroke: var(--lfr-cp-marker);
   stroke-width: 1.5;
 }
