@@ -748,8 +748,40 @@ class Reader {
       },
       x,
     );
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined) this.readNoseInternal(sub, { position: x, length, radius: baseRadius });
     el.finish([...IGNORED_COMMON]);
     return x + length;
+  }
+
+  /**
+   * Children of a nose cone. OpenRocket positions them against the cone's own
+   * length, the shoulder excluded, with the same methods as in a body tube
+   * (reference/rockets/nose-child-probe/values.txt: "bottom" is the cone's aft
+   * end with or without a shoulder). Only parts whose geometry does not use the
+   * parent's radius are read: fins, lugs, rail buttons and inner tubes would
+   * need the body radius, which varies along a nose cone.
+   */
+  private readNoseInternal(subcomponents: Element, parent: Parent): void {
+    for (const node of subcomponents.node.children) {
+      const el = subcomponents.wrap(node);
+      switch (node.name) {
+        case 'centeringring':
+          this.readRing(el, parent, 'centeringRing');
+          break;
+        case 'bulkhead':
+          this.readRing(el, parent, 'bulkhead');
+          break;
+        case 'masscomponent':
+          this.readMassComponent(el, parent);
+          break;
+        case 'parachute':
+          this.readParachute(el, parent);
+          break;
+        default:
+          throw el.unsupported(`element <${node.name}> inside a nose cone`);
+      }
+    }
   }
 
   private readTransition(el: Element, x: number): number {
