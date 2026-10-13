@@ -13,6 +13,7 @@
  * aft; C_Nα referred to the reference area π d²/4 with d the reference
  * diameter (the maximum body diameter unless given).
  */
+import { validateComponentFit } from '../geometry/fit.js';
 import { InvalidInputError, NotImplementedError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import { rocketMassProperties, type MotorMass } from '../geometry/assembly.js';
@@ -702,6 +703,7 @@ export function centreOfPressure(
   options: CentreOfPressureOptions,
 ): CentreOfPressureResult {
   requireMach(options.mach);
+  validateComponentFit(components);
   const referenceDiameter = options.referenceDiameter ?? maximumBodyDiameter(components);
   const d: number = referenceDiameter;
   if (!(d > 0)) {

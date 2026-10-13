@@ -42,6 +42,7 @@ export function designPlacedComponents(design: RocketDesign): PlacedComponent[] 
   return design.components.map((c: DesignComponent) => ({
     component: c.component,
     position: c.position,
+    ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
   }));
 }
 
@@ -61,6 +62,45 @@ export function designMotor(
       : 0;
   const aftEnd: number = holder.position + length + mount.overhang;
   return { selection: mount.motor, aftEnd: aftEnd as Metres };
+}
+
+/**
+ * Issue #36: whether the selected motor fits its mount tube. Returns one
+ * plain sentence per problem, empty when it fits or no motor is selected.
+ * Diameter: the motor against the tube's inside diameter 2 (r − t). Length:
+ * the motor's forward end, aftEnd − length, against the tube's forward end.
+ * Lengths are compared within 1 µm (as the component fit checks, D-074).
+ */
+export function designMotorFitProblems(design: RocketDesign): string[] {
+  const m = designMotor(design);
+  const mount = design.motorMount;
+  if (m === undefined || mount === undefined) return [];
+  const holder = design.components.find((c) => c.id === mount.componentId);
+  if (
+    holder === undefined ||
+    (holder.component.kind !== 'innerTube' && holder.component.kind !== 'bodyTube')
+  ) {
+    return [];
+  }
+  const tube = holder.component;
+  const def = m.selection.definition;
+  const mm = (x: number): string => (x * 1000).toFixed(1);
+  const out: string[] = [];
+  const inside = 2 * ((tube.outerRadius as number) - (tube.wallThickness as number));
+  const diameter: number = def.diameter;
+  if (diameter > inside + 1e-6) {
+    out.push(
+      `The motor is ${mm(diameter)} mm wide but the mount tube "${holder.name}" is ${mm(inside)} mm inside, so it does not fit: the mass, CG, stability and flight shown are for a rocket that cannot be built. Choose a ${mm(inside)} mm motor or a wider mount tube.`,
+    );
+  }
+  const motorFore = (m.aftEnd as number) - (def.length as number);
+  const tubeFore: number = holder.position;
+  if (motorFore < tubeFore - 1e-6) {
+    out.push(
+      `The motor is ${mm(def.length)} mm long and its front end sits ${mm(tubeFore - motorFore)} mm ahead of the front of the mount tube "${holder.name}", so it does not fit: lengthen the mount tube, let the motor overhang the back more, or choose a shorter motor.`,
+    );
+  }
+  return out;
 }
 
 export type MassCondition = 'liftoff' | 'burnout' | 'no-motor';
@@ -163,6 +203,7 @@ export function designVehicle(design: RocketDesign): FlightVehicle {
   }
   return {
     components: designPlacedComponents(design),
+    componentNames: design.components.map((c) => c.name),
     motor: {
       kind: 'definition',
       definition: m.selection.definition,
@@ -252,14 +293,19 @@ export function designSimulationOptions(
 
 export interface DesignWarning {
   readonly code:
+    | 'unstable'
+    | 'motor-fit'
     | 'rail-exit-velocity'
     | 'thrust-to-weight'
     | 'deployment-velocity'
+    | 'ejection-velocity'
     | 'transonic'
     | 'supersonic'
     | 'no-recovery'
+    | 'recovery-not-deployed'
     | 'max-time'
     | 'model-limit'
+    | 'large-angle'
     | 'model';
   /** What happened and why it matters, in one or two sentences. */
   readonly message: string;
@@ -280,6 +326,9 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
   const out: DesignWarning[] = [];
   const t = design.warningThresholds;
   const s = result.summary;
+  // Issue #17: an unstable rocket leads the list; the simulator's first warning is that statement.
+  const unstable = s.unstable !== undefined;
+  if (unstable) out.push({ code: 'unstable', message: result.warnings[0] ?? '' });
   if (s.railExitVelocity < t.minRailExitVelocity) {
     out.push({
       code: 'rail-exit-velocity',
@@ -293,26 +342,37 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       message: `Average thrust to liftoff weight is ${twr.toFixed(1)}:1, below ${String(t.minThrustToWeight)}:1: the rocket accelerates slowly off the pad and is sensitive to wind at rail exit.`,
     });
   }
+  // Issue #36: a motor that does not fit makes every figure that of a rocket that cannot be built.
+  for (const message of designMotorFitProblems(design)) out.push({ code: 'motor-fit', message });
   if (s.deploymentVelocity !== undefined && s.deploymentVelocity > t.maxDeploymentVelocity) {
     out.push({
       code: 'deployment-velocity',
       message: `Recovery deploys at ${s.deploymentVelocity.toFixed(1)} m/s, above ${String(t.maxDeploymentVelocity)} m/s: a fast deployment can tear the parachute or shock cord or zipper the airframe.`,
     });
   }
+  // Issue #9: the motor's charge at a high airspeed (too short or too long a delay). Without an altimeter it
+  // deploys the recovery; when a device already deploys at that instant the deployment warning covers it.
+  const e = s.ejectionCharge;
+  if (e !== undefined && e.airspeed > t.maxDeploymentVelocity && s.deploymentTime !== e.time) {
+    out.push({
+      code: 'ejection-velocity',
+      message: `The motor's ejection charge fires at ${e.time.toFixed(2)} s at ${e.airspeed.toFixed(1)} m/s, above ${String(t.maxDeploymentVelocity)} m/s: if the charge deploys the recovery, it opens fast enough to tear the parachute or shock cord or zipper the airframe. Choose a delay that fires near apogee.`,
+    });
+  }
   if (s.maxMach > 2) {
     out.push({
       code: 'supersonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is above 2.0, outside the validated range (Mach 0 to 2.0): the centre of pressure and drag have not been checked against measurements there (docs/reports/held-out-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic and above 2.0, outside the validated range (Mach 0 to 2.0): the centre of pressure and drag have not been checked against measurements there, so treat apogee and speeds as rough.`,
     });
   } else if (s.maxMach > 1.2) {
     out.push({
       code: 'supersonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the centre of pressure is validated to Mach 2.0 against held-out wind tunnel data, but the supersonic drag is less certain than the subsonic, so apogee and velocities carry a larger error (docs/reports/held-out-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is supersonic: the centre of pressure is validated to Mach 2.0 against held-out wind tunnel data, but the supersonic drag is less certain than the subsonic, so apogee and velocities carry a larger error.`,
     });
   } else if (s.maxMach > 0.8) {
     out.push({
       code: 'transonic',
-      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime (0.8 to 1.2), where the drag rises steeply and the fin force is an interpolation, so apogee and velocities carry a larger error (docs/reports/held-out-validation.md).`,
+      message: `Maximum Mach ${s.maxMach.toFixed(2)} is in the transonic regime (0.8 to 1.2), where the drag rises steeply and the fin force is an interpolation, so apogee and velocities carry a larger error.`,
     });
   }
   if (design.recovery.length === 0) {
@@ -320,6 +380,17 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       code: 'no-recovery',
       message:
         'No recovery device: the rocket falls ballistically and lands at its terminal speed.',
+    });
+  }
+  // Issue #33: devices exist but none opened. First in the list: the result looks like a normal flight.
+  if (
+    design.recovery.length > 0 &&
+    !result.events.some((e) => e.kind === 'deployment') &&
+    s.groundHitVelocity !== undefined
+  ) {
+    out.unshift({
+      code: 'recovery-not-deployed',
+      message: `No recovery device opened, so the rocket hits the ground at ${s.groundHitVelocity.toFixed(1)} m/s, fast enough to hurt someone and to damage the rocket. The reason for each device is given below.`,
     });
   }
   if (s.endReason === 'max-time') {
@@ -331,10 +402,18 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
   if (s.endReason === 'model-limit') {
     out.push({
       code: 'model-limit',
-      message: `The flight ended at ${s.flightTime.toFixed(2)} s, before landing, because the rocket turned past 90° angle of attack (flying backwards or tumbling), which the aerodynamic model does not cover (D-046). The apogee and the ascent are valid; a recovery device deploying at apogee lets the descent be simulated.`,
+      message: `The flight ended at ${s.flightTime.toFixed(2)} s, before landing, because the rocket turned past 90° angle of attack (flying backwards or tumbling), which the aerodynamic model does not cover. The apogee and the ascent are valid; a recovery device deploying at apogee lets the descent be simulated.`,
     });
   }
-  for (const w of result.warnings) out.push({ code: 'model', message: w });
+  if (s.regimes.largeAngle) {
+    out.push({
+      code: 'large-angle',
+      message:
+        'Part of the flight is at angles of attack above 60° (the rocket tumbling or flying backwards), where the aerodynamic model is approximate, so that part of the path is rough.',
+    });
+  }
+  for (const w of unstable ? result.warnings.slice(1) : result.warnings)
+    out.push({ code: 'model', message: w });
   return out;
 }
 

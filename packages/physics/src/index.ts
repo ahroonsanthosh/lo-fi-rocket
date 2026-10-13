@@ -154,12 +154,15 @@ export {
 export {
   combineRocket,
   motorMassPart,
+  overriddenMassProperties,
   rocketMassProperties,
   structuralMassParts,
+  type MassOverride,
   type MotorMass,
   type PlacedComponent,
   type RocketMassProperties,
 } from './geometry/assembly.js';
+export { FIT_TOLERANCE, validateComponentFit } from './geometry/fit.js';
 export {
   bodyTerm,
   centreOfPressure,

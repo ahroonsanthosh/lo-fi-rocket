@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import { useId, type JSX } from 'react';
 import { componentShapes, extentOf } from './side-view-geometry.js';
 import type { DesignComponent } from '@lo-fi-rocket/formats';
 
@@ -21,8 +21,15 @@ function quarters(r: number): string {
 
 /** The 2D side view: nose at the left, x aft to the right, CG and CP markers (plan 0012). */
 export function SideView({ components, selectedId, cg, cp, onSelect }: SideViewProps): JSX.Element {
+  const uid = useId().replace(/:/g, '');
   const shapes = componentShapes(components);
   const ext = extentOf(shapes);
+  const body = Math.max(
+    0.001,
+    ...shapes
+      .filter((s) => s.kind === 'bodyTube' || s.kind === 'noseCone' || s.kind === 'transition')
+      .flatMap((s) => s.points.map(([, r]) => r)),
+  );
   const margin = 0.06 * ext.length;
   const scale = WIDTH / (ext.length + 2 * margin);
   const halfHeight = (ext.radius + margin / 2) * scale;
@@ -43,11 +50,36 @@ export function SideView({ components, selectedId, cg, cp, onSelect }: SideViewP
       data-scale={scale}
       data-margin={margin}
     >
+      <defs>
+        {/* The same lit cylinder as the upright view, turned on its side: light from above. */}
+        <linearGradient
+          id={`${uid}-body`}
+          gradientUnits="userSpaceOnUse"
+          x1={0}
+          x2={0}
+          y1={Y(body)}
+          y2={Y(-body)}
+        >
+          <stop offset="0" className="vehicle__shade-0" />
+          <stop offset="0.16" className="vehicle__shade-1" />
+          <stop offset="0.34" className="vehicle__shade-2" />
+          <stop offset="0.42" className="vehicle__shade-3" />
+          <stop offset="0.58" className="vehicle__shade-2" />
+          <stop offset="0.84" className="vehicle__shade-1" />
+          <stop offset="1" className="vehicle__shade-0" />
+        </linearGradient>
+        <linearGradient id={`${uid}-fin`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" className="vehicle__fin-0" />
+          <stop offset="1" className="vehicle__fin-3" />
+        </linearGradient>
+      </defs>
       <line x1={0} y1={halfHeight} x2={WIDTH} y2={halfHeight} className="axis" />
       {shapes.map((s) => {
         const base = s.id.split('-')[0] ?? s.id;
         const selected = base === selectedId;
         const cls = `shape ${s.external ? 'external' : 'internal'} kind-${s.kind}${selected ? ' selected' : ''}`;
+        const fill =
+          s.kind === 'finSet' ? `url(#${uid}-fin)` : s.external ? `url(#${uid}-body)` : undefined;
         return (
           <g
             key={s.id}
@@ -57,8 +89,8 @@ export function SideView({ components, selectedId, cg, cp, onSelect }: SideViewP
               onSelect(base);
             }}
           >
-            <polygon points={poly(s.points, false)} />
-            {s.mirror ? <polygon points={poly(s.points, true)} /> : null}
+            <polygon points={poly(s.points, false)} fill={fill} />
+            {s.mirror ? <polygon points={poly(s.points, true)} fill={fill} /> : null}
           </g>
         );
       })}

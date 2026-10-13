@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import { FIGURE_DISPLAY, formatFixed, isDisplayable } from '../format/display-rules.js';
 import { SeverityTag, type Severity } from './severity.js';
 import { Term } from './Tooltip.js';
@@ -30,9 +30,24 @@ export type StabilityIndicatorProps =
       readonly mach: number;
       /** Compact form for the always-visible status bar. */
       readonly compact?: boolean;
+      /** Extra figures shown at the end of the full card, for example the CG and CP positions. */
+      readonly details?: ReactNode;
+      /** Accessible name of the region; "Stability" by default. */
+      readonly label?: string;
     }
-  | { readonly state: 'empty'; readonly compact?: boolean }
-  | { readonly state: 'error'; readonly message: string; readonly compact?: boolean };
+  | {
+      readonly state: 'empty';
+      readonly compact?: boolean;
+      readonly label?: string;
+      /** What to add to see the margin; a default sentence otherwise. */
+      readonly message?: string;
+    }
+  | {
+      readonly state: 'error';
+      readonly message: string;
+      readonly compact?: boolean;
+      readonly label?: string;
+    };
 
 const LEVEL_SEVERITY: Readonly<Record<StabilityLevel, Severity>> = {
   unstable: 'danger',
@@ -106,21 +121,22 @@ function Scale({
  */
 export function StabilityIndicator(props: StabilityIndicatorProps): JSX.Element {
   const compact = props.compact ?? false;
+  const name = props.label ?? 'Stability';
   if (props.state === 'empty') {
     return (
-      <section className="lfr-stability lfr-stability--empty" aria-label="Stability">
+      <section className="lfr-stability lfr-stability--empty" aria-label={name}>
         <span className="lfr-stability__heading">
           <Term k="stabilityMargin">Stability</Term>
         </span>
         <p className="lfr-stability__message">
-          Add a nose cone, a body tube and fins to see the stability margin.
+          {props.message ?? 'Add a nose cone, a body tube and fins to see the stability margin.'}
         </p>
       </section>
     );
   }
   if (props.state === 'error') {
     return (
-      <section className="lfr-stability lfr-stability--danger" aria-label="Stability">
+      <section className="lfr-stability lfr-stability--danger" aria-label={name}>
         <span className="lfr-stability__heading">
           <Term k="stabilityMargin">Stability</Term>
         </span>
@@ -143,7 +159,7 @@ export function StabilityIndicator(props: StabilityIndicatorProps): JSX.Element 
   return (
     <section
       className={`lfr-stability lfr-stability--${frame}${compact ? ' lfr-stability--compact' : ''}`}
-      aria-label="Stability"
+      aria-label={name}
     >
       <span className="lfr-stability__heading">
         <Term k="stabilityMargin">Stability margin</Term>{' '}
@@ -186,6 +202,9 @@ export function StabilityIndicator(props: StabilityIndicatorProps): JSX.Element 
             The thresholds {String(thresholds.unstableBelow)} and{' '}
             {String(thresholds.overstableAbove)} {unit} are rules of thumb, not guarantees.
           </p>
+          {props.details === undefined ? null : (
+            <div className="lfr-stability__details">{props.details}</div>
+          )}
         </>
       )}
     </section>

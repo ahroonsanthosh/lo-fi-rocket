@@ -205,6 +205,23 @@ export function componentMassProperties(c: Component): MassProperties {
       requirePositive('shoulder length', s.length);
       requirePositive('shoulder radius', s.radius);
       requirePositive('shoulder wall thickness', s.wallThickness);
+      // G-1: the shoulder is a hollow cylinder inside the body tube, so its
+      // inner radius r − t must be positive (as for tubes) and it cannot be
+      // wider than the nose base it hangs from.
+      if (!(s.wallThickness < s.radius)) {
+        throw new InvalidInputError(
+          'shoulder wall thickness',
+          s.wallThickness,
+          `must be less than the shoulder radius (${String(s.radius)} m)`,
+        );
+      }
+      if (!(s.radius <= c.baseRadius)) {
+        throw new InvalidInputError(
+          'shoulder radius',
+          s.radius,
+          `must not be larger than the nose cone base radius (${String(c.baseRadius)} m)`,
+        );
+      }
       const shoulder = shifted(
         hollowCylinder(s.radius, s.radius - s.wallThickness, s.length, density),
         profile.length,

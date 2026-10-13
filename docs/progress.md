@@ -71,9 +71,28 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 - Replay provenance check (D-072, owner's request before merging the viewer): every Monte Carlo result carries the app version and a SHA-256 of the physics and formats sources; replaying a run compares both and the landing point with the stored ones, exactly, and warns when either differs.
 
+- Review fixes, physics lane (2026-10-13). One pull request each, every one with `pnpm check` passing:
+  - G-1 nose shoulder wall: #7.
+  - B-1 component fit, D-074: #43.
+  - F-1 deployment for every trigger: #44, which also fixes the delayed altitude deployment time.
+  - F-3 deployment airspeed: #46. Stacked on #44, so merge #44 first. It changes `deploymentVelocity` in the five 5 m/s golden flights by exactly +5 m/s.
+  - F-2 apogee after an early deployment: #47.
+  - M-4 ejection charge never fires: #48.
+  - F-4 devices that never open: #49.
+  - Issues: #9 ejection before apogee (#50), #17 unstable result (#53), #19 plain warnings and `FlightResult.notes` (#54).
+  - The owner's `.ork` mass/CG overrides: #30, D-073. The rule was observed from OpenRocket with `tools/openrocket-harness/src/OverrideProbe.java`.
+  - Plans 0035 to 0045. ui follow-ups: #55 and #56.
+  - Second review pass (issues #32 to #36):
+    - #32 "at launch" refused while the motor burns, and a rocket that never leaves the rail is reported: #58, D-075.
+    - #33 is in #49, extended for "never" and a first warning with the landing speed.
+    - #34 is covered by #44, #46, #47 and #50 together, verified on a local merge.
+    - #36 motor fit: #59.
+    - #35 is ui only: the `.rse` parser already reads the delays.
+    - Also #53: the in-flight margin minimum now covers the ascent only. The fall after apogee had been counted.
+
 ## In progress
 
-- Nothing. The next work depends on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).
+- Waiting for the review-fix pull requests above to be merged. #30, #43 and #58 all append to `docs/decisions.md` (D-073, D-074, D-075): each later one needs `main` merged in, a small conflict. The other open questions depend on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).
 
 ## Next
 
@@ -97,6 +116,10 @@ At v1.0 these are open. Resolved earlier: gravity latitude (D-060), the large-an
 - **Deployment speed warning (D-042).** It is a rule-of-thumb placeholder. Please state the figure you want.
 - **`.CDX1` import.** It needs sample RASAero II files.
 - **Default branch.** `main` exists. Making it the default branch needs the owner, because the `gh` token here is invalid.
+- **Review-fix follow-ups for the owner (2026-10-13):**
+  - #9 suggests making the example's parachute open at the motor's ejection charge. That would change the example's figures used across the app tests, so it was not done.
+  - #17 suggests a seeded initial disturbance so that an unstable rocket visibly tumbles. It needs a sourced disturbance model.
+  - U-1 (the temperature override above 11 km) needs the owner's choice under rule 4 and is not yet done.
 - **Not blocking:** papers that would close verifications formally, namely Dormand and Prince (1980), Box and Muller (1958) and Barrowman's 1966 NARAM-8 report.
 
 - Gravity latitude dependence (D-030, D-054): NIMA TR8350.2 is approved but could not be downloaded from this environment (NGA empty reply, DTIC 403, Wayback resets). Please place the PDF in `reference/docs/` or allow the host; the implementation then follows plan 0019.

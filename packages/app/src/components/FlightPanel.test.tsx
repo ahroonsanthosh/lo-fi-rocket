@@ -45,6 +45,20 @@ function renderApp(design: RocketDesign, saved: string[] = []): ReturnType<typeo
   return userEvent.setup();
 }
 
+/** The value of a result card: the dd after the dt whose visible label is `label`. */
+function resultText(results: HTMLElement, label: string): string {
+  const dt = [...results.querySelectorAll('dt')].find(
+    (d) => (d.querySelector('.lfr-term')?.textContent ?? d.textContent) === label,
+  );
+  return dt?.nextElementSibling?.textContent ?? '';
+}
+
+/** The launch site, rail and wind have their own view, opened from the dock. */
+async function openLaunch(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  const dock = screen.getByRole('navigation', { name: 'Views' });
+  await user.click(within(dock).getByRole('button', { name: 'Launch' }));
+}
+
 async function openFlight(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(within(screen.getByRole('listbox', { name: 'Flight' })).getByRole('option'));
 }
@@ -55,14 +69,15 @@ describe('FlightPanel (plan 0014)', () => {
     await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const results = await screen.findByRole('region', { name: 'Flight' });
-    const dd = (label: string): string =>
-      within(results).getByText(label).nextElementSibling?.textContent ?? '';
+    const dd = (label: string): string => resultText(results, label);
     // Displayed modes with the DATCOM base drag (D-069): apogee 172.94 m, maximum velocity 63.0 m/s (167.33 m, 62.3 m/s in
     // docs/reports/phase-2-acceptance.md with Niskanen's base drag), rail exit 18.45 m/s.
     expect(dd('Apogee')).toBe('172.94 m');
     expect(dd('Maximum velocity')).toBe('63.0 m/s');
     expect(dd('Rail exit velocity')).toMatch(/^18\.5 m\/s at 0\.29\d s$/);
-    expect(within(results).getByText('No warnings.')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Warnings' })).getByText('No warnings.'),
+    ).toBeInTheDocument();
     const events = within(results).getByRole('list', { name: 'Events' });
     const kinds = within(events)
       .getAllByRole('listitem')
@@ -74,23 +89,30 @@ describe('FlightPanel (plan 0014)', () => {
 
   it('a 5 m/s wind gives a landing distance and direction; changing the design marks the flight stale', async () => {
     const user = renderApp(exampleDesign('w'));
-    await openFlight(user);
+    await openLaunch(user);
     const wind = screen.getByLabelText('Wind speed (steady, uniform)');
     await user.clear(wind);
     await user.type(wind, '5');
+    await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const results = await screen.findByRole('region', { name: 'Flight' });
-    const landing = within(results).getByText('Landing').nextElementSibling?.textContent ?? '';
+    const landing = resultText(results, 'Landing');
     expect(landing).toMatch(/^\d+\.\d\d m towards \d+°$/);
     expect(Number.parseFloat(landing)).toBeGreaterThan(10);
-    await user.clear(wind);
-    await user.type(wind, '2');
-    expect(screen.getByRole('status')).toHaveTextContent(/changed since this flight was simulated/);
+    await openLaunch(user);
+    const again = screen.getByLabelText('Wind speed (steady, uniform)');
+    await user.clear(again);
+    await user.type(again, '2');
+    // Stale results are a note in the checks column and are marked in the telemetry.
+    expect(screen.getByRole('region', { name: 'Warnings' })).toHaveTextContent(
+      /changed since this flight was simulated/,
+    );
+    expect(screen.getByRole('region', { name: 'Status' })).toHaveTextContent(/out of date/);
   });
 
   it('rejects a zero rail length at the field and warns above the NAR angle', async () => {
     const user = renderApp(exampleDesign('r'));
-    await openFlight(user);
+    await openLaunch(user);
     const rail = screen.getByLabelText('Rail length');
     await user.clear(rail);
     await user.type(rail, '0');
@@ -115,7 +137,7 @@ describe('FlightPanel (plan 0014)', () => {
     const user = renderApp(strict);
     await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
-    const warnings = await screen.findByRole('list', { name: 'Warnings' });
+    const warnings = await screen.findByRole('region', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/5\.5:1, below 6:1/);
     expect(warnings).toHaveTextContent(/No recovery device/);
   });
@@ -149,9 +171,10 @@ describe('FlightPanel (plan 0014)', () => {
     const user = renderApp(fast);
     await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
-    const warnings = await screen.findByRole('list', { name: 'Warnings' });
+    const warnings = await screen.findByRole('region', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/transonic|supersonic/);
-    expect(warnings).toHaveTextContent(/held-out-validation/);
+    // Issue #19: plain language, no document paths in the warnings.
+    expect(warnings).not.toHaveTextContent(/held-out-validation/);
   });
 
   it('exports the CSV through the save service', async () => {
@@ -168,7 +191,7 @@ describe('FlightPanel (plan 0014)', () => {
 describe('wind profile and turbulence (plan 0016)', () => {
   it('a sheared profile and a seeded turbulence change the landing and show the seed in the modes', async () => {
     const user = renderApp(exampleDesign('wp'));
-    await openFlight(user);
+    await openLaunch(user);
     await user.click(screen.getByRole('button', { name: 'Vary the wind with altitude' }));
     const speed2 = screen.getByLabelText('Row 2 speed');
     await user.clear(speed2);
@@ -180,11 +203,13 @@ describe('wind profile and turbulence (plan 0016)', () => {
     await user.clear(intensity);
     await user.type(intensity, '0.1');
     expect(screen.getByLabelText(/Turbulence seed/)).toHaveValue('1');
+    await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const results = await screen.findByRole('region', { name: 'Flight' });
-    const landing = within(results).getByText('Landing').nextElementSibling?.textContent ?? '';
+    const landing = resultText(results, 'Landing');
     expect(Number.parseFloat(landing)).toBeGreaterThan(10);
     expect(results).toHaveTextContent(/turbulence seed 1/);
+    await openLaunch(user);
     await user.click(screen.getByRole('button', { name: 'Use a uniform wind' }));
     expect(screen.getByLabelText('Wind speed (steady, uniform)')).toBeInTheDocument();
   });
@@ -232,13 +257,14 @@ describe('Monte Carlo dispersion panel (plan 0017)', () => {
 describe('warning thresholds are user-adjustable rules of thumb (D-042, D-053)', () => {
   it('raising the rail-exit threshold to 20 m/s makes the warning fire on the example', async () => {
     const user = renderApp(exampleDesign('th'));
-    await openFlight(user);
+    await openLaunch(user);
     await user.click(screen.getByText(/Warning and stability thresholds/));
     const field = screen.getByLabelText('Minimum rail exit velocity');
     await user.clear(field);
     await user.type(field, '20');
+    await openFlight(user);
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
-    const warnings = await screen.findByRole('list', { name: 'Warnings' });
+    const warnings = await screen.findByRole('region', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/below 20 m\/s/);
   });
 });

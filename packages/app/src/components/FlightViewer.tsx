@@ -19,8 +19,13 @@ import {
   type Formatter,
   type Readouts,
 } from '@lo-fi-rocket/viewer';
-import { mountViewer, type ViewerHandle } from '@lo-fi-rocket/viewer/dom';
-import { useEffect, useId, useMemo, useRef, useState, type JSX } from 'react';
+import {
+  loadMapScenery,
+  mountViewer,
+  type MapScenery,
+  type ViewerHandle,
+} from '@lo-fi-rocket/viewer/dom';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type JSX } from 'react';
 import {
   CURRENT_PROVENANCE,
   describeProvenance,
@@ -35,6 +40,47 @@ import {
 } from '../simulation/replay-check.js';
 import { useServices } from '../state/services.js';
 import { formatQuantity, type UnitSystem } from '../units/display.js';
+import { loadSiteChoice, saveSiteChoice, SitePicker, type SiteChoice } from './FlightViewerSite.js';
+
+type MapState =
+  | { readonly kind: 'off' }
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly map: MapScenery }
+  | { readonly kind: 'error'; readonly message: string };
+
+// Inline styles: the app's stylesheet belongs to the ui lane.
+const STAGE: CSSProperties = { position: 'relative' };
+const CANVAS: CSSProperties = { height: 'clamp(440px, 62vh, 720px)', background: '#c9dcec' };
+const HUD: CSSProperties = {
+  position: 'absolute',
+  top: 8,
+  left: 8,
+  zIndex: 2,
+  padding: '6px 10px',
+  borderRadius: 6,
+  background: 'rgba(15, 20, 28, 0.62)',
+  color: '#fff',
+  font: '12px/1.45 system-ui, sans-serif',
+  fontVariantNumeric: 'tabular-nums',
+  pointerEvents: 'none',
+};
+const ATTRIBUTION: CSSProperties = {
+  position: 'absolute',
+  left: 8,
+  bottom: 6,
+  zIndex: 2,
+  maxWidth: '60%',
+  padding: '1px 6px',
+  borderRadius: 4,
+  background: 'rgba(255, 255, 255, 0.75)',
+  color: '#222',
+  font: '10px/1.35 system-ui, sans-serif',
+};
+
+/** Terrain departures from the pad's height above this are reported (a display threshold). */
+const TERRAIN_NOTE_THRESHOLD = 2;
+/** A pad altitude this far from the terrain data is pointed out (a display threshold). */
+const PAD_ALTITUDE_NOTE = 50;
 
 export interface DispersionState {
   readonly design: RocketDesign;
@@ -98,6 +144,9 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
   const speedId = useId();
   const cameraId = useId();
   const runId = useId();
+  const [siteChoice, setSiteChoice] = useState<SiteChoice>(() => loadSiteChoice());
+  const [sceneVersion, setSceneVersion] = useState(0);
+  const [mapState, setMapState] = useState<MapState>({ kind: 'off' });
 
   // The flight shown: the design's own, or a replayed Monte Carlo run of the same design.
   const shown: Shown = useMemo(() => {
@@ -129,6 +178,7 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
       rail: design.launch.rail,
       wind: { speed: wind.speed, from: wind.from },
       format: appFormatter(props.units),
+      recovery: design.recovery.map((r) => ({ name: r.name, diameter: r.diameter })),
       extraGroundPoints:
         props.dispersion === undefined
           ? []
@@ -163,6 +213,7 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         });
         handleRef.current = handle;
         setWebgl(undefined);
+        setSceneVersion((v) => v + 1);
       } catch (error) {
         setWebgl(
           `The 3D view could not start (${error instanceof Error ? error.message : String(error)}). The readouts below still show the stored values.`,
@@ -180,6 +231,36 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
   useEffect(() => {
     handleRef.current?.setCamera(camera);
   }, [camera]);
+
+  // Real-world scenery for the chosen site (D-3D-2); the illustrative scenery stays until it loads.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const site = siteChoice.site;
+    if (scene === undefined || site === undefined || handleRef.current === undefined) {
+      setMapState({ kind: 'off' });
+      return;
+    }
+    const abort = new AbortController();
+    setMapState({ kind: 'loading' });
+    loadMapScenery(scene, site, siteChoice.source, abort.signal).then(
+      (map) => {
+        if (abort.signal.aborted) return;
+        scene.setTerrain(map.terrain, map.visibility);
+        handleRef.current?.render();
+        setMapState({ kind: 'ready', map });
+      },
+      (error: unknown) => {
+        if (abort.signal.aborted) return;
+        setMapState({
+          kind: 'error',
+          message: `The map scenery could not be loaded, so the illustrative scenery is shown. ${error instanceof Error ? error.message : String(error)}`,
+        });
+      },
+    );
+    return () => {
+      abort.abort();
+    };
+  }, [sceneVersion, siteChoice]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -257,7 +338,50 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         smoothness only.
       </p>
       {webgl === undefined ? null : <p className="warning viewer-unavailable">{webgl}</p>}
-      <div className="viewer-canvas" ref={containerRef} data-shown={shown.label} />
+      <div style={STAGE}>
+        <div className="viewer-canvas" ref={containerRef} data-shown={shown.label} style={CANVAS} />
+        {r === undefined || webgl !== undefined ? null : (
+          <div className="viewer-hud" style={HUD} aria-hidden="true">
+            <div>Altitude: {formatQuantity(r.sample.altitude, 'm', u)}</div>
+            <div>Distance from pad: {formatQuantity(r.horizontalDistance, 'm', u)}</div>
+            <div>Velocity: {formatQuantity(r.sample.speed, 'velocity', u)}</div>
+            <div>
+              t = {stepTime} ({r.sample.phase})
+            </div>
+          </div>
+        )}
+        {mapState.kind === 'ready' ? (
+          <div className="viewer-attribution" style={ATTRIBUTION}>
+            {mapState.map.attributions.join(' · ')}
+          </div>
+        ) : null}
+      </div>
+      <p className="muted small">
+        The scenery, smoke, flame and parachute shapes are illustrative. The simulation assumes flat
+        ground at the pad; the ground is drawn at the rocket&apos;s tail at rest, the smoke drifts
+        with the ground wind input, and a canopy is drawn at its design diameter from the stored
+        deployment time.
+      </p>
+      <SitePicker
+        choice={siteChoice}
+        onChange={(c) => {
+          setSiteChoice(c);
+          saveSiteChoice(c);
+        }}
+      />
+      {mapState.kind === 'loading' ? (
+        <p className="muted small" role="status">
+          Loading the map scenery…
+        </p>
+      ) : null}
+      {mapState.kind === 'error' ? (
+        <p className="warning" role="alert">
+          {mapState.message}
+        </p>
+      ) : null}
+      {mapState.kind === 'ready' ? (
+        <MapNotes map={mapState.map} padAltitude={shown.design.launch.site.altitude} units={u} />
+      ) : null}
       <div className="viewer-controls">
         <button type="button" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
           {playing ? 'Pause' : 'Play'}
@@ -410,6 +534,42 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * What the map scenery means for the flight: the terrain height at the pad
+ * against the design's pad altitude, and how far the terrain under the
+ * flight departs from the flat ground the simulator assumes.
+ */
+function MapNotes({
+  map,
+  padAltitude,
+  units,
+}: {
+  readonly map: MapScenery;
+  readonly padAltitude: number;
+  readonly units: UnitSystem;
+}): JSX.Element {
+  const dev = map.deviation;
+  return (
+    <div className="viewer-map-notes">
+      <p className="muted small">
+        Terrain at the pad: {formatQuantity(map.padElevation, 'm', units)} above sea level from the
+        elevation data; the design&apos;s pad altitude is {formatQuantity(padAltitude, 'm', units)}.
+        Imagery about {formatQuantity(map.imageryResolution, 'm', units)} per pixel near the pad.
+        {Math.abs(map.padElevation - padAltitude) > PAD_ALTITUDE_NOTE
+          ? ' The two differ: if this is where you will fly, set the pad altitude in the launch settings so the simulation uses the air density there.'
+          : ''}
+      </p>
+      {Math.abs(dev) > TERRAIN_NOTE_THRESHOLD ? (
+        <p className="warning" role="note">
+          The terrain under the flight path is up to {formatQuantity(Math.abs(dev), 'm', units)}{' '}
+          {dev > 0 ? 'higher' : 'lower'} than the pad. The simulation assumes flat ground at the
+          pad, so the landing point and the time of landing do not account for this terrain.
+        </p>
+      ) : null}
+    </div>
   );
 }
 

@@ -93,31 +93,44 @@ export type FigureKind =
   | 'averageThrustInList'
   | 'burnTime'
   | 'recordedApogeeDifference'
-  | 'runMillis';
+  | 'runMillis'
+  | 'thrustToWeight';
 
 export interface FigureRule extends DisplayRule {
-  /** Where the current app applies this rounding (file and line at 109d117). */
+  /**
+   * Where the app applies this rounding, as a path under packages/ and a
+   * line: there either as `toFixed(decimals)` or by reading this rule.
+   */
   readonly from: string;
 }
 
 /** Figures the app shows with a fixed number of decimals outside the unit table. */
 export const FIGURE_DISPLAY: Readonly<Record<FigureKind, FigureRule>> = {
-  stabilityMargin: { unit: 'calibers', decimals: 2, from: 'StabilityPanel.tsx:90' },
-  normalForceDerivative: { unit: 'per radian', decimals: 2, from: 'StabilityPanel.tsx:116' },
-  maxMach: { unit: '', decimals: 3, from: 'FlightPanel.tsx:170' },
-  timeToApogee: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:162' },
-  railExitTime: { unit: 's', decimals: 3, from: 'FlightPanel.tsx:179' },
-  burnoutTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:185' },
-  deploymentTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:191' },
-  flightTime: { unit: 's', decimals: 2, from: 'FlightPanel.tsx:221' },
-  eventTime: { unit: 's', decimals: 3, from: 'FlightPanel.tsx:235' },
-  bearing: { unit: '°', decimals: 0, from: 'FlightPanel.tsx:37' },
-  totalImpulse: { unit: 'N·s', decimals: 2, from: 'MotorPanel.tsx:261' },
-  totalImpulseInList: { unit: 'N·s', decimals: 1, from: 'MotorPanel.tsx:380' },
-  averageThrustInList: { unit: 'N', decimals: 1, from: 'MotorPanel.tsx:536' },
-  burnTime: { unit: 's', decimals: 2, from: 'MotorPanel.tsx:265' },
-  recordedApogeeDifference: { unit: '%', decimals: 1, from: 'ComparisonPanel.tsx:95' },
-  runMillis: { unit: 'ms', decimals: 0, from: 'FlightPanel.tsx:251' },
+  stabilityMargin: { unit: 'calibers', decimals: 2, from: 'formats/src/design/to-physics.ts:142' },
+  normalForceDerivative: {
+    unit: 'per radian',
+    decimals: 2,
+    from: 'app/src/components/StabilityPanel.tsx:96',
+  },
+  maxMach: { unit: '', decimals: 3, from: 'app/src/components/FlightPanel.tsx:208' },
+  timeToApogee: { unit: 's', decimals: 2, from: 'app/src/components/FlightPanel.tsx:193' },
+  railExitTime: { unit: 's', decimals: 3, from: 'app/src/components/FlightPanel.tsx:225' },
+  burnoutTime: { unit: 's', decimals: 2, from: 'app/src/components/FlightPanel.tsx:232' },
+  deploymentTime: { unit: 's', decimals: 2, from: 'app/src/components/FlightPanel.tsx:241' },
+  flightTime: { unit: 's', decimals: 2, from: 'app/src/components/FlightPanel.tsx:269' },
+  eventTime: { unit: 's', decimals: 3, from: 'app/src/components/FlightPanel.tsx:290' },
+  bearing: { unit: '°', decimals: 0, from: 'app/src/components/FlightPanel.tsx:43' },
+  totalImpulse: { unit: 'N·s', decimals: 2, from: 'app/src/components/MotorPanel.tsx:258' },
+  totalImpulseInList: { unit: 'N·s', decimals: 1, from: 'app/src/components/MotorPanel.tsx:377' },
+  averageThrustInList: { unit: 'N', decimals: 1, from: 'app/src/components/MotorPanel.tsx:533' },
+  burnTime: { unit: 's', decimals: 2, from: 'app/src/components/MotorPanel.tsx:262' },
+  recordedApogeeDifference: {
+    unit: '%',
+    decimals: 1,
+    from: 'app/src/components/ComparisonPanel.tsx:95',
+  },
+  runMillis: { unit: 'ms', decimals: 0, from: 'app/src/components/FlightPanel.tsx:306' },
+  thrustToWeight: { unit: ': 1', decimals: 1, from: 'formats/src/design/to-physics.ts:342' },
 };
 
 /**

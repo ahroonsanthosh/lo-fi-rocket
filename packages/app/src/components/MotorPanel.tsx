@@ -26,6 +26,7 @@ import {
   type LibraryMotor,
 } from '../motors/library.js';
 import { useServices } from '../state/services.js';
+import { motorFitMessage } from '../layout/warnings.js';
 import { useStore } from '../state/store.js';
 import { formatQuantity, parseQuantity } from '../units/display.js';
 import { LinePlot } from './LinePlot.js';
@@ -96,12 +97,8 @@ export function MotorPanel(): JSX.Element {
   const libraryMatch =
     motor === undefined ? undefined : library.motors.find((m) => sameProvenance(m, motor));
   const delays = libraryMatch?.delays;
-  const diameterWarning =
-    motor !== undefined &&
-    innerDiameter !== undefined &&
-    motor.definition.diameter > innerDiameter + 1e-9
-      ? `The motor is ${formatQuantity(motor.definition.diameter, 'mm', units)} wide but the mount tube's inside is ${formatQuantity(innerDiameter, 'mm', units)}: it will not fit unless the tube changes.`
-      : undefined;
+  // Also listed in the checks column (docs/ui/redesign.md section 5).
+  const diameterWarning = motorFitMessage(design, units);
 
   return (
     <section className="editor" aria-label="Motor">

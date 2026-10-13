@@ -22,6 +22,7 @@ import {
   SimulationStalledError,
 } from '../errors.js';
 import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
+import { validateComponentFit } from '../geometry/fit.js';
 import type { MassProperties } from '../geometry/revolution.js';
 import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.js';
 import { finiteResult } from '../numerics/finite.js';
@@ -170,6 +171,7 @@ export interface FlightSummary {
   readonly railExitTime: number;
   readonly burnoutTime: number;
   readonly burnoutVelocity: number;
+  /** Airspeed |v − v_wind| at the first deployment of any recovery device, whatever its trigger (review F-1, F-3). */
   readonly deploymentVelocity: number | undefined;
   readonly deploymentTime: number | undefined;
   /** Vertical speed at landing (positive down). */
@@ -179,6 +181,33 @@ export interface FlightSummary {
   /** Bearing of the landing point from the pad, clockwise from north, radians. */
   readonly landingDirection: number | undefined;
   readonly flightTime: number;
+  /**
+   * When the motor's ejection charge fired, the airspeed |v − v_wind| and the
+   * vertical velocity (positive up) at that instant; undefined when it did not
+   * fire (plugged motor, or the flight ended first). Issue #9: without an
+   * altimeter the charge is the deployment, whatever the devices are set to.
+   */
+  readonly ejectionCharge:
+    | { readonly time: number; readonly airspeed: number; readonly verticalVelocity: number }
+    | undefined;
+  /**
+   * Issue #17: the most negative stability margin of powered flight and coast
+   * (CP ahead of the CG), or undefined when the margin stayed at 0 or above.
+   * When set, the result's first warning says that the rocket is unstable and
+   * that the flight shown is not a prediction.
+   */
+  readonly unstable: StabilityPoint | undefined;
+  /**
+   * The flight regimes met in powered flight and coast (issue #19): Mach 0.8 to 1.2, 1.2 to 2, above 2,
+   * and angle of attack above 60°. The design warnings turn these into plain messages; the model's
+   * technical notes on each are in `FlightResult.notes`.
+   */
+  readonly regimes: {
+    readonly transonic: boolean;
+    readonly supersonic: boolean;
+    readonly beyondValidated: boolean;
+    readonly largeAngle: boolean;
+  };
   /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
   readonly endReason: 'landing' | 'max-time' | 'model-limit';
   /**
@@ -235,7 +264,16 @@ export interface FlightResult {
   readonly samples: readonly FlightSample[];
   readonly events: readonly FlightEvent[];
   readonly summary: FlightSummary;
+  /**
+   * What the user should know about this flight, one plain sentence or two each, saying what it means and
+   * what to do (CLAUDE.md 9, issue #19). No decision or chart references.
+   */
   readonly warnings: readonly string[];
+  /**
+   * Technical notes on the models used (chart limits, fairings, reading uncertainty, sources and decision
+   * IDs), for a "details" view. They do not change what the user should do; the warnings carry that.
+   */
+  readonly notes: readonly string[];
   readonly modes: {
     readonly aerodynamics: 'niskanen' | 'none';
     readonly finRollReduction: boolean;
@@ -602,6 +640,11 @@ export const RK4_MAX_PITCH_AMPLITUDE_LOSS = 0.1;
 /** D-063: a warning is attached above this loss per step. */
 export const RK4_WARN_PITCH_AMPLITUDE_LOSS = 0.01;
 
+/** Off the rail and not landed: powered flight, coast, or descent under a recovery device. */
+function isAirborne(phase: FlightPhase): boolean {
+  return phase === 'powered' || phase === 'coast' || phase === 'descent';
+}
+
 /** Cross-check mode: the axis follows the velocity (the rail direction before the rocket moves). */
 function velocityAlignedNose(v: Vec3, rail: Vec3): Vec3 {
   const n = norm(v);
@@ -624,7 +667,7 @@ interface PendingTimed {
 function effectiveLargeAngleMethod(
   vehicle: FlightVehicle,
   options: SimulationOptions,
-  warnings: Set<string>,
+  notes: Set<string>,
 ): LargeAngleMethod {
   const requested = options.largeAngleMethod ?? DEFAULT_LARGE_ANGLE_METHOD;
   if (requested === 'linear') return 'linear';
@@ -632,7 +675,7 @@ function effectiveLargeAngleMethod(
     if (p.component.kind !== 'finSet') continue;
     const av = finLargeAngleAvailability(p.component);
     if (!av.available) {
-      warnings.add(
+      notes.add(
         `The large-angle model (DATCOM, D-070) does not cover this fin set: ${av.reason}. The small-angle model is used instead, and the flight ends if the angle of attack passes 90° (D-046).`,
       );
       return 'linear';
@@ -645,11 +688,26 @@ function effectiveLargeAngleMethod(
 export function simulateFlight(vehicle: FlightVehicle, options: SimulationOptions): FlightResult {
   const launch = validateLaunch(options.site, options.rail);
   const warnings = new Set<string>(launch.warnings.map((w) => w.message));
+  // Issue #19: model provenance goes to the notes; the warnings say what matters and what to do.
+  const notes = new Set<string>();
+  const finName = (index: number): string => {
+    const name = vehicle.componentNames?.[index];
+    return name === undefined || name === ''
+      ? `the fin set (component ${String(index)})`
+      : `"${name}"`;
+  };
+  const regimes = {
+    transonic: false,
+    supersonic: false,
+    beyondValidated: false,
+    largeAngle: false,
+  };
   if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
   const maxTime: number = options.maxTime;
   if (!(maxTime > 0))
     throw new InvalidInputError('maximum simulation time', maxTime, 'must be greater than 0 s');
   if (options.dragCurve !== undefined) validateDragCurve(options.dragCurve);
+  validateComponentFit(vehicle.components);
   const structure = structuralMassParts(vehicle.components);
   const rocketLength = vehicle.components.reduce((s, p) => {
     const c = p.component;
@@ -663,6 +721,20 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     vehicle.motor.kind === 'definition'
       ? (burnTime(vehicle.motor.definition) as number)
       : (vehicle.motor.burnTime as number);
+  // Issue #32, D-075: a device open while the motor still burns would need thrust and canopy drag together;
+  // the descent model (DYN-14, Niskanen §4.2.5 pp. 67 to 68) has the canopy drag and gravity only, and the
+  // flight would silently stay on the pad. Refused with a plain message instead.
+  for (const d of vehicle.recovery) {
+    if (d.deploy.event !== 'launch') continue;
+    const at: number = d.deploy.delay;
+    if (at < motorBurn) {
+      throw new InvalidInputError(
+        `"${d.name}" deployment time`,
+        at,
+        `the parachute would open ${at > 0 ? `${at.toFixed(2)} s after launch` : 'at launch'}, while the motor is still burning (burnout at ${motorBurn.toFixed(2)} s), and flight with a parachute open under thrust is not modelled. Set it to open at apogee, at the motor's ejection charge, at an altitude, or at least ${motorBurn.toFixed(2)} s after launch`,
+      );
+    }
+  }
   const ctx: Context = {
     vehicle,
     options,
@@ -678,8 +750,21 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     deployedArea: { area: 0 },
     motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
-    largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, warnings),
+    largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, notes),
   };
+
+  // M-4: a device on the ejection charge needs a charge. A plugged motor (no delay) or the ideal motor of the
+  // analytical cases has none, so the device can never open; say so before the flight, not only after it.
+  const ejectionDevices = vehicle.recovery.filter((d) => d.deploy.event === 'ejection');
+  const hasEjectionCharge =
+    vehicle.motor.kind === 'definition' && vehicle.motor.ejectionDelay !== undefined;
+  if (!hasEjectionCharge) {
+    for (const d of ejectionDevices) {
+      warnings.add(
+        `"${d.name}" is set to open at the motor's ejection charge, but ${vehicle.motor.kind === 'ideal' ? 'this motor model has no ejection charge' : 'the motor is plugged (it has no ejection delay)'}, so it never opens and the rocket comes down without it. Set it to open at apogee or at an altitude (with an altimeter), or choose a motor with an ejection delay.`,
+      );
+    }
+  }
 
   const events: FlightEvent[] = [];
   const samples: FlightSample[] = [];
@@ -692,13 +777,25 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     vec3(0, 0, 0),
   );
   const timed: PendingTimed[] = [];
+  let ejectionCharge: FlightSummary['ejectionCharge'];
   let apogeeReached = false;
   let liftedOff = false;
   const deployed = new Set<RecoveryDevice>();
+  // F-1: the first deployment, whatever its trigger (apogee, altitude, ejection charge, launch, delay).
+  let deployment: { t: number; v: number } | undefined;
+  // F-3: the speed relative to the air, |v − v_wind| (DYN-7, Niskanen §4.2.4 p. 65), which sets the deployment load
+  // through the dynamic pressure; the descent drag of DYN-14 already uses it.
+  const airspeedAt = (tt: number, yy: readonly number[]): number => {
+    const st = unpack(yy);
+    return norm(sub(st.velocity, ctx.wind(st.position.z, Math.max(0, tt))));
+  };
 
   const deploy = (device: RecoveryDevice, at: number, why: string): void => {
     if (deployed.has(device)) return;
     deployed.add(device);
+    // Every caller deploys at the current state: a timed action runs at its step boundary, an event
+    // handler after the state has been advanced to the bisected crossing.
+    deployment ??= { t: at, v: airspeedAt(at, y) };
     const area = (Math.PI * (device.diameter as number) ** 2) / 4;
     ctx.deployedArea.area += device.dragCoefficient * area;
     events.push({
@@ -743,6 +840,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       kind: 'ejection-charge',
       detail: `ejection charge at ${tE.toFixed(3)} s`,
       action: () => {
+        const st = unpack(y);
+        ejectionCharge = {
+          time: tE,
+          airspeed: norm(sub(st.velocity, ctx.wind(st.position.z, tE))),
+          verticalVelocity: st.velocity.z,
+        };
         scheduleDeployments('ejection', tE);
       },
     });
@@ -812,8 +915,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         model = 'linear';
       }
     }
+    // Plan 0030: the ascent only (rail exit to apogee). A rocket with no open recovery device stays in
+    // 'coast' after apogee; its fall is not flight along the stability axis and must not count, or a
+    // stable rocket falling tail first would be reported unstable (issue #17).
     if (
       (phase === 'powered' || phase === 'coast') &&
+      !apogeeReached &&
       Number.isFinite(cp) &&
       (f === undefined || (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK)
     ) {
@@ -851,6 +958,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         }
       }
     }
+    // Issue #19: the regimes met, for one plain warning each at the end (every accepted ascent step).
+    if (derived.flight !== undefined && (phase === 'powered' || phase === 'coast')) {
+      const m: number = derived.flight.mach;
+      if (m >= 0.8 && m <= 1.2) regimes.transonic = true;
+      else if (m > 1.2 && m <= 2) regimes.supersonic = true;
+      else if (m > 2) regimes.beyondValidated = true;
+      if ((derived.flight.angleOfAttack as number) > Math.PI / 3) regimes.largeAngle = true;
+    }
     if (!recordNow) return;
     const s = unpack(y);
     const acc = norm(derived.accelerationWorld);
@@ -867,7 +982,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       angularVelocity: s.angularVelocity,
       altitude: s.position.z,
       speed: norm(s.velocity),
-      airspeed: derived.flight?.airspeed ?? norm(s.velocity),
+      // F-3: without flight parameters (descent, landed), the airspeed is still |v − v_wind|, not the ground speed.
+      airspeed: derived.flight?.airspeed ?? airspeedAt(t, y),
       mach: derived.flight?.mach ?? Number.NaN,
       angleOfAttack: derived.flight?.angleOfAttack ?? Number.NaN,
       acceleration: acc,
@@ -879,7 +995,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       cp: derived.cp,
       stabilityCalibers: Number.isNaN(cp) ? Number.NaN : (cp - derived.cg) / referenceDiameter,
     });
-    for (const w of derived.warnings) warnings.add(w);
+    for (const w of derived.warnings) notes.add(w);
     lastRecorded = t;
   };
 
@@ -920,7 +1036,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let railExit: { t: number; v: number } | undefined;
   let burnout: { t: number; v: number } | undefined;
   let apogee: { t: number; z: number } | undefined;
-  let deployment: { t: number; v: number } | undefined;
   let landing: { t: number; vz: number; speed: number; x: number; y: number } | undefined;
   let endReason: 'landing' | 'max-time' | 'model-limit' = 'max-time';
   let stopped = false;
@@ -953,8 +1068,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           detail: nextTimed.detail,
         });
       if (nextTimed.kind === 'burnout') burnout = { t, v: norm(unpack(y).velocity) };
-      if (nextTimed.kind === 'deployment' && deployment === undefined && deployed.size > 0)
-        deployment = { t, v: norm(unpack(y).velocity) };
       record(true);
       continue;
     }
@@ -1005,8 +1118,15 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       }
       if (check.pitchAmplitudeLoss > RK4_WARN_PITCH_AMPLITUDE_LOSS && !pitchLossWarned) {
         pitchLossWarned = true;
+        const betterStep = (
+          (1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) *
+          0.9
+        ).toPrecision(2);
         warnings.add(
-          `RK4 step check: the pitch oscillation advances up to ${check.pitchStepAngle.toFixed(2)} rad per step, so RK4 damps its amplitude numerically by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step (D-063); apogee and velocities are not affected on the reference rockets, the oscillation history is. Use a step below ${((1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9).toPrecision(2)} s or the Dormand–Prince integrator for the oscillation.`,
+          `RK4 step check: the time step is coarse for this rocket's pitch oscillation, so the calculation damps the wobble by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step. Apogee and speeds are not affected; to see the oscillation, use a step below ${betterStep} s or the Dormand–Prince integrator.`,
+        );
+        notes.add(
+          `RK4 step check: the pitch oscillation advances up to ${check.pitchStepAngle.toFixed(2)} rad per step, so RK4 damps its amplitude numerically by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step (D-063); apogee and velocities are not affected on the reference rockets, the oscillation history is. Use a step below ${betterStep} s or the Dormand–Prince integrator for the oscillation.`,
         );
       }
     }
@@ -1052,7 +1172,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           direction: 'down',
         });
     }
-    if ((phase === 'powered' || phase === 'coast') && !apogeeReached)
+    // F-2: apogee is the top of the flight in every airborne phase, also after a recovery device opened on the
+    // way up (an early ejection charge); the apogee- and altitude-triggered devices depend on it.
+    // (`deploy` sets 'descent' from a closure, which the compiler's narrowing of `phase` does not see.)
+    if (isAirborne(phase) && !apogeeReached)
       candidates.push({ kind: 'apogee', g: verticalVelocity, direction: 'down' });
     if (phase !== 'on-rail')
       candidates.push({ kind: 'landing', g: altitudeAbovePad, direction: 'down' });
@@ -1172,7 +1295,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
             detail: `apogee ${s.position.z.toFixed(3)} m above the pad`,
           });
           scheduleDeployments('apogee', t);
-          if (deployed.size > 0 && deployment === undefined) deployment = { t, v: speed };
           break;
         case 'altitude':
           for (const device of vehicle.recovery) {
@@ -1183,22 +1305,23 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
               Math.abs(s.position.z - (device.deploy.altitude as number)) < 1e-6
             ) {
               const delay: number = device.deploy.delay;
+              // The crossing time, fixed now: `t` has moved on by the time the action runs.
+              const crossing = t;
               if (delay <= 0)
                 deploy(device, t, `descending through ${String(device.deploy.altitude)} m`);
               else
                 timed.push({
-                  time: t + delay,
+                  time: crossing + delay,
                   kind: 'deployment',
                   detail: '',
                   action: () => {
                     deploy(
                       device,
-                      t + delay,
+                      crossing + delay,
                       `${String(delay)} s after ${String(device.deploy.altitude)} m`,
                     );
                   },
                 });
-              if (deployed.size > 0 && deployment === undefined) deployment = { t, v: speed };
             }
           }
           events.push({
@@ -1230,7 +1353,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
               ? `angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above, beyond the large-angle model (D-070); the flight is not continued`
               : `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
           });
-          warnings.add(
+          // Issue #19: the plain message is the design warning for endReason 'model-limit'.
+          notes.add(
             supersonic
               ? `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above: the large-angle model (DATCOM, D-070) covers fins beyond 90° only below Mach 1, and the DATCOM supersonic high-angle charts are not implemented. The rocket was flying backwards or tumbling at supersonic speed.`
               : `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
@@ -1258,8 +1382,35 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       time: seconds(t),
       detail: `maximum simulation time ${String(maxTime)} s reached in phase ${phase}`,
     });
+  // M-4: the charge was due after the flight ended (a delay longer than the flight), so its devices never opened.
+  if (hasEjectionCharge && !events.some((e) => e.kind === 'ejection-charge')) {
+    const due = motorBurn + (vehicle.motor.ejectionDelay as number);
+    const ended =
+      endReason === 'landing' ? `landed at ${t.toFixed(2)} s` : `ended at ${t.toFixed(2)} s`;
+    for (const d of ejectionDevices) {
+      if (deployed.has(d)) continue;
+      warnings.add(
+        `"${d.name}" is set to open at the motor's ejection charge, due at ${due.toFixed(2)} s, but the flight ${ended}, before the charge fired, so it never opened. Choose a shorter ejection delay; one that fires near apogee (${apogee === undefined ? 'not reached' : `${apogee.t.toFixed(2)} s, ${(apogee.t - motorBurn).toFixed(1)} s after burnout`}) is usual.`,
+      );
+    }
+  }
 
+  // Issue #32: a rocket that never left the rail has no rail-exit, burnout or apogee figures (NaN in the summary).
+  if (railExit === undefined) {
+    warnings.add(
+      `The rocket never left the launch rail${phase === 'landed' ? ' (it slid back down)' : ''}: the motor's thrust did not carry it to the end of the rail, so there is no real flight. Use a more powerful motor or a lighter rocket; rail exit, apogee and burnout figures are not available.`,
+    );
+  }
   const apogeeZ = samples.reduce((m, s) => Math.max(m, s.altitude), 0);
+  // Issue #17: a negative margin (CP ahead of the CG) during the ascent means the rocket is unstable; the
+  // flight below is then not a prediction. Stated first, in place of the in-flight margin warning.
+  const unstable = [lowest.powered, lowest.coast].reduce<StabilityPoint | undefined>(
+    (worst, p) =>
+      p !== undefined && p.calibers < 0 && (worst === undefined || p.calibers < worst.calibers)
+        ? p
+        : worst,
+    undefined,
+  );
   const summary: FlightSummary = {
     apogee: finiteResult('apogee', apogee?.z ?? apogeeZ),
     timeToApogee: apogee?.t ?? Number.NaN,
@@ -1280,6 +1431,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ? undefined
         : (Math.atan2(landing.x, landing.y) + 2 * Math.PI) % (2 * Math.PI),
     flightTime: t,
+    ejectionCharge,
+    unstable,
+    regimes: { ...regimes },
     endReason,
     minimumStability: { powered: lowest.powered, coast: lowest.coast },
     flutter: flutterFins.map(({ index, fin }): FlutterMargin => {
@@ -1299,15 +1453,63 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       );
     }),
   };
+  // F-4: every apogee- or altitude-triggered device that did not open, with the reason, so that a ballistic
+  // landing is never presented as a recovered one. (Ejection-charge devices: M-4.)
+  const ended =
+    endReason === 'landing'
+      ? `the rocket landed at ${t.toFixed(2)} s`
+      : endReason === 'max-time'
+        ? `the simulation stopped at its time limit, ${t.toFixed(2)} s`
+        : `the flight ended at ${t.toFixed(2)} s`;
+  for (const d of vehicle.recovery) {
+    if (deployed.has(d)) continue;
+    const delay: number = d.deploy.delay;
+    let reason: string | undefined;
+    if (d.deploy.event === 'apogee') {
+      reason =
+        apogee === undefined
+          ? `it opens at apogee, which was not reached before ${ended}`
+          : `it opens ${delay.toFixed(2)} s after apogee (at ${(apogee.t + delay).toFixed(2)} s), but ${ended} first. Use a shorter delay`;
+    } else if (d.deploy.event === 'altitude' && d.deploy.altitude !== undefined) {
+      const alt: number = d.deploy.altitude;
+      if (apogee === undefined) {
+        reason = `it opens when descending through ${alt.toFixed(1)} m, which is only checked after apogee, and apogee was not reached before ${ended}`;
+      } else if (alt >= apogee.z) {
+        reason = `it is set to open at ${alt.toFixed(1)} m on the way down, but the apogee is only ${apogee.z.toFixed(1)} m. Set it below the apogee`;
+      } else if (alt <= 0) {
+        reason = `it is set to open at ${alt.toFixed(1)} m above the pad, which the rocket reaches only on landing. Set it above the ground`;
+      } else {
+        const crossing = events.find(
+          (e) => e.kind === 'altitude' && e.detail.startsWith(`altitude ${alt.toFixed(3)} m`),
+        );
+        reason =
+          crossing === undefined
+            ? `it opens when descending through ${alt.toFixed(1)} m, but ${ended} before reaching that height`
+            : `it opens ${delay.toFixed(2)} s after descending through ${alt.toFixed(1)} m (at ${((crossing.time as number) + delay).toFixed(2)} s), but ${ended} first. Use a shorter delay`;
+      }
+    }
+    // Issue #33: 'never' is a choice, but when nothing else opened the rocket comes down unretarded.
+    if (d.deploy.event === 'never' && deployed.size === 0) {
+      reason = 'it is set to never open, and no other recovery device opened';
+    }
+    if (reason !== undefined) {
+      warnings.add(
+        `"${d.name}" never opened: ${reason}. The landing speed and drift shown are for a rocket coming down without it.`,
+      );
+    }
+  }
   for (const f of summary.flutter) {
     if (f.ratio === undefined) {
       if (f.reason.startsWith('no shear modulus'))
         warnings.add(
-          `Fin flutter not checked for the fin set at component ${String(f.finIndex)}: enter the fin material's shear modulus (NACA TN 4197).`,
+          `Fin flutter not checked for ${finName(f.finIndex)}: enter the fin material's shear modulus (its stiffness) to check whether the fins can flutter.`,
         );
     } else if (f.ratio < 1) {
       warnings.add(
-        `Fin flutter: the fin set at component ${String(f.finIndex)} reaches ${f.airspeed.toFixed(0)} m/s at t = ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}), above its NACA TN 4197 flutter speed of ${f.flutterVelocity.toFixed(0)} m/s there: the fins may flutter and fail. Thicker fins, a stiffer material, a smaller span or a slower flight raise the margin.`,
+        `Fin flutter: ${finName(f.finIndex)} reaches ${f.airspeed.toFixed(0)} m/s at t = ${f.time.toFixed(2)} s (Mach ${f.mach.toFixed(2)}), above the estimated flutter speed of ${f.flutterVelocity.toFixed(0)} m/s there, so the fins may flutter and break. Thicker fins, a stiffer material, a smaller span or a slower flight raise the margin.`,
+      );
+      notes.add(
+        `Fin flutter speed of component ${String(f.finIndex)} from NACA TN 4197 eq. (12) at the local pressure and speed of sound (plan 0031).`,
       );
     }
   }
@@ -1315,17 +1517,41 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     ['powered flight', lowest.powered],
     ['coast', lowest.coast],
   ] as const) {
-    if (p !== undefined && p.calibers < minimumMargin) {
+    if (p !== undefined && p.calibers < minimumMargin && !(p.calibers < 0)) {
       warnings.add(
-        `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (t = ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there. The margin uses the CP at that Mach number and angle of attack (plan 0030).`,
+        `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (at ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there.`,
+      );
+      notes.add(
+        `The in-flight margin uses the centre of pressure at the flight's Mach number and angle of attack, with the ${p.model === 'datcom' ? 'DATCOM large-angle' : 'small-angle'} normal force model (plan 0030, D-070).`,
       );
     }
   }
+  // Issue #9: a charge that fires while the rocket still climbs. Without an altimeter the charge is the
+  // deployment, so the recovery would open at this speed; the devices' own trigger does not change that.
+  if (ejectionCharge !== undefined && ejectionCharge.verticalVelocity > 0) {
+    const e = ejectionCharge;
+    const toApogee =
+      apogee === undefined
+        ? ''
+        : `, ${(apogee.t - e.time).toFixed(1)} s before apogee (a delay of about ${(apogee.t - motorBurn).toFixed(1)} s after burnout would fire it near apogee)`;
+    warnings.add(
+      `The motor's ejection charge fires at ${e.time.toFixed(2)} s while the rocket is still climbing at ${e.airspeed.toFixed(1)} m/s${toApogee}. If the charge deploys the recovery (no altimeter), the parachute opens at that speed and may tear, strip or zipper the airframe; choose a longer delay. If an altimeter deploys the recovery and the charge is only a backup, this still fires the charge early.`,
+    );
+  }
+
+  const unstableStatement =
+    unstable === undefined
+      ? []
+      : [
+          `This rocket is unstable: at ${unstable.time.toFixed(2)} s its centre of pressure is ${(-unstable.calibers).toFixed(2)} calibers ahead of its centre of mass, so it turns sideways or tumbles instead of flying straight. The apogee, speeds and landing point shown are not a prediction of its flight. Add or enlarge the fins, or add nose weight, until the margin is positive (1 to 2 calibers is the usual target).`,
+        ];
   return {
     samples,
     events,
     summary,
-    warnings: [...warnings],
+    // When unstable, the statement is always the first warning (formats relies on this, issue #17).
+    warnings: [...unstableStatement, ...warnings],
+    notes: [...notes],
     modes: {
       dragCurve: options.dragCurve?.label,
       aerodynamics: options.aerodynamics,

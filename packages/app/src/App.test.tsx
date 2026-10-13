@@ -1,4 +1,4 @@
-import { exampleDesign, parseDesign } from '@lo-fi-rocket/formats';
+import { designThrustToWeight, exampleDesign, parseDesign } from '@lo-fi-rocket/formats';
 import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -52,7 +52,10 @@ describe('App (plan 0012)', () => {
     // the margin itself may fall because the heavier fins also move the CG aft.
     const region = screen.getByRole('region', { name: 'Stability' });
     const cpText =
-      within(region).getByText('Centre of pressure').nextElementSibling?.textContent ?? '';
+      within(region)
+        .getByRole('button', { name: 'Centre of pressure' })
+        .closest('div')
+        ?.querySelector('dd')?.textContent ?? '';
     expect(Number.parseFloat(cpText)).toBeGreaterThan(478.9);
   });
 
@@ -90,7 +93,8 @@ describe('App (plan 0012)', () => {
     storage.setItem('lofi-rocket:last', 'x');
     storage.setItem('lofi-rocket:design:x', '{"schemaVersion":1}');
     render(<App storage={storage} />);
-    expect(screen.getByRole('status')).toHaveTextContent(/could not be loaded and was kept aside/);
+    const warnings = screen.getByRole('region', { name: 'Warnings' });
+    expect(warnings).toHaveTextContent(/could not be loaded and was kept aside/);
     expect(storage.map.has('lofi-rocket:recovered:x')).toBe(true);
   });
 
@@ -100,5 +104,54 @@ describe('App (plan 0012)', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Add a component' }), 'bodyTube');
     expect(screen.getByRole('region', { name: 'Body tube editor' })).toBeInTheDocument();
     expect(screen.getAllByRole('option', { name: /Body tube/ }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('the dock opens each view; selecting a part opens its view (D-UI-7)', async () => {
+    const user = userEvent.setup();
+    render(<App storage={memory()} />);
+    const dock = screen.getByRole('navigation', { name: 'Views' });
+    expect(within(dock).getByRole('button', { name: 'Overview' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await user.click(within(dock).getByRole('button', { name: 'Motor' }));
+    expect(screen.getByRole('region', { name: 'Motor' })).toBeInTheDocument();
+    await user.click(within(dock).getByRole('button', { name: 'Launch' }));
+    expect(screen.getByLabelText('Rail length')).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: /Fins/ }));
+    expect(within(dock).getByRole('button', { name: 'Airframe' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('region', { name: 'Fin set editor' })).toBeInTheDocument();
+  });
+
+  it('the overview dials and the telemetry show the physics figures with their status in words', () => {
+    const design = exampleDesign('o');
+    render(<App storage={memory()} initialDesign={design} />);
+    const main = screen.getByRole('main');
+    expect(within(main).getByText('Liftoff margin')).toBeInTheDocument();
+    const twr = designThrustToWeight(design);
+    if (twr === undefined) throw new Error('the example has a motor');
+    expect(within(main).getByText(twr.toFixed(1))).toBeInTheDocument();
+    const status = screen.getByRole('region', { name: 'Status' });
+    expect(within(status).getByText('1.84')).toBeInTheDocument();
+    expect(within(status).getAllByText('not simulated yet').length).toBeGreaterThan(0);
+    expect(within(status).getByText('Typical range')).toBeInTheDocument();
+  });
+
+  it('More opens the glossary and the theme switch, and the choice is kept', async () => {
+    const user = userEvent.setup();
+    const storage = memory();
+    render(<App storage={storage} />);
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    const dialog = screen.getByRole('dialog', { name: 'More' });
+    expect(within(dialog).getByText('Static stability margin')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('radio', { name: 'Light' }));
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light');
+    expect(storage.map.get('lofi-rocket:theme')).toBe('light');
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

@@ -1,10 +1,6 @@
 import { PhysicsError } from '@lo-fi-rocket/physics';
-import {
-  designMassProperties,
-  designStability,
-  DESIGN_MACH,
-  type DesignStability,
-} from '@lo-fi-rocket/formats';
+import { designMassProperties, designStability, type DesignStability } from '@lo-fi-rocket/formats';
+import { FIGURE_DISPLAY, Panel, Term } from '@lo-fi-rocket/ui';
 import type { JSX } from 'react';
 import { useStore } from '../state/store.js';
 import { formatQuantity } from '../units/display.js';
@@ -56,72 +52,55 @@ export function computeFigures(design: Parameters<typeof designStability>[0]): F
   }
 }
 
-export function StabilityPanel({ figures }: { readonly figures: Figures }): JSX.Element {
+/**
+ * The figures behind the stability margin, shown inside the stability
+ * card of the checks column: CG, CP, the reference diameter, the normal
+ * force derivative and the method (Barrowman 1967 with Niskanen's
+ * extensions, D-016).
+ */
+export function StabilityDetails({ figures }: { readonly figures: Figures }): JSX.Element | null {
   const { state } = useStore();
   const units = state.units;
-  const d = state.design;
   const s = figures.stability;
-  if (figures.error !== undefined) {
-    return (
-      <section className="stability level-error" aria-live="polite" aria-label="Stability">
-        <h2>Stability</h2>
-        <p className="banner-main">Cannot compute</p>
-        <p>{figures.error}</p>
-      </section>
-    );
-  }
-  if (s === undefined) {
-    return (
-      <section className="stability" aria-live="polite" aria-label="Stability">
-        <h2>Stability</h2>
-        <p className="muted">
-          Add components to see the centre of gravity, the centre of pressure and the margin.
-        </p>
-      </section>
-    );
-  }
+  if (s === undefined) return null;
   const r = s.result;
   const cp = r.centreOfPressure;
-  const level = s.liftoff.level;
   return (
-    <section className={`stability level-${level}`} aria-live="polite" aria-label="Stability">
-      <h2>Stability at Mach {String(DESIGN_MACH)}</h2>
-      <p className="banner-main">
-        <span className="big">{r.marginLiftoff.toFixed(2)}</span> calibers{' '}
-        {s.noMotor ? '(no motor selected)' : 'at liftoff'}
-        {s.noMotor ? null : <>, {r.marginBurnout.toFixed(2)} at burnout</>}
-      </p>
-      <p className="guidance">{s.liftoff.message}</p>
-      {s.noMotor || s.burnout.level === s.liftoff.level ? null : (
-        <p className="guidance">At burnout: {s.burnout.message}</p>
-      )}
+    <>
       <dl className="figures">
         <div>
-          <dt>Centre of gravity</dt>
+          <dt>
+            <Term k="cg">Centre of gravity</Term>
+          </dt>
           <dd>
             {formatQuantity(r.cgLiftoff, 'mm', units)}
             {s.noMotor ? '' : ` (burnout ${formatQuantity(r.cgBurnout, 'mm', units)})`}
           </dd>
         </div>
         <div>
-          <dt>Centre of pressure</dt>
+          <dt>
+            <Term k="cp">Centre of pressure</Term>
+          </dt>
           <dd>{formatQuantity(cp.cp, 'mm', units)}</dd>
         </div>
         <div>
-          <dt>Reference diameter</dt>
+          <dt>
+            <Term k="referenceDiameter">Reference diameter</Term>
+          </dt>
           <dd>{formatQuantity(cp.referenceDiameter, 'mm', units)}</dd>
         </div>
         <div>
-          <dt>Normal force derivative C_Nα</dt>
-          <dd>{cp.cnAlpha.toFixed(2)} per radian</dd>
+          <dt>
+            <Term k="cnAlpha">Normal force derivative C_Nα</Term>
+          </dt>
+          <dd>{cp.cnAlpha.toFixed(FIGURE_DISPLAY.normalForceDerivative.decimals)} per radian</dd>
         </div>
       </dl>
       <p className="muted small">
         Barrowman method with Niskanen’s extensions, worst roll angle, roll-angle reduction applied
-        (D-016). Thresholds {String(d.stabilityThresholds.unstableBelow)} and{' '}
-        {String(d.stabilityThresholds.overstableAbove)} calibers are rules of thumb, not guarantees.
+        (D-016).
       </p>
-    </section>
+    </>
   );
 }
 
@@ -129,8 +108,7 @@ export function MassPanel({ figures }: { readonly figures: Figures }): JSX.Eleme
   const { state } = useStore();
   const units = state.units;
   return (
-    <section className="mass" aria-label="Mass and size">
-      <h2>Mass and size</h2>
+    <Panel title="Mass and size">
       <dl className="figures">
         <div>
           <dt>Length</dt>
@@ -151,6 +129,6 @@ export function MassPanel({ figures }: { readonly figures: Figures }): JSX.Eleme
           </dd>
         </div>
       </dl>
-    </section>
+    </Panel>
   );
 }

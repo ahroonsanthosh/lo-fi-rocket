@@ -21,6 +21,28 @@ export interface StepGuideProps {
   readonly onHide: () => void;
 }
 
+/** A finished step: a check in a neutral circle (finished is not the same as checked safe). */
+function DoneMark(): JSX.Element {
+  return (
+    <svg
+      className="lfr-icon lfr-icon--done"
+      width={20}
+      height={20}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="8" cy="8" r="7.5" fill="currentColor" />
+      <path
+        d="M4.6 8.3l2.2 2.2 4.6-4.8"
+        stroke="var(--lfr-surface)"
+        strokeWidth="1.7"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 const STATUS_TEXT: Readonly<Record<StepStatus, string>> = {
   done: 'done',
   current: 'current step',
@@ -60,7 +82,7 @@ export function StepGuide({ steps, currentId, onSelect, onHide }: StepGuideProps
               >
                 <span className="lfr-steps__number" aria-hidden="true">
                   {s.status === 'done' ? (
-                    <StatusIcon severity="safe" size={18} />
+                    <DoneMark />
                   ) : s.status === 'attention' ? (
                     <StatusIcon severity="caution" size={18} />
                   ) : (

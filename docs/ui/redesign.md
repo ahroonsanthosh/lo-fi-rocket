@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-12. Plan UI-0001; decisions D-UI-1 to D-UI-5 in `docs/ui/decisions.md`.
 **Inputs:** the usability review (`docs/ui/review.md`), CLAUDE.md sections 8 and 9, the owner's brief for this prompt.
-**Status:** the design and the component library (`packages/ui`) are done. Applying them to the screens of `packages/app` is the next prompt, after the parallel sessions (physics v1.0.0, 3D viewer, physics review) have merged.
+**Status:** applied to `packages/app` on 2026-10-13 in the look of the owner's reference image, an instrument console (section 12, D-UI-6 to D-UI-10). The sections below remain the rules; section 12 says where each part landed and what was adapted.
 
 ## 1. Principles
 
@@ -163,20 +163,20 @@ The glossary already has entries for the minimum in-flight margin and the fin fl
 
 ### Colour tokens
 
-Defined once in `packages/ui/src/tokens/tokens.ts` and as CSS variables in `tokens.css` (light by default, dark from the system setting or `data-theme="dark"`). A test checks the two files agree.
+Defined once in `packages/ui/src/tokens/tokens.ts` and as CSS variables in `tokens.css` (light by default, dark from the system setting or `data-theme="dark"`; the app sets dark unless the user chose light, D-UI-6). A test checks the two files agree. The dark values were refitted on 2026-10-13 to colours sampled from the owner's reference image; a `neutralIndicator` (#6b7192 light, #8b91b3 dark) marks finished checklist steps.
 
 | Token                        | Light                       | Dark                        | Use                                   |
 | ---------------------------- | --------------------------- | --------------------------- | ------------------------------------- |
-| bg / surface / surfaceSunken | #f4f6f8 / #ffffff / #f0f3f6 | #101317 / #181d23 / #20262e | page, panels, insets                  |
-| text / textMuted             | #1b1f24 / #4f5966           | #e7eaee / #a7b1bc           | text, labels and units                |
-| borderSubtle / borderControl | #dde2e8 / #77828f           | #2c343d / #7f8a97           | dividers (decorative) / control edges |
-| accent, focus                | #1f5fbf                     | #80b0ff                     | links, selection, focus ring          |
-| safe text / bg / indicator   | #166232 / #e7f4eb / #1b7f3b | #86dca0 / #122a1b / #4cc272 | OK, typical range                     |
-| caution                      | #6f4400 / #fff3d3 / #a86400 | #ffd27a / #2d2310 / #e0a030 | Caution                               |
-| danger                       | #9c1f18 / #fdeceb / #b3261e | #ffa39b / #33171a / #ff6b61 | Danger                                |
-| info                         | #1a4b93 / #e8f0fb / #1f5fbf | #a3c6ff / #14233a / #80b0ff | Note                                  |
-| limit                        | #55358f / #f2edfa / #6b47ad | #cdb9ff / #241d3a / #a98bf0 | Model limit                           |
-| cgMarker / cpMarker          | #1b4f9c / #b3261e           | #80b0ff / #ff6b61           | side view markers                     |
+| bg / surface / surfaceSunken | #eef0f7 / #ffffff / #f3f4fa | #12152b / #181b38 / #0e1124 | page, panels, insets                  |
+| text / textMuted             | #161a33 / #535978           | #f3f4fb / #9fa3c7           | text, labels and units                |
+| borderSubtle / borderControl | #dde0ee / #7a809f           | #272b52 / #6d72a3           | dividers (decorative) / control edges |
+| accent, focus                | #1f5fd1                     | #4b97ff, #8ab8ff            | links, selection, focus ring          |
+| safe text / bg / indicator   | #166232 / #e7f4eb / #1b7f3b | #7be3a4 / #11291f / #3fd47f | OK, typical range                     |
+| caution                      | #6f4400 / #fff3d3 / #a86400 | #ffcb6b / #2c2414 / #f7a128 | Caution                               |
+| danger                       | #9c1f18 / #fdeceb / #c62a22 | #ff9d9d / #341823 / #ff5d5d | Danger                                |
+| info                         | #1a4b93 / #e8f0fb / #1f5fd1 | #a9c9ff / #152349 / #4b97ff | Note                                  |
+| limit                        | #55358f / #f2edfa / #6b47ad | #cdb8ff / #251e47 / #ad8bff | Model limit                           |
+| cgMarker / cpMarker          | #1b4f9c / #c62a22           | #4b97ff / #ff6b6b           | side view markers                     |
 
 Colour for meaning is always paired with an icon of its own shape and a word (`SeverityTag`, `WarningBanner`, `StabilityIndicator`, `StepGuide`); the stability zones are labelled with their threshold numbers and the current zone is outlined and pointed at, so they read in grey scale.
 
@@ -236,3 +236,32 @@ The after images are screenshots of `packages/ui/mockups/`, a page built only fr
 | Motor picker tabs                    | `Tabs`                                                                 |
 | `<details>` sections                 | `Panel collapsible`                                                    |
 | labels with technical terms          | `Term`                                                                 |
+
+## 12. Applied as an instrument console (2026-10-13)
+
+The owner asked for the app to look like their reference image, a spacecraft "Vehicle overview" console: clean, new, refined, adapted where needed. The plan above was applied in that look.
+
+![The vehicle overview at 1366 × 768](mockups/console-overview-flown.png)
+
+| Reference                                     | Here                                                                                                                                                                           |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| One screen on a deep indigo field with a glow | The console: the page never scrolls on a laptop or larger; each column scrolls on its own. Below 1100 px the columns stack, checks first (section 2).                          |
+| "Vehicle overview" title                      | The open view's name, centred over the main column.                                                                                                                            |
+| Checklist with check circles, on the left     | The guided steps (section 3): a neutral check when done, a caution mark when a step needs attention, the number while not started; the parts list under it.                    |
+| Dial tiles around the vehicle                 | Stability at liftoff and burnout, thrust to weight, maximum Mach, CG and CP from the nose, rail exit and deployment velocity, each with its status in words (D-UI-7).          |
+| The vehicle, large, in a spotlight            | The rocket standing nose up, drawn from the side-view geometry and shaded as a lit cylinder, with the CG and CP marked and labelled. Clicking a part opens it.                 |
+| "Connections" table                           | Motor and Airframe tables: motor, total impulse, burn time, ejection delay; length, reference diameter, masses.                                                                |
+| Readouts with thin bars, on the right         | The always-visible status (section 2): stability, apogee, maximum velocity, rail exit velocity, maximum Mach; then every warning, the stability card and the in-flight checks. |
+| Systems / Cabin switch                        | Metric / Imperial.                                                                                                                                                             |
+| Icon dock                                     | The views: Overview, Airframe, Motor, Recovery, Launch, Flight. The open view is marked in the accent colour, not red, which means danger here (D-UI-6).                       |
+| More                                          | Theme and the full glossary.                                                                                                                                                   |
+
+| Screen                    | Image                                   |
+| ------------------------- | --------------------------------------- |
+| Overview, before a flight | ![](mockups/console-overview.png)       |
+| Airframe, fins selected   | ![](mockups/console-airframe.png)       |
+| Flight results            | ![](mockups/console-flight.png)         |
+| Light theme               | ![](mockups/console-overview-light.png) |
+| 1920 × 1080               | ![](mockups/console-overview-1920.png)  |
+
+Not yet done from this plan: replacing the editors' own fields with `NumberInput` and `SelectField` (they are restyled, not rebuilt), the replace-design confirmation dialog, and the structured warnings of D-UI-4 (a `packages/formats` change). The 3D replay's sky is drawn by `packages/viewer` in a fixed light colour; that is the 3D lane's to theme.

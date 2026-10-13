@@ -137,16 +137,18 @@ describe('gridSpacing by hand', () => {
 });
 
 describe('cameraPose by hand', () => {
-  it('follow sits 5 rocket lengths (at least 2 m) away along (−1, −1, 0.6); pad stands at (0, −3, 1.7); orbit is free', () => {
+  it('follow sits 5 rocket lengths (at least 2 m) away along (−1, −1, 0.3); pad stands at (0, −3, 1.7); orbit is free', () => {
     const f = cameraPose('follow', { x: 10, y: 20, z: 30 }, 0.6)!;
     const d = 3; // max(2, 5 × 0.6)
-    const n = Math.hypot(1, 1, 0.6);
-    expect(f.position.x).toBeCloseTo(10 - d / n, 12);
+    const n = Math.hypot(1, 1, 0.3); // √2.09 = 1.44568
+    expect(f.position.x).toBeCloseTo(10 - d / n, 12); // 10 − 2.07515 = 7.92485
+    expect(f.position.x).toBeCloseTo(7.92485, 4);
     expect(f.position.y).toBeCloseTo(20 - d / n, 12);
-    expect(f.position.z).toBeCloseTo(30 + (0.6 * d) / n, 12);
+    expect(f.position.z).toBeCloseTo(30 + (0.3 * d) / n, 12); // 30 + 0.62255
+    expect(f.position.z).toBeCloseTo(30.62255, 4);
     expect(f.target).toEqual({ x: 10, y: 20, z: 30 });
     expect(cameraPose('follow', { x: 0, y: 0, z: 0 }, 0.1)!.position.z).toBeCloseTo(
-      (0.6 * 2) / n,
+      (0.3 * 2) / n,
       12,
     );
     expect(cameraPose('pad', { x: 1, y: 2, z: 3 }, 0.6)).toEqual({

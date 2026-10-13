@@ -44,6 +44,8 @@ export interface ColourTokens {
   readonly limitText: string;
   readonly limitBg: string;
   readonly limitIndicator: string;
+  /** A finished step or a neutral "done" mark: not a hazard and not a pass, just complete. */
+  readonly neutralIndicator: string;
   /** Side view and plot markers. */
   readonly cgMarker: string;
   readonly cpMarker: string;
@@ -51,16 +53,16 @@ export interface ColourTokens {
 
 export const COLOURS: Readonly<Record<ThemeName, ColourTokens>> = {
   light: {
-    bg: '#f4f6f8',
+    bg: '#eef0f7',
     surface: '#ffffff',
-    surfaceSunken: '#f0f3f6',
-    text: '#1b1f24',
-    textMuted: '#4f5966',
-    borderSubtle: '#dde2e8',
-    borderControl: '#77828f',
-    accent: '#1f5fbf',
+    surfaceSunken: '#f3f4fa',
+    text: '#161a33',
+    textMuted: '#535978',
+    borderSubtle: '#dde0ee',
+    borderControl: '#7a809f',
+    accent: '#1f5fd1',
     onAccent: '#ffffff',
-    focus: '#1f5fbf',
+    focus: '#1f5fd1',
     safeText: '#166232',
     safeBg: '#e7f4eb',
     safeIndicator: '#1b7f3b',
@@ -69,44 +71,46 @@ export const COLOURS: Readonly<Record<ThemeName, ColourTokens>> = {
     cautionIndicator: '#a86400',
     dangerText: '#9c1f18',
     dangerBg: '#fdeceb',
-    dangerIndicator: '#b3261e',
+    dangerIndicator: '#c62a22',
     infoText: '#1a4b93',
     infoBg: '#e8f0fb',
-    infoIndicator: '#1f5fbf',
+    infoIndicator: '#1f5fd1',
     limitText: '#55358f',
     limitBg: '#f2edfa',
     limitIndicator: '#6b47ad',
+    neutralIndicator: '#6b7192',
     cgMarker: '#1b4f9c',
-    cpMarker: '#b3261e',
+    cpMarker: '#c62a22',
   },
   dark: {
-    bg: '#101317',
-    surface: '#181d23',
-    surfaceSunken: '#20262e',
-    text: '#e7eaee',
-    textMuted: '#a7b1bc',
-    borderSubtle: '#2c343d',
-    borderControl: '#7f8a97',
-    accent: '#80b0ff',
-    onAccent: '#0b1a33',
-    focus: '#80b0ff',
-    safeText: '#86dca0',
-    safeBg: '#122a1b',
-    safeIndicator: '#4cc272',
-    cautionText: '#ffd27a',
-    cautionBg: '#2d2310',
-    cautionIndicator: '#e0a030',
-    dangerText: '#ffa39b',
-    dangerBg: '#33171a',
-    dangerIndicator: '#ff6b61',
-    infoText: '#a3c6ff',
-    infoBg: '#14233a',
-    infoIndicator: '#80b0ff',
-    limitText: '#cdb9ff',
-    limitBg: '#241d3a',
-    limitIndicator: '#a98bf0',
-    cgMarker: '#80b0ff',
-    cpMarker: '#ff6b61',
+    bg: '#12152b',
+    surface: '#181b38',
+    surfaceSunken: '#0e1124',
+    text: '#f3f4fb',
+    textMuted: '#9fa3c7',
+    borderSubtle: '#272b52',
+    borderControl: '#6d72a3',
+    accent: '#4b97ff',
+    onAccent: '#06112a',
+    focus: '#8ab8ff',
+    safeText: '#7be3a4',
+    safeBg: '#11291f',
+    safeIndicator: '#3fd47f',
+    cautionText: '#ffcb6b',
+    cautionBg: '#2c2414',
+    cautionIndicator: '#f7a128',
+    dangerText: '#ff9d9d',
+    dangerBg: '#341823',
+    dangerIndicator: '#ff5d5d',
+    infoText: '#a9c9ff',
+    infoBg: '#152349',
+    infoIndicator: '#4b97ff',
+    limitText: '#cdb8ff',
+    limitBg: '#251e47',
+    limitIndicator: '#ad8bff',
+    neutralIndicator: '#8b91b3',
+    cgMarker: '#4b97ff',
+    cpMarker: '#ff6b6b',
   },
 };
 
@@ -123,7 +127,7 @@ export const TYPE = {
   figure: { size: 28, line: 34 },
 } as const;
 
-export const RADIUS = { small: 4, medium: 8 } as const;
+export const RADIUS = { small: 4, medium: 8, large: 14, screen: 22 } as const;
 
 /**
  * The text and indicator pairs the components use. Each must meet the
@@ -161,6 +165,9 @@ export const CONTRAST_PAIRS: readonly {
   { fg: 'dangerIndicator', bg: 'surface', minimum: 3, use: 'danger stripe and icon' },
   { fg: 'infoIndicator', bg: 'surface', minimum: 3, use: 'information stripe and icon' },
   { fg: 'limitIndicator', bg: 'surface', minimum: 3, use: 'limitation stripe and icon' },
+  { fg: 'neutralIndicator', bg: 'surface', minimum: 3, use: 'finished step mark' },
+  { fg: 'borderControl', bg: 'bg', minimum: 3, use: 'control edges on the page background' },
+  { fg: 'accent', bg: 'bg', minimum: 4.5, use: 'links and selection on the page background' },
   { fg: 'cgMarker', bg: 'surfaceSunken', minimum: 3, use: 'CG marker in the side view' },
   { fg: 'cpMarker', bg: 'surfaceSunken', minimum: 3, use: 'CP marker in the side view' },
 ];

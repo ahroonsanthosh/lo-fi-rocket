@@ -1,20 +1,23 @@
 /*
- * Design tokens as CSS custom properties. Generated from tokens.ts and
- * checked against it by tokens.test.ts: change both together.
- * Light is the default; dark follows the system setting unless the page
- * sets data-theme="light", and data-theme="dark" forces it.
+ * Design tokens as CSS custom properties. The colour values are generated
+ * from tokens.ts and checked against it by tokens.test.ts: change both
+ * together. Light is the default; dark follows the system setting unless
+ * the page sets data-theme="light", and data-theme="dark" forces it. The
+ * app sets data-theme="dark" by default (D-UI-6): the instrument-panel
+ * look of the owner's reference. Glow, glass, tile and track values are
+ * decorative only: no text or meaning is carried by them.
  */
 :root {
-  --lfr-bg: #f4f6f8;
+  --lfr-bg: #eef0f7;
   --lfr-surface: #ffffff;
-  --lfr-surface-sunken: #f0f3f6;
-  --lfr-text: #1b1f24;
-  --lfr-text-muted: #4f5966;
-  --lfr-border-subtle: #dde2e8;
-  --lfr-border-control: #77828f;
-  --lfr-accent: #1f5fbf;
+  --lfr-surface-sunken: #f3f4fa;
+  --lfr-text: #161a33;
+  --lfr-text-muted: #535978;
+  --lfr-border-subtle: #dde0ee;
+  --lfr-border-control: #7a809f;
+  --lfr-accent: #1f5fd1;
   --lfr-on-accent: #ffffff;
-  --lfr-focus: #1f5fbf;
+  --lfr-focus: #1f5fd1;
   --lfr-safe-text: #166232;
   --lfr-safe-bg: #e7f4eb;
   --lfr-safe-indicator: #1b7f3b;
@@ -23,15 +26,16 @@
   --lfr-caution-indicator: #a86400;
   --lfr-danger-text: #9c1f18;
   --lfr-danger-bg: #fdeceb;
-  --lfr-danger-indicator: #b3261e;
+  --lfr-danger-indicator: #c62a22;
   --lfr-info-text: #1a4b93;
   --lfr-info-bg: #e8f0fb;
-  --lfr-info-indicator: #1f5fbf;
+  --lfr-info-indicator: #1f5fd1;
   --lfr-limit-text: #55358f;
   --lfr-limit-bg: #f2edfa;
   --lfr-limit-indicator: #6b47ad;
+  --lfr-neutral-indicator: #6b7192;
   --lfr-cg-marker: #1b4f9c;
-  --lfr-cp-marker: #b3261e;
+  --lfr-cp-marker: #c62a22;
   --lfr-space-1: 4px;
   --lfr-space-2: 8px;
   --lfr-space-3: 12px;
@@ -53,70 +57,115 @@
   --lfr-line-figure: 34px;
   --lfr-radius-small: 4px;
   --lfr-radius-medium: 8px;
-  --lfr-font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --lfr-radius-large: 14px;
+  --lfr-radius-screen: 22px;
+  --lfr-font-family: Lato, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --lfr-glow: rgb(31 95 209 / 0.12);
+  --lfr-glow-soft: rgb(31 95 209 / 0.06);
+  --lfr-glass: rgb(255 255 255 / 0.88);
+  --lfr-tile: rgb(22 26 51 / 0.03);
+  --lfr-tile-edge: rgb(22 26 51 / 0.06);
+  --lfr-track: rgb(22 26 51 / 0.1);
+  --lfr-page: linear-gradient(160deg, #dfe2ef 0%, #cfd3e6 100%);
+  --lfr-screen: radial-gradient(120% 75% at 50% 100%, #dfe5fb 0%, #f1f3fa 45%, #f6f7fb 100%);
+  --lfr-shadow: 0 24px 60px rgb(22 26 51 / 0.14);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --lfr-bg: #101317;
-    --lfr-surface: #181d23;
-    --lfr-surface-sunken: #20262e;
-    --lfr-text: #e7eaee;
-    --lfr-text-muted: #a7b1bc;
-    --lfr-border-subtle: #2c343d;
-    --lfr-border-control: #7f8a97;
-    --lfr-accent: #80b0ff;
-    --lfr-on-accent: #0b1a33;
-    --lfr-focus: #80b0ff;
-    --lfr-safe-text: #86dca0;
-    --lfr-safe-bg: #122a1b;
-    --lfr-safe-indicator: #4cc272;
-    --lfr-caution-text: #ffd27a;
-    --lfr-caution-bg: #2d2310;
-    --lfr-caution-indicator: #e0a030;
-    --lfr-danger-text: #ffa39b;
-    --lfr-danger-bg: #33171a;
-    --lfr-danger-indicator: #ff6b61;
-    --lfr-info-text: #a3c6ff;
-    --lfr-info-bg: #14233a;
-    --lfr-info-indicator: #80b0ff;
-    --lfr-limit-text: #cdb9ff;
-    --lfr-limit-bg: #241d3a;
-    --lfr-limit-indicator: #a98bf0;
-    --lfr-cg-marker: #80b0ff;
-    --lfr-cp-marker: #ff6b61;
+    --lfr-bg: #12152b;
+    --lfr-surface: #181b38;
+    --lfr-surface-sunken: #0e1124;
+    --lfr-text: #f3f4fb;
+    --lfr-text-muted: #9fa3c7;
+    --lfr-border-subtle: #272b52;
+    --lfr-border-control: #6d72a3;
+    --lfr-accent: #4b97ff;
+    --lfr-on-accent: #06112a;
+    --lfr-focus: #8ab8ff;
+    --lfr-safe-text: #7be3a4;
+    --lfr-safe-bg: #11291f;
+    --lfr-safe-indicator: #3fd47f;
+    --lfr-caution-text: #ffcb6b;
+    --lfr-caution-bg: #2c2414;
+    --lfr-caution-indicator: #f7a128;
+    --lfr-danger-text: #ff9d9d;
+    --lfr-danger-bg: #341823;
+    --lfr-danger-indicator: #ff5d5d;
+    --lfr-info-text: #a9c9ff;
+    --lfr-info-bg: #152349;
+    --lfr-info-indicator: #4b97ff;
+    --lfr-limit-text: #cdb8ff;
+    --lfr-limit-bg: #251e47;
+    --lfr-limit-indicator: #ad8bff;
+    --lfr-neutral-indicator: #8b91b3;
+    --lfr-cg-marker: #4b97ff;
+    --lfr-cp-marker: #ff6b6b;
+    --lfr-glow: rgb(150 156 255 / 0.38);
+    --lfr-glow-soft: rgb(75 151 255 / 0.12);
+    --lfr-glass: rgb(20 23 48 / 0.86);
+    --lfr-tile: rgb(255 255 255 / 0.028);
+    --lfr-tile-edge: rgb(255 255 255 / 0.04);
+    --lfr-track: rgb(255 255 255 / 0.1);
+    --lfr-page: linear-gradient(160deg, #262b4b 0%, #3a3f6e 55%, #2b2f55 100%);
+    --lfr-screen: radial-gradient(
+      105% 72% at 50% 100%,
+      #565b99 0%,
+      #3a3e7b 22%,
+      #24285c 46%,
+      #171a3d 72%,
+      #12152b 100%
+    );
+    --lfr-shadow: 0 30px 80px rgb(4 6 20 / 0.55);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --lfr-bg: #101317;
-  --lfr-surface: #181d23;
-  --lfr-surface-sunken: #20262e;
-  --lfr-text: #e7eaee;
-  --lfr-text-muted: #a7b1bc;
-  --lfr-border-subtle: #2c343d;
-  --lfr-border-control: #7f8a97;
-  --lfr-accent: #80b0ff;
-  --lfr-on-accent: #0b1a33;
-  --lfr-focus: #80b0ff;
-  --lfr-safe-text: #86dca0;
-  --lfr-safe-bg: #122a1b;
-  --lfr-safe-indicator: #4cc272;
-  --lfr-caution-text: #ffd27a;
-  --lfr-caution-bg: #2d2310;
-  --lfr-caution-indicator: #e0a030;
-  --lfr-danger-text: #ffa39b;
-  --lfr-danger-bg: #33171a;
-  --lfr-danger-indicator: #ff6b61;
-  --lfr-info-text: #a3c6ff;
-  --lfr-info-bg: #14233a;
-  --lfr-info-indicator: #80b0ff;
-  --lfr-limit-text: #cdb9ff;
-  --lfr-limit-bg: #241d3a;
-  --lfr-limit-indicator: #a98bf0;
-  --lfr-cg-marker: #80b0ff;
-  --lfr-cp-marker: #ff6b61;
+  --lfr-bg: #12152b;
+  --lfr-surface: #181b38;
+  --lfr-surface-sunken: #0e1124;
+  --lfr-text: #f3f4fb;
+  --lfr-text-muted: #9fa3c7;
+  --lfr-border-subtle: #272b52;
+  --lfr-border-control: #6d72a3;
+  --lfr-accent: #4b97ff;
+  --lfr-on-accent: #06112a;
+  --lfr-focus: #8ab8ff;
+  --lfr-safe-text: #7be3a4;
+  --lfr-safe-bg: #11291f;
+  --lfr-safe-indicator: #3fd47f;
+  --lfr-caution-text: #ffcb6b;
+  --lfr-caution-bg: #2c2414;
+  --lfr-caution-indicator: #f7a128;
+  --lfr-danger-text: #ff9d9d;
+  --lfr-danger-bg: #341823;
+  --lfr-danger-indicator: #ff5d5d;
+  --lfr-info-text: #a9c9ff;
+  --lfr-info-bg: #152349;
+  --lfr-info-indicator: #4b97ff;
+  --lfr-limit-text: #cdb8ff;
+  --lfr-limit-bg: #251e47;
+  --lfr-limit-indicator: #ad8bff;
+  --lfr-neutral-indicator: #8b91b3;
+  --lfr-cg-marker: #4b97ff;
+  --lfr-cp-marker: #ff6b6b;
+  --lfr-glow: rgb(150 156 255 / 0.38);
+  --lfr-glow-soft: rgb(75 151 255 / 0.12);
+  --lfr-glass: rgb(20 23 48 / 0.86);
+  --lfr-tile: rgb(255 255 255 / 0.028);
+  --lfr-tile-edge: rgb(255 255 255 / 0.04);
+  --lfr-track: rgb(255 255 255 / 0.1);
+  --lfr-page: linear-gradient(160deg, #262b4b 0%, #3a3f6e 55%, #2b2f55 100%);
+  --lfr-screen: radial-gradient(
+    105% 72% at 50% 100%,
+    #565b99 0%,
+    #3a3e7b 22%,
+    #24285c 46%,
+    #171a3d 72%,
+    #12152b 100%
+  );
+  --lfr-shadow: 0 30px 80px rgb(4 6 20 / 0.55);
   color-scheme: dark;
 }

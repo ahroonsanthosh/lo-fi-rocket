@@ -5,6 +5,8 @@
  */
 import fc from 'fast-check';
 import {
+  componentMassProperties,
+  kilograms,
   metres,
   metresPerSecond,
   radians,
@@ -105,6 +107,34 @@ describe('validation names the path and the problem', () => {
     expectFail((d) => {
       components(d)[1]!['id'] = 'nose';
     }, /\$\.components\[1\]\.id: duplicate id "nose"/);
+  });
+  it('mass overrides (D-073): round trip, mass applied, bad values rejected', () => {
+    const d = exampleDesign();
+    const nose = d.components[0];
+    if (nose === undefined) throw new Error('no nose');
+    const withOverride: RocketDesign = {
+      ...d,
+      components: [
+        { ...nose, massOverride: { mass: kilograms(0.05), cg: metres(0.03) } },
+        ...d.components.slice(1),
+      ],
+    };
+    const text = serializeDesign(withOverride);
+    expect(parseDesign(text)).toEqual(withOverride);
+    // The nose's computed mass is replaced by 0.05 kg, so the total grows by 0.05 − m_nose.
+    const before = designMassProperties(d, 'liftoff').mass;
+    const after = designMassProperties(withOverride, 'liftoff').mass;
+    const noseMass = componentMassProperties(nose.component).mass;
+    expect(after - before).toBeCloseTo(0.05 - noseMass, 12);
+    expectFail((doc) => {
+      components(doc)[0]!['massOverride'] = { mass: -1 };
+    }, /\$\.components\[0\]\.massOverride\.mass: must be 0 kg or more/);
+    expectFail((doc) => {
+      components(doc)[0]!['massOverride'] = {};
+    }, /\$\.components\[0\]\.massOverride: must give a mass, a CG or both/);
+    expectFail((doc) => {
+      components(doc)[0]!['massOverride'] = { weight: 1 };
+    }, /unknown field "weight"/);
   });
   it('motor mount must point at a tube; altitude deployment needs an altitude; overrides come in pairs', () => {
     expectFail((d) => {

@@ -14,6 +14,15 @@ export {
 } from './components/AppShell.js';
 export { Button, type ButtonProps, type ButtonVariant } from './components/Button.js';
 export { Dialog, type DialogProps } from './components/Dialog.js';
+export { Dock, type DockItem, type DockProps } from './components/Dock.js';
+export {
+  arcPath,
+  Gauge,
+  gaugePosition,
+  type GaugePosition,
+  type GaugeProps,
+  type GaugeZone,
+} from './components/Gauge.js';
 export {
   Field,
   SelectField,
@@ -25,9 +34,12 @@ export {
   type TextFieldProps,
 } from './components/Field.js';
 export { FileButton, type FileButtonProps } from './components/FileButton.js';
+export { Icon, type IconName } from './components/Icon.js';
+export { Meter, type MeterProps, type MeterTick } from './components/Meter.js';
 export { NumberInput, type NumberInputProps, type NumberRule } from './components/NumberInput.js';
 export { Panel, type PanelProps } from './components/Panel.js';
 export { ResultCard, ResultGrid, type ResultCardProps } from './components/ResultCard.js';
+export { Segmented, type SegmentedOption, type SegmentedProps } from './components/Segmented.js';
 export {
   SEVERITY_LABEL,
   SEVERITY_ORDER,

@@ -49,6 +49,8 @@ export interface FlightVehicle {
   /** Surface roughness height for the skin friction (DRAG-2). */
   readonly roughnessHeight: Metres;
   readonly referenceDiameter?: Metres;
+  /** Optional display names, one per entry of `components`, used in warnings (issue #19). */
+  readonly componentNames?: readonly string[];
 }
 
 export type IntegratorOptions =
