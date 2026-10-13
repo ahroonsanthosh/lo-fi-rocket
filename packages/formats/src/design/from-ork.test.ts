@@ -14,7 +14,13 @@ import { motorFromEng } from '../motor-definition.js';
 import { parseOrk } from '../ork.js';
 import { orkToDesign, type LibraryMotorRef } from './from-ork.js';
 import { parseDesign, serializeDesign } from './serialize.js';
-import { designSimulationOptions, designStability, designVehicle } from './to-physics.js';
+import {
+  designMassProperties,
+  designSimulationOptions,
+  designStability,
+  designThrustToWeight,
+  designVehicle,
+} from './to-physics.js';
 
 const REFERENCE = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -132,5 +138,95 @@ describe('approximations travel from the import to the result (D-084)', () => {
   it('a saved approximation with an unknown impact is refused on load', () => {
     const text = serializeDesign(design).replace('"impact": "major"', '"impact": "huge"');
     expect(() => parseDesign(text)).toThrow(/approximations\[0\]\.impact/);
+  });
+});
+
+/**
+ * Motor clusters against OpenRocket (plan 0057, D-086): the files and figures of
+ * reference/rockets/cluster-probe (values.txt), flown in the OpenRocket-equivalent mode.
+ */
+describe('motor clusters from .ork files (plan 0057)', () => {
+  const probe = (n: number) =>
+    orkToDesign(ork(join('cluster-probe', `cluster${String(n)}`)), library, `cluster${String(n)}`);
+  const fly = (n: number) => {
+    const { design } = probe(n);
+    const rk = {
+      ...design,
+      simulation: {
+        ...design.simulation,
+        integrator: { kind: 'rk4' as const, timeStep: seconds(0.002) },
+      },
+    };
+    return simulateFlight(designVehicle(rk), designSimulationOptions(rk, 'openrocket-equivalent'))
+      .summary;
+  };
+  const relative = (ours: number, theirs: number): number => Math.abs(ours / theirs - 1);
+
+  it('three D12s in a 3-ring: offsets, tubes, launch mass and CG as OpenRocket', () => {
+    const { design, notices } = probe(1);
+    // values.txt case 1: (∓0.0125, −0.007216878) and (0, 0.014433757) m.
+    const cluster = design.motorMount?.cluster ?? [];
+    expect(cluster).toHaveLength(3);
+    [
+      [-0.0125, -0.007216878],
+      [0.0125, -0.007216878],
+      [0, 0.014433757],
+    ].forEach(([y, z], i) => {
+      expect(cluster[i]?.y).toBeCloseTo(y ?? NaN, 9);
+      expect(cluster[i]?.z).toBeCloseTo(z ?? NaN, 9);
+    });
+    expect(design.components.filter((c) => c.component.kind === 'innerTube')).toHaveLength(3);
+    expect(notices[0]).toMatch(/^Motor 3 × Estes D12 taken from the library/);
+    // OpenRocket: launch 0.396983731 kg at 0.514652679 m (tolerances: CG 1 %, CLAUDE.md 7.4).
+    const m = designMassProperties(design, 'liftoff');
+    expect(relative(m.mass, 0.396983731)).toBeLessThan(1e-5);
+    expect(relative(m.cg, 0.514652679)).toBeLessThan(1e-5);
+    expect(designThrustToWeight(design)).toBeCloseTo(
+      3 *
+        designThrustToWeight(probe(0).design)! *
+        (designMassProperties(probe(0).design, 'liftoff').mass / m.mass),
+      9,
+    );
+  });
+
+  it('rotated by 30° and scaled 1.2: the offsets OpenRocket gives', () => {
+    // values.txt case 2: (−0.017320508, 0), (0.008660254, −0.015), (0.008660254, 0.015) m.
+    const cluster = probe(2).design.motorMount?.cluster ?? [];
+    [
+      [-0.017320508, 0],
+      [0.008660254, -0.015],
+      [0.008660254, 0.015],
+    ].forEach(([y, z], i) => {
+      expect(cluster[i]?.y).toBeCloseTo(y ?? NaN, 9);
+      expect(cluster[i]?.z).toBeCloseTo(z ?? NaN, 9);
+    });
+  });
+
+  it('a mass override on the clustered tubes is their total, as OpenRocket (case 3)', () => {
+    const m = designMassProperties(probe(3).design, 'liftoff');
+    expect(relative(m.mass, 0.420518333)).toBeLessThan(1e-5);
+    expect(relative(m.cg, 0.526145085)).toBeLessThan(1e-5);
+  });
+
+  it('flights: apogee and maximum velocity within tolerance, as close as one motor', () => {
+    // OpenRocket (values.txt): one D12 85.958 m, 36.060 m/s; three 273.974 m, 93.420 m/s;
+    // three with the tube override 267.393 m, 89.530 m/s. Tolerances 5 % and 3 % (CLAUDE.md 7.4).
+    // With D-086 the clusters agree as closely as the single motor (within 1.5 %).
+    for (const [n, apogee, speed] of [
+      [0, 85.958, 36.06],
+      [1, 273.974, 93.42],
+      [3, 267.393, 89.53],
+    ] as const) {
+      const s = fly(n);
+      expect(relative(s.apogee, apogee)).toBeLessThan(0.015);
+      expect(relative(s.maxVelocity, speed)).toBeLessThan(0.015);
+    }
+  }, 120000);
+
+  it('the cluster design survives a save and load', () => {
+    const { design } = probe(1);
+    expect(parseDesign(serializeDesign(design))).toEqual(design);
+    const text = serializeDesign(design).replace(/"cluster": \[[^\]]*\]/s, '"cluster": []');
+    expect(() => parseDesign(text)).toThrow(/cluster/);
   });
 });

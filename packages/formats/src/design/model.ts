@@ -6,6 +6,7 @@
  */
 import type {
   Approximation,
+  ClusterOffset,
   Component,
   DragCurve,
   IntegratorOptions,
@@ -55,6 +56,11 @@ export interface MotorMount {
   /** How far the motor's aft end sits past the mount's aft end (positive aft). */
   readonly overhang: Metres;
   readonly motor?: MotorSelection;
+  /**
+   * A cluster of identical motors (plan 0057): each motor's axis offset from the rocket's axis.
+   * Absent for one motor on the axis.
+   */
+  readonly cluster?: readonly ClusterOffset[];
 }
 
 export type DeployEvent = 'apogee' | 'ejection' | 'altitude' | 'launch' | 'never';

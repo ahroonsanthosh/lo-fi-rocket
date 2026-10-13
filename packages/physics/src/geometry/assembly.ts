@@ -89,6 +89,15 @@ export function overriddenMassProperties(
 }
 
 /**
+ * One motor of a cluster: its axis's offset from the rocket's axis, along the body y and z axes
+ * (docs/conventions.md). Plan 0057.
+ */
+export interface ClusterOffset {
+  readonly y: Metres;
+  readonly z: Metres;
+}
+
+/**
  * A motor for mass purposes: a solid cylinder of the given mass whose aft end
  * is at `aftEnd`; CG at mid-length (the RASP convention recorded in plan 0004).
  */
@@ -99,6 +108,11 @@ export interface MotorMass {
   readonly aftEnd: Metres;
   /** CG from the motor's forward end; mid-length when absent (plan 0004 convention, MOT-3). */
   readonly cgFromForeEnd?: Metres;
+  /**
+   * A cluster of identical motors, one per offset (plan 0057); `mass` is one motor's. Absent for
+   * one motor on the axis.
+   */
+  readonly cluster?: readonly ClusterOffset[];
 }
 
 export interface RocketMassProperties {
@@ -113,10 +127,36 @@ function placed(p: MassProperties, position: number): MassProperties {
   return { ...p, cgX: p.cgX + position };
 }
 
+/** The number of motors and the sum of their squared distances from the axis (plan 0057). */
+export function clusterSums(cluster: readonly ClusterOffset[] | undefined): {
+  readonly count: number;
+  readonly sumSquaredDistance: number;
+} {
+  if (cluster === undefined) return { count: 1, sumSquaredDistance: 0 };
+  if (cluster.length === 0) {
+    throw new InvalidInputError('motor cluster', 0, 'must list at least one motor offset');
+  }
+  let sum = 0;
+  for (const { y, z } of cluster) {
+    if (!(Number.isFinite(y) && Number.isFinite(z))) {
+      throw new InvalidInputError(
+        'motor cluster offset',
+        Number.isFinite(y) ? z : y,
+        'must be finite',
+      );
+    }
+    sum += (y as number) ** 2 + (z as number) ** 2;
+  }
+  return { count: cluster.length, sumSquaredDistance: sum };
+}
+
 /**
  * The motor as a mass part in the rocket frame: a solid cylinder of the
  * given mass, CG at `cgFromForeEnd` (mid-length when absent), aft end at
- * `aftEnd` (GEO-12).
+ * `aftEnd` (GEO-12). A cluster is n such cylinders at the same axial position, each at distance
+ * d_i from the axis (GEO-15): m = n m₁, I_x = n I_x1 + m₁ Σd_i², I_y = n I_y1 + m₁ Σd_i²/2, the
+ * parallel axis theorem (N09 §4.2.3 p. 64) with the transverse term averaged over the two
+ * transverse axes, as the axisymmetric model holds one transverse inertia.
  */
 export function motorMassPart(motor: MotorMass): MassProperties {
   const m: number = motor.mass;
@@ -126,12 +166,13 @@ export function motorMassPart(motor: MotorMass): MassProperties {
   if (!(l > 0)) throw new InvalidInputError('motor length', l, 'must be greater than 0 m');
   if (!(r > 0))
     throw new InvalidInputError('motor diameter', motor.diameter, 'must be greater than 0 m');
+  const { count: n, sumSquaredDistance: d2 } = clusterSums(motor.cluster);
   return {
-    volume: Math.PI * r * r * l,
-    mass: m,
+    volume: n * Math.PI * r * r * l,
+    mass: n * m,
     cgX: (motor.aftEnd as number) - l + (motor.cgFromForeEnd ?? l / 2),
-    inertiaRotational: 0.5 * m * r * r,
-    inertiaLongitudinal: (m * (3 * r * r + l * l)) / 12,
+    inertiaRotational: n * 0.5 * m * r * r + m * d2,
+    inertiaLongitudinal: (n * (m * (3 * r * r + l * l))) / 12 + (m * d2) / 2,
   };
 }
 

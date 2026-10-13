@@ -11,6 +11,7 @@
  * crossing by bisection on the step (owner's requirement, D-017).
  */
 import {
+  clusterApproximations,
   componentApproximations,
   confidenceOf,
   type Approximation,
@@ -27,7 +28,12 @@ import {
   NonFiniteResultError,
   SimulationStalledError,
 } from '../errors.js';
-import { combineRocket, structuralMassParts, type MotorMass } from '../geometry/assembly.js';
+import {
+  clusterSums,
+  combineRocket,
+  structuralMassParts,
+  type MotorMass,
+} from '../geometry/assembly.js';
 import { validateComponentFit } from '../geometry/fit.js';
 import type { MassProperties } from '../geometry/revolution.js';
 import { burnTime, motorMassAt, thrustAt, validateMotor } from '../motor/motor.js';
@@ -363,6 +369,8 @@ interface Context {
   readonly referenceDiameter: number;
   readonly burnTime: number;
   readonly motorDiameter: number | undefined;
+  /** Motors in the cluster (plan 0057); 1 for one motor. */
+  readonly motorCount: number;
   /** The wind for this flight (ENV-1, ENV-3 to ENV-5), built once so every stage reads the same gust. */
   readonly wind: WindField;
   readonly deployedArea: { area: number }; // Σ C_D A of deployed devices (mutable through the run)
@@ -394,13 +402,17 @@ function pack(p: Vec3, v: Vec3, q: Quaternion, w: Vec3): number[] {
 function motorMass(ctx: Context, t: number): MotorMass | undefined {
   const m = ctx.vehicle.motor;
   if (m.kind !== 'definition') return undefined;
-  return motorMassAt(m.definition, seconds(Math.max(0, t)), m.aftEnd);
+  const one = motorMassAt(m.definition, seconds(Math.max(0, t)), m.aftEnd);
+  return m.cluster === undefined ? one : { ...one, cluster: m.cluster };
 }
 
 function thrustNow(ctx: Context, t: number): number {
   const m = ctx.vehicle.motor;
   if (m.kind === 'ideal') return t >= 0 && t <= m.burnTime ? m.thrust : 0;
-  return thrustAt(m.definition, seconds(Math.max(0, t)));
+  // Plan 0057: a cluster's motors ignite together; their offsets are centred (or listed when not),
+  // so the thrust is n times one motor's, along the axis.
+  const one = thrustAt(m.definition, seconds(Math.max(0, t)));
+  return m.cluster === undefined ? one : m.cluster.length * one;
 }
 
 function sampleFlight(
@@ -474,7 +486,15 @@ function derive(
         roughnessHeight: ctx.vehicle.roughnessHeight,
         ...(ctx.motorDiameter === undefined
           ? {}
-          : { motor: { diameter: metres(ctx.motorDiameter), thrusting } }),
+          : {
+              motor: {
+                diameter: metres(ctx.motorDiameter),
+                thrusting,
+                ...(ctx.motorCount === 1 || ctx.options.baseDragClusterMotors === 'one'
+                  ? {}
+                  : { count: ctx.motorCount }),
+              },
+            }),
         baseDragMotorRule: ctx.options.baseDragMotorRule,
         ...(ctx.options.baseDragMethod === undefined
           ? {}
@@ -759,6 +779,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     burnTime: motorBurn,
     motorDiameter:
       vehicle.motor.kind === 'definition' ? vehicle.motor.definition.diameter : undefined,
+    motorCount: vehicle.motor.kind === 'definition' ? clusterSums(vehicle.motor.cluster).count : 1,
     deployedArea: { area: 0 },
     motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
@@ -1566,6 +1587,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
       })),
     ),
+    ...(vehicle.motor.kind === 'definition' ? clusterApproximations(vehicle.motor.cluster) : []),
   ];
   return {
     samples,

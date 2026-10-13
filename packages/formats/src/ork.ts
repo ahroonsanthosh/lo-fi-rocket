@@ -21,6 +21,7 @@ import {
   noseProfile,
   seconds,
   type Approximation,
+  type ClusterOffset,
   type Component,
   type FinTab,
   type KilogramsPerCubicMetre,
@@ -53,8 +54,10 @@ export interface OrkMotorMount {
   readonly delay: Seconds | undefined;
   /** Aft end of the motor from the nose tip: the mount's aft end plus the overhang. */
   readonly aftEnd: Metres;
-  /** Index into `components` of the tube that is the mount. */
+  /** Index into `components` of the tube that is the mount (the first tube of a cluster). */
   readonly mountComponent: number;
+  /** The motors' offsets from the axis for a cluster (plan 0057); absent for one motor. */
+  readonly cluster?: readonly ClusterOffset[];
 }
 
 /** OpenRocket deployment events (DeploymentConfiguration.DeployEvent, from the jar's public signature). */
@@ -573,6 +576,131 @@ function readMassOverride(
   };
 }
 
+/**
+ * A mass override of a part of `count` instances, spread over `count` parts of `length` placed
+ * `separation` apart (D-084, reference/rockets/lug-probe/values.txt case 5): OpenRocket's override
+ * is the instances' total, at the override CG from the first instance's front or else at the set's
+ * own CG. The first part carries it and the others weigh nothing; a CG override alone moves every
+ * part's CG to the same point.
+ */
+function instanceOverride(
+  override: MassOverride | undefined,
+  count: number,
+  i: number,
+  separation: number,
+  length: number,
+): MassOverride | undefined {
+  if (count === 1 || override === undefined) return override;
+  if (override.mass === undefined) {
+    return override.cg === undefined ? undefined : { cg: metres(override.cg - i * separation) };
+  }
+  const setCg = length / 2 + ((count - 1) * separation) / 2;
+  return i === 0
+    ? { mass: override.mass, cg: override.cg ?? metres(setCg) }
+    : { mass: kilograms(0) };
+}
+
+/**
+ * OpenRocket 24.12's motor cluster layouts (plan 0057): unit points (y, z) in tube outer diameters,
+ * as `ClusterConfiguration.getPoints()` gives them (reference/rockets/cluster-probe/values.txt).
+ */
+const CLUSTER_LAYOUTS: Readonly<Record<string, readonly (readonly [number, number])[]>> = {
+  single: [[0, 0]],
+  double: [
+    [-0.5, 0],
+    [0.5, 0],
+  ],
+  '3-row': [
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+  ],
+  '4-row': [
+    [-1.5, 0],
+    [-0.5, 0],
+    [0.5, 0],
+    [1.5, 0],
+  ],
+  '3-ring': [
+    [-0.5, -0.2886751345948129],
+    [0.5, -0.2886751345948129],
+    [0, 0.5773502691896258],
+  ],
+  '4-ring': [
+    [-0.5, 0.5],
+    [0.5, 0.5],
+    [0.5, -0.5],
+    [-0.5, -0.5],
+  ],
+  '5-ring': [
+    [0, 0.8506508083520399],
+    [0.8090169943749473, 0.2628655560595668],
+    [0.5000000000000001, -0.6881909602355867],
+    [-0.4999999999999999, -0.6881909602355868],
+    [-0.8090169943749475, 0.26286555605956663],
+  ],
+  '6-ring': [
+    [0, 1],
+    [0.8660254037844386, 0.5],
+    [0.8660254037844386, -0.5],
+    [0, -1],
+    [-0.8660254037844386, -0.5],
+    [-0.8660254037844386, 0.5],
+  ],
+  '3-star': [
+    [0, 0],
+    [0, 1],
+    [0.8660254037844386, -0.5],
+    [-0.8660254037844386, -0.5],
+  ],
+  '4-star': [
+    [0, 0],
+    [-0.7071067811865475, 0.7071067811865475],
+    [0.7071067811865475, 0.7071067811865475],
+    [0.7071067811865475, -0.7071067811865475],
+    [-0.7071067811865475, -0.7071067811865475],
+  ],
+  '5-star': [
+    [0, 0],
+    [0, 1],
+    [0.9510565162951535, 0.30901699437494745],
+    [0.5877852522924732, -0.8090169943749473],
+    [-0.587785252292473, -0.8090169943749476],
+    [-0.9510565162951536, 0.30901699437494723],
+  ],
+  '6-star': [
+    [0, 0],
+    [0, 1],
+    [0.8660254037844386, 0.5],
+    [0.8660254037844386, -0.5],
+    [0, -1],
+    [-0.8660254037844386, -0.5],
+    [-0.8660254037844386, 0.5],
+  ],
+  '9-grid': [
+    [-1.4, 1.4],
+    [0, 1.4],
+    [1.4, 1.4],
+    [-1.4, 0],
+    [0, 0],
+    [1.4, 0],
+    [-1.4, -1.4],
+    [0, -1.4],
+    [1.4, -1.4],
+  ],
+  '9-star': [
+    [0, 0],
+    [1.4, 0],
+    [0.9899494936611664, -0.9899494936611664],
+    [0, -1.4],
+    [-0.9899494936611664, -0.9899494936611664],
+    [-1.4, 0],
+    [-0.9899494936611664, 0.9899494936611664],
+    [0, 1.4],
+    [0.9899494936611664, 0.9899494936611664],
+  ],
+};
+
 /** Plain names of the file's part elements, for approximation subjects (D-084). */
 const PART_LABELS: Readonly<Record<string, string>> = {
   nosecone: 'Nose cone',
@@ -1069,17 +1197,14 @@ class Reader {
     const override = readMassOverride(el, false, (a) => {
       this.note(el, a);
     });
-    const setCg = length / 2 + ((count - 1) * separation) / 2;
-    const overrideOf = (i: number): MassOverride | undefined => {
-      if (count === 1 || override === undefined) return override;
-      if (override.mass === undefined) {
-        return override.cg === undefined ? undefined : { cg: metres(override.cg - i * separation) };
-      }
-      return i === 0
-        ? { mass: override.mass, cg: override.cg ?? metres(setCg) }
-        : { mass: kilograms(0) };
-    };
-    for (let i = 0; i < count; i++) this.place(el, lug, position + i * separation, overrideOf(i));
+    for (let i = 0; i < count; i++) {
+      this.place(
+        el,
+        lug,
+        position + i * separation,
+        instanceOverride(override, count, i, separation, length),
+      );
+    }
     this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
   }
 
@@ -1125,23 +1250,46 @@ class Reader {
 
   private readInnerTube(el: Element, parent: Parent): void {
     this.onAxis(el);
-    el.requireValue('clusterconfiguration', 'single', 'motor clusters');
     const length = el.number('length');
     const position = axialPosition(el, parent, length);
     const outer = el.length('outerradius');
     const wall = el.number('thickness');
-    const index = this.place(
-      el,
-      {
-        kind: 'innerTube',
-        length: metres(length),
-        outerRadius: metres(outer),
-        wallThickness: metres(wall),
-        density: el.bulkDensity(),
-      },
-      position,
-    );
+    const cluster = this.readCluster(el, outer);
+    const count = cluster?.length ?? 1;
+    const tube: Component = {
+      kind: 'innerTube',
+      length: metres(length),
+      outerRadius: metres(outer),
+      wallThickness: metres(wall),
+      density: el.bulkDensity(),
+    };
+    const override = readMassOverride(el, false, (a) => {
+      this.note(el, a);
+    });
+    if (cluster !== undefined) {
+      this.note(el, {
+        what: `the ${String(count)} tubes’ offsets from the rocket’s axis`,
+        method: 'the tubes placed on the axis, as OpenRocket does for their mass',
+        effect:
+          'the tubes’ roll and pitch inertia is slightly low; their mass and CG are exact and the motors are placed at their offsets',
+        impact: 'minor',
+      });
+    }
+    // Plan 0057: a cluster is n identical tubes, each holding the same motor.
+    let index = -1;
+    for (let i = 0; i < count; i++) {
+      const placed = this.place(
+        el,
+        tube,
+        position,
+        instanceOverride(override, count, i, 0, length),
+      );
+      if (i === 0) index = placed;
+    }
     this.readMotorMount(el, index, position + length);
+    if (cluster !== undefined && this.motorMount?.mountComponent === index) {
+      this.motorMount = { ...this.motorMount, cluster };
+    }
     // D-081: parts inside an inner tube (an engine block in a motor tube) are positioned against the
     // tube; an automatic outer radius there is its inner radius (tab-probe: 0.009 m in a 0.0095 m
     // tube with a 0.0005 m wall).
@@ -1153,9 +1301,43 @@ class Reader {
         radius: outer,
         autoOuterRadius: () => outer - wall,
       };
-      this.readNoseInternal(sub, { ...parentOfChildren, innerTubes: [] }, 'an inner tube');
+      // Each tube of a cluster holds its own copy of the parts inside.
+      for (let i = 0; i < count; i++) {
+        this.readNoseInternal(sub, { ...parentOfChildren, innerTubes: [] }, 'an inner tube');
+      }
     }
-    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'clusterscale', 'clusterrotation']);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+  }
+
+  /**
+   * Plan 0057: the motor offsets of a clustered inner tube, or undefined for a single tube. The
+   * layout's unit points are scaled by the outer diameter times `<clusterscale>` and turned by
+   * `<clusterrotation>` degrees, as OpenRocket places them (cluster-probe cases 1 and 2: the
+   * "3-ring" point (−0.5, −0.2887) at scale 1.2 and 30° is at (−0.017321, 0) m for a 25 mm tube).
+   */
+  private readCluster(el: Element, outerRadius: number): ClusterOffset[] | undefined {
+    const name = el.optionalText('clusterconfiguration') ?? 'single';
+    const scale = el.optionalNumber('clusterscale') ?? 1;
+    const rotation = ((el.optionalNumber('clusterrotation') ?? 0) * Math.PI) / 180;
+    if (name === 'single') return undefined;
+    const layout = CLUSTER_LAYOUTS[name];
+    if (layout === undefined) {
+      this.note(el, {
+        what: `the motor cluster layout "${name}", which the app does not know`,
+        method: 'one tube and one motor on the axis',
+        effect:
+          'the thrust and the motors’ mass are those of one motor: the apogee, speeds and stability shown can be far off',
+        impact: 'major',
+      });
+      return undefined;
+    }
+    const step = 2 * outerRadius * scale;
+    const cos = Math.cos(rotation);
+    const sin = Math.sin(rotation);
+    return layout.map(([y, z]) => ({
+      y: metres(step * (y * cos + z * sin)),
+      z: metres(step * (z * cos - y * sin)),
+    }));
   }
 
   /**

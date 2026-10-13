@@ -4,6 +4,7 @@
  * uses a documented approximation and lists it here, so a result always says
  * what was approximated and how far to trust it (CLAUDE.md 1 rules 3 and 8).
  */
+import type { ClusterOffset } from './geometry/assembly.js';
 import type { Component } from './geometry/components.js';
 
 /**
@@ -96,6 +97,60 @@ export function componentApproximations(
         impact: 'minor',
       });
     }
+  }
+  return out;
+}
+
+/**
+ * Approximations of a motor cluster (plan 0057). The thrust is taken along the axis, which is
+ * exact when the motors are centred on it, as all of OpenRocket's layouts are; and the pitch and
+ * yaw inertias are averaged (GEO-15), exact for layouts with three-fold or higher symmetry.
+ */
+export function clusterApproximations(
+  cluster: readonly ClusterOffset[] | undefined,
+): Approximation[] {
+  if (cluster === undefined || cluster.length === 0) return [];
+  const n = cluster.length;
+  let sy = 0;
+  let sz = 0;
+  let syy = 0;
+  let szz = 0;
+  let syz = 0;
+  for (const o of cluster) {
+    const y: number = o.y;
+    const z: number = o.z;
+    sy += y;
+    sz += z;
+    syy += y * y;
+    szz += z * z;
+    syz += y * z;
+  }
+  // Numerical tolerance, not a physical threshold: a layout's offsets are rounded (to float64 from
+  // its trigonometry, or to the decimals of a file), so sums within a millionth of the layout's
+  // size (14 nm for a 25 mm 3-ring) are a centred layout.
+  const tolerance = 1e-6;
+  const size = Math.sqrt((syy + szz) / n);
+  const out: Approximation[] = [];
+  const centre = Math.hypot(sy / n, sz / n);
+  if (centre > tolerance * size) {
+    out.push({
+      subject: 'Motor cluster',
+      what: `a layout whose thrust centre is ${(centre * 1000).toFixed(1)} mm off the rocket’s axis`,
+      method: 'the total thrust along the axis',
+      effect:
+        'the turning moment of off-centre thrust is not simulated: a real rocket would veer, and could be unstable leaving the rail',
+      impact: 'major',
+    });
+  }
+  if (Math.abs(syy - szz) + 2 * Math.abs(syz) > tolerance * (syy + szz)) {
+    out.push({
+      subject: 'Motor cluster',
+      what: 'the different pitch and yaw inertias of a layout without three-fold symmetry',
+      method: 'their average',
+      effect:
+        'the pitching motion differs slightly between the two planes; the trajectory changes little',
+      impact: 'minor',
+    });
   }
   return out;
 }

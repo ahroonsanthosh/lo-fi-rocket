@@ -106,12 +106,19 @@ export function designMotorFitProblems(design: RocketDesign): string[] {
 
 export type MassCondition = 'liftoff' | 'burnout' | 'no-motor';
 
-/** Motor mass at liftoff or burnout, or undefined without a motor. */
+/** Motor mass at liftoff or burnout, or undefined without a motor; a cluster's motors together (plan 0057). */
 export function designMotorMass(design: RocketDesign, at: MassCondition): MotorMass | undefined {
   const m = designMotor(design);
   if (m === undefined || at === 'no-motor') return undefined;
   const def = m.selection.definition;
-  return motorMassAt(def, at === 'liftoff' ? seconds(0) : burnTime(def), m.aftEnd);
+  const one = motorMassAt(def, at === 'liftoff' ? seconds(0) : burnTime(def), m.aftEnd);
+  const cluster = design.motorMount?.cluster;
+  return cluster === undefined ? one : { ...one, cluster };
+}
+
+/** Motors in the mount: one, or a cluster's count (plan 0057). */
+export function designMotorCount(design: RocketDesign): number {
+  return design.motorMount?.cluster?.length ?? 1;
 }
 
 export function designMassProperties(
@@ -213,6 +220,7 @@ export function designVehicle(design: RocketDesign): FlightVehicle {
       ...(m.selection.ejectionDelay === undefined
         ? {}
         : { ejectionDelay: m.selection.ejectionDelay }),
+      ...(design.motorMount?.cluster === undefined ? {} : { cluster: design.motorMount.cluster }),
     },
     recovery: design.recovery.map((d) => ({
       name: d.name,
@@ -281,6 +289,8 @@ export function designSimulationOptions(
     aerodynamics: 'niskanen',
     finRollReduction: mode === 'displayed',
     baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'always',
+    // D-086: OpenRocket takes one motor's area off the base for a whole cluster.
+    ...(mode === 'displayed' ? {} : { baseDragClusterMotors: 'one' as const }),
     baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
     largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,
@@ -313,12 +323,15 @@ export interface DesignWarning {
   readonly message: string;
 }
 
-/** Thrust-to-weight: the motor's average thrust (total impulse / burn time) over the liftoff weight at standard gravity. */
+/**
+ * Thrust-to-weight: the motor's average thrust (total impulse / burn time), times the motors in a
+ * cluster (plan 0057), over the liftoff weight at standard gravity.
+ */
 export function designThrustToWeight(design: RocketDesign): number | undefined {
   const m = designMotor(design);
   if (m === undefined) return undefined;
   const def = m.selection.definition;
-  const average: number = totalImpulse(def) / burnTime(def);
+  const average: number = (designMotorCount(design) * totalImpulse(def)) / burnTime(def);
   const weight: number = designMassProperties(design, 'liftoff').mass * STANDARD_GRAVITY;
   return average / weight;
 }

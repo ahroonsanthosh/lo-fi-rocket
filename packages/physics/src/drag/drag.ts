@@ -86,7 +86,12 @@ export interface DragInputs {
   /** Surface roughness height R_s (Table 3.2); the same finish on every external surface. */
   readonly roughnessHeight: Metres;
   /** The motor in the base, if any, and whether it is thrusting now. */
-  readonly motor?: { readonly diameter: Metres; readonly thrusting: boolean };
+  readonly motor?: {
+    readonly diameter: Metres;
+    readonly thrusting: boolean;
+    /** Motors in a cluster (plan 0057); one when absent. */
+    readonly count?: number;
+  };
   /**
    * When the motor's area is removed from the base drag area (DRAG-11):
    * 'while-thrusting' is Niskanen p. 51 ("the thrusting motors"); 'always'
@@ -517,7 +522,11 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const motor = input.motor;
   const removeMotor =
     motor !== undefined && (motor.thrusting || input.baseDragMotorRule === 'always');
-  const baseArea = baseDragArea(geometry.baseRadius, removeMotor ? motor.diameter : undefined);
+  const baseArea = baseDragArea(
+    geometry.baseRadius,
+    removeMotor ? motor.diameter : undefined,
+    motor?.count,
+  );
   const base = bodyBaseDrag(input, geometry, cfcForBase(input, geometry));
   warnings.push(...base.warnings);
   const baseCd = base.cd;

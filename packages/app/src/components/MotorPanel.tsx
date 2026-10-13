@@ -137,7 +137,7 @@ export function MotorPanel(): JSX.Element {
       {motor === undefined ? (
         <p className="muted">No motor selected. Pick one below.</p>
       ) : (
-        <SelectedMotor motor={motor} units={units} />
+        <SelectedMotor motor={motor} count={mount?.cluster?.length ?? 1} units={units} />
       )}
       {diameterWarning === undefined ? null : (
         <p className="warning" role="alert">
@@ -231,9 +231,12 @@ function DelayEntry({
 
 function SelectedMotor({
   motor,
+  count,
   units,
 }: {
   readonly motor: MotorSelection;
+  /** Motors in a cluster (plan 0057); the figures below are each motor's. */
+  readonly count: number;
   readonly units: 'metric' | 'imperial';
 }): JSX.Element {
   const def = motor.definition;
@@ -242,8 +245,10 @@ function SelectedMotor({
     <div className="motor-summary">
       <p className="banner-main">
         <strong>
+          {count > 1 ? `${String(count)} × ` : ''}
           {def.manufacturer} {def.designation}
         </strong>{' '}
+        {count > 1 ? <span className="muted small">(figures for each motor) </span> : null}
         <span className="muted small">{provenanceLabel(motor.provenance)}</span>
       </p>
       <dl className="figures">

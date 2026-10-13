@@ -6,7 +6,7 @@ import type { Approximation } from '../fidelity.js';
 import type { AtmosphereBaseConditions } from '../atmosphere/ussa1976.js';
 import type { LaunchRail, LaunchSite } from '../environment/launch.js';
 import type { WindModel } from '../environment/wind.js';
-import type { PlacedComponent } from '../geometry/assembly.js';
+import type { ClusterOffset, PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import type { Metres, Newtons, Seconds } from '../units/si.js';
 import type { BaseDragMethod } from '../drag/drag.js';
@@ -35,6 +35,8 @@ export type MotorSource =
       readonly aftEnd: Metres;
       /** Ejection charge delay after burnout; undefined for a plugged motor. */
       readonly ejectionDelay?: Seconds;
+      /** A cluster of identical motors igniting together, one per offset (plan 0057). */
+      readonly cluster?: readonly ClusterOffset[];
     }
   | {
       /** Constant thrust with no mass or inertia, for the analytical test cases of CLAUDE.md 7.2 only. */
@@ -93,6 +95,11 @@ export interface SimulationOptions {
   readonly finRollReduction: boolean;
   /** Base drag motor area rule (D-035). */
   readonly baseDragMotorRule: 'while-thrusting' | 'always';
+  /**
+   * How many of a cluster's motors are taken off the base drag area (D-086): 'all', the thrusting
+   * motors of N09 p. 51 (the default), or 'one', as OpenRocket 24.12 does (OpenRocket-equivalent).
+   */
+  readonly baseDragClusterMotors?: 'all' | 'one';
   /** Body base drag method (D-069); defaults to the drag model's default. */
   readonly baseDragMethod?: BaseDragMethod;
   /**
