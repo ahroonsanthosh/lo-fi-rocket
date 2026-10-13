@@ -155,4 +155,43 @@ describe('FlightViewer (plan 0034)', () => {
     expect(readout(viewer, 'Shown')).toBe('This flight');
     // 50 flights plus the replay: the same allowance as the dispersion test in FlightPanel.test.tsx.
   }, 30000);
+
+  it('the map site picker requests no tile until opened, then places the pad on a click and validates typed coordinates', async () => {
+    const design = exampleDesign('s');
+    const user = renderApp(design);
+    const viewer = await simulate(user);
+    // Closed: no map, so no network request has been made.
+    expect(within(viewer).queryByRole('application')).toBeNull();
+    expect(viewer.querySelectorAll('img')).toHaveLength(0);
+    await user.click(within(viewer).getByText(/^Launch site on the map:/));
+    const map = within(viewer).getByRole('application');
+    // Zoom 2 shows the free satellite tiles of the default source (Esri World Imagery, z/y/x order).
+    const srcs = [...map.querySelectorAll('img')].map((i) => i.getAttribute('src') ?? '');
+    expect(srcs.length).toBeGreaterThan(0);
+    expect(srcs.every((u) => u.startsWith('https://server.arcgisonline.com/'))).toBe(true);
+    expect(within(map).getByText(/Esri/)).toBeInTheDocument();
+    // jsdom has no layout: a click at the frame's (0, 0) is its top-left corner, a valid point.
+    await user.pointer({ keys: '[MouseLeft]', target: map });
+    expect(
+      within(viewer).getByText(/^Launch site on the map: Picked on the map/),
+    ).toBeInTheDocument();
+    // Typed coordinates are checked before use, with a message saying what is wrong.
+    await user.type(within(viewer).getByLabelText('Latitude (°N)'), '89');
+    await user.type(within(viewer).getByLabelText('Longitude (°E)'), '10');
+    await user.click(within(viewer).getByRole('button', { name: 'Set site' }));
+    expect(within(viewer).getByRole('alert')).toHaveTextContent('latitude must be between');
+    // Back to the illustrative scenery.
+    await user.click(within(viewer).getByRole('button', { name: 'Use illustrative scenery' }));
+    expect(
+      within(viewer).getByText(/^Launch site on the map: none \(illustrative scenery\)/),
+    ).toBeInTheDocument();
+  });
+
+  it('says the scenery and effects are illustrative and the simulation assumes flat ground', async () => {
+    const user = renderApp(exampleDesign('n'));
+    const viewer = await simulate(user);
+    expect(
+      within(viewer).getByText(/simulation assumes flat\s+ground at the pad/),
+    ).toBeInTheDocument();
+  });
 });

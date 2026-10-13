@@ -73,3 +73,48 @@ export {
   type LandingSummaryLike,
 } from './dispersion/landing-scatter.js';
 export { SI_FORMATTER, type FormatKind, type Formatter } from './units.js';
+export {
+  bracket,
+  deployedCanopies,
+  displayThrust,
+  displayVelocity,
+  inflation,
+  maxThrust,
+  smokeEmissions,
+  smokePuffs,
+  windVelocity,
+  type CanopyState,
+  type RecoveryInputs,
+  type SmokeEmission,
+  type SmokeOptions,
+  type SmokePuff,
+} from './scene/effects.js';
+export {
+  fbm,
+  sceneryLayout,
+  terrainHeight,
+  valueNoise,
+  type SceneryLayout,
+} from './scene/scenery.js';
+export {
+  chooseZoom,
+  decodeTerrarium,
+  ElevationGrid,
+  ELEVATION_SOURCE,
+  IMAGERY_SOURCES,
+  localToPixel,
+  lonLatOfPixel,
+  mapExtents,
+  metresPerPixel,
+  pixelToLocal,
+  terrainDeviation,
+  TILE_SIZE,
+  tileRange,
+  validateSite,
+  worldPixel,
+  type ImagerySource,
+  type LaunchSite,
+  type LonLat,
+  type TileRange,
+} from './map/tiles.js';
+export { buildMapTerrain, mapTerrainGeometry, rangeBounds } from './scene/map-terrain.js';

@@ -17,10 +17,12 @@ import { noseProfile, transitionProfile, type Component } from '@lo-fi-rocket/ph
 import {
   BufferAttribute,
   BufferGeometry,
+  Color,
   DoubleSide,
   Group,
   Mesh,
-  MeshStandardMaterial,
+  MeshPhysicalMaterial,
+  SRGBColorSpace,
   type Material,
 } from 'three';
 
@@ -329,19 +331,49 @@ export function buttonGeometry(b: ButtonPart): BufferGeometry {
   return g;
 }
 
+/** Paint colours, sRGB (drawing choices; the design stores no colours). */
 export const PART_COLOURS: Readonly<Record<Component['kind'], number>> = {
-  noseCone: 0xd9534f,
-  bodyTube: 0xe8e8e8,
-  transition: 0xd9534f,
-  finSet: 0x2f6db5,
-  launchLug: 0x888888,
-  railButton: 0x444444,
+  noseCone: 0xc4231d,
+  bodyTube: 0xf1f0ea,
+  transition: 0xc4231d,
+  finSet: 0x1c2026,
+  launchLug: 0xa7adb4,
+  railButton: 0x2a2a2a,
   innerTube: 0x888888,
   centeringRing: 0x888888,
   bulkhead: 0x888888,
   massComponent: 0x888888,
   parachute: 0x888888,
 };
+
+/** Outline corners sharper than this turn are drawn as hard edges (a drawing choice). */
+export const CREASE_ANGLE = (25 * Math.PI) / 180;
+
+/**
+ * The outline with every corner sharper than `CREASE_ANGLE` doubled, so
+ * that the revolved surface gets separate normals on each side of the
+ * corner (a crisp edge at a shoulder or a base) instead of a smeared one.
+ * The points themselves are unchanged.
+ */
+export function creasedOutline(outline: readonly OutlinePoint[]): OutlinePoint[] {
+  const out: OutlinePoint[] = [];
+  outline.forEach((p, i) => {
+    out.push(p);
+    const prev = outline[i - 1];
+    const next = outline[i + 1];
+    if (prev === undefined || next === undefined) return;
+    const ax = p[0] - prev[0];
+    const ar = p[1] - prev[1];
+    const bx = next[0] - p[0];
+    const br = next[1] - p[1];
+    const na = Math.hypot(ax, ar);
+    const nb = Math.hypot(bx, br);
+    if (na === 0 || nb === 0) return;
+    const cos = (ax * bx + ar * br) / (na * nb);
+    if (cos < Math.cos(CREASE_ANGLE)) out.push(p);
+  });
+  return out;
+}
 
 export interface RocketObject {
   /** Origin at the nose tip, x aft (body frame). */
@@ -355,13 +387,16 @@ export function buildRocketObject(parts: readonly ModelPart[]): RocketObject {
   const group = new Group();
   group.name = 'rocket-body';
   const materials = new Map<number, Material>();
-  const material = (colour: number): Material => {
+  const material = (colour: number, metal = false): Material => {
     let m = materials.get(colour);
     if (m === undefined) {
-      m = new MeshStandardMaterial({
-        color: colour,
-        metalness: 0.1,
-        roughness: 0.6,
+      // Gloss paint: a clear coat over a smooth base; bare metal for lugs.
+      m = new MeshPhysicalMaterial({
+        color: new Color().setHex(colour, SRGBColorSpace),
+        metalness: metal ? 0.85 : 0,
+        roughness: metal ? 0.35 : 0.42,
+        clearcoat: metal ? 0 : 0.9,
+        clearcoatRoughness: 0.12,
         side: DoubleSide,
       });
       materials.set(colour, m);
@@ -373,8 +408,8 @@ export function buildRocketObject(parts: readonly ModelPart[]): RocketObject {
     switch (p.kind) {
       case 'revolved': {
         mesh = new Mesh(
-          revolveOutline(p.outline, REVOLUTION_SEGMENTS),
-          material(PART_COLOURS[p.component]),
+          revolveOutline(creasedOutline(p.outline), REVOLUTION_SEGMENTS),
+          material(PART_COLOURS[p.component], p.component === 'launchLug'),
         );
         if (p.offset !== undefined) {
           mesh.position.set(
@@ -385,14 +420,20 @@ export function buildRocketObject(parts: readonly ModelPart[]): RocketObject {
         }
         break;
       }
-      case 'fin':
-        mesh = new Mesh(finGeometry(p), material(PART_COLOURS.finSet));
+      case 'fin': {
+        // Flat faces: each triangle its own normal.
+        const g = finGeometry(p).toNonIndexed();
+        g.computeVertexNormals();
+        mesh = new Mesh(g, material(PART_COLOURS.finSet));
         break;
+      }
       case 'button':
         mesh = new Mesh(buttonGeometry(p), material(PART_COLOURS.railButton));
         break;
     }
     mesh.name = p.name;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     group.add(mesh);
   }
   return { group, parts, extent: rocketModelExtent(parts) };
