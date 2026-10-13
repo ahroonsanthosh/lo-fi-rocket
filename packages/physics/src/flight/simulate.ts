@@ -179,6 +179,13 @@ export interface FlightSummary {
   /** Bearing of the landing point from the pad, clockwise from north, radians. */
   readonly landingDirection: number | undefined;
   readonly flightTime: number;
+  /**
+   * Issue #17: the most negative stability margin of powered flight and coast
+   * (CP ahead of the CG), or undefined when the margin stayed at 0 or above.
+   * When set, the result's first warning says that the rocket is unstable and
+   * that the flight shown is not a prediction.
+   */
+  readonly unstable: StabilityPoint | undefined;
   /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
   readonly endReason: 'landing' | 'max-time' | 'model-limit';
   /**
@@ -1260,6 +1267,15 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     });
 
   const apogeeZ = samples.reduce((m, s) => Math.max(m, s.altitude), 0);
+  // Issue #17: a negative margin (CP ahead of the CG) during the ascent means the rocket is unstable; the
+  // flight below is then not a prediction. Stated first, in place of the in-flight margin warning.
+  const unstable = [lowest.powered, lowest.coast].reduce<StabilityPoint | undefined>(
+    (worst, p) =>
+      p !== undefined && p.calibers < 0 && (worst === undefined || p.calibers < worst.calibers)
+        ? p
+        : worst,
+    undefined,
+  );
   const summary: FlightSummary = {
     apogee: finiteResult('apogee', apogee?.z ?? apogeeZ),
     timeToApogee: apogee?.t ?? Number.NaN,
@@ -1280,6 +1296,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ? undefined
         : (Math.atan2(landing.x, landing.y) + 2 * Math.PI) % (2 * Math.PI),
     flightTime: t,
+    unstable,
     endReason,
     minimumStability: { powered: lowest.powered, coast: lowest.coast },
     flutter: flutterFins.map(({ index, fin }): FlutterMargin => {
@@ -1315,17 +1332,24 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     ['powered flight', lowest.powered],
     ['coast', lowest.coast],
   ] as const) {
-    if (p !== undefined && p.calibers < minimumMargin) {
+    if (p !== undefined && p.calibers < minimumMargin && !(p.calibers < 0)) {
       warnings.add(
         `In-flight stability margin fell to ${p.calibers.toFixed(2)} calibers during ${name} (t = ${p.time.toFixed(2)} s, Mach ${p.mach.toFixed(2)}, angle of attack ${((p.angleOfAttack * 180) / Math.PI).toFixed(1)}°), below the ${minimumMargin.toFixed(2)} caliber minimum: the rocket may not fly straight there. The margin uses the CP at that Mach number and angle of attack (plan 0030).`,
       );
     }
   }
+  const unstableStatement =
+    unstable === undefined
+      ? []
+      : [
+          `This rocket is unstable: at ${unstable.time.toFixed(2)} s its centre of pressure is ${(-unstable.calibers).toFixed(2)} calibers ahead of its centre of mass, so it turns sideways or tumbles instead of flying straight. The apogee, speeds and landing point shown are not a prediction of its flight. Add or enlarge the fins, or add nose weight, until the margin is positive (1 to 2 calibers is the usual target).`,
+        ];
   return {
     samples,
     events,
     summary,
-    warnings: [...warnings],
+    // When unstable, the statement is always the first warning (formats relies on this, issue #17).
+    warnings: [...unstableStatement, ...warnings],
     modes: {
       dragCurve: options.dragCurve?.label,
       aerodynamics: options.aerodynamics,
