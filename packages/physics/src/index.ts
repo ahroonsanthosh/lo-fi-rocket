@@ -134,6 +134,7 @@ export {
   componentMassProperties,
   type Component,
   type FinCrossSection,
+  type FinTab,
   type MassItemComponent,
   type NoseConeComponent,
   type RailButtonComponent,

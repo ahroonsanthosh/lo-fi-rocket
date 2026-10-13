@@ -21,6 +21,7 @@ import {
   noseProfile,
   seconds,
   type Component,
+  type FinTab,
   type KilogramsPerCubicMetre,
   type MassOverride,
   type Metres,
@@ -47,8 +48,8 @@ export interface OrkMotorMount {
   readonly manufacturer: string;
   readonly diameter: Metres;
   readonly length: Metres;
-  /** Ejection delay as written in the file. */
-  readonly delay: Seconds;
+  /** Ejection delay as written in the file; undefined for a plugged motor (written "none"). */
+  readonly delay: Seconds | undefined;
   /** Aft end of the motor from the nose tip: the mount's aft end plus the overhang. */
   readonly aftEnd: Metres;
   /** Index into `components` of the tube that is the mount. */
@@ -466,6 +467,45 @@ function readShoulder(
 }
 
 /**
+ * A fin tab (D-081, GEO-14). OpenRocket writes the tab's offset twice, under its old and new
+ * names for the reference (front/top, center/middle, end/bottom), and they agree. The forward
+ * edge from the root leading edge is the offset from the root's front, from the root's middle
+ * less half the tab, or from the root's end less the tab (reference/rockets/tab-probe/values.txt:
+ * 0.01, 0.03 and 0.05 m for an offset of 0.01 m, a 0.1 m root and a 0.06 m tab).
+ */
+function readFinTab(el: Element, rootChord: number): FinTab | undefined {
+  const height = el.optionalNumber('tabheight') ?? 0;
+  const length = el.optionalNumber('tablength') ?? 0;
+  const positions = el.all('tabposition');
+  if (height === 0 || length === 0) return undefined;
+  const offsets = new Map<string, number>();
+  for (const p of positions) {
+    const ref = p.attributes['relativeto'] ?? '';
+    const key =
+      ({ top: 'front', middle: 'center', bottom: 'end' } as Record<string, string>)[ref] ?? ref;
+    if (!NUMBER.test(p.text)) throw el.parseError(`<tabposition> is not a number: "${p.text}"`);
+    offsets.set(key, Number(p.text));
+  }
+  if (offsets.size !== 1) {
+    throw el.parseError(
+      `<tabposition> must give one reference, got ${offsets.size === 0 ? 'none' : [...offsets.keys()].join(', ')}`,
+    );
+  }
+  const [[ref, offset]] = [...offsets.entries()] as [[string, number]];
+  const fore =
+    ref === 'front'
+      ? offset
+      : ref === 'center'
+        ? (rootChord - length) / 2 + offset
+        : ref === 'end'
+          ? rootChord - length + offset
+          : undefined;
+  if (fore === undefined) throw el.unsupported(`fin tab position relative to "${ref}"`);
+  if (fore < 0) throw el.unsupported('a fin tab that starts ahead of the fin root');
+  return { height: metres(height), length: metres(length), foreOffset: metres(fore) };
+}
+
+/**
  * Mass and CG overrides (D-073). `<overridemass>` is the total mass of the
  * component over all its instances and `<overridecg>` its CG from the
  * component's forward end, as OpenRocket 24.12 computes them
@@ -606,13 +646,19 @@ class Reader {
     this.checkIgnition(mount);
     const overhang = mount.number('overhang');
     const motor = mount.wrap(chosen);
-    motor.requireValue('type', 'single', 'motor type other than "single"');
+    // D-081: single-use, reloadable or hybrid is catalogue information; the motor's thrust and mass
+    // come from its definition, matched by name.
+    const type = motor.optionalText('type');
+    if (type !== undefined && !['single', 'reload', 'hybrid'].includes(type)) {
+      throw motor.unsupported(`motor type "${type}"`);
+    }
     this.motorMount = {
       designation: motor.text('designation'),
       manufacturer: motor.text('manufacturer'),
       diameter: metres(motor.number('diameter')),
       length: metres(motor.number('length')),
-      delay: seconds(motor.number('delay')),
+      // D-081: OpenRocket writes "none" for a plugged motor (no ejection charge).
+      delay: motor.text('delay') === 'none' ? undefined : seconds(motor.number('delay')),
       aftEnd: metres(aftEndOfMount + overhang),
       mountComponent: mountIndex,
     };
@@ -687,6 +733,7 @@ class Reader {
     }
     const rootChord = el.number('rootchord');
     const position = axialPosition(el, parent, rootChord);
+    const tab = readFinTab(el, rootChord);
     this.place(
       el,
       {
@@ -700,6 +747,7 @@ class Reader {
         thickness: metres(el.number('thickness')),
         density: el.bulkDensity(),
         bodyRadius: metres(parent.radius),
+        ...(tab === undefined ? {} : { tab }),
       },
       position,
     );
@@ -756,24 +804,35 @@ class Reader {
   private readInnerTube(el: Element, parent: Parent): void {
     el.requireZero('radialposition', 'radially offset inner tubes');
     el.requireValue('clusterconfiguration', 'single', 'motor clusters');
-    const sub = el.optionalChild('subcomponents');
-    if (sub !== undefined && sub.node.children.length > 0) {
-      throw sub.unsupported('components inside an inner tube');
-    }
     const length = el.number('length');
     const position = axialPosition(el, parent, length);
+    const outer = el.length('outerradius');
+    const wall = el.number('thickness');
     const index = this.place(
       el,
       {
         kind: 'innerTube',
         length: metres(length),
-        outerRadius: metres(el.length('outerradius')),
-        wallThickness: metres(el.number('thickness')),
+        outerRadius: metres(outer),
+        wallThickness: metres(wall),
         density: el.bulkDensity(),
       },
       position,
     );
     this.readMotorMount(el, index, position + length);
+    // D-081: parts inside an inner tube (an engine block in a motor tube) are positioned against the
+    // tube; an automatic outer radius there is its inner radius (tab-probe: 0.009 m in a 0.0095 m
+    // tube with a 0.0005 m wall).
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined) {
+      const parentOfChildren: Parent = {
+        position,
+        length,
+        radius: outer,
+        autoOuterRadius: () => outer - wall,
+      };
+      this.readNoseInternal(sub, { ...parentOfChildren, innerTubes: [] }, 'an inner tube');
+    }
     el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'clusterscale', 'clusterrotation']);
   }
 
@@ -832,6 +891,11 @@ class Reader {
       parent.autoOuterRadius?.(fore, fore + length),
     );
     const thickness = el.number('thickness');
+    if (thickness === 0) {
+      // OpenRocket gives a zero-thickness engine block no mass (tab-probe case 0); nothing to place.
+      el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation', 'material']);
+      return;
+    }
     if (!(thickness > 0 && thickness <= outer)) {
       throw el.parseError(
         `engine block thickness must be greater than 0 and at most the outer radius, got ${String(thickness)} and ${String(outer)}`,
@@ -1236,7 +1300,7 @@ class Reader {
     }
     this.readStage(subcomponents.wrap(stage));
     subcomponents.finish([]);
-    rocket.finish([...IGNORED_COMMON, 'designtype', 'revision']);
+    rocket.finish([...IGNORED_COMMON, 'designtype', 'revision', 'designer']);
 
     if (this.components.length === 0) throw rocket.parseError('the rocket has no components');
     return {

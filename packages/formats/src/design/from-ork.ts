@@ -82,7 +82,9 @@ export function orkToDesign(
         m.definition.designation.toLowerCase() === mount.designation.toLowerCase() &&
         sameManufacturer(m.definition.manufacturer, mount.manufacturer),
     );
-    const delay: Seconds = mount.delay;
+    const delay: Seconds | undefined = mount.delay;
+    const delayText =
+      delay === undefined ? 'plugged (no ejection charge)' : `delay ${String(delay)} s`;
     design = {
       ...design,
       motorMount: {
@@ -94,18 +96,18 @@ export function orkToDesign(
               motor: {
                 definition: match.definition,
                 provenance: match.provenance,
-                ejectionDelay: delay,
+                ...(delay === undefined ? {} : { ejectionDelay: delay }),
               },
             }),
       },
     };
     if (match === undefined) {
       notices.push(
-        `The file names the motor ${mount.manufacturer} ${mount.designation} (${String(Math.round(mount.diameter * 1000))} mm, delay ${String(delay)} s) but carries no thrust curve and no motor of that name is in the library: choose it in the motor panel.`,
+        `The file names the motor ${mount.manufacturer} ${mount.designation} (${String(Math.round(mount.diameter * 1000))} mm, ${delayText}) but carries no thrust curve and no motor of that name is in the library: choose it in the motor panel.`,
       );
     } else {
       notices.push(
-        `Motor ${match.definition.manufacturer} ${match.definition.designation} taken from the library with the file's delay of ${String(delay)} s.`,
+        `Motor ${match.definition.manufacturer} ${match.definition.designation} taken from the library, ${delay === undefined ? 'plugged as in the file (no ejection charge)' : `with the file's delay of ${String(delay)} s`}.`,
       );
     }
   }

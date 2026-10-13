@@ -42,3 +42,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Automatic ring probe
 
 `src/AutoRingProbe.java` (D-080) measures the radii OpenRocket gives rings, bulkheads and couplers written with a bare "auto", and parts inside a tube coupler; output in `reference/rockets/auto-ring-probe/`.
+
+## Tab probe
+
+`src/TabProbe.java` (D-081) measures fin sets with fin tabs at each tab reference and an engine block in a motor tube; output in `reference/rockets/tab-probe/`.

@@ -1,0 +1,5 @@
+case 0: tab=null tabFrontEdge=0.025000000 fins absX0=0.500000000 mass=0.032400000 cgAbs=0.561111111 Irot_unit=3.957050808e-03 Ilong_unit=2.603525404e-03
+case 0: engine block absX0=0.530000000 outer=0.009000000 inner=0.009000000 mass=0.000000000 cgAbs=0.533000000
+case 1: tab=Top of the parent component tabFrontEdge=0.010000000 fins absX0=0.500000000 mass=0.036288000 cgAbs=0.558849206 Irot_unit=3.957050808e-03 Ilong_unit=2.603525404e-03
+case 2: tab=Middle of the parent component tabFrontEdge=0.030000000 fins absX0=0.500000000 mass=0.036288000 cgAbs=0.560992063 Irot_unit=3.957050808e-03 Ilong_unit=2.603525404e-03
+case 3: tab=Bottom of the parent component tabFrontEdge=0.050000000 fins absX0=0.500000000 mass=0.036288000 cgAbs=0.563134921 Irot_unit=3.957050808e-03 Ilong_unit=2.603525404e-03
