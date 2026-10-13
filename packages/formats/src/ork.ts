@@ -202,20 +202,25 @@ class Element {
     return value;
   }
 
+  /** A number; OpenRocket's "auto <value>" for an automatic value gives the value (see `length`). */
   number(name: string): number {
-    return this.toNumber(name, this.text(name));
+    return this.length(name);
   }
 
   optionalNumber(name: string): number | undefined {
-    const t = this.optionalText(name);
-    return t === undefined ? undefined : this.toNumber(name, t);
+    return this.has(name) ? this.number(name) : undefined;
   }
 
-  /** A length that may be "auto" in OpenRocket; auto is unsupported. */
+  /**
+   * A length that may be automatic in OpenRocket. OpenRocket writes an automatic length as
+   * "auto" followed by the value it resolved (D-078, reference/rockets/shoulder-probe/values.txt
+   * case 4: "auto 0.031" for a radius matched to a 0.031 m tube), and that value is used.
+   * A bare "auto" carries no value and is refused.
+   */
   length(name: string): number {
     const t = this.text(name);
-    if (t === 'auto') throw this.unsupported(`<${name}> "auto"`);
-    return this.toNumber(name, t);
+    if (t === 'auto') throw this.unsupported(`<${name}> "auto" without a resolved value`);
+    return this.toNumber(name, t.startsWith('auto ') ? t.slice(5) : t);
   }
 
   /** A wall thickness that may be "filled". */
@@ -303,6 +308,7 @@ const IGNORED_COMMON = [
   'preset',
   'finish',
   'appearance',
+  'insideappearance',
   'color',
   'linestyle',
 ];
@@ -377,18 +383,32 @@ function readShape(el: Element): { shape: NoseShape; shapeParameter: number | un
   return { shape, shapeParameter };
 }
 
-function readShoulder(el: Element, prefix: 'fore' | 'aft'): Shoulder | undefined {
+/**
+ * A shoulder, and whether it is capped (D-078). OpenRocket gives a shoulder of zero wall
+ * thickness no mass, capped or not (reference/rockets/shoulder-probe/values.txt cases 2 and 3),
+ * so it is read as no shoulder. A cap is a disc of the shoulder's wall thickness and inner
+ * radius at its far end (cases 0 and 1), returned for the caller to place.
+ */
+function readShoulder(
+  el: Element,
+  prefix: 'fore' | 'aft',
+): { shoulder: Shoulder | undefined; capped: boolean } {
   const radius = el.number(`${prefix}shoulderradius`);
   const length = el.number(`${prefix}shoulderlength`);
   const thickness = el.number(`${prefix}shoulderthickness`);
-  if (el.boolean(`${prefix}shouldercapped`)) throw el.unsupported(`capped ${prefix} shoulder`);
-  if (radius === 0 && length === 0) return undefined;
+  const capped = el.boolean(`${prefix}shouldercapped`);
+  if ((radius === 0 && length === 0) || (thickness === 0 && radius > 0 && length > 0)) {
+    return { shoulder: undefined, capped: false };
+  }
   if (!(radius > 0 && length > 0 && thickness > 0)) {
     throw el.parseError(
       `${prefix} shoulder needs positive radius, length and thickness (got ${String(radius)}, ${String(length)}, ${String(thickness)})`,
     );
   }
-  return { radius: metres(radius), length: metres(length), wallThickness: metres(thickness) };
+  return {
+    shoulder: { radius: metres(radius), length: metres(length), wallThickness: metres(thickness) },
+    capped,
+  };
 }
 
 /**
@@ -431,6 +451,9 @@ function readMassOverride(el: Element, massIsComponentMass: boolean): MassOverri
   };
 }
 
+/** The configuration OpenRocket opens a file in when none of several is marked default: no motor. */
+const NO_CONFIGURATION = '';
+
 class Reader {
   readonly components: OrkPlacedComponent[] = [];
   readonly recoveryDevices: OrkRecoveryDevice[] = [];
@@ -451,6 +474,36 @@ class Reader {
       ...(massOverride === undefined ? {} : { massOverride }),
     });
     return this.components.length - 1;
+  }
+
+  /**
+   * A shoulder cap (D-078): a disc of the shoulder's wall thickness and inner radius, at the
+   * shoulder's far end, of the component's material. OpenRocket counts it in the component, so a
+   * mass override of that component would cover it; that combination is refused.
+   */
+  private placeShoulderCap(
+    el: Element,
+    shoulder: Shoulder,
+    farEnd: number,
+    side: 'fore' | 'aft',
+  ): void {
+    if (el.has('overridemass') || el.has('overridecg')) {
+      throw el.unsupported(`a mass or CG override on a component with a capped ${side} shoulder`);
+    }
+    const t = shoulder.wallThickness as number;
+    const position = side === 'aft' ? farEnd - t : farEnd;
+    this.components.push({
+      name: `${el.optionalText('name') ?? ''} (shoulder cap)`,
+      element: 'shouldercap',
+      component: {
+        kind: 'bulkhead',
+        length: metres(t),
+        outerRadius: metres((shoulder.radius as number) - t),
+        innerRadius: metres(0),
+        density: el.bulkDensity(),
+      },
+      position: metres(position),
+    });
   }
 
   /**
@@ -483,9 +536,11 @@ class Reader {
         : motors.find((m) => m.attributes['configid'] === this.selectedConfig);
     if (chosen === undefined) {
       // A mount with no motor in the configuration used: the design is imported without a motor.
-      this.notices.push(
-        `The motor mount "${el.optionalText('name') ?? ''}" has no motor in the ${motors.length === 0 ? 'file' : 'default motor configuration'}: choose a motor in the motor panel.`,
-      );
+      if (this.selectedConfig !== NO_CONFIGURATION) {
+        this.notices.push(
+          `The motor mount "${el.optionalText('name') ?? ''}" has no motor in the ${motors.length === 0 ? 'file' : 'default motor configuration'}: choose a motor in the motor panel.`,
+        );
+      }
       mount.all('ignitionconfiguration');
       for (const name of ['overhang', 'ignitionevent', 'ignitiondelay']) mount.optional(name);
       mount.finish([]);
@@ -792,7 +847,7 @@ class Reader {
     const length = el.number('length');
     const baseRadius = el.length('aftradius');
     const thickness = el.thickness('thickness');
-    const aftShoulder = readShoulder(el, 'aft');
+    const { shoulder: aftShoulder, capped } = readShoulder(el, 'aft');
     this.maxBodyRadius = Math.max(this.maxBodyRadius, baseRadius);
     this.place(
       el,
@@ -808,6 +863,9 @@ class Reader {
       },
       x,
     );
+    if (capped && aftShoulder !== undefined) {
+      this.placeShoulderCap(el, aftShoulder, x + length + aftShoulder.length, 'aft');
+    }
     const sub = el.optionalChild('subcomponents');
     if (sub !== undefined) this.readNoseInternal(sub, { position: x, length, radius: baseRadius });
     el.finish([...IGNORED_COMMON]);
@@ -917,15 +975,23 @@ class Reader {
     const configs = rocket.all('motorconfiguration');
     if (configs.length > 0) {
       const defaults = configs.filter((c) => c.attributes['default'] === 'true');
-      const selected =
-        configs.length === 1 ? configs[0] : defaults.length === 1 ? defaults[0] : undefined;
-      if (selected === undefined) {
+      if (defaults.length > 1) {
         throw rocket.unsupported(
-          `${String(configs.length)} motor configurations with ${defaults.length === 0 ? 'none' : String(defaults.length)} marked as the default`,
+          `${String(configs.length)} motor configurations with ${String(defaults.length)} marked as the default`,
         );
       }
-      this.selectedConfig = selected.attributes['configid'];
-      if (configs.length > 1) {
+      const selected = configs.length === 1 ? configs[0] : defaults[0];
+      if (selected === undefined) {
+        // With none marked, OpenRocket opens the file in its own empty configuration: no motor, and
+        // every parachute on its own deployment elements (D-078, SelProbe on "Base drag hack").
+        this.selectedConfig = NO_CONFIGURATION;
+        this.notices.push(
+          `This file has ${String(configs.length)} motor configurations and none is marked as the default, so OpenRocket opens it with no motor selected, and so does this import: choose a motor in the motor panel.`,
+        );
+      } else {
+        this.selectedConfig = selected.attributes['configid'];
+      }
+      if (selected !== undefined && configs.length > 1) {
         this.notices.push(
           `This file has ${String(configs.length)} motor configurations; the default one, the configuration OpenRocket opens with, was imported. To use another, make it the default in OpenRocket and import again, or choose the motor here.`,
         );

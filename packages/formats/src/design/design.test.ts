@@ -250,7 +250,8 @@ describe('physics adapter on the example (R1 with the D12)', () => {
     );
     expect(or.summary.apogee).toBeCloseTo(168.866, 2);
     expect(designFlightWarnings(rk, shown)).toEqual([]);
-  });
+    // Three full flights: the same allowance as the other full-flight tests.
+  }, 30000);
   it('warnings fire on the thresholds and explain why', () => {
     const strict: RocketDesign = {
       ...d,
