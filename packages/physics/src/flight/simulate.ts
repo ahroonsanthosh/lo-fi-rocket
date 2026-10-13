@@ -1334,6 +1334,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
             : `it opens ${delay.toFixed(2)} s after descending through ${alt.toFixed(1)} m (at ${((crossing.time as number) + delay).toFixed(2)} s), but ${ended} first. Use a shorter delay`;
       }
     }
+    // Issue #33: 'never' is a choice, but when nothing else opened the rocket comes down unretarded.
+    if (d.deploy.event === 'never' && deployed.size === 0) {
+      reason = 'it is set to never open, and no other recovery device opened';
+    }
     if (reason !== undefined) {
       warnings.add(
         `"${d.name}" never opened: ${reason}. The landing speed and drift shown are for a rocket coming down without it.`,

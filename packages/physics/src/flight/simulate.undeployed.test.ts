@@ -114,3 +114,15 @@ describe('devices that never open are reported (review F-4)', () => {
     expect(r.warnings.some((w) => w.includes('never opened'))).toBe(false);
   });
 });
+
+describe('a parachute set to never open, with nothing else opening (issue #33)', () => {
+  it('is reported; a spare set to never beside an opening parachute is not', () => {
+    const alone = simulateFlight(
+      r1([device('Parachute', 0.3, { event: 'never', delay: seconds(0) })]),
+      { ...OPTIONS, largeAngleMethod: 'datcom' },
+    );
+    expect(neverOpened(alone.warnings, 'Parachute')).toBe(
+      '"Parachute" never opened: it is set to never open, and no other recovery device opened. The landing speed and drift shown are for a rocket coming down without it.',
+    );
+  });
+});
