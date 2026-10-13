@@ -82,10 +82,17 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Issues: #9 ejection before apogee (#50), #17 unstable result (#53), #19 plain warnings and `FlightResult.notes` (#54).
   - The owner's `.ork` mass/CG overrides: #30, D-073. The rule was observed from OpenRocket with `tools/openrocket-harness/src/OverrideProbe.java`.
   - Plans 0035 to 0045. ui follow-ups: #55 and #56.
+  - Second review pass (issues #32 to #36):
+    - #32 "at launch" refused while the motor burns, and a rocket that never leaves the rail is reported: #58, D-075.
+    - #33 is in #49, extended for "never" and a first warning with the landing speed.
+    - #34 is covered by #44, #46, #47 and #50 together, verified on a local merge.
+    - #36 motor fit: #59.
+    - #35 is ui only: the `.rse` parser already reads the delays.
+    - Also #53: the in-flight margin minimum now covers the ascent only. The fall after apogee had been counted.
 
 ## In progress
 
-- Waiting for the review-fix pull requests above to be merged. #30 and #43 both append to `docs/decisions.md` (D-073, D-074): whichever merges second needs `main` merged in, a one-line conflict. The other open questions depend on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).
+- Waiting for the review-fix pull requests above to be merged. #30, #43 and #58 all append to `docs/decisions.md` (D-073, D-074, D-075): each later one needs `main` merged in, a small conflict. The other open questions depend on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).
 
 ## Next
 
