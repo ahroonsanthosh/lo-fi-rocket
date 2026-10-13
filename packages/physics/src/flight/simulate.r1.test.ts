@@ -143,7 +143,8 @@ describe('step-size convergence and integrator agreement (CLAUDE.md 6.5)', () =>
     expect(three.summary.apogee).toBeCloseTo(six.summary.apogee, 3);
     expect(three.summary.maxVelocity).toBeCloseTo(six.summary.maxVelocity, 3);
     expect(three.modes.degreesOfFreedom).toBe(3);
-  });
+    // Two full flights: the same allowance as the other full-flight tests.
+  }, 30000);
 });
 
 describe('modes, wind and properties', () => {

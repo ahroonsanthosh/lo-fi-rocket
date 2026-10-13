@@ -253,6 +253,7 @@ export function designSimulationOptions(
 
 export interface DesignWarning {
   readonly code:
+    | 'unstable'
     | 'rail-exit-velocity'
     | 'thrust-to-weight'
     | 'deployment-velocity'
@@ -282,6 +283,9 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
   const out: DesignWarning[] = [];
   const t = design.warningThresholds;
   const s = result.summary;
+  // Issue #17: an unstable rocket leads the list; the simulator's first warning is that statement.
+  const unstable = s.unstable !== undefined;
+  if (unstable) out.push({ code: 'unstable', message: result.warnings[0] ?? '' });
   if (s.railExitVelocity < t.minRailExitVelocity) {
     out.push({
       code: 'rail-exit-velocity',
@@ -345,7 +349,8 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       message: `The flight ended at ${s.flightTime.toFixed(2)} s, before landing, because the rocket turned past 90° angle of attack (flying backwards or tumbling), which the aerodynamic model does not cover (D-046). The apogee and the ascent are valid; a recovery device deploying at apogee lets the descent be simulated.`,
     });
   }
-  for (const w of result.warnings) out.push({ code: 'model', message: w });
+  for (const w of unstable ? result.warnings.slice(1) : result.warnings)
+    out.push({ code: 'model', message: w });
   return out;
 }
 
