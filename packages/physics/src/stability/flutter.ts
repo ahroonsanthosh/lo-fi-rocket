@@ -25,6 +25,7 @@
  */
 import { InvalidInputError } from '../errors.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
+import { trapezoidOf } from '../geometry/fin-planform.js';
 import { finiteResult } from '../numerics/finite.js';
 
 /** 1 psi = 4.4482216152605 N / (0.0254 m)² (NIST SP 811 B.8, exact factors; printed 6.894 757 E+03). */
@@ -87,7 +88,9 @@ export interface FlutterGeometry {
 }
 
 /** FLUT-1. The TN 4197 geometry of one trapezoidal fin: c₀.₅₀ = (c_r + c_t)/2 at mid-span. */
-export function flutterGeometry(fin: TrapezoidFinSetComponent): FlutterGeometry {
+export function flutterGeometry(shaped: TrapezoidFinSetComponent): FlutterGeometry {
+  // D-087: TN 4197 is for trapezoidal panels; other planforms use their equivalent trapezoid.
+  const fin = trapezoidOf(shaped);
   const cr: number = fin.rootChord;
   const ct: number = fin.tipChord;
   const s: number = fin.span;

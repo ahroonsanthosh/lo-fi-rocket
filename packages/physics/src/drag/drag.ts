@@ -10,6 +10,7 @@
 import { InvalidInputError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { Component, TrapezoidFinSetComponent } from '../geometry/components.js';
+import { finPlanform } from '../geometry/fin-planform.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
@@ -71,11 +72,12 @@ export function jointAngle(profile: Profile): number {
   return Math.atan(Math.abs(slope));
 }
 
-/** Mean aerodynamic chord of a trapezoidal fin, eq. (3.30) p. 26 evaluated for the trapezoid: (2/3)(c_r² + c_r c_t + c_t²)/(c_r + c_t). */
+/**
+ * Mean aerodynamic chord of a fin, eq. (3.30) p. 26: for the trapezoid (2/3)(c_r² + c_r c_t +
+ * c_t²)/(c_r + c_t), for other planforms by integration (D-087).
+ */
 export function meanAerodynamicChord(fin: TrapezoidFinSetComponent): number {
-  const cr: number = fin.rootChord;
-  const ct: number = fin.tipChord;
-  return ((2 / 3) * (cr * cr + cr * ct + ct * ct)) / (cr + ct);
+  return finPlanform(fin).mac;
 }
 
 export interface DragInputs {
@@ -221,19 +223,18 @@ function staticEntries(components: readonly PlacedComponent[]): readonly StaticE
         };
       }
       case 'finSet': {
-        const cr: number = c.rootChord;
-        const ct: number = c.tipChord;
+        // D-087: the planform's area, MAC and average leading-edge angle Γ_L (p. 50).
+        const p = finPlanform(c);
         const s: number = c.span;
         const t: number = c.thickness;
-        const planform = ((cr + ct) / 2) * s;
         return {
           ...none,
           kind: 'fins',
           area: c.count * t * s,
-          finWetted: 2 * c.count * planform,
+          finWetted: 2 * c.count * p.area,
           finThickness: t,
-          finMeanChord: meanAerodynamicChord(c),
-          finSweepAngle: Math.atan((c.sweep as number) / s),
+          finMeanChord: p.mac,
+          finSweepAngle: p.leadingEdgeSweep,
         };
       }
       case 'launchLug':
@@ -444,15 +445,18 @@ export function dragCoefficient(input: DragInputs): DragResult {
           // planform area of the N fins; the airfoil profile is taken as
           // biconvex and the rounded one as a round-nosed biconvex (D-062), the
           // wedges with their own K (D-066).
+          // D-087: the DATCOM method's quarter-chord sweep is a trapezoid's; other planforms use
+          // their equivalent trapezoid.
+          const p = finPlanform(c);
           const cr: number = c.rootChord;
-          const ct: number = c.tipChord;
+          const { tipChord: ct, sweep: xt } = p.equivalentTrapezoid;
           const s: number = c.span;
-          const planform = ((cr + ct) / 2) * s;
+          const planform = p.area;
           const w = finWaveDrag({
             mach: input.mach,
             thicknessRatio: st.finThickness / st.finMeanChord,
             aspectRatio: (2 * s * s) / planform,
-            quarterChordSweep: Math.atan(((c.sweep as number) + ct / 4 - cr / 4) / s),
+            quarterChordSweep: Math.atan((xt + ct / 4 - cr / 4) / s),
             leadingEdgeSweep: st.finSweepAngle,
             section:
               c.crossSection === 'wedge' || c.crossSection === 'double-wedge'

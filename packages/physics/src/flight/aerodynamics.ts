@@ -13,6 +13,7 @@ import { axialDragScaling } from '../drag/drag.js';
 import { InvalidInputError, NotImplementedError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
+import { finPlanform, trapezoidOf } from '../geometry/fin-planform.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
@@ -677,14 +678,16 @@ const BODY_VOLUME_CACHE = new WeakMap<
 >();
 
 /** HA-10: the planform seen in reverse flow, its leading edge the old trailing edge (tan Λ′ = (c_r − x_t − c_t)/s). */
-export function reversedFin(c: TrapezoidFinSetComponent): TrapezoidFinSetComponent {
-  const cached = REVERSED_FIN_CACHE.get(c);
+export function reversedFin(shaped: TrapezoidFinSetComponent): TrapezoidFinSetComponent {
+  const cached = REVERSED_FIN_CACHE.get(shaped);
   if (cached !== undefined) return cached;
+  // D-087: the reversed planform is a trapezoid's; other planforms use their equivalent trapezoid.
+  const c = trapezoidOf(shaped);
   const r = {
     ...c,
     sweep: metres((c.rootChord as number) - (c.sweep as number) - (c.tipChord as number)),
   };
-  REVERSED_FIN_CACHE.set(c, r);
+  REVERSED_FIN_CACHE.set(shaped, r);
   return r;
 }
 /** One reversed planform object per fin set, so the per-component caches of `finSetTerm` keep working. */
@@ -732,33 +735,11 @@ export function pitchDampingMoment(
     (foreRadius * foreLength ** 4 + aftRadius * aftLength ** 4) *
     transverseRate ** 2;
   for (const { fin, cp } of finCps) {
-    const cr: number = fin.rootChord;
-    const ct: number = fin.tipChord;
-    const s: number = fin.span;
-    const aFin = ((cr + ct) / 2) * s;
+    const aFin = finPlanform(fin).area;
     const xi = Math.abs(cp - cg);
     moment += 0.3 * density * Math.min(fin.count, 4) * aFin * xi ** 3 * transverseRate ** 2;
   }
   return finiteResult('pitch damping moment', moment);
-}
-
-/**
- * AERO-6 helper: I_n = ∫₀ˢ c(y)(r_t + y)ⁿ dy for the trapezoid chord
- * c(y) = c_r + (c_t − c_r) y/s, by the binomial expansion of (r_t + y)ⁿ:
- * Σ_k C(n,k) r_t^(n−k) [c_r s^(k+1)/(k+1) + (c_t − c_r) s^(k+1)/(k+2)].
- * I₂ is the thesis's closed form (3.70) (tested).
- */
-function trapezoidStripIntegral(n: number, cr: number, ct: number, rt: number, s: number): number {
-  let total = 0;
-  let binomial = 1;
-  for (let k = 0; k <= n; k += 1) {
-    total +=
-      binomial *
-      rt ** (n - k) *
-      ((cr * s ** (k + 1)) / (k + 1) + ((ct - cr) * s ** (k + 1)) / (k + 2));
-    binomial = (binomial * (n - k)) / (k + 1);
-  }
-  return total;
 }
 
 /** AERO-5 subsonic form: N (2π/β)(ω/v₀) q I₂ with I₂ of (3.70). */
@@ -769,7 +750,7 @@ function subsonicRollDamping(
   r: number,
 ): number {
   const beta = Math.sqrt(1 - M * M);
-  const sum = trapezoidStripIntegral(2, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
+  const sum = finPlanform(fin).stripIntegral(2, fin.bodyRadius);
   return fin.count * ((2 * Math.PI) / beta) * r * q * sum;
 }
 
@@ -787,9 +768,10 @@ function supersonicRollDamping(
 ): number {
   const { k1, k2, k3 } = busemannCoefficients(M);
   const ar = Math.abs(r);
-  const i2 = trapezoidStripIntegral(2, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
-  const i3 = trapezoidStripIntegral(3, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
-  const i4 = trapezoidStripIntegral(4, fin.rootChord, fin.tipChord, fin.bodyRadius, fin.span);
+  const planform = finPlanform(fin);
+  const i2 = planform.stripIntegral(2, fin.bodyRadius);
+  const i3 = planform.stripIntegral(3, fin.bodyRadius);
+  const i4 = planform.stripIntegral(4, fin.bodyRadius);
   return Math.sign(r) * fin.count * q * (k1 * ar * i2 + k2 * ar * ar * i3 + k3 * ar ** 3 * i4);
 }
 

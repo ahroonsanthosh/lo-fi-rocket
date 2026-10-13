@@ -23,6 +23,7 @@ import type {
   TransitionComponent,
   TrapezoidFinSetComponent,
 } from '../geometry/components.js';
+import { finPlanform } from '../geometry/fin-planform.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
 import { finiteResult } from '../numerics/finite.js';
@@ -449,9 +450,11 @@ export function finSetTerm(
 ): FinSetTerm {
   const M: number = mach;
   requireMach(M);
+  // D-087: the planform's own quantities (Niskanen §3.2.2); the methods written for trapezoids only
+  // (DATCOM) read the equivalent trapezoid, which is the trapezoid itself for a trapezoid.
+  const planform = finPlanform(c);
   const cr: number = c.rootChord;
-  const ct: number = c.tipChord;
-  const xt: number = c.sweep;
+  const { tipChord: ct, sweep: xt } = planform.equivalentTrapezoid;
   const s: number = c.span;
   const rt: number = c.bodyRadius;
   if (!(cr > 0)) throw new InvalidInputError('fin root chord', cr, 'must be greater than 0 m');
@@ -461,16 +464,16 @@ export function finSetTerm(
     throw new InvalidInputError('body radius at the fins', rt, 'must be 0 m or greater');
   if (!Number.isFinite(xt)) throw new InvalidInputError('fin sweep', xt, 'must be finite');
   const Aref: number = referenceArea;
-  const Afin = ((cr + ct) / 2) * s;
-  // eq. (3.34): the quarter-MAC position; eq. (3.30) MAC c̄ = (2/3)(c_r² + c_r c_t + c_t²)/(c_r + c_t).
-  const quarterChord =
-    ((xt / 3) * (cr + 2 * ct)) / (cr + ct) + (cr * cr + ct * ct + cr * ct) / (6 * (cr + ct));
-  const mac = ((2 / 3) * (cr * cr + cr * ct + ct * ct)) / (cr + ct);
+  // The true fin area (p. 28); the quarter-MAC position, eqs. (3.30) to (3.32) (3.34 for a
+  // trapezoid); the MAC c̄, eq. (3.30).
+  const Afin = planform.area;
+  const quarterChord = planform.quarterChord;
+  const mac = planform.mac;
   // BAR-10: the CP moves aft of the quarter chord above Mach 0.5 (eqs. 3.35, 3.36).
   const chordFraction = finChordFraction(mach, aspectRatio(s, Afin));
   const cpX = quarterChord + (chordFraction - 0.25) * mac;
   // eq. (3.40): (C_Nα)₁ = C/(1 + √(1 + (β k)²)), C = 2π s²/A_ref, k = s²/(A_fin cos Γ_c).
-  const gammaC = Math.atan((xt + ct / 2 - cr / 2) / s);
+  const gammaC = planform.midchordSweep;
   const k = (s * s) / (Afin * Math.cos(gammaC));
   const C = (2 * Math.PI * s * s) / Aref;
   const subsonic = (m: number): number => C / (1 + Math.sqrt(1 + (Math.sqrt(1 - m * m) * k) ** 2));

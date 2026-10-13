@@ -16,6 +16,7 @@ import { InvalidInputError } from '../errors.js';
 import { finiteResult } from '../numerics/finite.js';
 import type { Kilograms, KilogramsPerCubicMetre, Metres, Pascals } from '../units/si.js';
 import { noseProfile, transitionProfile, type NoseShape } from './profiles.js';
+import { finPlanform, type FinShape } from './fin-planform.js';
 import { integrate, revolutionMassProperties, type MassProperties } from './revolution.js';
 
 export interface Shoulder {
@@ -99,6 +100,11 @@ export interface TrapezoidFinSetComponent {
   readonly bodyRadius: Metres;
   /** Profile shape, used by the drag model (plan 0009) and the supersonic fin force (D-065, D-066). */
   readonly crossSection?: FinCrossSection;
+  /**
+   * A planform other than the trapezoid (D-087): elliptical, or a freeform outline. The root chord
+   * and span must agree with it; the tip chord and sweep then describe nothing and are not read.
+   */
+  readonly shape?: FinShape;
   /**
    * A fin tab (GEO-14, D-081): a rectangular extension of each fin's root into the body,
    * `height` inward from the body surface and `length` along x, its forward edge `foreOffset`
@@ -324,6 +330,10 @@ function finSetMassProperties(c: TrapezoidFinSetComponent): MassProperties {
   if (!Number.isInteger(c.count)) {
     throw new InvalidInputError('fin count', c.count, 'must be a whole number');
   }
+  if (c.shape !== undefined) {
+    const fin = shapedFinMassProperties(c);
+    return c.tab === undefined ? fin : combineFinTab(fin, c.tab, c);
+  }
   const {
     rootChord: cr,
     tipChord: ct,
@@ -365,6 +375,33 @@ function finSetMassProperties(c: TrapezoidFinSetComponent): MassProperties {
     inertiaLongitudinal,
   };
   return c.tab === undefined ? fin : combineFinTab(fin, c.tab, c);
+}
+
+/**
+ * GEO-16: a fin set of elliptical or freeform planform (D-087) as the thin plates of GEO-10, from
+ * the planform's area A and moments ∫∫x dA, ∫∫y dA, ∫∫x² dA, ∫∫y² dA (exact for a polygon by
+ * Green's theorem, closed forms for the ellipse): m = N ρ t A, x̄ = ∫∫x dA / A,
+ * I_rot = N ρ t ∫∫(r_b + y)² dA = N ρ t (r_b² A + 2 r_b ∫∫y dA + ∫∫y² dA),
+ * I_long = N ρ t [∫∫x² dA − A x̄² + ½ ∫∫(r_b + y)² dA].
+ */
+function shapedFinMassProperties(c: TrapezoidFinSetComponent): MassProperties {
+  const p = finPlanform(c);
+  const n = c.count;
+  const k = n * (c.density as number) * (c.thickness as number);
+  const rb: number = c.bodyRadius;
+  const { area } = p;
+  const xBar = p.moments.x / area;
+  const aroundAxis = rb * rb * area + 2 * rb * p.moments.y + p.moments.yy;
+  return {
+    volume: n * (c.thickness as number) * area,
+    mass: finiteResult('fin set mass', k * area),
+    cgX: finiteResult('fin set CG', xBar),
+    inertiaRotational: finiteResult('fin set rotational inertia', k * aroundAxis),
+    inertiaLongitudinal: finiteResult(
+      'fin set longitudinal inertia',
+      k * (p.moments.xx - area * xBar * xBar + 0.5 * aroundAxis),
+    ),
+  };
 }
 
 /**
