@@ -574,3 +574,62 @@ describe('mass and CG overrides (D-073)', () => {
     expect(rocketMassProperties(rocket.components).mass).toBeCloseTo(0.133878314, 8);
   });
 });
+
+/**
+ * Components inside a nose cone. OpenRocket 24.12 was asked where it places
+ * them (tools/openrocket-harness/src/NoseChildProbe.java); its output is
+ * reference/rockets/nose-child-probe/values.txt. Nose cone 0.150 m long,
+ * base radius 0.025 m; mass component 0.020 m long. Fore ends by hand, from
+ * the cone's own length (the 0.040 m shoulder of cases 4 to 8 does not count):
+ * top +0.010 → 0.010; bottom −0.005 → 0.150 − 0.005 − 0.020 = 0.125;
+ * middle +0.003 → (0.150 − 0.020)/2 + 0.003 = 0.068; absolute 0.050 → 0.050.
+ */
+describe('components inside a nose cone', () => {
+  const probe = (n: number): OrkRocket =>
+    parseOrk(
+      bytes(join('nose-child-probe', `nosechild${String(n)}.ork`)),
+      `nosechild${String(n)}.ork`,
+    );
+  // OpenRocket's structure mass (kg) and CG (m from the tip) for each saved file as it loads it, values.txt.
+  const OPENROCKET: readonly (readonly [number, number])[] = [
+    [0.115387874, 0.217727117],
+    [0.115387874, 0.247626272],
+    [0.115387874, 0.232806691],
+    [0.115387874, 0.228126823],
+    [0.126999201, 0.213363505],
+    [0.126999201, 0.240529031],
+    [0.126999201, 0.227064379],
+    [0.126999201, 0.222812384],
+    [0.142769112, 0.203356708],
+  ];
+  const FORE_END = [0.01, 0.125, 0.068, 0.05];
+
+  for (let n = 0; n <= 8; n++) {
+    it(`case ${String(n)}: the mass component's fore end, the structure mass and CG match OpenRocket`, () => {
+      const rocket = probe(n);
+      const mass = rocket.components.find((c) => c.element === 'masscomponent');
+      expect(mass?.position).toBeCloseTo(FORE_END[n % 4] ?? Number.NaN, 12);
+      const m = rocketMassProperties(rocket.components);
+      const [orMass, orCg] = OPENROCKET[n] ?? [Number.NaN, Number.NaN];
+      // 1e-5: OpenRocket integrates the ogive nose shell numerically; the nose cone alone differs from
+      // the closed form by 1.7e-5 of its mass (0.031510094 against 0.031509560 kg), 5e-6 of the total.
+      expect(Math.abs(m.mass - orMass) / orMass).toBeLessThan(1e-5);
+      expect(Math.abs(m.cg - orCg) / orCg).toBeLessThan(1e-5);
+    });
+  }
+
+  it('case 8: the parachute and bulkhead sit where OpenRocket puts them, and the parachute is a recovery device', () => {
+    const rocket = probe(8);
+    // Parachute 0.050 m long, bottom −0.010: 0.150 − 0.010 − 0.050 = 0.090 m.
+    expect(rocket.components.find((c) => c.element === 'parachute')?.position).toBeCloseTo(
+      0.09,
+      12,
+    );
+    // Bulkhead 0.005 m long, bottom 0: 0.150 − 0.005 = 0.145 m.
+    expect(rocket.components.find((c) => c.element === 'bulkhead')?.position).toBeCloseTo(
+      0.145,
+      12,
+    );
+    expect(rocket.recoveryDevices).toHaveLength(1);
+  });
+});

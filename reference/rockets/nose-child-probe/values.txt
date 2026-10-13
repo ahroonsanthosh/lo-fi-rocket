@@ -1,0 +1,38 @@
+case 0: method=Top of the parent component offset=0.0100 shoulder=false structure m=0.115387874 cg=0.217727117
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.031509560 cgAbs=0.094312441
+   MassComponent absX0=0.010000000 length=0.020000 mass=0.030000000 cgAbs=0.020000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 1: method=Bottom of the parent component offset=-0.0050 shoulder=false structure m=0.115387874 cg=0.247626272
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.031509560 cgAbs=0.094312441
+   MassComponent absX0=0.125000000 length=0.020000 mass=0.030000000 cgAbs=0.135000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 2: method=Middle of the parent component offset=0.0030 shoulder=false structure m=0.115387874 cg=0.232806691
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.031509560 cgAbs=0.094312441
+   MassComponent absX0=0.068000000 length=0.020000 mass=0.030000000 cgAbs=0.078000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 3: method=Tip of the rocket offset=0.0500 shoulder=false structure m=0.115387874 cg=0.228126823
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.031509560 cgAbs=0.094312441
+   MassComponent absX0=0.050000000 length=0.020000 mass=0.030000000 cgAbs=0.060000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 4: method=Top of the parent component offset=0.0100 shoulder=true structure m=0.126999201 cg=0.213363505
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.043120887 cgAbs=0.114693120
+   MassComponent absX0=0.010000000 length=0.020000 mass=0.030000000 cgAbs=0.020000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 5: method=Bottom of the parent component offset=-0.0050 shoulder=true structure m=0.126999201 cg=0.240529031
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.043120887 cgAbs=0.114693120
+   MassComponent absX0=0.125000000 length=0.020000 mass=0.030000000 cgAbs=0.135000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 6: method=Middle of the parent component offset=0.0030 shoulder=true structure m=0.126999201 cg=0.227064379
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.043120887 cgAbs=0.114693120
+   MassComponent absX0=0.068000000 length=0.020000 mass=0.030000000 cgAbs=0.078000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 7: method=Tip of the rocket offset=0.0500 shoulder=true structure m=0.126999201 cg=0.222812384
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.043120887 cgAbs=0.114693120
+   MassComponent absX0=0.050000000 length=0.020000 mass=0.030000000 cgAbs=0.060000000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000
+case 8: method=Top of the parent component offset=0.0100 shoulder=true structure m=0.142769112 cg=0.203356708
+   NoseCone absX0=0.000000000 length=0.150000 mass=0.043120887 cgAbs=0.114693120
+   MassComponent absX0=0.010000000 length=0.020000 mass=0.030000000 cgAbs=0.020000000
+   Parachute absX0=0.090000000 length=0.050000 mass=0.012000000 cgAbs=0.115000000
+   Bulkhead absX0=0.145000000 length=0.005000 mass=0.003769911 cgAbs=0.147500000 outerRadius=0.020000
+   BodyTube absX0=0.150000000 length=0.500000 mass=0.053878314 cgAbs=0.400000000

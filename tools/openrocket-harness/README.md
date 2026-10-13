@@ -22,3 +22,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Override probe
 
 `src/OverrideProbe.java` (D-073) asks OpenRocket how it applies component mass and CG overrides; the comment at its top gives the commands. Its output and four of its `.ork` files are in `reference/rockets/override-probe/`.
+
+## Nose child probe
+
+`src/NoseChildProbe.java` (D-076) asks OpenRocket where it places components inside a nose cone. It saves each case and measures it as OpenRocket reloads the file, because a rocket built in memory keeps stale stacking positions. The comment at its top gives the commands; its output and files are in `reference/rockets/nose-child-probe/`.
