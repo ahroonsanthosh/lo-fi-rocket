@@ -1,0 +1,5 @@
+case 0: crossSection=Square finSetMass=0.032400000
+case 1: crossSection=Rounded finSetMass=0.032076000
+case 2: crossSection=Airfoil finSetMass=0.027540000
+case 3: selected configuration=config 1 (index 1 of 3)
+case 3: parachute in the selected configuration: event=Specific altitude during descent altitude=150.000 delay=0.000

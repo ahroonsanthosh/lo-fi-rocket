@@ -81,6 +81,12 @@ export interface OrkRocket {
   readonly maxBodyRadius: Metres;
   readonly motorMount: OrkMotorMount | undefined;
   readonly recoveryDevices: readonly OrkRecoveryDevice[];
+  /**
+   * What the reader chose or approximated, in plain words: the motor
+   * configuration used when the file has several (D-077), and differences
+   * from OpenRocket the user should know about.
+   */
+  readonly notices: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -431,6 +437,9 @@ class Reader {
   motorMount: OrkMotorMount | undefined;
   length = 0;
   maxBodyRadius = 0;
+  readonly notices: string[] = [];
+  /** The `configid` of the motor configuration OpenRocket selects (D-077); undefined with no configurations. */
+  private selectedConfig: string | undefined;
 
   private place(el: Element, component: Component, position: number): number {
     const massOverride = readMassOverride(el, component.kind === 'parachute');
@@ -444,17 +453,47 @@ class Reader {
     return this.components.length - 1;
   }
 
+  /**
+   * The selected configuration's ignition, from its <ignitionconfiguration> or else the mount's own
+   * elements, must be at launch with no delay: a single-stage rocket's motor starts on the pad.
+   */
+  private checkIgnition(mount: Element): void {
+    const own = mount
+      .all('ignitionconfiguration')
+      .find((n) => n.attributes['configid'] === this.selectedConfig);
+    const from = own === undefined ? mount : mount.wrap(own);
+    const event = from.optionalText('ignitionevent');
+    if (event !== undefined && event !== 'automatic' && event !== 'launch') {
+      throw from.unsupported(`motor ignition event "${event}"`);
+    }
+    const delay = from.optionalNumber('ignitiondelay');
+    if (delay !== undefined && delay !== 0) throw from.unsupported('a motor ignition delay');
+    if (own !== undefined) from.finish([]);
+  }
+
   private readMotorMount(el: Element, mountIndex: number, aftEndOfMount: number): void {
     const mount = el.optionalChild('motormount');
     if (mount === undefined) return;
     if (this.motorMount !== undefined) throw mount.unsupported('more than one motor mount');
     const motors = mount.all('motor');
-    const [first] = motors;
-    if (first === undefined || motors.length !== 1) {
-      throw mount.unsupported(`${String(motors.length)} motor configurations`);
+    // D-077: the motor of the selected configuration; a file with one configuration may omit the configid.
+    const chosen =
+      motors.length === 1 && this.selectedConfig === undefined
+        ? motors[0]
+        : motors.find((m) => m.attributes['configid'] === this.selectedConfig);
+    if (chosen === undefined) {
+      // A mount with no motor in the configuration used: the design is imported without a motor.
+      this.notices.push(
+        `The motor mount "${el.optionalText('name') ?? ''}" has no motor in the ${motors.length === 0 ? 'file' : 'default motor configuration'}: choose a motor in the motor panel.`,
+      );
+      mount.all('ignitionconfiguration');
+      for (const name of ['overhang', 'ignitionevent', 'ignitiondelay']) mount.optional(name);
+      mount.finish([]);
+      return;
     }
+    this.checkIgnition(mount);
     const overhang = mount.number('overhang');
-    const motor = mount.wrap(first);
+    const motor = mount.wrap(chosen);
     motor.requireValue('type', 'single', 'motor type other than "single"');
     this.motorMount = {
       designation: motor.text('designation'),
@@ -514,14 +553,24 @@ class Reader {
     }
     el.requireZero('cant', 'canted fins');
     el.requireZero('filletradius', 'fin fillets');
-    el.requireValue('crosssection', 'square', 'fin cross-section other than "square"');
+    const crossSection = el.optionalText('crosssection') ?? 'square';
+    if (crossSection !== 'square' && crossSection !== 'rounded' && crossSection !== 'airfoil') {
+      throw el.unsupported(`fin cross-section "${crossSection}"`);
+    }
+    if (crossSection !== 'square') {
+      // D-077: OpenRocket reduces the volume of rounded and airfoil fins (to 0.99 and 0.85 of the slab,
+      // reference/rockets/config-probe/values.txt); no source gives such factors, so the slab is kept.
+      this.notices.push(
+        `Fin set "${el.optionalText('name') ?? ''}" has ${crossSection} edges. OpenRocket makes such fins ${crossSection === 'rounded' ? '1' : '15'} % lighter than a flat slab of the same outline; this app uses the full slab (area × thickness), so the fins weigh slightly more and the CG sits slightly further aft than in OpenRocket. Use a mass override if you know the real fin mass.`,
+      );
+    }
     const rootChord = el.number('rootchord');
     const position = axialPosition(el, parent, rootChord);
     this.place(
       el,
       {
         kind: 'finSet',
-        crossSection: 'square',
+        crossSection,
         count,
         rootChord: metres(rootChord),
         tipChord: metres(el.number('tipchord')),
@@ -663,9 +712,15 @@ class Reader {
       },
       position,
     );
-    const event = el.text('deployevent');
+    // D-077: a <deploymentconfiguration> for the selected configuration replaces the parachute's own
+    // deployment elements; the other configurations' entries are not used.
+    const own = el
+      .all('deploymentconfiguration')
+      .find((n) => n.attributes['configid'] === this.selectedConfig);
+    const deploy = own === undefined ? el : el.wrap(own);
+    const event = deploy.text('deployevent');
     if (!['launch', 'ejection', 'apogee', 'altitude', 'never'].includes(event)) {
-      throw el.unsupported(`deployment event "${event}"`);
+      throw deploy.unsupported(`deployment event "${event}"`);
     }
     const cdText = el.text('cd');
     if (cdText === 'auto') throw el.unsupported('parachute drag coefficient "auto"');
@@ -675,9 +730,14 @@ class Reader {
       diameter: metres(el.number('diameter')),
       dragCoefficient: el.number('cd'),
       deployEvent: event as OrkDeployEvent,
-      deployAltitude: metres(el.number('deployaltitude')),
-      deployDelay: seconds(el.number('deploydelay')),
+      deployAltitude: metres(deploy.number('deployaltitude')),
+      deployDelay: seconds(deploy.number('deploydelay')),
     });
+    if (own !== undefined) {
+      deploy.finish([]);
+      // The parachute's own deployment elements are the other configurations' settings.
+      for (const name of ['deployevent', 'deployaltitude', 'deploydelay']) el.optional(name);
+    }
     el.finish([
       ...IGNORED_COMMON,
       ...IGNORED_ANGULAR,
@@ -853,9 +913,24 @@ class Reader {
       'maximum',
       'reference length other than the maximum body diameter',
     );
+    // D-077: OpenRocket simulates the configuration marked default="true" (config-probe case 3).
     const configs = rocket.all('motorconfiguration');
-    if (configs.length > 1)
-      throw rocket.unsupported(`${String(configs.length)} motor configurations`);
+    if (configs.length > 0) {
+      const defaults = configs.filter((c) => c.attributes['default'] === 'true');
+      const selected =
+        configs.length === 1 ? configs[0] : defaults.length === 1 ? defaults[0] : undefined;
+      if (selected === undefined) {
+        throw rocket.unsupported(
+          `${String(configs.length)} motor configurations with ${defaults.length === 0 ? 'none' : String(defaults.length)} marked as the default`,
+        );
+      }
+      this.selectedConfig = selected.attributes['configid'];
+      if (configs.length > 1) {
+        this.notices.push(
+          `This file has ${String(configs.length)} motor configurations; the default one, the configuration OpenRocket opens with, was imported. To use another, make it the default in OpenRocket and import again, or choose the motor here.`,
+        );
+      }
+    }
     const offset = rocket.optional('axialoffset');
     if (offset !== undefined && Number(offset.text) !== 0) {
       throw rocket.unsupported('a rocket axial offset');
@@ -881,6 +956,7 @@ class Reader {
       maxBodyRadius: metres(this.maxBodyRadius),
       motorMount: this.motorMount,
       recoveryDevices: this.recoveryDevices,
+      notices: this.notices,
     };
   }
 }

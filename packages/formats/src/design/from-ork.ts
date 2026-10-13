@@ -42,7 +42,7 @@ export function orkToDesign(
   id: string,
   componentId: (index: number) => string = (i) => `ork-${String(i)}`,
 ): OrkImport {
-  const notices: string[] = [];
+  const notices: string[] = [...rocket.notices];
   const components: DesignComponent[] = rocket.components.map((c, i) => ({
     id: componentId(i),
     name: c.name,
