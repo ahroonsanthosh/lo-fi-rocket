@@ -557,6 +557,8 @@ function FileTab({ onUse, onLibraryChanged }: PickerProps): JSX.Element {
   const [status, setStatus] = useState<string | undefined>(undefined);
   const id = useId();
   const importFile = async (file: File): Promise<void> => {
+    // A new import starts with no message, so the previous file's message cannot stand in for this one's.
+    setStatus(undefined);
     try {
       const text = await services.readFile(file);
       const lower = file.name.toLowerCase();
@@ -577,7 +579,7 @@ function FileTab({ onUse, onLibraryChanged }: PickerProps): JSX.Element {
         const first = motors[0];
         if (first === undefined) throw new Error(`${file.name}: no motor found`);
         definition = motorFromRse(first, file.name);
-        delays = undefined;
+        delays = first.delays;
       } else {
         throw new Error(`${file.name}: choose a .eng (RASP) or .rse (RockSim) file`);
       }

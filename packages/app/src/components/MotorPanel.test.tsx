@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App.js';
+import F39T_RSE from '../../../../reference/motors/AeroTech_F39T.rse?raw';
 import C6_ENG from '../motors/bundled/Estes_C6.eng?raw';
 import type { Storage } from '../state/autosave.js';
 
@@ -193,6 +194,50 @@ describe('MotorPanel (plan 0013)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       /could not be reached \(Failed to fetch\)/,
     );
+  });
+
+  it('a second motor file import names the second file, not the first', async () => {
+    render(
+      <App
+        storage={memory()}
+        motorStore={memory()}
+        transport={fixtureTransport()}
+        initialDesign={exampleDesign('m')}
+      />,
+    );
+    const user = await openMotorPanel();
+    await user.click(screen.getByRole('tab', { name: 'Import .eng / .rse' }));
+    const input = screen.getByLabelText('RASP .eng or RockSim .rse file');
+    await user.upload(input, new File([C6_ENG], 'first.eng', { type: 'text/plain' }));
+    expect(await screen.findByText(/first\.eng: E C6 imported and selected/)).toBeInTheDocument();
+    await user.upload(input, new File([C6_ENG], 'second.eng', { type: 'text/plain' }));
+    expect(await screen.findByText(/second\.eng: E C6 imported and selected/)).toBeInTheDocument();
+    expect(screen.queryByText(/first\.eng/)).not.toBeInTheDocument();
+  });
+
+  it('a RockSim .rse import keeps the delays the file lists (3, 6 and 9 s)', async () => {
+    render(
+      <App
+        storage={memory()}
+        motorStore={memory()}
+        transport={fixtureTransport()}
+        initialDesign={exampleDesign('m')}
+      />,
+    );
+    const user = await openMotorPanel();
+    await user.click(screen.getByRole('tab', { name: 'Import .eng / .rse' }));
+    await user.upload(
+      screen.getByLabelText('RASP .eng or RockSim .rse file'),
+      new File([F39T_RSE], 'AeroTech_F39T.rse', { type: 'text/plain' }),
+    );
+    expect(
+      await screen.findByText(/AeroTech_F39T\.rse: .* imported and selected/),
+    ).toBeInTheDocument();
+    const delay = screen.getByLabelText('Ejection delay after burnout');
+    const offered = within(delay)
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+    expect(offered.join(' ')).toMatch(/3.*6.*9/);
   });
 
   it('imports a .eng file and a custom CSV, keeping both in the library', async () => {
