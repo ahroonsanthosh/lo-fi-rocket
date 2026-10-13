@@ -4,6 +4,7 @@
  * moments of inertia are combined; the parallel axis theorem moves each
  * longitudinal inertia to the rocket CG.
  */
+import type { Approximation } from '../fidelity.js';
 import { InvalidInputError } from '../errors.js';
 import { finiteResult } from '../numerics/finite.js';
 import {
@@ -39,6 +40,11 @@ export interface PlacedComponent {
   readonly position: Metres;
   /** Optional mass and CG override (D-073). */
   readonly massOverride?: MassOverride;
+  /**
+   * What this part's entry does not represent exactly, carried with the part so that it travels
+   * with it and disappears when the part is replaced (D-083, D-084); listed in every result.
+   */
+  readonly approximations?: readonly Approximation[];
 }
 
 /** The component's own mass properties (cgX from its forward end) with any override applied (D-073). */

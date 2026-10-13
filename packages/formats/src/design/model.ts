@@ -5,6 +5,7 @@
  * plain JSON numbers. Nothing here computes physics; see to-physics.ts.
  */
 import type {
+  Approximation,
   Component,
   DragCurve,
   IntegratorOptions,
@@ -29,6 +30,8 @@ export interface DesignComponent {
   readonly component: Component;
   /** Optional mass and CG override (D-073); the CG is from the component's forward end. */
   readonly massOverride?: MassOverride;
+  /** What this part's entry does not represent exactly, e.g. from an import (D-084). */
+  readonly approximations?: readonly Approximation[];
 }
 
 /** Where a motor's data came from, for display and for refreshing from the source. */
@@ -172,6 +175,8 @@ export interface RocketDesign {
   readonly dragCurve?: DragCurve;
   readonly recordedFlight?: RecordedFlight;
   readonly dispersion?: DispersionSettingsRecord;
+  /** Approximations of the design as a whole, e.g. from an import (D-084). */
+  readonly approximations?: readonly Approximation[];
 }
 
 /** A fresh random id (RFC 4122 version 4) for designs, components and devices. */

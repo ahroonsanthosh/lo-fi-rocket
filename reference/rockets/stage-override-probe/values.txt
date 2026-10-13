@@ -1,0 +1,14 @@
+case 0: structure m=0.094350290 cg=0.306759079 Irot=3.581742297e-05 Ilong=1.808829786e-03
+case 0: stage massOverridden=false cgOverridden=false subcomponentsMass=false subcomponentsCG=false mass=0.000000000
+case 1: structure m=0.394350290 cg=0.306759079 Irot=3.581742297e-05 Ilong=1.808829786e-03
+case 1: stage massOverridden=true cgOverridden=false subcomponentsMass=false subcomponentsCG=false mass=0.300000000
+case 2: structure m=0.094350290 cg=0.306759079 Irot=3.581742297e-05 Ilong=1.808829786e-03
+case 2: stage massOverridden=false cgOverridden=true subcomponentsMass=false subcomponentsCG=false mass=0.000000000
+case 3: structure m=0.394350290 cg=0.263579895 Irot=3.581742297e-05 Ilong=2.040064489e-03
+case 3: stage massOverridden=true cgOverridden=true subcomponentsMass=false subcomponentsCG=false mass=0.300000000
+case 4: structure m=0.300000000 cg=0.306759079 Irot=3.581742297e-05 Ilong=1.808829786e-03
+case 4: stage massOverridden=true cgOverridden=false subcomponentsMass=true subcomponentsCG=false mass=0.300000000
+case 5: structure m=0.094350290 cg=0.250000000 Irot=3.581742297e-05 Ilong=2.112788027e-03
+case 5: stage massOverridden=false cgOverridden=true subcomponentsMass=false subcomponentsCG=true mass=0.000000000
+case 6: structure m=0.300000000 cg=0.250000000 Irot=3.581742297e-05 Ilong=2.112788027e-03
+case 6: stage massOverridden=true cgOverridden=true subcomponentsMass=true subcomponentsCG=true mass=0.300000000
