@@ -170,6 +170,7 @@ export interface FlightSummary {
   readonly railExitTime: number;
   readonly burnoutTime: number;
   readonly burnoutVelocity: number;
+  /** Speed at the first deployment of any recovery device, whatever its trigger (review F-1). */
   readonly deploymentVelocity: number | undefined;
   readonly deploymentTime: number | undefined;
   /** Vertical speed at landing (positive down). */
@@ -695,10 +696,15 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let apogeeReached = false;
   let liftedOff = false;
   const deployed = new Set<RecoveryDevice>();
+  // F-1: the first deployment, whatever its trigger (apogee, altitude, ejection charge, launch, delay).
+  let deployment: { t: number; v: number } | undefined;
 
   const deploy = (device: RecoveryDevice, at: number, why: string): void => {
     if (deployed.has(device)) return;
     deployed.add(device);
+    // Every caller deploys at the current state: a timed action runs at its step boundary, an event
+    // handler after the state has been advanced to the bisected crossing.
+    deployment ??= { t: at, v: norm(unpack(y).velocity) };
     const area = (Math.PI * (device.diameter as number) ** 2) / 4;
     ctx.deployedArea.area += device.dragCoefficient * area;
     events.push({
@@ -920,7 +926,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let railExit: { t: number; v: number } | undefined;
   let burnout: { t: number; v: number } | undefined;
   let apogee: { t: number; z: number } | undefined;
-  let deployment: { t: number; v: number } | undefined;
   let landing: { t: number; vz: number; speed: number; x: number; y: number } | undefined;
   let endReason: 'landing' | 'max-time' | 'model-limit' = 'max-time';
   let stopped = false;
@@ -953,8 +958,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           detail: nextTimed.detail,
         });
       if (nextTimed.kind === 'burnout') burnout = { t, v: norm(unpack(y).velocity) };
-      if (nextTimed.kind === 'deployment' && deployment === undefined && deployed.size > 0)
-        deployment = { t, v: norm(unpack(y).velocity) };
       record(true);
       continue;
     }
@@ -1172,7 +1175,6 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
             detail: `apogee ${s.position.z.toFixed(3)} m above the pad`,
           });
           scheduleDeployments('apogee', t);
-          if (deployed.size > 0 && deployment === undefined) deployment = { t, v: speed };
           break;
         case 'altitude':
           for (const device of vehicle.recovery) {
@@ -1183,22 +1185,23 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
               Math.abs(s.position.z - (device.deploy.altitude as number)) < 1e-6
             ) {
               const delay: number = device.deploy.delay;
+              // The crossing time, fixed now: `t` has moved on by the time the action runs.
+              const crossing = t;
               if (delay <= 0)
                 deploy(device, t, `descending through ${String(device.deploy.altitude)} m`);
               else
                 timed.push({
-                  time: t + delay,
+                  time: crossing + delay,
                   kind: 'deployment',
                   detail: '',
                   action: () => {
                     deploy(
                       device,
-                      t + delay,
+                      crossing + delay,
                       `${String(delay)} s after ${String(device.deploy.altitude)} m`,
                     );
                   },
                 });
-              if (deployed.size > 0 && deployment === undefined) deployment = { t, v: speed };
             }
           }
           events.push({
