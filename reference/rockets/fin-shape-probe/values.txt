@@ -1,0 +1,12 @@
+case 0: points=4 first=(0.000000, 0.000000) last=(0.100000, 0.000000) planformArea=6.000000000e-03
+case 0: fins absX0=0.500000000 mass=0.032400000 cgAbs=0.561111111 Irot_unit=3.957050808e-03 Ilong_unit=2.603525404e-03
+case 0: fin set CP x=0.541578014 CNa=15.450582104
+case 0: rocket worst CP x=0.487148730 CNa=17.450582104 structure m=0.096750290 cg=0.390932246
+case 1: points=31 first=(0.000000, 0.000000) last=(0.100000, 0.000000) planformArea=6.271707796e-03
+case 1: fins absX0=0.500000000 mass=0.033867222 cgAbs=0.550000000 Irot_unit=4.068289650e-03 Ilong_unit=2.687447721e-03
+case 1: fin set CP x=0.528729752 CNa=15.876938183
+case 1: rocket worst CP x=0.477035991 CNa=17.876938183 structure m=0.098217512 cg=0.389643145
+case 2: points=5 first=(0.000000, 0.000000) last=(0.120000, 0.000000) planformArea=5.900000000e-03
+case 2: fins absX0=0.480000000 mass=0.031860000 cgAbs=0.539887006 Irot_unit=3.504018421e-03 Ilong_unit=2.489509211e-03
+case 2: fin set CP x=0.517811702 CNa=15.400517802
+case 2: rocket worst CP x=0.465957494 CNa=17.400517802 structure m=0.096210290 cg=0.382948728

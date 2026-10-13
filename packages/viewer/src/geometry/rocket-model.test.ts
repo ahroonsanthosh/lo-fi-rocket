@@ -59,10 +59,10 @@ describe('rocketModelParts (R1 by hand, reference/rockets/README.md)', () => {
     expect(fins).toHaveLength(3);
     for (const f of fins) {
       expect(f.corners[0]).toEqual([0.5, 0.025]);
-      expect(f.corners[1][0]).toBeCloseTo(0.55, 15);
-      expect(f.corners[1][1]).toBeCloseTo(0.105, 15);
-      expect(f.corners[2][0]).toBeCloseTo(0.6, 15);
-      expect(f.corners[2][1]).toBeCloseTo(0.105, 15);
+      expect(f.corners[1]?.[0]).toBeCloseTo(0.55, 15);
+      expect(f.corners[1]?.[1]).toBeCloseTo(0.105, 15);
+      expect(f.corners[2]?.[0]).toBeCloseTo(0.6, 15);
+      expect(f.corners[2]?.[1]).toBeCloseTo(0.105, 15);
       expect(f.corners[3]).toEqual([0.6, 0.025]);
       expect(f.thickness).toBe(0.003);
     }
@@ -204,6 +204,59 @@ describe('three.js geometry', () => {
     expect(pos.getZ(1)).toBeCloseTo(0.0015, 6);
     // Vertex 5 (the same corner, −side): z = −0.0015.
     expect(pos.getZ(5)).toBeCloseTo(-0.0015, 6);
+  });
+
+  it('finGeometry: a trapezoid is two quads and four rim quads; any outline is wound as the trapezoid', () => {
+    const trapezoid = finGeometry({
+      kind: 'fin',
+      name: 'f',
+      finIndex: 0,
+      corners: [
+        [0.5, 0.025],
+        [0.55, 0.105],
+        [0.6, 0.105],
+        [0.6, 0.025],
+      ],
+      thickness: 0.003,
+      angle: 0,
+    });
+    // 2 triangles a side and 2 per rim edge: (2 + 2 + 8) × 3 indices, as the four-corner plate had.
+    expect(trapezoid.index?.count).toBe(36);
+    // Plan 0059: a concave freeform outline and a 48-segment half ellipse.
+    const concave: FinPart['corners'] = [
+      [0.5, 0.025],
+      [0.52, 0.1],
+      [0.55, 0.06],
+      [0.58, 0.1],
+      [0.6, 0.025],
+    ];
+    const ellipse = rocketModelParts(
+      R1_COMPONENTS.map((c) =>
+        c.component.kind === 'finSet'
+          ? { ...c, component: { ...c.component, shape: { kind: 'elliptical' as const } } }
+          : c,
+      ),
+    ).find((p): p is FinPart => p.kind === 'fin');
+    expect(ellipse?.corners).toHaveLength(49);
+    for (const corners of [concave, ellipse?.corners ?? []]) {
+      const g = finGeometry({
+        kind: 'fin',
+        name: 'f',
+        finIndex: 0,
+        corners,
+        thickness: 0.003,
+        angle: 0,
+      });
+      const m = corners.length;
+      // (m − 2) triangles a side, 2 per rim edge.
+      expect(g.index?.count).toBe(3 * (2 * (m - 2) + 2 * m));
+      // Wound as the four-corner plate (whose +z side faces −z; the material is double-sided), so
+      // the lighting is unchanged.
+      const normal = g.getAttribute('normal');
+      const reference = trapezoid.getAttribute('normal');
+      expect(Math.sign(normal.getZ(0))).toBe(Math.sign(reference.getZ(0)));
+      expect(Math.sign(normal.getZ(m))).toBe(Math.sign(reference.getZ(4)));
+    }
   });
 
   it('buildRocketObject makes one mesh per part, origin at the nose tip, and reports the extent', () => {

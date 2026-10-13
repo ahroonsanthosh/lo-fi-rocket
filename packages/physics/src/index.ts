@@ -166,6 +166,7 @@ export {
   type RocketMassProperties,
 } from './geometry/assembly.js';
 export {
+  finOutline,
   finPlanform,
   trapezoidOf,
   type FinPlanform,

@@ -66,3 +66,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Cluster probe
 
 `src/ClusterProbe.java` (plan 0057) prints OpenRocket's motor cluster layouts and measures a rocket with one Estes D12 and with three in a "3-ring" (plain, rotated and scaled, and with a mass override on the tubes): offsets, mass, CG and inertias of the structure and the motors, and a flight with the reference harness's settings; output in `reference/rockets/cluster-probe/`. Compile it with `src/ReferenceHarness.java`.
+
+## Fin shape probe
+
+`src/FinShapeProbe.java` (plan 0059) measures trapezoidal, elliptical and freeform fin sets on the same rocket: the fins' mass, CG, inertias, planform area and outline, and the fin set's and the rocket's CP and C_Nα at Mach 0.3; output in `reference/rockets/fin-shape-probe/`.

@@ -431,3 +431,35 @@ export function trapezoidOf<T extends FinPlanformInput>(fin: T): T {
   EQUIVALENT.set(fin, t);
   return t;
 }
+
+/**
+ * The outline of one fin for drawing (plan 0059), (x, y) from the root leading edge, round from
+ * (0, 0) to (c_r, 0): the trapezoid's four corners, the freeform points, or `segments` + 1 points
+ * on the half ellipse. Drawing only: the models read `finPlanform`.
+ */
+export function finOutline(
+  fin: FinPlanformInput,
+  segments = 48,
+): readonly (readonly [number, number])[] {
+  const cr: number = fin.rootChord;
+  const s: number = fin.span;
+  if (fin.shape === undefined) {
+    const xt: number = fin.sweep;
+    const ct: number = fin.tipChord;
+    return [
+      [0, 0],
+      [xt, s],
+      [xt + ct, s],
+      [cr, 0],
+    ];
+  }
+  if (fin.shape.kind === 'freeform') return fin.shape.points.map((p) => [p.x, p.y] as const);
+  const out: (readonly [number, number])[] = [];
+  for (let i = 0; i <= segments; i++) {
+    const theta = Math.PI - (Math.PI * i) / segments;
+    out.push([(cr / 2) * (1 + Math.cos(theta)), s * Math.sin(theta)]);
+  }
+  out[0] = [0, 0];
+  out[segments] = [cr, 0];
+  return out;
+}

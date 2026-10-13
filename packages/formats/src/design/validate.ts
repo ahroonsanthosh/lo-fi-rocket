@@ -8,6 +8,7 @@
  */
 import {
   type Approximation,
+  type FinShape,
   type DragCurve,
   kelvin,
   kilograms,
@@ -259,11 +260,46 @@ function component(c: Ctx, path: string, v: unknown): Component {
           'density',
           'bodyRadius',
         ],
-        ['crossSection', 'shearModulus'],
+        ['crossSection', 'shearModulus', 'tab', 'shape'],
       );
       const crossSection = opt('crossSection', (x) =>
         c.oneOf(`${path}.crossSection`, x, FIN_SECTIONS),
       );
+      // D-081: a fin tab; the physics checks its sizes against the fin and body.
+      const tab = opt('tab', (x) => {
+        const t = c.object(`${path}.tab`, x);
+        c.keys(`${path}.tab`, t, ['height', 'length', 'foreOffset']);
+        return {
+          height: metres(c.number(`${path}.tab.height`, t['height'])),
+          length: metres(c.number(`${path}.tab.length`, t['length'])),
+          foreOffset: metres(c.number(`${path}.tab.foreOffset`, t['foreOffset'])),
+        };
+      });
+      // D-087: an elliptical or freeform planform; the physics checks the outline against the root and span.
+      const shape = opt('shape', (x): FinShape => {
+        const sh = c.object(`${path}.shape`, x);
+        const shapeKind = c.oneOf(`${path}.shape.kind`, sh['kind'], [
+          'elliptical',
+          'freeform',
+        ] as const);
+        if (shapeKind === 'elliptical') {
+          c.keys(`${path}.shape`, sh, ['kind']);
+          return { kind: 'elliptical' };
+        }
+        c.keys(`${path}.shape`, sh, ['kind', 'points']);
+        return {
+          kind: 'freeform',
+          points: c.array(`${path}.shape.points`, sh['points']).map((item, i) => {
+            const pp = `${path}.shape.points[${String(i)}]`;
+            const pt = c.object(pp, item);
+            c.keys(pp, pt, ['x', 'y']);
+            return {
+              x: metres(c.number(`${pp}.x`, pt['x'])),
+              y: metres(c.number(`${pp}.y`, pt['y'])),
+            };
+          }),
+        };
+      });
       const shearModulus = opt('shearModulus', (x) => {
         const g = c.number(`${path}.shearModulus`, x);
         if (!(g > 0)) c.fail(`${path}.shearModulus`, 'must be greater than 0 Pa');
@@ -281,6 +317,8 @@ function component(c: Ctx, path: string, v: unknown): Component {
         bodyRadius: metres(m('bodyRadius')),
         ...(crossSection === undefined ? {} : { crossSection }),
         ...(shearModulus === undefined ? {} : { shearModulus }),
+        ...(tab === undefined ? {} : { tab }),
+        ...(shape === undefined ? {} : { shape }),
       };
     }
     case 'railButton': {

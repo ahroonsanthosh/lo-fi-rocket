@@ -4,7 +4,7 @@
  * so the tests can check it without rendering. Nose and transition
  * outlines come from the physics profiles (GEO-1, GEO-2).
  */
-import { noseProfile, transitionProfile, type Component } from '@lo-fi-rocket/physics';
+import { finOutline, noseProfile, transitionProfile, type Component } from '@lo-fi-rocket/physics';
 import type { DesignComponent } from '@lo-fi-rocket/formats';
 
 export interface Shape {
@@ -115,16 +115,12 @@ export function componentShapes(components: readonly DesignComponent[]): Shape[]
           out.push(rect(d.id, c.kind, x0, c.length, 0, c.radius, false));
           break;
         case 'finSet': {
+          // Plan 0059: the trapezoid's corners, or the elliptical or freeform outline.
           const r: number = c.bodyRadius;
           out.push({
             id: d.id,
             kind: c.kind,
-            points: [
-              [x0, r],
-              [x0 + c.sweep, r + c.span],
-              [x0 + c.sweep + c.tipChord, r + c.span],
-              [x0 + c.rootChord, r],
-            ],
+            points: finOutline(c).map(([x, y]) => [x0 + x, r + y] as [number, number]),
             external: false,
             mirror: true,
           });

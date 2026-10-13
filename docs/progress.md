@@ -97,6 +97,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - D-085: `.ork` fin cant read in degrees (CantProbe); the cant approximation now states the real angle. OpenRocket's example designs: 10 of 17 import (multi-stage and clusters remain).
   - Step 3 part 2a (plan 0057, D-086): motor clusters in the physics (GEO-15, n motors' thrust and base area), the design file and the `.ork` import; three D12s against OpenRocket: mass and CG within 1e-5, apogee +1.0 %, maximum velocity +0.4 %. OpenRocket's "Clustered motors" example imports (11 of 17).
   - Step 2 physics (plan 0058, D-087): elliptical and freeform fins by Niskanen's general-planform method (BAR-18, GEO-16); trapezoids unchanged; the trapezoid-only methods use an equivalent trapezoid (listed, minor). Next: their `.ork` import and app display (plan 0059).
+  - Step 2 import and display (plan 0059, D-088): elliptical and freeform fin sets from `.ork` files (CP within 0.13 % of OpenRocket), saved in the design file with fin tabs (which could not be loaded back before), drawn in the side view and 3D, chosen in the editor. OpenRocket's examples: 11 of 17 import; the rest are multi-stage or air-start (a decision for the owner, below).
 
 ## In progress
 
@@ -116,6 +117,8 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Tag `v1.0.0`; pull request from `claude/v1-completion` into `main`.
 
 ## Open questions
+
+- **Multi-stage designs (plan 0055 step 3).** The sourced model (Niskanen Table 4.2, p. 69) ignites motors at launch, at another motor's burnout or ejection charge, with a delay, on one body; the thesis has no separation event, and CLAUDE.md lists separation events as a version-1 non-goal. Options: (a) fly the stack as one body with motors igniting in turn, the spent stage carried to apogee (listed as major: apogee shown low); (b) also drop the spent stage at separation, as OpenRocket does (needs the non-goal changed). Recommendation: (b), with (a) as its first step.
 
 At v1.0 these are open. Resolved earlier: gravity latitude (D-060), the large-angle force (D-070), and the transonic models (D-055, D-056).
 
