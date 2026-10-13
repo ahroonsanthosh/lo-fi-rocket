@@ -583,3 +583,10 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** The owner's goal (D-083): any file imports and flies. These were the refusals of parts inside the rocket and of part settings. The impact ratings take the cautious side where unknown; the black-box probes make two items exact instead of approximated.
 - **Alternatives:** Drop unreadable parts silently (rejected: rule 3); keep refusing until each model exists (rejected by the owner, D-083); apply stage overrides by scaling every part's mass at import (rejected for now: it spreads one figure over every part of the user's design; a design-level measured-mass override is the next step).
 - **Consequences:** Files that were refused for these features import, with their approximations shown under the results and a confidence rating. Still refused, for the next step (plan 0056 part 2): parts outside the body (pods, booster sets, more than one stage), flipped nose cones, unknown nose shapes, a bare "auto" radius on an outer part, non-bulk materials on outer parts, motor clusters, more than one motor mount, ignition delays and events, other reference lengths and other format versions.
+
+## D-085 (2026-10-13): .ork fin cant is in degrees
+
+- **Decision:** The reader takes `<cant>` in degrees. The cant approximation of D-084 states the file's value as written.
+- **Why:** D-084 converted it as radians, so OpenRocket's example "Simulation scripting" was listed with a 57.3° cant for a 1° one. Observed as a black box (CLAUDE.md 3) with `tools/openrocket-harness/src/CantProbe.java`: a fin set canted 2° is written `<cant>2.0</cant>` and read back as 0.034906585 rad (reference/rockets/cant-probe/values.txt). The cant enters only the listed text until roll forcing is modelled (plan 0055 step 6), so no result changed.
+- **Alternatives:** none; the probe settles it.
+- **Consequences:** Canted fins are listed with their real angle.

@@ -495,7 +495,8 @@ describe('inputs are refused, reported as malformed or approximated, by element 
     // D-084: cant and fillets are listed as minor and the fins kept as they are otherwise.
     const canted = approximated(
       edit(r1, '<cant>0.0</cant>', '<cant>0.1</cant>'),
-      /Fin set "Fins \(3\)": the fins’ 5\.7° cant/,
+      // OpenRocket writes degrees (D-085): 0.1 in the file is 0.1°.
+      /Fin set "Fins \(3\)": the fins’ 0\.1° cant/,
       'minor',
     );
     const fins = (r: OrkRocket): OrkPlacedComponent | undefined =>
