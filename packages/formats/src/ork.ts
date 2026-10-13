@@ -23,6 +23,7 @@ import {
   type Approximation,
   type ClusterOffset,
   type Component,
+  type FinShape,
   type FinTab,
   type KilogramsPerCubicMetre,
   type MassOverride,
@@ -486,6 +487,68 @@ function readShoulder(
  * less half the tab, or from the root's end less the tab (reference/rockets/tab-probe/values.txt:
  * 0.01, 0.03 and 0.05 m for an offset of 0.01 m, a 0.1 m root and a 0.06 m tab).
  */
+/**
+ * The planform of a trapezoidal, elliptical or freeform fin set (plan 0059, D-087). An elliptical
+ * set is `<rootchord>` and `<height>`; a freeform set is its `<finpoints>`, `<point x= y=>` from the
+ * root leading edge (0, 0) round to the root trailing edge, x aft and y outward
+ * (reference/rockets/fin-shape-probe: OpenRocket writes the points it was given). The tip chord and
+ * sweep of a shaped set describe nothing and are written as 0.
+ */
+function readFinPlanform(el: Element): {
+  rootChord: number;
+  tipChord: number;
+  sweep: number;
+  span: number;
+  shape?: FinShape;
+} {
+  switch (el.node.name) {
+    case 'ellipticalfinset':
+      return {
+        rootChord: el.number('rootchord'),
+        tipChord: 0,
+        sweep: 0,
+        span: el.number('height'),
+        shape: { kind: 'elliptical' },
+      };
+    case 'freeformfinset': {
+      const list = el.child('finpoints');
+      const points = list.all('point').map((p, i) => {
+        const read = (axis: 'x' | 'y'): number => {
+          const text = p.attributes[axis];
+          if (text === undefined || !NUMBER.test(text)) {
+            throw list.parseError(
+              `<point> ${String(i + 1)} has no number in its ${axis} attribute`,
+            );
+          }
+          return Number(text);
+        };
+        return { x: metres(read('x')), y: metres(read('y')) };
+      });
+      list.finish([]);
+      const last = points.at(-1);
+      if (points.length < 3 || last === undefined) {
+        throw el.parseError(
+          `<finpoints> has ${String(points.length)} points, at least 3 are needed`,
+        );
+      }
+      return {
+        rootChord: last.x,
+        tipChord: 0,
+        sweep: 0,
+        span: Math.max(...points.map((p) => p.y as number)),
+        shape: { kind: 'freeform', points },
+      };
+    }
+    default:
+      return {
+        rootChord: el.number('rootchord'),
+        tipChord: el.number('tipchord'),
+        sweep: el.number('sweeplength'),
+        span: el.number('height'),
+      };
+  }
+}
+
 function readFinTab(el: Element, rootChord: number): FinTab | undefined {
   const height = el.optionalNumber('tabheight') ?? 0;
   const length = el.optionalNumber('tablength') ?? 0;
@@ -1061,6 +1124,8 @@ class Reader {
           const el = subcomponents.wrap(node);
           switch (node.name) {
             case 'trapezoidfinset':
+            case 'ellipticalfinset':
+            case 'freeformfinset':
               this.readFinSet(el, parent);
               break;
             case 'launchlug':
@@ -1151,19 +1216,20 @@ class Reader {
     }
     const crossSection = known ? written : 'square';
     // Rounded and airfoil fins: the slab mass is listed by the physics (D-077, D-083).
-    const rootChord = el.number('rootchord');
-    const position = axialPosition(el, parent, rootChord);
-    const tab = readFinTab(el, rootChord);
+    const planform = readFinPlanform(el);
+    const position = axialPosition(el, parent, planform.rootChord);
+    const tab = readFinTab(el, planform.rootChord);
     this.place(
       el,
       {
         kind: 'finSet',
         crossSection,
         count,
-        rootChord: metres(rootChord),
-        tipChord: metres(el.number('tipchord')),
-        sweep: metres(el.number('sweeplength')),
-        span: metres(el.number('height')),
+        rootChord: metres(planform.rootChord),
+        tipChord: metres(planform.tipChord),
+        sweep: metres(planform.sweep),
+        span: metres(planform.span),
+        ...(planform.shape === undefined ? {} : { shape: planform.shape }),
         thickness: metres(el.number('thickness')),
         density: el.bulkDensity(),
         bodyRadius: metres(parent.radius),

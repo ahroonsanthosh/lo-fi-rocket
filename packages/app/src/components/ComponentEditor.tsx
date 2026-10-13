@@ -4,13 +4,13 @@ import type {
   NoseShape,
   TrapezoidFinSetComponent,
 } from '@lo-fi-rocket/physics';
-import { metres, pascals, TN4197_MATERIALS, type Metres } from '@lo-fi-rocket/physics';
+import { metres, pascals, TN4197_MATERIALS, trapezoidOf, type Metres } from '@lo-fi-rocket/physics';
 import type { DesignComponent } from '@lo-fi-rocket/formats';
 import { useId, type JSX } from 'react';
 import { COMPONENT_LABELS } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
 import { IntegerField, QuantityField, type FieldRule } from './QuantityField.js';
-import type { QuantityKind } from '../units/display.js';
+import { formatQuantity, type QuantityKind } from '../units/display.js';
 
 /** The fin set without a shear modulus (flutter not checked). */
 function withoutShearModulus(c: TrapezoidFinSetComponent): TrapezoidFinSetComponent {
@@ -19,6 +19,30 @@ function withoutShearModulus(c: TrapezoidFinSetComponent): TrapezoidFinSetCompon
   };
   delete copy.shearModulus;
   return copy;
+}
+
+/**
+ * Plan 0059, D-087: a fin set made elliptical keeps its root chord and span; one made trapezoidal
+ * from another shape becomes its equivalent trapezoid (same span, root chord, area and CP).
+ */
+export function withPlanform(
+  c: TrapezoidFinSetComponent,
+  kind: 'trapezoidal' | 'elliptical',
+): TrapezoidFinSetComponent {
+  if (kind === 'elliptical') {
+    return { ...c, tipChord: metres(0), sweep: metres(0), shape: { kind: 'elliptical' } };
+  }
+  return trapezoidOf(c);
+}
+
+/** The editable sizes: a shaped fin's tip chord and sweep describe nothing; a freeform outline sets its root and span. */
+export function fieldsOf(c: Component): readonly NumField[] {
+  if (c.kind !== 'finSet' || c.shape === undefined) return FIELDS[c.kind];
+  const hidden =
+    c.shape.kind === 'freeform'
+      ? ['rootChord', 'tipChord', 'sweep', 'span']
+      : ['tipChord', 'sweep'];
+  return FIELDS.finSet.filter((f) => !hidden.includes(f.key));
 }
 
 const NOSE_SHAPES: readonly { value: NoseShape; label: string }[] = [
@@ -148,6 +172,7 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
   const nameId = useId();
   const shapeId = useId();
   const sectionId = useId();
+  const planformId = useId();
   const materialId = useId();
   const hollowId = useId();
   const update = (component: Component): void => {
@@ -270,7 +295,36 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
           }}
         />
       ) : null}
-      {FIELDS[c.kind].map((f) => (
+      {c.kind === 'finSet' ? (
+        <div className="field">
+          <label htmlFor={planformId}>Fin shape</label>
+          <div className="field-input">
+            <select
+              id={planformId}
+              value={c.shape?.kind ?? 'trapezoidal'}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'trapezoidal' || v === 'elliptical') update(withPlanform(c, v));
+              }}
+            >
+              <option value="trapezoidal">Trapezoidal</option>
+              <option value="elliptical">Elliptical</option>
+              {c.shape?.kind === 'freeform' ? (
+                <option value="freeform">Freeform outline (from the imported file)</option>
+              ) : null}
+            </select>
+          </div>
+        </div>
+      ) : null}
+      {c.kind === 'finSet' && c.shape?.kind === 'freeform' ? (
+        <p className="muted small">
+          An outline of {c.shape.points.length} points: root chord{' '}
+          {formatQuantity(c.rootChord, 'mm', units)}, span {formatQuantity(c.span, 'mm', units)}.
+          Choose Trapezoidal to edit the sizes: the fins become the trapezoid with the same span,
+          root chord, area and centre of pressure.
+        </p>
+      ) : null}
+      {fieldsOf(c).map((f) => (
         <QuantityField
           key={f.key}
           label={f.label}

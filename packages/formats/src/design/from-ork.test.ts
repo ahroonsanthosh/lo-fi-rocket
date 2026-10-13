@@ -6,7 +6,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { seconds, simulateFlight } from '@lo-fi-rocket/physics';
+import { rocketMassProperties, seconds, simulateFlight } from '@lo-fi-rocket/physics';
 import { strFromU8, unzipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import { parseEng } from '../eng.js';
@@ -228,5 +228,83 @@ describe('motor clusters from .ork files (plan 0057)', () => {
     expect(parseDesign(serializeDesign(design))).toEqual(design);
     const text = serializeDesign(design).replace(/"cluster": \[[^\]]*\]/s, '"cluster": []');
     expect(() => parseDesign(text)).toThrow(/cluster/);
+  });
+});
+
+/**
+ * Elliptical and freeform fin sets (plan 0059, D-087) against OpenRocket's figures for the files
+ * it wrote (reference/rockets/fin-shape-probe/values.txt); fin tabs and shapes survive a save and
+ * load.
+ */
+describe('elliptical and freeform fins from .ork files (plan 0059)', () => {
+  const probe = (n: number) => ork(join('fin-shape-probe', `fins${String(n)}`));
+  const fins = (r: ReturnType<typeof probe>) => {
+    const f = r.components.find((c) => c.component.kind === 'finSet');
+    if (f?.component.kind !== 'finSet') throw new Error('fins expected');
+    return { position: f.position, component: f.component };
+  };
+  const cp = (n: number): number =>
+    designStability(
+      orkToDesign(probe(n), library, `fins${String(n)}`).design,
+      'openrocket-equivalent',
+    ).result.centreOfPressure.cp;
+  const relative = (ours: number, theirs: number): number => Math.abs(ours / theirs - 1);
+
+  it('the shapes are read from the file', () => {
+    expect(fins(probe(0)).component.shape).toBeUndefined();
+    expect(fins(probe(1)).component).toMatchObject({
+      rootChord: 0.1,
+      span: 0.08,
+      shape: { kind: 'elliptical' },
+    });
+    expect(fins(probe(2)).component).toMatchObject({
+      rootChord: 0.12,
+      span: 0.08,
+      shape: {
+        kind: 'freeform',
+        points: [
+          { x: 0, y: 0 },
+          { x: 0.03, y: 0.06 },
+          { x: 0.07, y: 0.08 },
+          { x: 0.1, y: 0.04 },
+          { x: 0.12, y: 0 },
+        ],
+      },
+    });
+    expect(fins(probe(2)).position).toBeCloseTo(0.48, 12);
+  });
+
+  it('mass and CG: the freeform set exactly as OpenRocket, the ellipse 0.18 % above its polygon', () => {
+    // Freeform: 3 × 0.003 × 600 × 5.9e-3 m² (shoelace) = 0.03186 kg at 0.539887006 m (OpenRocket).
+    const free = rocketMassProperties([fins(probe(2))]);
+    expect(free.mass).toBeCloseTo(0.03186, 12);
+    expect(free.cg).toBeCloseTo(0.539887006, 9);
+    // Ellipse: 5.4 × π 0.1 × 0.08/4 = 0.0339292 kg; OpenRocket's 31-point polygon has 6.2717e-3 m²,
+    // 0.0338672 kg (values.txt). The CG, at mid-chord, is 0.55 m in both.
+    const ellipse = rocketMassProperties([fins(probe(1))]);
+    expect(ellipse.mass).toBeCloseTo((5.4 * Math.PI * 0.008) / 4, 12);
+    expect(relative(ellipse.mass, 0.033867222)).toBeLessThan(0.002);
+    expect(ellipse.cg).toBeCloseTo(0.55, 12);
+  });
+
+  it('the rocket CP within 2 % of OpenRocket (CLAUDE.md 7.4), as close as the trapezoid', () => {
+    // OpenRocket's worst-case CP at Mach 0.3: 0.487148730, 0.477035991, 0.465957494 m.
+    expect(relative(cp(0), 0.48714873)).toBeLessThan(0.0005);
+    expect(relative(cp(1), 0.477035991)).toBeLessThan(0.0005);
+    expect(relative(cp(2), 0.465957494)).toBeLessThan(0.002);
+  });
+
+  it('a design with fin tabs or a fin shape saves and loads', () => {
+    for (const file of [
+      join('tab-probe', 'tab1'),
+      join('fin-shape-probe', 'fins1'),
+      join('fin-shape-probe', 'fins2'),
+    ]) {
+      const { design } = orkToDesign(ork(file), library, 'd');
+      expect(parseDesign(serializeDesign(design))).toEqual(design);
+    }
+    const { design } = orkToDesign(probe(1), library, 'd');
+    const text = serializeDesign(design).replace('"kind": "elliptical"', '"kind": "oval"');
+    expect(() => parseDesign(text)).toThrow(/shape\.kind/);
   });
 });

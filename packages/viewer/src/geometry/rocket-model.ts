@@ -13,7 +13,7 @@
  * design, so they are drawn at +z (90° from fin 1). Internal components
  * (inner tubes, rings, bulkheads, masses, packed parachutes) are not drawn.
  */
-import { noseProfile, transitionProfile, type Component } from '@lo-fi-rocket/physics';
+import { finOutline, noseProfile, transitionProfile, type Component } from '@lo-fi-rocket/physics';
 import {
   BufferAttribute,
   BufferGeometry,
@@ -22,7 +22,9 @@ import {
   Group,
   Mesh,
   MeshPhysicalMaterial,
+  ShapeUtils,
   SRGBColorSpace,
+  Vector2,
   type Material,
 } from 'three';
 
@@ -43,8 +45,11 @@ export interface FinPart {
   readonly kind: 'fin';
   readonly name: string;
   readonly finIndex: number;
-  /** Planform corners (x, r) in the fin's half-plane: root leading edge, tip leading edge, tip trailing edge, root trailing edge. */
-  readonly corners: readonly [OutlinePoint, OutlinePoint, OutlinePoint, OutlinePoint];
+  /**
+   * Planform outline (x, r) in the fin's half-plane, from the root leading edge round to the root
+   * trailing edge: a trapezoid's four corners, or an elliptical or freeform outline (plan 0059).
+   */
+  readonly corners: readonly OutlinePoint[];
   readonly thickness: number;
   /** Angle of the fin's half-plane about +x from +y towards +z. */
   readonly angle: number;
@@ -165,12 +170,9 @@ export function rocketModelParts(
         case 'finSet': {
           const n = Math.max(1, Math.round(c.count));
           const r: number = c.bodyRadius;
-          const corners: FinPart['corners'] = [
-            [x0, r],
-            [x0 + c.sweep, r + c.span],
-            [x0 + c.sweep + c.tipChord, r + c.span],
-            [x0 + c.rootChord, r],
-          ];
+          const corners: FinPart['corners'] = finOutline(c).map(
+            ([x, y]) => [x0 + x, r + y] as OutlinePoint,
+          );
           for (let k = 0; k < n; k++) {
             out.push({
               kind: 'fin',
@@ -280,7 +282,8 @@ export function finGeometry(fin: FinPart): BufferGeometry {
   const u = [0, Math.cos(fin.angle), Math.sin(fin.angle)] as const; // radial direction
   const n = [0, -Math.sin(fin.angle), Math.cos(fin.angle)] as const; // plate normal
   const h = fin.thickness / 2;
-  const positions = new Float32Array(8 * 3);
+  const m = fin.corners.length;
+  const positions = new Float32Array(2 * m * 3);
   let k = 0;
   for (const side of [1, -1] as const) {
     for (const [x, r] of fin.corners) {
@@ -289,11 +292,39 @@ export function finGeometry(fin: FinPart): BufferGeometry {
       positions[k++] = r * u[2] + side * h * n[2];
     }
   }
-  // Faces: top (0..3), bottom (4..7) and the four edges.
-  const indices = [
-    0, 1, 2, 0, 2, 3, 4, 6, 5, 4, 7, 6, 0, 4, 5, 0, 5, 1, 1, 5, 6, 1, 6, 2, 2, 6, 7, 2, 7, 3, 3, 7,
-    4, 3, 4, 0,
-  ];
+  // Faces: the outline triangulated on each side (ear clipping, so concave freeform fins draw
+  // right), and two triangles per outline edge round the rim.
+  const faces = ShapeUtils.triangulateShape(
+    fin.corners.map(([x, r]) => new Vector2(x, r)),
+    [],
+  );
+  // Each triangle wound as the outline is (as the four-corner plate was), so that the normals of
+  // the two sides point outward whatever order the triangulation returns.
+  const at = (i: number): OutlinePoint => fin.corners[i] ?? [0, 0];
+  const signed = (a: number, b: number, c: number): number => {
+    const [ax, ar] = at(a);
+    const [bx, br] = at(b);
+    const [cx, cr] = at(c);
+    return (bx - ax) * (cr - ar) - (cx - ax) * (br - ar);
+  };
+  let outline = 0;
+  for (let i = 0; i < m; i++) {
+    const [x0, r0] = at(i);
+    const [x1, r1] = at((i + 1) % m);
+    outline += x0 * r1 - x1 * r0;
+  }
+  const indices: number[] = [];
+  for (const face of faces) {
+    const [a = 0, b0 = 0, c0 = 0] = face;
+    const flip = Math.sign(signed(a, b0, c0)) !== Math.sign(outline);
+    const b = flip ? c0 : b0;
+    const c = flip ? b0 : c0;
+    indices.push(a, b, c, m + a, m + c, m + b);
+  }
+  for (let i = 0; i < m; i++) {
+    const j = (i + 1) % m;
+    indices.push(i, m + i, m + j, i, m + j, j);
+  }
   const g = new BufferGeometry();
   g.setAttribute('position', new BufferAttribute(positions, 3));
   g.setIndex(indices);
