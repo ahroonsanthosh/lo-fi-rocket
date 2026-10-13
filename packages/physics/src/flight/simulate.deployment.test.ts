@@ -91,3 +91,34 @@ describe('summary deployment time and velocity (review F-1)', () => {
     expect(r.summary.deploymentVelocity).toBeLessThan(1e-6);
   });
 });
+
+describe('deployment velocity is the airspeed (review F-3)', () => {
+  // Wind blowing towards +x at 10 m/s (the review's case). At apogee in still air the rocket has no
+  // velocity relative to the ground or the air; in wind it drifts with less than the wind speed, so the
+  // airspeed |v − v_wind| exceeds the ground speed.
+  const windy: SimulationOptions = {
+    ...OPTIONS,
+    wind: { kind: 'vector', velocity: { x: 10, y: 0, z: 0 } },
+  };
+  const r = simulateFlight(vehicle({ event: 'apogee', delay: seconds(0) }, 5), windy);
+
+  it('equals |v − v_wind| at the deployment instant, not |v|', () => {
+    const sample = r.samples.find(
+      (s) => Math.abs((s.time as number) - (r.summary.deploymentTime ?? Number.NaN)) < 1e-12,
+    );
+    expect(sample).toBeDefined();
+    const v = sample?.velocity ?? { x: Number.NaN, y: 0, z: 0 };
+    const air = Math.hypot(v.x - 10, v.y, v.z);
+    expect(r.summary.deploymentVelocity).toBeCloseTo(air, 9);
+    expect(Math.abs((r.summary.deploymentVelocity ?? 0) - norm(v))).toBeGreaterThan(1);
+  });
+
+  it('descent samples report the airspeed, not the ground speed', () => {
+    const descent = r.samples.filter((s) => s.phase === 'descent');
+    expect(descent.length).toBeGreaterThan(10);
+    for (const s of descent) {
+      const v = s.velocity;
+      expect(s.airspeed).toBeCloseTo(Math.hypot(v.x - 10, v.y, v.z), 9);
+    }
+  });
+});
