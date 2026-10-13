@@ -30,7 +30,7 @@ import {
   type Seconds,
   type Shoulder,
 } from '@lo-fi-rocket/physics';
-import { OrkParseError, OrkUnsupportedError } from './errors.js';
+import { OrkParseError, OrkUnsupportedError, OrkUnsupportedFeaturesError } from './errors.js';
 import { NUMBER, parseXmlRoots, XmlSyntaxError, type XmlNode } from './xml.js';
 
 // ---------------------------------------------------------------------------
@@ -558,6 +558,23 @@ class Reader {
   length = 0;
   maxBodyRadius = 0;
   readonly notices: string[] = [];
+  /** Unsupported features met so far; reading goes on past them to list them all (D-082). */
+  readonly problems: OrkUnsupportedError[] = [];
+
+  /**
+   * Read one child, recording an unsupported feature instead of stopping, so that the remaining
+   * children are still checked (D-082). Malformed input still stops at once.
+   */
+  private attempt(read: () => void): void {
+    try {
+      read();
+    } catch (error) {
+      if (!(error instanceof OrkUnsupportedError)) throw error;
+      this.problems.push(
+        ...(error instanceof OrkUnsupportedFeaturesError ? error.problems : [error]),
+      );
+    }
+  }
   /** The `configid` of the motor configuration OpenRocket selects (D-077); undefined with no configurations. */
   private selectedConfig: string | undefined;
 
@@ -669,44 +686,46 @@ class Reader {
   /** Children of a body tube. */
   private readInternal(subcomponents: Element, parent: Parent): void {
     for (const node of subcomponents.node.children) {
-      const el = subcomponents.wrap(node);
-      switch (node.name) {
-        case 'trapezoidfinset':
-          this.readFinSet(el, parent);
-          break;
-        case 'launchlug':
-          this.readLaunchLug(el, parent);
-          break;
-        case 'railbutton':
-          this.readRailButton(el, parent);
-          break;
-        case 'innertube':
-          this.readInnerTube(el, parent);
-          break;
-        case 'centeringring':
-          this.readRing(el, parent, 'centeringRing');
-          break;
-        case 'bulkhead':
-          this.readRing(el, parent, 'bulkhead');
-          break;
-        case 'masscomponent':
-          this.readMassComponent(el, parent);
-          break;
-        case 'parachute':
-          this.readParachute(el, parent);
-          break;
-        case 'shockcord':
-          this.readShockCord(el, parent);
-          break;
-        case 'tubecoupler':
-          this.readTubeCoupler(el, parent);
-          break;
-        case 'engineblock':
-          this.readEngineBlock(el, parent);
-          break;
-        default:
-          throw el.unsupported(`element <${node.name}>`);
-      }
+      this.attempt(() => {
+        const el = subcomponents.wrap(node);
+        switch (node.name) {
+          case 'trapezoidfinset':
+            this.readFinSet(el, parent);
+            break;
+          case 'launchlug':
+            this.readLaunchLug(el, parent);
+            break;
+          case 'railbutton':
+            this.readRailButton(el, parent);
+            break;
+          case 'innertube':
+            this.readInnerTube(el, parent);
+            break;
+          case 'centeringring':
+            this.readRing(el, parent, 'centeringRing');
+            break;
+          case 'bulkhead':
+            this.readRing(el, parent, 'bulkhead');
+            break;
+          case 'masscomponent':
+            this.readMassComponent(el, parent);
+            break;
+          case 'parachute':
+            this.readParachute(el, parent);
+            break;
+          case 'shockcord':
+            this.readShockCord(el, parent);
+            break;
+          case 'tubecoupler':
+            this.readTubeCoupler(el, parent);
+            break;
+          case 'engineblock':
+            this.readEngineBlock(el, parent);
+            break;
+          default:
+            throw el.unsupported(`element <${node.name}>`);
+        }
+      });
     }
   }
 
@@ -1067,30 +1086,32 @@ class Reader {
     const sub = stage.child('subcomponents');
     let x = 0;
     for (const node of sub.node.children) {
-      const el = sub.wrap(node);
-      const offset = el.optional('axialoffset');
-      if (
-        offset !== undefined &&
-        (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
-      ) {
-        throw el.unsupported(
-          'external components positioned other than stacked after the previous one',
-        );
-      }
-      el.optional('position');
-      switch (node.name) {
-        case 'nosecone':
-          x = this.readNoseCone(el, x);
-          break;
-        case 'bodytube':
-          x = this.readBodyTube(el, x);
-          break;
-        case 'transition':
-          x = this.readTransition(el, x);
-          break;
-        default:
-          throw el.unsupported(`element <${node.name}>`);
-      }
+      this.attempt(() => {
+        const el = sub.wrap(node);
+        const offset = el.optional('axialoffset');
+        if (
+          offset !== undefined &&
+          (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
+        ) {
+          throw el.unsupported(
+            'external components positioned other than stacked after the previous one',
+          );
+        }
+        el.optional('position');
+        switch (node.name) {
+          case 'nosecone':
+            x = this.readNoseCone(el, x);
+            break;
+          case 'bodytube':
+            x = this.readBodyTube(el, x);
+            break;
+          case 'transition':
+            x = this.readTransition(el, x);
+            break;
+          default:
+            throw el.unsupported(`element <${node.name}>`);
+        }
+      });
     }
     this.length = x;
     stage.finish([...IGNORED_COMMON]);
@@ -1158,32 +1179,34 @@ class Reader {
    */
   private readNoseInternal(subcomponents: Element, parent: Parent, where = 'a nose cone'): void {
     for (const node of subcomponents.node.children) {
-      const el = subcomponents.wrap(node);
-      switch (node.name) {
-        case 'centeringring':
-          this.readRing(el, parent, 'centeringRing');
-          break;
-        case 'bulkhead':
-          this.readRing(el, parent, 'bulkhead');
-          break;
-        case 'masscomponent':
-          this.readMassComponent(el, parent);
-          break;
-        case 'parachute':
-          this.readParachute(el, parent);
-          break;
-        case 'shockcord':
-          this.readShockCord(el, parent);
-          break;
-        case 'tubecoupler':
-          this.readTubeCoupler(el, parent);
-          break;
-        case 'engineblock':
-          this.readEngineBlock(el, parent);
-          break;
-        default:
-          throw el.unsupported(`element <${node.name}> inside ${where}`);
-      }
+      this.attempt(() => {
+        const el = subcomponents.wrap(node);
+        switch (node.name) {
+          case 'centeringring':
+            this.readRing(el, parent, 'centeringRing');
+            break;
+          case 'bulkhead':
+            this.readRing(el, parent, 'bulkhead');
+            break;
+          case 'masscomponent':
+            this.readMassComponent(el, parent);
+            break;
+          case 'parachute':
+            this.readParachute(el, parent);
+            break;
+          case 'shockcord':
+            this.readShockCord(el, parent);
+            break;
+          case 'tubecoupler':
+            this.readTubeCoupler(el, parent);
+            break;
+          case 'engineblock':
+            this.readEngineBlock(el, parent);
+            break;
+          default:
+            throw el.unsupported(`element <${node.name}> inside ${where}`);
+        }
+      });
     }
   }
 
@@ -1302,6 +1325,7 @@ class Reader {
     subcomponents.finish([]);
     rocket.finish([...IGNORED_COMMON, 'designtype', 'revision', 'designer']);
 
+    if (this.problems.length > 0) throw new OrkUnsupportedFeaturesError(root.file, this.problems);
     if (this.components.length === 0) throw rocket.parseError('the rocket has no components');
     return {
       name: rocket.optionalText('name') ?? '',

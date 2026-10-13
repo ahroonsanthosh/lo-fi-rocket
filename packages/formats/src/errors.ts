@@ -30,11 +30,37 @@ export class OrkParseError extends FormatError {
  */
 export class OrkUnsupportedError extends FormatError {
   readonly path: string;
+  readonly feature: string;
   constructor(fileName: string | undefined, path: string, feature: string) {
-    super(
-      `${fileName ?? '.ork file'}, ${path}: ${feature} is not supported by the minimal .ork reader (docs/plans/0005-ork-reader.md)`,
-    );
+    super(`${fileName ?? '.ork file'}, ${path}: ${feature} is not supported yet.`);
     this.path = path;
+    this.feature = feature;
+  }
+}
+
+/** A component path without the file's container elements: `stage "S" > bodytube "Body" > ...`. */
+function readablePath(path: string): string {
+  return path
+    .replace(/^openrocket > rocket "[^"]*"(?: > subcomponents)?(?: > )?/, '')
+    .replaceAll(' > subcomponents', '');
+}
+
+/**
+ * Every unsupported feature of a file at once (D-082), so that the user sees the whole list
+ * rather than one problem per attempt. An `OrkUnsupportedError` itself, for callers that catch
+ * that type.
+ */
+export class OrkUnsupportedFeaturesError extends OrkUnsupportedError {
+  readonly problems: readonly OrkUnsupportedError[];
+  constructor(fileName: string | undefined, problems: readonly OrkUnsupportedError[]) {
+    const first = problems[0];
+    super(fileName, first?.path ?? 'openrocket', first?.feature ?? 'this design');
+    this.problems = problems;
+    if (problems.length > 1) {
+      this.message = `${fileName ?? '.ork file'}: ${String(problems.length)} parts of this design are not supported yet:\n${problems
+        .map((p) => `- ${readablePath(p.path)}: ${p.feature}`)
+        .join('\n')}`;
+    }
   }
 }
 

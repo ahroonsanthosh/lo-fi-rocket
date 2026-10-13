@@ -25,7 +25,7 @@ import {
 } from '@lo-fi-rocket/physics';
 import { describe, expect, it } from 'vitest';
 import { parseEng } from './eng.js';
-import { OrkParseError, OrkUnsupportedError } from './errors.js';
+import { OrkParseError, OrkUnsupportedError, OrkUnsupportedFeaturesError } from './errors.js';
 import { parseOrk, type OrkPlacedComponent, type OrkRocket } from './ork.js';
 
 const REFERENCE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'reference');
@@ -964,5 +964,29 @@ describe('a plugged motor and a reloadable motor type (D-081)', () => {
     expect(() =>
       parseOrk(r1.replace('<type>single</type>', '<type>cluster</type>'), 'r1.ork'),
     ).toThrow(/motor type "cluster"/);
+  });
+});
+
+describe('every unsupported feature is listed at once (D-082)', () => {
+  it('canted fins and an unknown part in the same file are both reported', () => {
+    const r1 = strFromU8(
+      unzipSync(bytes('r1-three-fin-conical.ork'))['rocket.ork'] ?? new Uint8Array(),
+    );
+    const edited = r1
+      .replace('<cant>0.0</cant>', '<cant>0.1</cant>')
+      .replace('<masscomponent>', '<streamer><name>Streamer</name></streamer><masscomponent>');
+    let caught: unknown;
+    try {
+      parseOrk(edited, 'two.ork');
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(OrkUnsupportedFeaturesError);
+    expect(caught).toBeInstanceOf(OrkUnsupportedError);
+    const e = caught as OrkUnsupportedFeaturesError;
+    expect(e.problems.map((p) => p.feature)).toEqual(['canted fins', 'element <streamer>']);
+    expect(e.message).toMatch(
+      /2 parts of this design are not supported yet:\n- .*canted fins\n- .*streamer "Streamer": element <streamer>/,
+    );
   });
 });
