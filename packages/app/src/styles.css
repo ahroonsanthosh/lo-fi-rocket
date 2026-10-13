@@ -127,8 +127,8 @@ body {
   text-align: center;
   font-size: 19px;
   line-height: 28px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink);
   white-space: nowrap;
@@ -645,10 +645,17 @@ li[role='option'].selected::before {
   stop-color: #ffffff;
 }
 .vehicle__fin-0 {
-  stop-color: #f4f5fb;
+  stop-color: #e9ebf5;
 }
 .vehicle__fin-1 {
-  stop-color: #8c90b2;
+  stop-color: #7e83a8;
+}
+/* The left fin faces away from the light. */
+.vehicle__fin-2 {
+  stop-color: #c9ccdf;
+}
+.vehicle__fin-3 {
+  stop-color: #5d6288;
 }
 .vehicle__marker circle {
   vector-effect: non-scaling-stroke;
@@ -998,15 +1005,15 @@ button.danger {
   stroke: var(--control);
 }
 .plot .tick {
-  font-size: 11px;
+  font-size: 12px;
   fill: var(--muted);
 }
 .plot .axis-label {
-  font-size: 12px;
+  font-size: 13px;
   fill: var(--ink);
 }
 .plot .plot-title {
-  font-size: 13px;
+  font-size: 14px;
   fill: var(--ink);
   font-weight: 600;
 }
@@ -1111,7 +1118,8 @@ button:disabled {
 }
 .plots {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* One plot per row unless there is room for two at a readable size (review finding 25). */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   gap: 12px;
   margin-top: 12px;
 }

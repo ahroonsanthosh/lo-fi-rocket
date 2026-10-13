@@ -1110,7 +1110,7 @@
 }
 .lfr-gauge__readout {
   position: absolute;
-  inset: 0 0 10% 0;
+  inset: 8% 0 12% 0;
   margin: 0;
   display: flex;
   flex-direction: column;

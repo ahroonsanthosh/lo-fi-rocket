@@ -54,7 +54,6 @@ import {
   stepOf,
   steps,
   stepTarget,
-  type StepId,
 } from './layout/steps.js';
 import { EmptyStep, InFlightChecks, StepStrip, Telemetry } from './layout/panels.js';
 import { Overview } from './layout/Overview.js';
@@ -166,11 +165,8 @@ export function App(props: AppProps): JSX.Element {
   const stale = flight !== undefined && !flightCurrent;
 
   const step = stepOf(state.selectedId, state.design);
-  const [lastStep, setLastStep] = useState<StepId>('body');
-  useEffect(() => {
-    if (step !== undefined) setLastStep(step);
-  }, [step]);
-  const currentStep = step ?? lastStep;
+  // Only an open step is marked current; on the overview every step shows its own status.
+  const currentStep = step;
   const stepList = steps(
     { design: state.design, liftoffLevel: figures.stability?.liftoff.level, flightCurrent },
     currentStep,
@@ -431,7 +427,7 @@ export function App(props: AppProps): JSX.Element {
                   {guideHidden ? null : (
                     <StepGuide
                       steps={stepList}
-                      currentId={currentStep}
+                      currentId={currentStep ?? ''}
                       onSelect={openStep}
                       onHide={() => {
                         setGuideHidden(true);

@@ -111,17 +111,22 @@ export function VehicleView(props: VehicleViewProps): JSX.Element {
               <stop offset="0.84" className="vehicle__shade-1" />
               <stop offset="1" className="vehicle__shade-0" />
             </linearGradient>
-            <linearGradient id={`${uid}-fin`} x1="0" x2="1" y1="0" y2="1">
+            {/* Fins: lit at the root, darker towards the tip, mirrored for each side. */}
+            <linearGradient id={`${uid}-fin-r`} x1="0" x2="1" y1="0" y2="0.35">
               <stop offset="0" className="vehicle__fin-0" />
               <stop offset="1" className="vehicle__fin-1" />
+            </linearGradient>
+            <linearGradient id={`${uid}-fin-l`} x1="1" x2="0" y1="0" y2="0.35">
+              <stop offset="0" className="vehicle__fin-2" />
+              <stop offset="1" className="vehicle__fin-3" />
             </linearGradient>
           </defs>
           {sorted.map((s) => {
             const base = s.id.split('-')[0] ?? s.id;
             const selected = base === selectedId;
-            const fill =
+            const fill = (side: 1 | -1): string | undefined =>
               s.kind === 'finSet'
-                ? `url(#${uid}-fin)`
+                ? `url(#${uid}-fin-${side === 1 ? 'r' : 'l'})`
                 : s.kind === 'launchLug' || s.kind === 'railButton'
                   ? undefined
                   : `url(#${uid}-body)`;
@@ -134,8 +139,8 @@ export function VehicleView(props: VehicleViewProps): JSX.Element {
                   onSelect(base);
                 }}
               >
-                <polygon points={pts(s, 1)} fill={fill} />
-                {s.mirror ? <polygon points={pts(s, -1)} fill={fill} /> : null}
+                <polygon points={pts(s, 1)} fill={fill(1)} />
+                {s.mirror ? <polygon points={pts(s, -1)} fill={fill(-1)} /> : null}
               </g>
             );
           })}
