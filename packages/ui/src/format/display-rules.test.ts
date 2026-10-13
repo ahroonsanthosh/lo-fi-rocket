@@ -59,13 +59,16 @@ describe('UNIT_DISPLAY matches the app (parity until the app adopts this module)
   }
 });
 
-describe('FIGURE_DISPLAY matches the rounding at the line it names', () => {
+describe('FIGURE_DISPLAY matches the rounding on the line it marks', () => {
   const packages = join(appSrc, '../..');
   for (const [kind, rule] of Object.entries(FIGURE_DISPLAY)) {
     it(kind, () => {
-      const [file, line] = rule.from.split(':');
-      const text = readFileSync(join(packages, file!), 'utf8').split('\n');
-      const source = text[Number(line) - 1] ?? '';
+      const lines = readFileSync(join(packages, rule.from), 'utf8')
+        .split('\n')
+        .filter((l) => l.includes(rule.marker));
+      // The marker names one line, so the check cannot pass on an unrelated one.
+      expect(lines, `${rule.from}: "${rule.marker}"`).toHaveLength(1);
+      const source = lines[0] ?? '';
       // Either the literal rounding, or the app reading this very rule from the library.
       const literal = source.includes(`toFixed(${String(rule.decimals)})`);
       const reads = source.includes(`.${kind}.decimals`);

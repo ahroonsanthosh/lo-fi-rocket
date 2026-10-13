@@ -45,7 +45,12 @@ import {
 } from './state/autosave.js';
 import { initialState, reduce } from './state/reducer.js';
 import { StoreContext } from './state/store.js';
-import { designWarningItems, flightWarningItems, splitMessage } from './layout/warnings.js';
+import {
+  approximationItems,
+  designWarningItems,
+  flightWarningItems,
+  splitMessage,
+} from './layout/warnings.js';
 import { stabilityProps } from './layout/stability.js';
 import {
   EMPTY_STEP_PREFIX,
@@ -253,6 +258,7 @@ export function App(props: AppProps): JSX.Element {
           flight.result,
           designItems.some((w) => w.id === 'no-recovery'),
         ),
+        ...approximationItems(flight.result),
       );
     }
     return out.map((w) => (acknowledged.has(w.id) ? { ...w, acknowledged: true } : w));

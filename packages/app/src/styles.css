@@ -1325,3 +1325,22 @@ button:disabled {
     height: min(520px, 70vh);
   }
 }
+
+/* The flight's confidence (D-083): a status line under the results. */
+.confidence {
+  border-left: 3px solid var(--lfr-safe-indicator);
+  background: var(--lfr-safe-bg);
+  color: var(--lfr-safe-text);
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+}
+.confidence-medium {
+  border-left-color: var(--lfr-caution-indicator);
+  background: var(--lfr-caution-bg);
+  color: var(--lfr-caution-text);
+}
+.confidence-low {
+  border-left-color: var(--lfr-danger-indicator);
+  background: var(--lfr-danger-bg);
+  color: var(--lfr-danger-text);
+}

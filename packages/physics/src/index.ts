@@ -437,3 +437,11 @@ export {
   LARGE_ANGLE_UNVERIFIED_WARNING,
   type LargeAngleMethod,
 } from './flight/aerodynamics.js';
+export {
+  componentApproximations,
+  confidenceOf,
+  type Approximation,
+  type ApproximationImpact,
+  type Confidence,
+  type ConfidenceLevel,
+} from './fidelity.js';

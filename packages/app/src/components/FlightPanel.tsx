@@ -278,6 +278,16 @@ function Summary({
           stale={stale}
         />
       </ResultGrid>
+      <p
+        className={`confidence confidence-${r.confidence.level}`}
+        role="note"
+        aria-label="Confidence"
+      >
+        {r.confidence.summary}
+        {r.approximations.length === 0
+          ? ''
+          : ` ${String(r.approximations.length)} approximation${r.approximations.length === 1 ? '' : 's'} listed in the checks.`}
+      </p>
       <p className="muted small">
         Lowest in-flight stability: {stabilityText(s.minimumStability.powered, 'powered')}
         {s.minimumStability.coast === undefined ? '' : '; '}

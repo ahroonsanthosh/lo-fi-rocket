@@ -11,8 +11,8 @@ Accuracy is the top priority, above speed, features, and code elegance. Users wi
 These rules are non-negotiable:
 
 1. Never invent, guess, or approximate an equation from memory. Every physics formula must come from a cited source (see Section 4). Put the citation (source, chapter or section, equation number or page) in a comment above the implementation.
-2. Never write placeholder physics. No hard-coded "reasonable" constants, no stubbed drag values, no `// TODO: real formula later` returning a fake number. If something is not implemented, it must throw a clear `NotImplementedError` and not silently produce output.
-3. Never silently fall back. If an input is invalid, out of range, or outside a model's validity range, report it explicitly to the user. Do not clamp, default, or ignore it without telling them.
+2. Never write placeholder physics. No hard-coded "reasonable" constants, no stubbed drag values, no `// TODO: real formula later` returning a fake number. If something is not modelled exactly, it is handled under rule 3: a documented approximation that appears in the result, never a hidden one. (Changed by the owner on 2026-10-13, D-083.)
+3. Always simulate, never silently. Every design a user builds or imports must produce a result: any kit, any sizes, any weights, any file, and swapping or replacing a part never breaks the app. An invalid input (a negative length, a typo) is reported plainly with what to fix. A part, setting or flight condition outside what the models cover exactly is simulated with the best documented approximation (the most conservative where there is a choice), and every approximation is listed in the result with its method, its expected effect, and an overall confidence rating. Nothing is clamped, defaulted or ignored unless it appears in that list. (Changed by the owner on 2026-10-13, D-083; it replaced "never silently fall back", which in practice refused designs.)
 4. When sources conflict or you are unsure, stop and ask me. Explain the conflict, the options, and your recommendation. Do not pick one quietly.
 5. Every physics function ships with tests in the same change. No exceptions (see Section 7).
 6. Plan before coding. For any non-trivial task, first write a short plan (files to change, equations involved with sources, tests to add) and wait for my approval.
@@ -34,7 +34,7 @@ An amateur builder scratch-building rockets that fly on commercial motors, with 
 ### Non-goals for version 1
 
 - Full CFD.
-- Multi-stage and clustered motors (design the data model so they can be added later, but do not implement them yet).
+- Full staging and cluster dynamics (separation events, booster and pod flight paths). Multi-stage, clustered and podded designs are still simulated, with their approximations listed (rule 3, D-083).
 - Liquid engine design or combustion modelling (only the ability to import a thrust curve and propellant mass profile).
 
 ## 3. Licensing constraint
