@@ -34,7 +34,14 @@ function ticks(min: number, max: number): number[] {
   return out;
 }
 
-const COLOURS = ['#1f5fbf', '#b3261e', '#1b7f3b', '#b26a00', '#6a3fb0'];
+// Series colours follow the theme tokens (D-UI-6); each series is also named in the legend.
+const COLOURS = [
+  'var(--lfr-accent)',
+  'var(--lfr-cp-marker)',
+  'var(--lfr-safe-indicator)',
+  'var(--lfr-caution-indicator)',
+  'var(--lfr-limit-indicator)',
+];
 
 /** A small SVG line chart with axes and ticks; no library (D-045). */
 export function LinePlot(props: LinePlotProps): JSX.Element {
