@@ -326,19 +326,28 @@ describe('rejected inputs name the element and component', () => {
     );
     unsupported(edit(r1, 'version="1.10"', 'version="2.0"'), /format version "2.0"/);
     unsupported(edit(r1, '<referencetype>maximum', '<referencetype>nose'), /reference length/);
+    // A second configuration and neither marked as the default (D-077).
+    unsupported(
+      edit(
+        edit(r1, ' default="true">', '>'),
+        '</motorconfiguration>',
+        '</motorconfiguration><motorconfiguration configid="b"><stage number="0" active="true"/></motorconfiguration>',
+      ),
+      /2 motor configurations with none marked as the default/,
+    );
     unsupported(
       edit(
         r1,
-        '<delay>5.0</delay>\n                  </motor>',
-        '<delay>5.0</delay></motor><motor configid="b"><designation>X</designation></motor>',
+        '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>0.0',
+        '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>2.0',
       ),
-      /2 motor configurations/,
+      /motor ignition delay/,
     );
     unsupported(
       edit(
         r1,
         '<subcomponents>\n              <trapezoidfinset>',
-        '<subcomponents><innertube><name>Second mount</name><axialoffset method="top">0.0</axialoffset><material type="bulk" density="700.0">p</material><length>0.05</length><outerradius>0.01</outerradius><thickness>0.001</thickness><motormount><overhang>0.0</overhang><motor><manufacturer>m</manufacturer><designation>d</designation><diameter>0.018</diameter><length>0.07</length><delay>3.0</delay></motor></motormount></innertube><trapezoidfinset>',
+        '<subcomponents><innertube><name>Second mount</name><axialoffset method="top">0.0</axialoffset><material type="bulk" density="700.0">p</material><length>0.05</length><outerradius>0.01</outerradius><thickness>0.001</thickness><motormount><overhang>0.0</overhang><motor configid="87104846-a550-42cb-8c9c-36360f4ef57c"><manufacturer>m</manufacturer><designation>d</designation><diameter>0.018</diameter><length>0.07</length><delay>3.0</delay></motor></motormount></innertube><trapezoidfinset>',
       ),
       /more than one motor mount/,
     );
@@ -409,7 +418,10 @@ describe('rejected inputs name the element and component', () => {
   it('fins, lugs, buttons, rings, inner tubes', () => {
     unsupported(edit(r1, '<cant>0.0</cant>', '<cant>0.1</cant>'), /canted fins/);
     unsupported(edit(r1, '<filletradius>0.0', '<filletradius>0.003'), /fin fillets/);
-    unsupported(edit(r1, '<crosssection>square', '<crosssection>airfoil'), /fin cross-section/);
+    unsupported(
+      edit(r1, '<crosssection>square', '<crosssection>wedge'),
+      /fin cross-section "wedge"/,
+    );
     malformed(
       edit(r1, '<fincount>3</fincount>', '<fincount>4</fincount>'),
       /<instancecount> 3 differs from <fincount> 4/,
@@ -631,5 +643,57 @@ describe('components inside a nose cone', () => {
       12,
     );
     expect(rocket.recoveryDevices).toHaveLength(1);
+  });
+});
+
+/**
+ * Motor configurations, per-configuration deployment and fin cross-sections
+ * (D-077), against files OpenRocket 24.12 saved and reloaded
+ * (tools/openrocket-harness/src/ConfigProbe.java, reference/rockets/config-probe/values.txt).
+ */
+describe('motor configurations and fin cross-sections (D-077)', () => {
+  const probe = (n: number): OrkRocket =>
+    parseOrk(bytes(join('config-probe', `config${String(n)}.ork`)), `config${String(n)}.ork`);
+
+  it('three configurations: the default one is used and the import says so', () => {
+    const rocket = probe(3);
+    expect(rocket.notices.some((n) => n.includes('3 motor configurations; the default one'))).toBe(
+      true,
+    );
+  });
+
+  it("the parachute uses the default configuration's own deployment (altitude 150 m), as OpenRocket does", () => {
+    // values.txt case 3: "event=Specific altitude during descent altitude=150.000 delay=0.000"; the
+    // parachute's own elements say apogee, which applies to configurations without an entry.
+    const [chute] = probe(3).recoveryDevices;
+    expect(chute?.deployEvent).toBe('altitude');
+    expect(chute?.deployAltitude).toBe(150);
+    expect(chute?.deployDelay).toBe(0);
+  });
+
+  it('rounded and airfoil fins are read with their cross-section and a notice on the mass', () => {
+    for (const [n, section] of [
+      [0, 'square'],
+      [1, 'rounded'],
+      [2, 'airfoil'],
+    ] as const) {
+      const rocket = probe(n);
+      const fins = rocket.components.find((c) => c.element === 'trapezoidfinset');
+      expect(fins?.component.kind === 'finSet' && fins.component.crossSection).toBe(section);
+      expect(rocket.notices.some((t) => t.includes('OpenRocket makes such fins'))).toBe(n !== 0);
+    }
+  });
+
+  it('the fin mass is the slab, area × thickness × density, for every cross-section', () => {
+    // 3 fins, root 0.1, tip 0.05, height 0.08 m: area 0.5 (0.1 + 0.05) 0.08 = 0.006 m² each;
+    // 3 × 0.006 × 0.003 × 600 = 0.0324 kg, OpenRocket's square figure (values.txt case 0).
+    // OpenRocket gives 0.032076 kg rounded and 0.02754 kg airfoil; this app keeps the slab.
+    for (const n of [0, 1, 2]) {
+      const fins = probe(n).components.find((c) => c.element === 'trapezoidfinset');
+      expect(fins === undefined ? Number.NaN : rocketMassProperties([fins]).mass).toBeCloseTo(
+        0.0324,
+        12,
+      );
+    }
   });
 });
