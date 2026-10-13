@@ -394,3 +394,53 @@ describe('nose cone shoulder wall (review finding G-1)', () => {
     );
   });
 });
+
+describe('GEO-14 fin tabs (D-081)', () => {
+  // 3 fins: root 0.1, tip 0.05, sweep 0.05, span 0.08 m, 3 mm, 600 kg/m³, body radius 0.025 m;
+  // tab 0.012 m high, 0.06 m long, front edge 0.01 m aft of the root leading edge.
+  const fins: Component = {
+    kind: 'finSet',
+    count: 3,
+    rootChord: metres(0.1),
+    tipChord: metres(0.05),
+    sweep: metres(0.05),
+    span: metres(0.08),
+    thickness: metres(0.003),
+    density: kilogramsPerCubicMetre(600),
+    bodyRadius: metres(0.025),
+  };
+  const withTab: Component = {
+    ...fins,
+    tab: { height: metres(0.012), length: metres(0.06), foreOffset: metres(0.01) },
+  };
+
+  it('mass: fins 3 × 0.006 × 0.003 × 600 = 0.0324; tabs 3 × 0.012 × 0.06 × 0.003 × 600 = 0.003888 kg', () => {
+    // Fin area (0.1 + 0.05)/2 × 0.08 = 0.006 m². OpenRocket (reference/rockets/tab-probe): 0.036288 kg.
+    expect(componentMassProperties(fins).mass).toBeCloseTo(0.0324, 12);
+    expect(componentMassProperties(withTab).mass).toBeCloseTo(0.036288, 12);
+  });
+
+  it('CG: (0.0324 × 0.0611111 + 0.003888 × 0.04) / 0.036288 = 0.0588492 m from the root leading edge', () => {
+    // Fin centroid with u = y/s: ∫(x_LE c + c²/2) du × s / A with c = 0.1 − 0.05u, x_LE = 0.05u:
+    // (0.0016667 + 0.0029167) × 0.08 / 0.006 = 0.0611111. Tab centre 0.01 + 0.03 = 0.04.
+    // OpenRocket: 0.558849206 − 0.5 = 0.058849206.
+    expect(componentMassProperties(withTab).cgX).toBeCloseTo(0.0588492, 7);
+  });
+
+  it('rotational inertia adds 3 × 600 × 0.003 × 0.06 × (0.025³ − 0.013³)/3 = 1.450224e-6 kg·m²', () => {
+    // (1.5625e-5 − 2.197e-6)/3 = 4.476e-6; × 5.4 × 0.06 = 1.450224e-6.
+    const added =
+      componentMassProperties(withTab).inertiaRotational -
+      componentMassProperties(fins).inertiaRotational;
+    expect(added).toBeCloseTo(1.450224e-6, 12);
+  });
+
+  it('a tab higher than the body radius is refused', () => {
+    expect(() =>
+      componentMassProperties({
+        ...fins,
+        tab: { height: metres(0.03), length: metres(0.06), foreOffset: metres(0) },
+      }),
+    ).toThrow(InvalidInputError);
+  });
+});

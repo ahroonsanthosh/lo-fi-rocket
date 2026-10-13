@@ -100,11 +100,23 @@ export interface TrapezoidFinSetComponent {
   /** Profile shape, used by the drag model (plan 0009) and the supersonic fin force (D-065, D-066). */
   readonly crossSection?: FinCrossSection;
   /**
+   * A fin tab (GEO-14, D-081): a rectangular extension of each fin's root into the body,
+   * `height` inward from the body surface and `length` along x, its forward edge `foreOffset`
+   * aft of the root leading edge. Mass only; it adds no aerodynamic force.
+   */
+  readonly tab?: FinTab;
+  /**
    * Effective shear modulus G_E of the fin, Pa (NACA TN 4197 eq. 12: the
    * material's G for a solid fin). Used only for the flutter speed (plan
    * 0031); when absent, flutter is not evaluated and the flight says so.
    */
   readonly shearModulus?: Pascals;
+}
+
+export interface FinTab {
+  readonly height: Metres;
+  readonly length: Metres;
+  readonly foreOffset: Metres;
 }
 
 /** Rail buttons: base cylinder, shaft and flange stacked radially on the body surface. */
@@ -345,7 +357,65 @@ function finSetMassProperties(c: TrapezoidFinSetComponent): MassProperties {
       t *
       integrate((y) => chordSecondMoment(y) + 0.5 * (rb + y) ** 2 * chord(y), s, panels),
   );
-  return { volume: n * t * area, mass, cgX: xBar, inertiaRotational, inertiaLongitudinal };
+  const fin: MassProperties = {
+    volume: n * t * area,
+    mass,
+    cgX: xBar,
+    inertiaRotational,
+    inertiaLongitudinal,
+  };
+  return c.tab === undefined ? fin : combineFinTab(fin, c.tab, c);
+}
+
+/**
+ * GEO-14: n fin tabs, each a thin rectangular plate of thickness t from radius r_b − h to r_b and
+ * from x = a to a + l (a from the root leading edge), with the thin-plate moments of GEO-10:
+ * m = n ρ t h l; x̄ = a + l/2; I_x = n ρ t l (r_b³ − (r_b − h)³)/3;
+ * I_y about its CG = n ρ t (h l³/12 + ½ l (r_b³ − (r_b − h)³)/3), the ½ from the fins' spacing
+ * round the body as in GEO-10. Combined with the fins by GEO-12 (parallel axis theorem).
+ */
+function combineFinTab(
+  fin: MassProperties,
+  tab: FinTab,
+  c: TrapezoidFinSetComponent,
+): MassProperties {
+  const { height: h, length: l, foreOffset: a } = tab;
+  requirePositive('fin tab height', h);
+  requirePositive('fin tab length', l);
+  requireNonNegative('fin tab position from the root leading edge', a);
+  const rb: number = c.bodyRadius;
+  if (h > rb) {
+    throw new InvalidInputError(
+      'fin tab height',
+      h,
+      `must be at most the body radius ${String(rb)} m`,
+    );
+  }
+  const n = c.count;
+  const k = n * (c.density as number) * (c.thickness as number);
+  const r3 = (rb ** 3 - (rb - h) ** 3) / 3;
+  const tabMass = k * h * l;
+  const tabX = a + l / 2;
+  const tabIx = k * l * r3;
+  const tabIy = k * ((h * l ** 3) / 12 + 0.5 * l * r3);
+  const mass = fin.mass + tabMass;
+  const cgX = (fin.mass * fin.cgX + tabMass * tabX) / mass;
+  return {
+    volume: fin.volume + n * (c.thickness as number) * h * l,
+    mass: finiteResult('fin set mass with tabs', mass),
+    cgX: finiteResult('fin set CG with tabs', cgX),
+    inertiaRotational: finiteResult(
+      'fin set rotational inertia with tabs',
+      fin.inertiaRotational + tabIx,
+    ),
+    inertiaLongitudinal: finiteResult(
+      'fin set longitudinal inertia with tabs',
+      fin.inertiaLongitudinal +
+        fin.mass * (fin.cgX - cgX) ** 2 +
+        tabIy +
+        tabMass * (tabX - cgX) ** 2,
+    ),
+  };
 }
 
 /**

@@ -468,9 +468,9 @@ describe('rejected inputs name the element and component', () => {
       edit(
         r1,
         '<clusterrotation>0.0</clusterrotation>',
-        '<clusterrotation>0.0</clusterrotation><subcomponents><engineblock/></subcomponents>',
+        '<clusterrotation>0.0</clusterrotation><subcomponents><trapezoidfinset/></subcomponents>',
       ),
-      /components inside an inner tube/,
+      /element <trapezoidfinset> inside an inner tube/,
     );
   });
 
@@ -898,5 +898,71 @@ describe('a radially offset mass component (D-080)', () => {
       r.components.find((c) => c.element === 'masscomponent');
     expect(weight(offset)).toEqual(weight(plain));
     expect(offset.notices.join(' ')).toMatch(/12 mm off the rocket's axis/);
+  });
+});
+
+/**
+ * Fin tabs, motor types and parts inside an inner tube (D-081), against files
+ * OpenRocket 24.12 saved and reloaded (tools/openrocket-harness/src/TabProbe.java,
+ * reference/rockets/tab-probe/values.txt). Fins at 0.5 m: root 0.1, tip 0.05,
+ * sweep 0.05, height 0.08 m, 3 mm, 600 kg/m³; tab 0.06 × 0.012 m, offset 0.01 m.
+ */
+describe('fin tabs and parts inside an inner tube (D-081)', () => {
+  const probe = (n: number): OrkRocket =>
+    parseOrk(bytes(join('tab-probe', `tab${String(n)}.ork`)), `tab${String(n)}.ork`);
+  const fins = (n: number): OrkPlacedComponent => {
+    const f = probe(n).components.find((c) => c.element === 'trapezoidfinset');
+    if (f === undefined) throw new Error('no fins');
+    return f;
+  };
+  // OpenRocket: fin set mass and CG (m from the tip) with the tab from the front, centre and end.
+  const OPENROCKET = [
+    [0.0324, 0.561111111],
+    [0.036288, 0.558849206],
+    [0.036288, 0.560992063],
+    [0.036288, 0.563134921],
+  ] as const;
+
+  for (const n of [0, 1, 2, 3]) {
+    it(`case ${String(n)}: the fin set's mass and CG match OpenRocket`, () => {
+      const m = rocketMassProperties([fins(n)]);
+      const [mass, cg] = OPENROCKET[n] ?? [Number.NaN, Number.NaN];
+      expect(m.mass).toBeCloseTo(mass, 9);
+      expect(m.cg).toBeCloseTo(cg, 8);
+    });
+  }
+
+  it('the tab front edge is 0.01, 0.03 and 0.05 m aft of the root for front, centre and end', () => {
+    // front 0.01; centre (0.1 − 0.06)/2 + 0.01 = 0.03; end 0.1 − 0.06 + 0.01 = 0.05.
+    const fore = [1, 2, 3].map((n) => {
+      const c = fins(n).component;
+      return c.kind === 'finSet' ? c.tab?.foreOffset : undefined;
+    });
+    expect(fore[0]).toBeCloseTo(0.01, 12);
+    expect(fore[1]).toBeCloseTo(0.03, 12);
+    expect(fore[2]).toBeCloseTo(0.05, 12);
+  });
+
+  it('a zero-thickness engine block in the motor tube adds no mass, as in OpenRocket', () => {
+    expect(probe(0).components.some((c) => c.element === 'engineblock')).toBe(false);
+  });
+});
+
+describe('a plugged motor and a reloadable motor type (D-081)', () => {
+  const r1 = strFromU8(
+    unzipSync(bytes('r1-three-fin-conical.ork'))['rocket.ork'] ?? new Uint8Array(),
+  );
+  it('<delay>none</delay> reads as a plugged motor: no ejection delay', () => {
+    const rocket = parseOrk(r1.replace('<delay>5.0</delay>', '<delay>none</delay>'), 'r1.ork');
+    expect(rocket.motorMount?.delay).toBeUndefined();
+  });
+  it('a reloadable motor type is accepted; an unknown one is refused by name', () => {
+    expect(
+      parseOrk(r1.replace('<type>single</type>', '<type>reload</type>'), 'r1.ork').motorMount
+        ?.designation,
+    ).toBe('D12');
+    expect(() =>
+      parseOrk(r1.replace('<type>single</type>', '<type>cluster</type>'), 'r1.ork'),
+    ).toThrow(/motor type "cluster"/);
   });
 });
