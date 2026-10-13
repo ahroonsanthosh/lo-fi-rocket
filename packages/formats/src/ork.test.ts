@@ -326,15 +326,18 @@ describe('rejected inputs name the element and component', () => {
     );
     unsupported(edit(r1, 'version="1.10"', 'version="2.0"'), /format version "2.0"/);
     unsupported(edit(r1, '<referencetype>maximum', '<referencetype>nose'), /reference length/);
-    // A second configuration and neither marked as the default (D-077).
-    unsupported(
+    // Two configurations and neither marked as the default: OpenRocket opens such a file with no
+    // motor, and so does the reader (D-078).
+    const none = parseOrk(
       edit(
         edit(r1, ' default="true">', '>'),
         '</motorconfiguration>',
         '</motorconfiguration><motorconfiguration configid="b"><stage number="0" active="true"/></motorconfiguration>',
       ),
-      /2 motor configurations with none marked as the default/,
+      'edited.ork',
     );
+    expect(none.motorMount).toBeUndefined();
+    expect(none.notices.join(' ')).toMatch(/none is marked as the default/);
     unsupported(
       edit(
         r1,
@@ -359,14 +362,17 @@ describe('rejected inputs name the element and component', () => {
 
   it('nose cones and transitions', () => {
     unsupported(edit(r1, '<isflipped>false', '<isflipped>true'), /flipped nose cones/);
-    unsupported(
-      edit(
-        r2,
-        '<aftshouldercapped>false</aftshouldercapped>\n            <isflipped>',
-        '<aftshouldercapped>true</aftshouldercapped>\n            <isflipped>',
-      ),
-      /capped aft shoulder/,
-    );
+    // A capped shoulder adds the cap as a disc (D-078).
+    expect(
+      parseOrk(
+        edit(
+          r2,
+          '<aftshouldercapped>false</aftshouldercapped>\n            <isflipped>',
+          '<aftshouldercapped>true</aftshouldercapped>\n            <isflipped>',
+        ),
+        'edited.ork',
+      ).components.some((c) => c.element === 'shouldercap'),
+    ).toBe(true);
     unsupported(
       edit(
         r1,
@@ -389,7 +395,7 @@ describe('rejected inputs name the element and component', () => {
       /transition shoulders/,
     );
     malformed(
-      edit(r2, '<aftshoulderthickness>0.002', '<aftshoulderthickness>0.0'),
+      edit(r2, '<aftshoulderthickness>0.002', '<aftshoulderthickness>-0.002'),
       /aft shoulder needs positive/,
     );
     unsupported(
@@ -695,5 +701,55 @@ describe('motor configurations and fin cross-sections (D-077)', () => {
         12,
       );
     }
+  });
+});
+
+/**
+ * Capped and zero-thickness shoulders and resolved "auto" sizes (D-078), against
+ * files OpenRocket 24.12 saved and reloaded
+ * (tools/openrocket-harness/src/ShoulderProbe.java,
+ * reference/rockets/shoulder-probe/values.txt). Conical nose 0.150 m, base
+ * radius 0.025 m, wall 0.002 m; shoulder radius 0.023 m, length 0.040 m.
+ */
+describe('capped and zero-thickness shoulders, resolved "auto" sizes (D-078)', () => {
+  const probe = (n: number): OrkRocket =>
+    parseOrk(bytes(join('shoulder-probe', `shoulder${String(n)}.ork`)), `shoulder${String(n)}.ork`);
+  // OpenRocket's nose cone mass (kg) and CG (m), values.txt cases 0 to 3.
+  const OPENROCKET = [
+    [0.034713431, 0.124725757],
+    [0.03762286, 0.129696175],
+    [0.023102105, 0.101970514],
+    [0.023102105, 0.101970514],
+  ] as const;
+
+  for (const n of [0, 1, 2, 3]) {
+    it(`case ${String(n)}: nose cone mass and CG match OpenRocket`, () => {
+      const m = rocketMassProperties(probe(n).components);
+      const [orMass, orCg] = OPENROCKET[n] ?? [Number.NaN, Number.NaN];
+      expect(Math.abs(m.mass - orMass) / orMass).toBeLessThan(1e-6);
+      expect(Math.abs(m.cg - orCg) / orCg).toBeLessThan(1e-6);
+    });
+  }
+
+  it('the cap is a disc of the wall thickness and inner radius at the far end of the shoulder', () => {
+    // π (0.023 − 0.002)² × 0.002 × 1050 = π × 0.000441 × 2.1 = 0.0029094 kg, the difference
+    // between cases 1 and 0 (0.03762286 − 0.034713431 = 0.002909429); fore face at
+    // 0.150 + 0.040 − 0.002 = 0.188 m.
+    const cap = probe(1).components.find((c) => c.element === 'shouldercap');
+    expect(cap?.position).toBeCloseTo(0.188, 12);
+    expect(cap === undefined ? Number.NaN : rocketMassProperties([cap]).mass).toBeCloseTo(
+      0.0029094,
+      7,
+    );
+  });
+
+  it('an automatic radius uses the value OpenRocket resolved ("auto 0.031")', () => {
+    const rocket = probe(4);
+    const nose = rocket.components.find((c) => c.element === 'nosecone');
+    const transition = rocket.components.find((c) => c.element === 'transition');
+    expect(nose?.component.kind === 'noseCone' && nose.component.baseRadius).toBe(0.031);
+    expect(transition?.component.kind === 'transition' && transition.component.foreRadius).toBe(
+      0.031,
+    );
   });
 });

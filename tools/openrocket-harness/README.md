@@ -30,3 +30,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Configuration probe
 
 `src/ConfigProbe.java` (D-077) asks OpenRocket which motor configuration it opens a file with, which deployment settings a parachute then uses, and how the fin cross-section changes the fin mass. Output and files in `reference/rockets/config-probe/`.
+
+## Shoulder and selection probes
+
+`src/ShoulderProbe.java` (D-078) measures capped and zero-thickness shoulders and resolved automatic radii; output in `reference/rockets/shoulder-probe/`. `src/SelProbe.java` prints which configuration OpenRocket opens a given `.ork` file in.

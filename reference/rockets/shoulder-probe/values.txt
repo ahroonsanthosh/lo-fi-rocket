@@ -1,0 +1,7 @@
+case 0: shoulderThickness=0.0020 capped=false noseMass=0.034713431 cg=0.124725757
+case 1: shoulderThickness=0.0020 capped=true noseMass=0.037622860 cg=0.129696175
+case 2: shoulderThickness=0.0000 capped=false noseMass=0.023102105 cg=0.101970514
+case 3: shoulderThickness=0.0000 capped=true noseMass=0.023102105 cg=0.101970514
+case 4: nose aftRadius=0.031000000 automatic=true
+case 4: body tube outerRadius=0.031000000
+case 4: transition foreRadius=0.031000000 automatic=true
