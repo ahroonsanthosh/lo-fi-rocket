@@ -455,8 +455,12 @@ describe('rejected inputs name the element and component', () => {
 
   it('overrides, parachutes, positions, numbers', () => {
     unsupported(
-      edit(r1, '<radius>0.025</radius>', '<radius>0.025</radius><overridemass>0.1</overridemass>'),
-      /mass or CG override \(<overridemass>\)/,
+      edit(r1, '<radius>0.025</radius>', '<radius>0.025</radius><overridecd>0.5</overridecd>'),
+      /drag coefficient override \(<overridecd>\)/,
+    );
+    malformed(
+      edit(r1, '<radius>0.025</radius>', '<radius>0.025</radius><overridemass>-0.1</overridemass>'),
+      /<overridemass> must be 0 kg or more/,
     );
     unsupported(edit(r1, '<overridemass>0.01</overridemass>', ''), /no <overridemass>/);
     unsupported(
@@ -523,5 +527,50 @@ describe('rejected inputs name the element and component', () => {
     // bottom: parent aft end 0.6 − 0.02 → 0.58; with −0.1 → 0.48
     expect(at('bottom', '0.0')).toBeCloseTo(0.58, 12);
     expect(at('bottom', '-0.1')).toBeCloseTo(0.48, 12);
+  });
+});
+
+/**
+ * D-073: mass and CG overrides, read from files OpenRocket 24.12 wrote itself
+ * (tools/openrocket-harness/src/OverrideProbe.java). OpenRocket's structure
+ * masses are in reference/rockets/override-probe/values.txt; mass does not
+ * depend on positions, so it is compared directly. The CGs are worked by hand
+ * for the stacked layout the reader builds (nose 0 to 0.1 m, tube 0.1 to 0.6 m).
+ */
+describe('mass and CG overrides (D-073)', () => {
+  const probe = (n: number): OrkRocket =>
+    parseOrk(bytes(join('override-probe', `probe${String(n)}.ork`)), `probe${String(n)}.ork`);
+
+  it('nose cone mass 0.05 kg and CG 0.03 m: OpenRocket mass 0.133878314 kg, CG by hand', () => {
+    const rocket = probe(3);
+    expect(rocket.components[0]?.massOverride).toEqual({ mass: 0.05, cg: 0.03 });
+    const m = rocketMassProperties(rocket.components);
+    expect(m.mass).toBeCloseTo(0.133878314, 8);
+    // Nose 0.05 kg at 0.03 m; tube π(0.025² − 0.024²)(0.5)(700) = 0.0538783 kg at 0.35 m;
+    // weight 0.03 kg at 0.1 + 0.1 + 0.01 = 0.21 m:
+    // (0.0015 + 0.0188574 + 0.0063)/0.1338783 = 0.0266574/0.1338783 = 0.199117 m.
+    expect(m.cg).toBeCloseTo(0.199117, 6);
+  });
+
+  it('fin set (3 fins) and rail buttons (2): the override is the total of all instances', () => {
+    const rocket = probe(10);
+    const fins = rocket.components.find((c) => c.element === 'trapezoidfinset');
+    const buttons = rocket.components.find((c) => c.element === 'railbutton');
+    expect(fins?.massOverride).toEqual({ mass: 0.06, cg: 0.02 });
+    expect(buttons?.massOverride).toEqual({ mass: 0.004 });
+    // OpenRocket's structure mass for this rocket: 0.158350290 kg (values.txt, case 10).
+    expect(rocketMassProperties(rocket.components).mass).toBeCloseTo(0.15835029, 8);
+  });
+
+  it('an override that includes subcomponents is rejected when there are subcomponents', () => {
+    expect(() => parseOrk(bytes(join('override-probe', 'probe5.ork')), 'probe5.ork')).toThrow(
+      /override that includes the subcomponents \(<overridesubcomponentsmass> true/,
+    );
+  });
+
+  it('a mass override alone keeps the computed CG', () => {
+    const rocket = probe(1);
+    expect(rocket.components[0]?.massOverride).toEqual({ mass: 0.05 });
+    expect(rocketMassProperties(rocket.components).mass).toBeCloseTo(0.133878314, 8);
   });
 });

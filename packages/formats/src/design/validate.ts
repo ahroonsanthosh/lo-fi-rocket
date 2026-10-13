@@ -19,6 +19,7 @@ import {
   seconds,
   type Component,
   type IntegratorOptions,
+  type MassOverride,
   type MotorDefinition,
   type MotorMassRule,
   type NoseShape,
@@ -434,6 +435,21 @@ function motorMount(c: Ctx, path: string, v: unknown): MotorMount {
   };
 }
 
+/** D-073: a mass of 0 kg or more and a finite CG from the component's forward end; at least one. */
+function designMassOverride(c: Ctx, path: string, v: unknown): MassOverride {
+  const o = c.object(path, v);
+  c.keys(path, o, [], ['mass', 'cg']);
+  const mass =
+    'mass' in o && o['mass'] !== undefined ? c.number(`${path}.mass`, o['mass']) : undefined;
+  const cg = 'cg' in o && o['cg'] !== undefined ? c.number(`${path}.cg`, o['cg']) : undefined;
+  if (mass !== undefined && !(mass >= 0)) c.fail(`${path}.mass`, 'must be 0 kg or more');
+  if (mass === undefined && cg === undefined) c.fail(path, 'must give a mass, a CG or both');
+  return {
+    ...(mass === undefined ? {} : { mass: kilograms(mass) }),
+    ...(cg === undefined ? {} : { cg: metres(cg) }),
+  };
+}
+
 function recoveryDevice(c: Ctx, path: string, v: unknown): DesignRecoveryDevice {
   const o = c.object(path, v);
   c.keys(path, o, ['id', 'name', 'diameter', 'dragCoefficient', 'deploy']);
@@ -684,15 +700,20 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
   const components: DesignComponent[] = c.array('$.components', o['components']).map((v, i) => {
     const path = `$.components[${String(i)}]`;
     const co = c.object(path, v);
-    c.keys(path, co, ['id', 'name', 'position', 'component']);
+    c.keys(path, co, ['id', 'name', 'position', 'component'], ['massOverride']);
     const id = c.nonEmptyString(`${path}.id`, co['id']);
     if (ids.has(id)) c.fail(`${path}.id`, `duplicate id "${id}"`);
     ids.add(id);
+    const massOverride =
+      'massOverride' in co && co['massOverride'] !== undefined
+        ? designMassOverride(c, `${path}.massOverride`, co['massOverride'])
+        : undefined;
     return {
       id,
       name: c.string(`${path}.name`, co['name']),
       position: metres(c.number(`${path}.position`, co['position'])),
       component: component(c, `${path}.component`, co['component']),
+      ...(massOverride === undefined ? {} : { massOverride }),
     };
   });
   const recovery = c.array('$.recovery', o['recovery']).map((v, i) => {

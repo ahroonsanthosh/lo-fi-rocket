@@ -48,6 +48,7 @@ export function orkToDesign(
     name: c.name,
     position: c.position,
     component: c.component,
+    ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
   }));
   const base = newDesign(id, rocket.name);
   let design: RocketDesign = {

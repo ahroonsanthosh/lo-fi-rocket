@@ -17,10 +17,69 @@ import {
 import { combine, componentMassProperties, type Component } from './components.js';
 import type { MassProperties } from './revolution.js';
 
+/**
+ * A user-entered mass or CG for a component (CLAUDE.md 6.1, review finding
+ * G-8, D-073). The mass is the total over every instance (all fins of a fin
+ * set, all rail buttons); the CG is measured from the component's forward end
+ * (`position`) along x. Rule (D-073), matching OpenRocket 24.12 as a black box:
+ * - a mass override replaces the computed mass and scales the component's
+ *   own moments of inertia by the same ratio (same shape, uniform density);
+ * - a CG override moves the component's CG and keeps its own moments of
+ *   inertia about that CG; the rocket's longitudinal inertia then follows from
+ *   the parallel axis theorem in `combine` (GEO-12).
+ */
+export interface MassOverride {
+  readonly mass?: Kilograms;
+  readonly cg?: Metres;
+}
+
 export interface PlacedComponent {
   readonly component: Component;
   /** x of the component's forward end in the rocket body frame (from the nose tip). */
   readonly position: Metres;
+  /** Optional mass and CG override (D-073). */
+  readonly massOverride?: MassOverride;
+}
+
+/** The component's own mass properties (cgX from its forward end) with any override applied (D-073). */
+export function overriddenMassProperties(
+  computed: MassProperties,
+  override: MassOverride | undefined,
+): MassProperties {
+  if (override === undefined) return computed;
+  let p = computed;
+  if (override.mass !== undefined) {
+    const m: number = override.mass;
+    if (!(Number.isFinite(m) && m >= 0)) {
+      throw new InvalidInputError('mass override', m, 'must be a finite mass of 0 kg or more');
+    }
+    if (!(computed.mass > 0)) {
+      throw new InvalidInputError(
+        'mass override',
+        m,
+        'cannot be applied to a component whose computed mass is 0 kg (its inertia cannot be scaled)',
+      );
+    }
+    const ratio = m / computed.mass;
+    p = {
+      ...p,
+      mass: m,
+      inertiaRotational: computed.inertiaRotational * ratio,
+      inertiaLongitudinal: computed.inertiaLongitudinal * ratio,
+    };
+  }
+  if (override.cg !== undefined) {
+    const x: number = override.cg;
+    if (!Number.isFinite(x)) {
+      throw new InvalidInputError(
+        'CG override',
+        x,
+        'must be a finite distance from the component front',
+      );
+    }
+    p = { ...p, cgX: x };
+  }
+  return p;
 }
 
 /**
@@ -72,7 +131,12 @@ export function motorMassPart(motor: MotorMass): MassProperties {
 
 /** The structure's mass parts placed in the rocket frame (computed once per design by the simulator). */
 export function structuralMassParts(components: readonly PlacedComponent[]): MassProperties[] {
-  return components.map((pc) => placed(componentMassProperties(pc.component), pc.position));
+  return components.map((pc) =>
+    placed(
+      overriddenMassProperties(componentMassProperties(pc.component), pc.massOverride),
+      pc.position,
+    ),
+  );
 }
 
 /** Combine precomputed structural parts with a motor part (GEO-12). */
