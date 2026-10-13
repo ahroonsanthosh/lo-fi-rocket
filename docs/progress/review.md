@@ -27,6 +27,7 @@ Updated by the review session after every pull request. See "Parallel sessions" 
   - Major: #35, #36, #37, #38, #39.
   - Minor: #40, #41, #42.
   - Added a comment to #23.
+
 - Checks that passed in the second pass:
   - custom curve impulse 41.00 N·s (trapezoid by hand)
   - clear errors for malformed thrust CSV and .eng files
