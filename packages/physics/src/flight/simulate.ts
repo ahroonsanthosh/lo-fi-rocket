@@ -602,6 +602,11 @@ export const RK4_MAX_PITCH_AMPLITUDE_LOSS = 0.1;
 /** D-063: a warning is attached above this loss per step. */
 export const RK4_WARN_PITCH_AMPLITUDE_LOSS = 0.01;
 
+/** Off the rail and not landed: powered flight, coast, or descent under a recovery device. */
+function isAirborne(phase: FlightPhase): boolean {
+  return phase === 'powered' || phase === 'coast' || phase === 'descent';
+}
+
 /** Cross-check mode: the axis follows the velocity (the rail direction before the rocket moves). */
 function velocityAlignedNose(v: Vec3, rail: Vec3): Vec3 {
   const n = norm(v);
@@ -1052,7 +1057,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           direction: 'down',
         });
     }
-    if ((phase === 'powered' || phase === 'coast') && !apogeeReached)
+    // F-2: apogee is the top of the flight in every airborne phase, also after a recovery device opened on the
+    // way up (an early ejection charge); the apogee- and altitude-triggered devices depend on it.
+    // (`deploy` sets 'descent' from a closure, which the compiler's narrowing of `phase` does not see.)
+    if (isAirborne(phase) && !apogeeReached)
       candidates.push({ kind: 'apogee', g: verticalVelocity, direction: 'down' });
     if (phase !== 'on-rail')
       candidates.push({ kind: 'landing', g: altitudeAbovePad, direction: 'down' });
