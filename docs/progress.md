@@ -98,6 +98,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Step 3 part 2a (plan 0057, D-086): motor clusters in the physics (GEO-15, n motors' thrust and base area), the design file and the `.ork` import; three D12s against OpenRocket: mass and CG within 1e-5, apogee +1.0 %, maximum velocity +0.4 %. OpenRocket's "Clustered motors" example imports (11 of 17).
   - Step 2 physics (plan 0058, D-087): elliptical and freeform fins by Niskanen's general-planform method (BAR-18, GEO-16); trapezoids unchanged; the trapezoid-only methods use an equivalent trapezoid (listed, minor). Next: their `.ork` import and app display (plan 0059).
   - Step 2 import and display (plan 0059, D-088): elliptical and freeform fin sets from `.ork` files (CP within 0.13 % of OpenRocket), saved in the design file with fin tabs (which could not be loaded back before), drawn in the side view and 3D, chosen in the editor. OpenRocket's examples: 11 of 17 import; the rest are multi-stage or air-start (a decision for the owner, below).
+  - As-built mass and CG (plan 0060, D-089): the weighed mass and balance point of the empty rocket (GEO-17), in the design file, the app (airframe view, "As built") and the Monte Carlo mass variation; OpenRocket's stage mass and CG overrides import as it, matching its structure mass and CG to 1e-6 in all seven probe cases.
 
 ## In progress
 

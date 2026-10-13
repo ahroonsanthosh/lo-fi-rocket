@@ -6,6 +6,7 @@
  */
 import type {
   Approximation,
+  AsBuilt,
   ClusterOffset,
   Component,
   DragCurve,
@@ -183,6 +184,11 @@ export interface RocketDesign {
   readonly dispersion?: DispersionSettingsRecord;
   /** Approximations of the design as a whole, e.g. from an import (D-084). */
   readonly approximations?: readonly Approximation[];
+  /**
+   * The empty rocket as weighed, motor excluded (D-089): every part is scaled and moved to this
+   * mass and CG (GEO-17).
+   */
+  readonly asBuilt?: AsBuilt;
 }
 
 /** A fresh random id (RFC 4122 version 4) for designs, components and devices. */

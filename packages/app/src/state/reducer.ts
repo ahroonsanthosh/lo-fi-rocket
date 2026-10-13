@@ -9,6 +9,7 @@ import {
   kilogramsPerCubicMetre,
   metres,
   seconds,
+  type AsBuilt,
   type Component,
   type DragCurve,
   type Metres,
@@ -62,6 +63,7 @@ export type Action =
   | { readonly type: 'remove-recovery'; readonly id: string }
   | { readonly type: 'set-finish'; readonly roughnessHeight: Metres }
   | { readonly type: 'set-reference-diameter'; readonly referenceDiameter: Metres | undefined }
+  | { readonly type: 'set-as-built'; readonly asBuilt: AsBuilt | undefined }
   | { readonly type: 'set-stability-thresholds'; readonly thresholds: StabilityThresholds }
   | { readonly type: 'set-warning-thresholds'; readonly thresholds: WarningThresholds }
   | { readonly type: 'set-launch'; readonly launch: LaunchConditions }
@@ -383,6 +385,13 @@ export function reduce(state: AppState, action: Action): AppState {
       };
     case 'set-finish':
       return withDesign(state, { ...d, finish: { roughnessHeight: action.roughnessHeight } });
+    case 'set-as-built': {
+      // D-089: the weighed mass and balance point, or none.
+      const next: RocketDesign = { ...d };
+      if (action.asBuilt === undefined) delete (next as { asBuilt?: AsBuilt }).asBuilt;
+      else (next as { asBuilt?: AsBuilt }).asBuilt = action.asBuilt;
+      return withDesign(state, next);
+    }
     case 'set-reference-diameter': {
       const next: RocketDesign = { ...d };
       if (action.referenceDiameter === undefined) {

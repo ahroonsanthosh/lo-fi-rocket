@@ -19,6 +19,7 @@ import {
   type WarningItem,
 } from '@lo-fi-rocket/ui';
 import { ComponentEditor } from './components/ComponentEditor.js';
+import { AsBuiltEditor } from './components/AsBuiltEditor.js';
 import { ComponentList } from './components/ComponentList.js';
 import { Header } from './components/Header.js';
 import { FLIGHT_SELECTION_ID, FlightPanel, type FlightState } from './components/FlightPanel.js';
@@ -316,6 +317,7 @@ export function App(props: AppProps): JSX.Element {
                   Select a part in the parts list or on the drawing to edit it.
                 </p>
               )}
+              <AsBuiltEditor />
             </section>
           </>
         );
