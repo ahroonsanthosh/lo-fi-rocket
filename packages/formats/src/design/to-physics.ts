@@ -262,6 +262,7 @@ export interface DesignWarning {
     | 'transonic'
     | 'supersonic'
     | 'no-recovery'
+    | 'recovery-not-deployed'
     | 'max-time'
     | 'model-limit'
     | 'large-angle'
@@ -337,6 +338,17 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
       code: 'no-recovery',
       message:
         'No recovery device: the rocket falls ballistically and lands at its terminal speed.',
+    });
+  }
+  // Issue #33: devices exist but none opened. First in the list: the result looks like a normal flight.
+  if (
+    design.recovery.length > 0 &&
+    !result.events.some((e) => e.kind === 'deployment') &&
+    s.groundHitVelocity !== undefined
+  ) {
+    out.unshift({
+      code: 'recovery-not-deployed',
+      message: `No recovery device opened, so the rocket hits the ground at ${s.groundHitVelocity.toFixed(1)} m/s, fast enough to hurt someone and to damage the rocket. The reason for each device is given below.`,
     });
   }
   if (s.endReason === 'max-time') {

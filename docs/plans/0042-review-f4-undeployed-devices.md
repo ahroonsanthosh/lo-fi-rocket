@@ -27,3 +27,9 @@ Each warning ends: "The landing speed and drift shown are for a rocket coming do
 The three review cases, plus a main 30 s after 50 m under a drogue, and a clean flight with a `never` spare (no warning).
 
 No golden output changes: every device in the reference flights opens.
+
+## Follow-up for issue #33
+
+- A device set to `never` is reported when no recovery device opened during the flight. A `never` spare beside a parachute that opens is still not reported.
+- formats `designFlightWarnings`: when the design has recovery devices, none opened and the rocket landed, a `recovery-not-deployed` warning comes first. It gives the landing speed and says the reasons follow.
+- Tests: physics, the `never`-only case; formats, the example with its parachute at 500 m and set to never (first warning, exact message, the device named after it), and the shipped example with no such warning.
