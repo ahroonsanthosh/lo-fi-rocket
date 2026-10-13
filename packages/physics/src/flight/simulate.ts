@@ -663,6 +663,20 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     vehicle.motor.kind === 'definition'
       ? (burnTime(vehicle.motor.definition) as number)
       : (vehicle.motor.burnTime as number);
+  // Issue #32, D-075: a device open while the motor still burns would need thrust and canopy drag together;
+  // the descent model (DYN-14, Niskanen §4.2.5 pp. 67 to 68) has the canopy drag and gravity only, and the
+  // flight would silently stay on the pad. Refused with a plain message instead.
+  for (const d of vehicle.recovery) {
+    if (d.deploy.event !== 'launch') continue;
+    const at: number = d.deploy.delay;
+    if (at < motorBurn) {
+      throw new InvalidInputError(
+        `"${d.name}" deployment time`,
+        at,
+        `the parachute would open ${at > 0 ? `${at.toFixed(2)} s after launch` : 'at launch'}, while the motor is still burning (burnout at ${motorBurn.toFixed(2)} s), and flight with a parachute open under thrust is not modelled. Set it to open at apogee, at the motor's ejection charge, at an altitude, or at least ${motorBurn.toFixed(2)} s after launch`,
+      );
+    }
+  }
   const ctx: Context = {
     vehicle,
     options,
@@ -1259,6 +1273,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       detail: `maximum simulation time ${String(maxTime)} s reached in phase ${phase}`,
     });
 
+  // Issue #32: a rocket that never left the rail has no rail-exit, burnout or apogee figures (NaN in the summary).
+  if (railExit === undefined) {
+    warnings.add(
+      `The rocket never left the launch rail${phase === 'landed' ? ' (it slid back down)' : ''}: the motor's thrust did not carry it to the end of the rail, so there is no real flight. Use a more powerful motor or a lighter rocket; rail exit, apogee and burnout figures are not available.`,
+    );
+  }
   const apogeeZ = samples.reduce((m, s) => Math.max(m, s.altitude), 0);
   const summary: FlightSummary = {
     apogee: finiteResult('apogee', apogee?.z ?? apogeeZ),
