@@ -73,10 +73,16 @@ export function confidenceOf(approximations: readonly Approximation[]): Confiden
  * mass and aerodynamic models do not represent exactly.
  */
 export function componentApproximations(
-  components: readonly { readonly name?: string; readonly component: Component }[],
+  components: readonly {
+    readonly name?: string;
+    readonly component: Component;
+    readonly approximations?: readonly Approximation[];
+  }[],
 ): Approximation[] {
   const out: Approximation[] = [];
-  for (const { name, component } of components) {
+  for (const { name, component, approximations } of components) {
+    // Approximations a part carries from where it came from (an import, D-084).
+    out.push(...(approximations ?? []));
     if (
       component.kind === 'finSet' &&
       (component.crossSection === 'rounded' || component.crossSection === 'airfoil')

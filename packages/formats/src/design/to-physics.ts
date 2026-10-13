@@ -43,6 +43,7 @@ export function designPlacedComponents(design: RocketDesign): PlacedComponent[] 
     component: c.component,
     position: c.position,
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
+    ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
   }));
 }
 
@@ -204,6 +205,7 @@ export function designVehicle(design: RocketDesign): FlightVehicle {
   return {
     components: designPlacedComponents(design),
     componentNames: design.components.map((c) => c.name),
+    ...(design.approximations === undefined ? {} : { approximations: design.approximations }),
     motor: {
       kind: 'definition',
       definition: m.selection.definition,

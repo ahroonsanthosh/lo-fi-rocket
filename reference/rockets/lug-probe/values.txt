@@ -1,0 +1,19 @@
+case 0: Lug instances=1 locations=[ 0.300000 ] mass=0.000181427 cgAbs=0.315000000 cd=5.625816465e-03 pressureCD=5.625816465e-03 frictionCD=0.000000000e+00
+case 0: total cd=4.108284549e-01 pressureCD=5.274584035e-02 frictionCD=2.263826145e-01 baseCD=1.317000000e-01
+case 0: rocket structure mass=0.064531716 cg=0.305275584
+case 1: Lug instances=1 locations=[ 0.300000 ] mass=0.000181427 cgAbs=0.315000000 cd=5.625816465e-03 pressureCD=5.625816465e-03 frictionCD=0.000000000e+00
+case 1: Lug2 instances=1 locations=[ 0.350000 ] mass=0.000181427 cgAbs=0.365000000 cd=5.625816465e-03 pressureCD=5.625816465e-03 frictionCD=0.000000000e+00
+case 1: total cd=4.164542714e-01 pressureCD=5.837165682e-02 frictionCD=2.263826145e-01 baseCD=1.317000000e-01
+case 1: rocket structure mass=0.064713143 cg=0.305443025
+case 2: Lug instances=3 locations=[ 0.300000 0.350000 0.400000 ] mass=0.000544281 cgAbs=0.365000000 cd=5.625816465e-03 pressureCD=5.625816465e-03 frictionCD=0.000000000e+00
+case 2: total cd=4.220800878e-01 pressureCD=6.399747329e-02 frictionCD=2.263826145e-01 baseCD=1.317000000e-01
+case 2: rocket structure mass=0.064894570 cg=0.305749315
+case 3: Buttons instances=2 locations=[ 0.200000 0.400000 ] mass=0.001653180 cgAbs=0.300000000 cd=2.208162486e-02 pressureCD=2.208162486e-02 frictionCD=0.000000000e+00
+case 3: total cd=4.493658882e-01 pressureCD=9.128327361e-02 frictionCD=2.263826145e-01 baseCD=1.317000000e-01
+case 3: rocket structure mass=0.066003470 cg=0.305116717
+case 4: Buttons instances=2 locations=[ 0.200000 0.400000 ] mass=0.002072921 cgAbs=0.300000000 cd=2.208162486e-02 pressureCD=2.208162486e-02 frictionCD=0.000000000e+00
+case 4: total cd=4.493658882e-01 pressureCD=9.128327361e-02 frictionCD=2.263826145e-01 baseCD=1.317000000e-01
+case 4: rocket structure mass=0.066423211 cg=0.305084384
+case 5: Lug instances=3 locations=[ 0.300000 0.350000 0.400000 ] mass=0.010000000 cgAbs=0.320000000 cd=5.625816465e-03 pressureCD=5.625816465e-03 frictionCD=0.000000000e+00
+case 5: total cd=4.220800878e-01 pressureCD=6.399747329e-02 frictionCD=2.263826145e-01 baseCD=1.317000000e-01
+case 5: rocket structure mass=0.074350290 cg=0.307232266

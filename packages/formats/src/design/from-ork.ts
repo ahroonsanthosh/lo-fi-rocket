@@ -49,12 +49,14 @@ export function orkToDesign(
     position: c.position,
     component: c.component,
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
+    ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
   }));
   const base = newDesign(id, rocket.name);
   let design: RocketDesign = {
     ...base,
     components,
     referenceDiameter: metres(2 * rocket.maxBodyRadius),
+    ...(rocket.approximations.length === 0 ? {} : { approximations: rocket.approximations }),
     recovery: rocket.recoveryDevices.map((d, i) => ({
       id: `ork-recovery-${String(i)}`,
       name: d.name,
@@ -110,6 +112,18 @@ export function orkToDesign(
         `Motor ${match.definition.manufacturer} ${match.definition.designation} taken from the library, ${delay === undefined ? 'plugged as in the file (no ejection charge)' : `with the file's delay of ${String(delay)} s`}.`,
       );
     }
+  }
+  // D-084: say once what the import approximated; each one is listed with the results.
+  const approximated = [
+    ...rocket.approximations,
+    ...rocket.components.flatMap((c) => c.approximations ?? []),
+  ];
+  if (approximated.length > 0) {
+    const major = approximated.filter((a) => a.impact === 'major').length;
+    const n = approximated.length;
+    notices.push(
+      `${String(n)} part${n === 1 ? '' : 's'} or setting${n === 1 ? ' is' : 's are'} approximated${major === 0 ? '' : `, ${String(major)} in a way that can change the results a lot`}; each is listed with the flight results.`,
+    );
   }
   return { design, notices };
 }

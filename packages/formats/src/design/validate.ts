@@ -7,6 +7,7 @@
  * package's and are applied when the design is used.
  */
 import {
+  type Approximation,
   type DragCurve,
   kelvin,
   kilograms,
@@ -435,6 +436,22 @@ function motorMount(c: Ctx, path: string, v: unknown): MotorMount {
   };
 }
 
+/** A list of approximations (D-084): each with its subject, what, method, effect and impact. */
+function approximationList(c: Ctx, path: string, v: unknown): Approximation[] {
+  return c.array(path, v).map((item, i) => {
+    const p = `${path}[${String(i)}]`;
+    const o = c.object(p, item);
+    c.keys(p, o, ['subject', 'what', 'method', 'effect', 'impact']);
+    return {
+      subject: c.string(`${p}.subject`, o['subject']),
+      what: c.string(`${p}.what`, o['what']),
+      method: c.string(`${p}.method`, o['method']),
+      effect: c.string(`${p}.effect`, o['effect']),
+      impact: c.oneOf(`${p}.impact`, o['impact'], ['minor', 'moderate', 'major'] as const),
+    };
+  });
+}
+
 /** D-073: a mass of 0 kg or more and a finite CG from the component's forward end; at least one. */
 function designMassOverride(c: Ctx, path: string, v: unknown): MassOverride {
   const o = c.object(path, v);
@@ -687,7 +704,14 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       'stabilityThresholds',
       'warningThresholds',
     ],
-    ['motorMount', 'referenceDiameter', 'dragCurve', 'recordedFlight', 'dispersion'],
+    [
+      'motorMount',
+      'referenceDiameter',
+      'dragCurve',
+      'recordedFlight',
+      'dispersion',
+      'approximations',
+    ],
   );
   const version = c.integer('$.schemaVersion', o['schemaVersion']);
   if (version !== CURRENT_SCHEMA_VERSION) {
@@ -700,7 +724,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
   const components: DesignComponent[] = c.array('$.components', o['components']).map((v, i) => {
     const path = `$.components[${String(i)}]`;
     const co = c.object(path, v);
-    c.keys(path, co, ['id', 'name', 'position', 'component'], ['massOverride']);
+    c.keys(path, co, ['id', 'name', 'position', 'component'], ['massOverride', 'approximations']);
     const id = c.nonEmptyString(`${path}.id`, co['id']);
     if (ids.has(id)) c.fail(`${path}.id`, `duplicate id "${id}"`);
     ids.add(id);
@@ -714,6 +738,9 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       position: metres(c.number(`${path}.position`, co['position'])),
       component: component(c, `${path}.component`, co['component']),
       ...(massOverride === undefined ? {} : { massOverride }),
+      ...('approximations' in co && co['approximations'] !== undefined
+        ? { approximations: approximationList(c, `${path}.approximations`, co['approximations']) }
+        : {}),
     };
   });
   const recovery = c.array('$.recovery', o['recovery']).map((v, i) => {
@@ -774,5 +801,8 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     ...(curve === undefined ? {} : { dragCurve: curve }),
     ...(recorded === undefined ? {} : { recordedFlight: recorded }),
     ...(disp === undefined ? {} : { dispersion: disp }),
+    ...('approximations' in o && o['approximations'] !== undefined
+      ? { approximations: approximationList(c, '$.approximations', o['approximations']) }
+      : {}),
   };
 }

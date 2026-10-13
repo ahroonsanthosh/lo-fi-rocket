@@ -2,6 +2,7 @@
  * The vehicle and the simulation options (plan 0010). Pure data; the
  * conventions are those of docs/conventions.md.
  */
+import type { Approximation } from '../fidelity.js';
 import type { AtmosphereBaseConditions } from '../atmosphere/ussa1976.js';
 import type { LaunchRail, LaunchSite } from '../environment/launch.js';
 import type { WindModel } from '../environment/wind.js';
@@ -51,6 +52,8 @@ export interface FlightVehicle {
   readonly referenceDiameter?: Metres;
   /** Optional display names, one per entry of `components`, used in warnings (issue #19). */
   readonly componentNames?: readonly string[];
+  /** Approximations of the design as a whole, not of one part (D-084); listed in the result. */
+  readonly approximations?: readonly Approximation[];
 }
 
 export type IntegratorOptions =

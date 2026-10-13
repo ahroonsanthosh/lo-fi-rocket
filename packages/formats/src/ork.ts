@@ -20,6 +20,7 @@ import {
   metres,
   noseProfile,
   seconds,
+  type Approximation,
   type Component,
   type FinTab,
   type KilogramsPerCubicMetre,
@@ -83,6 +84,11 @@ export interface OrkRocket {
   readonly maxBodyRadius: Metres;
   readonly motorMount: OrkMotorMount | undefined;
   readonly recoveryDevices: readonly OrkRecoveryDevice[];
+  /**
+   * Approximations of the design as a whole (D-084), e.g. a stage-level override that is not
+   * applied. Approximations of one part are on that part (`components[i].approximations`).
+   */
+  readonly approximations: readonly Approximation[];
   /**
    * What the reader chose or approximated, in plain words: the motor
    * configuration used when the file has several (D-077), and differences
@@ -315,12 +321,16 @@ class Element {
   }
 
   /**
-   * Every child must have been read or be on the ignore list; anything else
-   * is rejected by name. Override elements get a specific message.
+   * Every child must have been read or be on the ignore list; anything else is rejected by name,
+   * or handed to `unknown` when given (D-084). Override elements get a specific message.
    */
-  finish(ignored: readonly string[]): void {
+  finish(ignored: readonly string[], unknown?: (name: string) => void): void {
     for (const c of this.node.children) {
       if (this.used.has(c.name) || ignored.includes(c.name)) continue;
+      if (unknown !== undefined) {
+        unknown(c.name);
+        continue;
+      }
       if (c.name.startsWith('override')) {
         throw this.unsupported(`mass or CG override (<${c.name}>)`);
       }
@@ -516,22 +526,40 @@ function readFinTab(el: Element, rootChord: number): FinTab | undefined {
  * coefficient override is not supported. For a parachute `<overridemass>` is
  * its mass itself and is read by the parachute reader.
  */
-function readMassOverride(el: Element, massIsComponentMass: boolean): MassOverride | undefined {
-  if (el.has('overridecd')) throw el.unsupported('drag coefficient override (<overridecd>)');
-  if (el.has('overridesubcomponentscd') && el.boolean('overridesubcomponentscd')) {
-    throw el.unsupported('drag coefficient override of subcomponents (<overridesubcomponentscd>)');
+function readMassOverride(
+  el: Element,
+  massIsComponentMass: boolean,
+  note: (a: Omit<Approximation, 'subject'>) => void,
+): MassOverride | undefined {
+  // D-084: a drag coefficient override is not applied; the computed drag is used and listed.
+  const cd = el.optionalNumber('overridecd');
+  const cdOfChildren = el.has('overridesubcomponentscd') && el.boolean('overridesubcomponentscd');
+  if (cd !== undefined) {
+    note({
+      what: `the drag coefficient override in the file (${String(cd)}${cdOfChildren ? ', including its subcomponents' : ''})`,
+      method: 'the drag computed from the part’s shape (Niskanen chapter 3)',
+      effect: 'the drag differs from what the file’s author set by hand, which moves the apogee',
+      impact: 'moderate',
+    });
   }
   const children = el.node.children.find((c) => c.name === 'subcomponents')?.children ?? [];
-  for (const flag of [
+  const coversChildren = [
     'overridesubcomponents',
     'overridesubcomponentsmass',
     'overridesubcomponentscg',
-  ]) {
-    if (el.has(flag) && el.boolean(flag) && children.length > 0) {
-      throw el.unsupported(
-        `a mass or CG override that includes the subcomponents (<${flag}> true on a component with subcomponents); set the override on the component alone, or override each subcomponent`,
-      );
-    }
+  ].some((flag) => el.has(flag) && el.boolean(flag));
+  if (coversChildren && children.length > 0) {
+    // D-084 (was refused, D-073): OpenRocket's reading of such an override is not a consistent
+    // rigid body, so the parts' own masses are used and the override is listed as not applied.
+    for (const name of ['overridemass', 'overridecg']) el.optional(name);
+    note({
+      what: 'a mass or CG override that covers this part and everything inside it',
+      method: 'the computed masses of the part and its contents, without the override',
+      effect:
+        'the mass and CG differ from the file’s override; check them against the built rocket',
+      impact: 'moderate',
+    });
+    return undefined;
   }
   const mass = massIsComponentMass ? undefined : el.optionalNumber('overridemass');
   const cg = el.optionalNumber('overridecg');
@@ -544,6 +572,49 @@ function readMassOverride(el: Element, massIsComponentMass: boolean): MassOverri
     ...(cg === undefined ? {} : { cg: metres(cg) }),
   };
 }
+
+/** Plain names of the file's part elements, for approximation subjects (D-084). */
+const PART_LABELS: Readonly<Record<string, string>> = {
+  nosecone: 'Nose cone',
+  bodytube: 'Body tube',
+  transition: 'Transition',
+  trapezoidfinset: 'Fin set',
+  freeformfinset: 'Freeform fin set',
+  ellipticalfinset: 'Elliptical fin set',
+  tubefinset: 'Tube fin set',
+  launchlug: 'Launch lug',
+  railbutton: 'Rail buttons',
+  innertube: 'Inner tube',
+  tubecoupler: 'Tube coupler',
+  engineblock: 'Engine block',
+  centeringring: 'Centering ring',
+  bulkhead: 'Bulkhead',
+  masscomponent: 'Mass component',
+  shockcord: 'Shock cord',
+  parachute: 'Parachute',
+  streamer: 'Streamer',
+  podset: 'Pod set',
+  parallelstage: 'Booster set',
+  stage: 'Stage',
+};
+
+function subjectOf(el: Element): string {
+  const label = PART_LABELS[el.node.name] ?? `<${el.node.name}>`;
+  const name = el.node.children.find((c) => c.name === 'name')?.text;
+  return name === undefined || name === '' ? label : `${label} "${name}"`;
+}
+
+/** Parts whose stand-in loses lift or drag that matters to the flight (D-084). */
+const AERODYNAMIC_PARTS = new Set([
+  'trapezoidfinset',
+  'freeformfinset',
+  'ellipticalfinset',
+  'tubefinset',
+  'launchlug',
+  'railbutton',
+  'podset',
+  'parallelstage',
+]);
 
 /** OpenRocket 24.12's automatic parachute drag coefficient (D-079, reference/rockets/parts-probe/values.txt). */
 const OPENROCKET_AUTO_PARACHUTE_CD = 0.8;
@@ -560,32 +631,203 @@ class Reader {
   readonly notices: string[] = [];
   /** Unsupported features met so far; reading goes on past them to list them all (D-082). */
   readonly problems: OrkUnsupportedError[] = [];
+  /** Approximations of the design as a whole (D-084). */
+  readonly approximations: Approximation[] = [];
+  /** Approximations noted for an element before its part is placed (D-084). */
+  private readonly pending = new Map<XmlNode, Approximation[]>();
+  /** The index of the (first) part placed for each element. */
+  private readonly placed = new Map<XmlNode, number>();
+
+  /**
+   * Note an approximation of the part `el` reads (D-084): attached to that part, when it is placed,
+   * or to the design when the element places nothing.
+   */
+  private note(el: Element, a: Omit<Approximation, 'subject'>): void {
+    const approximation = { subject: subjectOf(el), ...a };
+    const index = this.placed.get(el.node);
+    if (index !== undefined) {
+      this.attach(index, approximation);
+      return;
+    }
+    const list = this.pending.get(el.node) ?? [];
+    list.push(approximation);
+    this.pending.set(el.node, list);
+  }
+
+  /**
+   * Check a part's element for anything left unread (D-084): an element the reader does not know
+   * is skipped and listed, as major because what it would change is not known.
+   */
+  private finishPart(el: Element, ignored: readonly string[]): void {
+    el.finish(ignored, (name) => {
+      this.note(el, {
+        what: `the setting <${name}> in the file, which the app does not read`,
+        method: 'the part simulated without it',
+        effect: 'whatever it changes in OpenRocket is not simulated',
+        impact: 'major',
+      });
+    });
+    // A part that placed nothing (a weightless engine block) leaves its notes to the design.
+    const left = this.pending.get(el.node);
+    if (left !== undefined) {
+      this.pending.delete(el.node);
+      this.approximations.push(...left);
+    }
+  }
+
+  /** Attach an approximation to a part already placed (D-084). */
+  private attach(index: number, a: Approximation): void {
+    const c = this.components[index];
+    if (c === undefined) {
+      this.approximations.push(a);
+      return;
+    }
+    this.components[index] = { ...c, approximations: [...(c.approximations ?? []), a] };
+  }
+
+  /**
+   * D-084: the axisymmetric model has no radial offset; a part placed off the axis keeps its mass
+   * and position along the rocket, on the axis, and the offset is listed.
+   */
+  private onAxis(el: Element): void {
+    const radial = el.optionalNumber('radialposition') ?? 0;
+    if (radial === 0) return;
+    this.note(el, {
+      what: `its ${String(Math.round(radial * 1000))} mm offset from the rocket’s axis`,
+      method: 'the part placed on the axis at the same position along the rocket',
+      effect: 'the sideways CG offset, which tilts the flight slightly, is not simulated',
+      impact: 'minor',
+    });
+  }
 
   /**
    * Read one child, recording an unsupported feature instead of stopping, so that the remaining
    * children are still checked (D-082). Malformed input still stops at once.
    */
-  private attempt(read: () => void): void {
+  private attempt(
+    read: () => void,
+    standIn?: { readonly path: string; readonly put: (error: OrkUnsupportedError) => void },
+  ): void {
+    const components = this.components.length;
+    const devices = this.recoveryDevices.length;
+    const mount = this.motorMount;
     try {
       read();
     } catch (error) {
       if (!(error instanceof OrkUnsupportedError)) throw error;
-      this.problems.push(
-        ...(error instanceof OrkUnsupportedFeaturesError ? error.problems : [error]),
-      );
+      // A stand-in replaces the part only for a problem of the part itself; one inside it (its
+      // motor mount) is the motor's and stays a problem (D-084).
+      if (
+        standIn === undefined ||
+        error instanceof OrkUnsupportedFeaturesError ||
+        error.path !== standIn.path
+      ) {
+        this.problems.push(
+          ...(error instanceof OrkUnsupportedFeaturesError ? error.problems : [error]),
+        );
+        return;
+      }
+      // D-084: undo whatever the part placed before it failed, then put in its stand-in.
+      this.components.splice(components);
+      this.recoveryDevices.splice(devices);
+      for (const [node, index] of this.placed) if (index >= components) this.placed.delete(node);
+      this.motorMount = mount;
+      standIn.put(error);
     }
+  }
+
+  /**
+   * D-084: a part inside the rocket that the reader cannot model. With a mass in the file
+   * (`<overridemass>` or `<mass>`) it becomes a mass at its position; otherwise it is left out.
+   * Either way it is listed, as major when it is a lifting surface, a recovery device or a pod,
+   * whose aerodynamics or descent then go unmodelled.
+   */
+  private standInForInternal(el: Element, parent: Parent, error: OrkUnsupportedError): void {
+    // A motor mount (a motor cluster) is not stood in: a mass in its place would fly without its
+    // motor. It stays a problem until clusters are modelled (plan 0055).
+    if (el.has('motormount')) {
+      this.problems.push(error);
+      return;
+    }
+    const fresh = new Element(el.node, el.path, el.file);
+    const optional = (name: string): number | undefined => {
+      try {
+        return fresh.optionalNumber(name);
+      } catch {
+        return undefined;
+      }
+    };
+    const aerodynamic = AERODYNAMIC_PARTS.has(el.node.name);
+    const recovery = el.node.name === 'streamer' || el.node.name === 'parachute';
+    const mass = optional('overridemass') ?? optional('mass');
+    const length = optional('length') ?? optional('packedlength') ?? optional('rootchord') ?? 0;
+    let position = parent.position;
+    try {
+      position = axialPosition(fresh, parent, length);
+    } catch {
+      // the part's own position could not be read: its holder's front is used
+    }
+    const lost = aerodynamic
+      ? 'its drag and lift are not simulated; without its lift the stability shown is lower than the rocket’s (the cautious side)'
+      : recovery
+        ? 'it does not slow the descent: the descent is simulated without it'
+        : 'nothing else is affected';
+    const impact = aerodynamic || recovery ? 'major' : mass === undefined ? 'moderate' : 'minor';
+    const approximation: Approximation = {
+      subject: subjectOf(el),
+      what: `${error.feature} (the app cannot model this part yet)`,
+      method:
+        mass === undefined
+          ? 'the part left out: the file gives no mass for it'
+          : `a ${String(Math.round(mass * 1e4) / 10)} g mass at its position, from the file`,
+      effect: `${mass === undefined ? 'its mass is missing from the total and the CG; ' : ''}${lost}`,
+      impact,
+    };
+    if (mass === undefined || !(mass >= 0)) {
+      this.approximations.push(approximation);
+      return;
+    }
+    const radius = optional('packedradius') ?? optional('outerradius') ?? optional('radius');
+    this.components.push({
+      name: el.optionalText('name') ?? '',
+      element: el.node.name,
+      component: {
+        kind: 'massComponent',
+        mass: kilograms(mass),
+        length: metres(Math.max(length, 0)),
+        // The holder's radius when the part gives none: it only enters the inertia.
+        radius: metres(radius !== undefined && radius > 0 ? radius : parent.radius),
+      },
+      position: metres(position),
+      approximations: [approximation],
+    });
   }
   /** The `configid` of the motor configuration OpenRocket selects (D-077); undefined with no configurations. */
   private selectedConfig: string | undefined;
 
-  private place(el: Element, component: Component, position: number): number {
-    const massOverride = readMassOverride(el, component.kind === 'parachute');
+  /** Place a part; its mass override is read from `el` unless one is given. */
+  private place(
+    el: Element,
+    component: Component,
+    position: number,
+    override: MassOverride | undefined | 'from file' = 'from file',
+  ): number {
+    const massOverride =
+      override === 'from file'
+        ? readMassOverride(el, component.kind === 'parachute', (a) => {
+            this.note(el, a);
+          })
+        : override;
+    const approximations = this.pending.get(el.node);
+    this.pending.delete(el.node);
+    if (!this.placed.has(el.node)) this.placed.set(el.node, this.components.length);
     this.components.push({
       name: el.optionalText('name') ?? '',
       element: el.node.name,
       component,
       position: metres(position),
       ...(massOverride === undefined ? {} : { massOverride }),
+      ...(approximations === undefined ? {} : { approximations }),
     });
     return this.components.length - 1;
   }
@@ -686,46 +928,54 @@ class Reader {
   /** Children of a body tube. */
   private readInternal(subcomponents: Element, parent: Parent): void {
     for (const node of subcomponents.node.children) {
-      this.attempt(() => {
-        const el = subcomponents.wrap(node);
-        switch (node.name) {
-          case 'trapezoidfinset':
-            this.readFinSet(el, parent);
-            break;
-          case 'launchlug':
-            this.readLaunchLug(el, parent);
-            break;
-          case 'railbutton':
-            this.readRailButton(el, parent);
-            break;
-          case 'innertube':
-            this.readInnerTube(el, parent);
-            break;
-          case 'centeringring':
-            this.readRing(el, parent, 'centeringRing');
-            break;
-          case 'bulkhead':
-            this.readRing(el, parent, 'bulkhead');
-            break;
-          case 'masscomponent':
-            this.readMassComponent(el, parent);
-            break;
-          case 'parachute':
-            this.readParachute(el, parent);
-            break;
-          case 'shockcord':
-            this.readShockCord(el, parent);
-            break;
-          case 'tubecoupler':
-            this.readTubeCoupler(el, parent);
-            break;
-          case 'engineblock':
-            this.readEngineBlock(el, parent);
-            break;
-          default:
-            throw el.unsupported(`element <${node.name}>`);
-        }
-      });
+      this.attempt(
+        () => {
+          const el = subcomponents.wrap(node);
+          switch (node.name) {
+            case 'trapezoidfinset':
+              this.readFinSet(el, parent);
+              break;
+            case 'launchlug':
+              this.readLaunchLug(el, parent);
+              break;
+            case 'railbutton':
+              this.readRailButton(el, parent);
+              break;
+            case 'innertube':
+              this.readInnerTube(el, parent);
+              break;
+            case 'centeringring':
+              this.readRing(el, parent, 'centeringRing');
+              break;
+            case 'bulkhead':
+              this.readRing(el, parent, 'bulkhead');
+              break;
+            case 'masscomponent':
+              this.readMassComponent(el, parent);
+              break;
+            case 'parachute':
+              this.readParachute(el, parent);
+              break;
+            case 'shockcord':
+              this.readShockCord(el, parent);
+              break;
+            case 'tubecoupler':
+              this.readTubeCoupler(el, parent);
+              break;
+            case 'engineblock':
+              this.readEngineBlock(el, parent);
+              break;
+            default:
+              throw el.unsupported(`element <${node.name}>`);
+          }
+        },
+        {
+          path: subcomponents.wrap(node).path,
+          put: (error) => {
+            this.standInForInternal(subcomponents.wrap(node), parent, error);
+          },
+        },
+      );
     }
   }
 
@@ -737,19 +987,41 @@ class Reader {
         `<instancecount> ${String(instances)} differs from <fincount> ${String(count)}`,
       );
     }
-    el.requireZero('cant', 'canted fins');
-    el.requireZero('filletradius', 'fin fillets');
-    const crossSection = el.optionalText('crosssection') ?? 'square';
-    if (crossSection !== 'square' && crossSection !== 'rounded' && crossSection !== 'airfoil') {
-      throw el.unsupported(`fin cross-section "${crossSection}"`);
+    const cant = el.optionalNumber('cant') ?? 0;
+    if (cant !== 0) {
+      // D-084: the roll forcing of canted fins is not yet modelled (plan 0055 step 6).
+      this.note(el, {
+        what: `the fins’ ${String(Math.round(((cant * 180) / Math.PI) * 10) / 10)}° cant`,
+        method: 'the fins flown straight: no roll forcing',
+        effect:
+          'the spin the cant gives is not simulated; the trajectory and stability change little, the roll rate is not shown',
+        impact: 'minor',
+      });
     }
-    if (crossSection !== 'square') {
-      // D-077: OpenRocket reduces the volume of rounded and airfoil fins (to 0.99 and 0.85 of the slab,
-      // reference/rockets/config-probe/values.txt); no source gives such factors, so the slab is kept.
-      this.notices.push(
-        `Fin set "${el.optionalText('name') ?? ''}" has ${crossSection} edges. OpenRocket makes such fins ${crossSection === 'rounded' ? '1' : '15'} % lighter than a flat slab of the same outline; this app uses the full slab (area × thickness), so the fins weigh slightly more and the CG sits slightly further aft than in OpenRocket. Use a mass override if you know the real fin mass.`,
-      );
+    const fillet = el.optionalNumber('filletradius') ?? 0;
+    if (fillet !== 0) {
+      this.note(el, {
+        what: `fin fillets of ${String(Math.round(fillet * 1e4) / 10)} mm radius`,
+        method: 'the fins without fillets',
+        effect: 'the fillets’ few grams and small drag are missing',
+        impact: 'minor',
+      });
     }
+    const written = el.optionalText('crosssection') ?? 'square';
+    const known = written === 'square' || written === 'rounded' || written === 'airfoil';
+    if (!known) {
+      // D-084: a cross-section the app does not know is flown as square, whose blunt edges have
+      // the most drag and whose slab has the most mass, aft of the CG (the cautious side).
+      this.note(el, {
+        what: `the fin cross-section "${written}"`,
+        method: 'the fins flown as square-edged flat plates',
+        effect:
+          'the fin drag and mass are those of square edges, likely a little high: the apogee shown is a little low',
+        impact: 'moderate',
+      });
+    }
+    const crossSection = known ? written : 'square';
+    // Rounded and airfoil fins: the slab mass is listed by the physics (D-077, D-083).
     const rootChord = el.number('rootchord');
     const position = axialPosition(el, parent, rootChord);
     const tab = readFinTab(el, rootChord);
@@ -770,32 +1042,62 @@ class Reader {
       },
       position,
     );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'filletmaterial']);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'filletmaterial']);
   }
 
   private readLaunchLug(el: Element, parent: Parent): void {
-    el.requireValue('instancecount', '1', 'more than one launch lug instance');
+    // D-084: OpenRocket's n instances are n lugs, the first at the component's position and each
+    // next one <instanceseparation> further aft, with n times the mass and the drag of one
+    // (reference/rockets/lug-probe/values.txt cases 0 to 2); they are placed as n lugs. A mass
+    // override is the set's total at the override CG, from the first lug's front, or else at the
+    // set's own CG (case 5: 0.01 kg at 0.02 m); it is put on the first lug and the others weigh 0.
+    const count = el.has('instancecount') ? el.integer('instancecount') : 1;
+    if (count < 1) throw el.parseError(`<instancecount> must be 1 or more, got ${String(count)}`);
+    const separation = count > 1 ? el.number('instanceseparation') : 0;
     const length = el.number('length');
     const radius = el.number('radius');
     const position = axialPosition(el, parent, length);
-    this.place(
-      el,
-      {
-        kind: 'launchLug',
-        length: metres(length),
-        outerRadius: metres(radius),
-        wallThickness: metres(el.number('thickness')),
-        density: el.bulkDensity(),
-        radialOffset: metres(parent.radius + radius),
-      },
-      position,
-    );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
+    const lug: Component = {
+      kind: 'launchLug',
+      length: metres(length),
+      outerRadius: metres(radius),
+      wallThickness: metres(el.number('thickness')),
+      density: el.bulkDensity(),
+      radialOffset: metres(parent.radius + radius),
+    };
+    const override = readMassOverride(el, false, (a) => {
+      this.note(el, a);
+    });
+    const setCg = length / 2 + ((count - 1) * separation) / 2;
+    const overrideOf = (i: number): MassOverride | undefined => {
+      if (count === 1 || override === undefined) return override;
+      if (override.mass === undefined) {
+        return override.cg === undefined ? undefined : { cg: metres(override.cg - i * separation) };
+      }
+      return i === 0
+        ? { mass: override.mass, cg: override.cg ?? metres(setCg) }
+        : { mass: kilograms(0) };
+    };
+    for (let i = 0; i < count; i++) this.place(el, lug, position + i * separation, overrideOf(i));
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
   }
 
   private readRailButton(el: Element, parent: Parent): void {
     const count = el.integer('instancecount');
-    el.requireZero('screwheight', 'rail button screw height');
+    const screw = el.optionalNumber('screwheight') ?? 0;
+    if (screw > 0) {
+      // D-084: OpenRocket counts each screw head as a half-ellipsoid of the button's outer radius
+      // and the screw height, mass only, no drag (reference/rockets/lug-probe/values.txt cases 3
+      // and 4: 0.4197 g for two 9.7 mm Delrin buttons with 3 mm screws).
+      const outer = el.number('outerdiameter') / 2;
+      const grams = count * ((2 / 3) * Math.PI * outer ** 2 * screw) * el.bulkDensity() * 1000;
+      this.note(el, {
+        what: `the screw heads (${String(Math.round(screw * 1e4) / 10)} mm)`,
+        method: 'the buttons without their screw heads',
+        effect: `about ${grams.toPrecision(2)} g is missing from the total; they add no drag`,
+        impact: 'minor',
+      });
+    }
     const separation = el.optionalNumber('instanceseparation');
     if (count > 1 && separation === undefined) {
       throw el.parseError('<instanceseparation> is required for more than one button');
@@ -817,11 +1119,11 @@ class Reader {
       },
       position,
     );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR]);
   }
 
   private readInnerTube(el: Element, parent: Parent): void {
-    el.requireZero('radialposition', 'radially offset inner tubes');
+    this.onAxis(el);
     el.requireValue('clusterconfiguration', 'single', 'motor clusters');
     const length = el.number('length');
     const position = axialPosition(el, parent, length);
@@ -852,7 +1154,7 @@ class Reader {
       };
       this.readNoseInternal(sub, { ...parentOfChildren, innerTubes: [] }, 'an inner tube');
     }
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'clusterscale', 'clusterrotation']);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'clusterscale', 'clusterrotation']);
   }
 
   /**
@@ -860,7 +1162,7 @@ class Reader {
    * mount; OpenRocket's mass for it is the tube's (reference/rockets/parts-probe/values.txt).
    */
   private readTubeCoupler(el: Element, parent: Parent): void {
-    el.requireZero('radialposition', 'radially offset tube couplers');
+    this.onAxis(el);
     const length = el.number('length');
     const fore = axialPosition(el, parent, length);
     const outer = el.radiusOrAuto('outerradius', () =>
@@ -894,7 +1196,7 @@ class Reader {
         'a tube coupler',
       );
     }
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR]);
   }
 
   /**
@@ -903,7 +1205,7 @@ class Reader {
    */
   private readEngineBlock(el: Element, parent: Parent): void {
     el.requireValue('instancecount', '1', 'more than one engine block instance');
-    el.requireZero('radialposition', 'radially offset engine blocks');
+    this.onAxis(el);
     const length = el.number('length');
     const fore = axialPosition(el, parent, length);
     const outer = el.radiusOrAuto('outerradius', () =>
@@ -912,7 +1214,12 @@ class Reader {
     const thickness = el.number('thickness');
     if (thickness === 0) {
       // OpenRocket gives a zero-thickness engine block no mass (tab-probe case 0); nothing to place.
-      el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation', 'material']);
+      this.finishPart(el, [
+        ...IGNORED_COMMON,
+        ...IGNORED_ANGULAR,
+        'instanceseparation',
+        'material',
+      ]);
       return;
     }
     if (!(thickness > 0 && thickness <= outer)) {
@@ -931,7 +1238,7 @@ class Reader {
       },
       fore,
     );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
   }
 
   /**
@@ -939,7 +1246,7 @@ class Reader {
    * packed length and radius (parts-probe: 1.5 m × 0.005 kg/m = 0.0075 kg at the packed centre).
    */
   private readShockCord(el: Element, parent: Parent): void {
-    el.requireZero('radialposition', 'radially offset shock cords');
+    this.onAxis(el);
     const length = el.number('packedlength');
     const cord = el.number('cordlength');
     if (!(cord >= 0)) throw el.parseError(`<cordlength> must be 0 m or more, got ${String(cord)}`);
@@ -953,12 +1260,12 @@ class Reader {
       },
       axialPosition(el, parent, length),
     );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR]);
   }
 
   private readRing(el: Element, parent: Parent, kind: 'centeringRing' | 'bulkhead'): void {
     el.requireValue('instancecount', '1', `more than one ${kind} instance`);
-    el.requireZero('radialposition', `radially offset ${kind}`);
+    this.onAxis(el);
     const length = el.number('length');
     const position = axialPosition(el, parent, length);
     const aft = position + length;
@@ -985,18 +1292,11 @@ class Reader {
       },
       position,
     );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
   }
 
   private readMassComponent(el: Element, parent: Parent): void {
-    // D-080: the physics model is axisymmetric; a radially offset mass is placed on the axis, keeping
-    // its mass and axial position, and the import says so.
-    const radial = el.optionalNumber('radialposition') ?? 0;
-    if (radial !== 0) {
-      this.notices.push(
-        `Mass component "${el.optionalText('name') ?? ''}" sits ${String(Math.round(radial * 1000))} mm off the rocket's axis in the file. This app models the rocket as symmetric about its axis, so the mass is placed on the axis at the same position along the rocket; its sideways offset, which tilts the rocket slightly, is not modelled.`,
-      );
-    }
+    this.onAxis(el);
     const length = el.number('packedlength');
     const position = axialPosition(el, parent, length);
     this.place(
@@ -1009,14 +1309,13 @@ class Reader {
       },
       position,
     );
-    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'masscomponenttype']);
+    this.finishPart(el, [...IGNORED_COMMON, ...IGNORED_ANGULAR, 'masscomponenttype']);
   }
 
   private readParachute(el: Element, parent: Parent): void {
-    el.requireZero('radialposition', 'radially offset parachutes');
-    if (el.has('overridesubcomponentsmass') && el.boolean('overridesubcomponentsmass')) {
-      throw el.unsupported('<overridesubcomponentsmass> true');
-    }
+    this.onAxis(el);
+    // An override "including subcomponents" is the parachute's own: OpenRocket gives a parachute no
+    // children, and any in the file are refused by name (D-084).
     const diameter = el.number('diameter');
     // D-079: without an override, OpenRocket's parachute mass is the canopy disc, π (d/2)² × the
     // surface density, plus the lines, count × length × the line density
@@ -1045,17 +1344,33 @@ class Reader {
       .all('deploymentconfiguration')
       .find((n) => n.attributes['configid'] === this.selectedConfig);
     const deploy = own === undefined ? el : el.wrap(own);
-    const event = deploy.text('deployevent');
-    if (!['launch', 'ejection', 'apogee', 'altitude', 'never'].includes(event)) {
-      throw deploy.unsupported(`deployment event "${event}"`);
+    const written = deploy.text('deployevent');
+    const known = ['launch', 'ejection', 'apogee', 'altitude', 'never'].includes(written);
+    if (!known) {
+      // D-084: an event the app does not model (a stage separation) deploys at apogee, the usual
+      // intent; the deployment speed and descent can then be wrong in kind, so it is major.
+      this.attach(index, {
+        subject: subjectOf(el),
+        what: `deployment at the "${written}" event`,
+        method: 'deployed at apogee instead',
+        effect:
+          'the deployment speed, descent and drift are those of an apogee deployment, which may not be what happens',
+        impact: 'major',
+      });
     }
+    const event = known ? written : 'apogee';
     const cdText = el.text('cd');
     if (cdText === 'auto') {
       // D-079 (the owner's choice): OpenRocket's automatic parachute C_D, 0.8 (parts-probe), an
-      // OpenRocket default with no approved source, used and stated.
-      this.notices.push(
-        `Parachute "${el.optionalText('name') ?? ''}" uses OpenRocket's automatic drag coefficient, 0.8. That is OpenRocket's default, not a measured value for this canopy; enter the maker's figure if you have it.`,
-      );
+      // OpenRocket default with no approved source, used and listed (D-084).
+      this.attach(index, {
+        subject: subjectOf(el),
+        what: 'the canopy’s drag coefficient ("auto" in the file)',
+        method: 'OpenRocket’s default C_D of 0.8',
+        effect:
+          'the descent rate and drift depend on it; a real canopy’s figure can differ by 20 % or more. Enter the maker’s value if you have it',
+        impact: 'moderate',
+      });
     }
     this.recoveryDevices.push({
       name: el.optionalText('name') ?? '',
@@ -1071,7 +1386,7 @@ class Reader {
       // The parachute's own deployment elements are the other configurations' settings.
       for (const name of ['deployevent', 'deployaltitude', 'deploydelay']) el.optional(name);
     }
-    el.finish([
+    this.finishPart(el, [
       ...IGNORED_COMMON,
       ...IGNORED_ANGULAR,
       'material',
@@ -1114,6 +1429,30 @@ class Reader {
       });
     }
     this.length = x;
+    // D-084: a stage-level override is not applied yet (the parts' own masses and drag are used)
+    // and is listed for the design as a whole. OpenRocket makes a stage mass override the stage's
+    // total, or adds it as a point mass, and moves the CG to an overridden one
+    // (reference/rockets/stage-override-probe/values.txt), often to enter a measured weight: so a
+    // mass or CG override is major, a drag override moderate.
+    const stageOverrides = ['overridemass', 'overridecg', 'overridecd'].filter((n) => stage.has(n));
+    if (stageOverrides.length > 0) {
+      for (const n of [
+        ...stageOverrides,
+        'overridesubcomponents',
+        'overridesubcomponentsmass',
+        'overridesubcomponentscg',
+        'overridesubcomponentscd',
+      ])
+        stage.optional(n);
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what: `the stage’s ${stageOverrides.map((n) => ({ overridemass: 'mass', overridecg: 'CG', overridecd: 'drag' })[n]).join(' and ')} override`,
+        method: 'the masses and drag of the stage’s parts, without the override',
+        effect:
+          'the mass, CG or drag differ from what the file’s author set for the whole stage, often a measured weight; enter the measured masses on the parts to use them',
+        impact: stageOverrides.some((n) => n !== 'overridecd') ? 'major' : 'moderate',
+      });
+    }
     stage.finish([...IGNORED_COMMON]);
   }
 
@@ -1165,7 +1504,7 @@ class Reader {
       };
       this.readNoseInternal(sub, { ...parent, innerTubes: innerTubeSpans(sub, parent) });
     }
-    el.finish([...IGNORED_COMMON]);
+    this.finishPart(el, [...IGNORED_COMMON]);
     return x + length;
   }
 
@@ -1179,54 +1518,67 @@ class Reader {
    */
   private readNoseInternal(subcomponents: Element, parent: Parent, where = 'a nose cone'): void {
     for (const node of subcomponents.node.children) {
-      this.attempt(() => {
-        const el = subcomponents.wrap(node);
-        switch (node.name) {
-          case 'centeringring':
-            this.readRing(el, parent, 'centeringRing');
-            break;
-          case 'bulkhead':
-            this.readRing(el, parent, 'bulkhead');
-            break;
-          case 'masscomponent':
-            this.readMassComponent(el, parent);
-            break;
-          case 'parachute':
-            this.readParachute(el, parent);
-            break;
-          case 'shockcord':
-            this.readShockCord(el, parent);
-            break;
-          case 'tubecoupler':
-            this.readTubeCoupler(el, parent);
-            break;
-          case 'engineblock':
-            this.readEngineBlock(el, parent);
-            break;
-          default:
-            throw el.unsupported(`element <${node.name}> inside ${where}`);
-        }
-      });
+      this.attempt(
+        () => {
+          const el = subcomponents.wrap(node);
+          switch (node.name) {
+            case 'centeringring':
+              this.readRing(el, parent, 'centeringRing');
+              break;
+            case 'bulkhead':
+              this.readRing(el, parent, 'bulkhead');
+              break;
+            case 'masscomponent':
+              this.readMassComponent(el, parent);
+              break;
+            case 'parachute':
+              this.readParachute(el, parent);
+              break;
+            case 'shockcord':
+              this.readShockCord(el, parent);
+              break;
+            case 'tubecoupler':
+              this.readTubeCoupler(el, parent);
+              break;
+            case 'engineblock':
+              this.readEngineBlock(el, parent);
+              break;
+            default:
+              throw el.unsupported(`element <${node.name}> inside ${where}`);
+          }
+        },
+        {
+          path: subcomponents.wrap(node).path,
+          put: (error) => {
+            this.standInForInternal(subcomponents.wrap(node), parent, error);
+          },
+        },
+      );
     }
   }
 
   private readTransition(el: Element, x: number): number {
-    // Clipped transitions are not implemented in the physics package (plan 0003).
-    if (el.has('shapeclipped') && el.boolean('shapeclipped')) {
-      throw el.unsupported('clipped transitions');
-    }
     const { shape, shapeParameter } = readShape(el);
+    // D-084: clipped transition profiles are not in the physics (plan 0003); the unclipped shape of
+    // the same length and radii is used and listed.
+    if (shape !== 'conical' && el.has('shapeclipped') && el.boolean('shapeclipped')) {
+      this.note(el, {
+        what: `its clipped ${shape} profile`,
+        method: `the unclipped ${shape} profile of the same length and end radii`,
+        effect: 'the transition’s outline, and so its mass, drag and lift, differ slightly',
+        impact: 'moderate',
+      });
+    } else if (el.has('shapeclipped')) {
+      el.boolean('shapeclipped');
+    }
     const length = el.number('length');
     const foreRadius = el.length('foreradius');
     const aftRadius = el.length('aftradius');
     const thickness = el.thickness('thickness');
-    for (const prefix of ['fore', 'aft'] as const) {
-      const fields = ['radius', 'length', 'thickness'].map((f) =>
-        el.number(`${prefix}shoulder${f}`),
-      );
-      if (fields.some((v) => v !== 0)) throw el.unsupported('transition shoulders');
-      if (el.boolean(`${prefix}shouldercapped`)) throw el.unsupported(`capped ${prefix} shoulder`);
-    }
+    const shoulders = (['fore', 'aft'] as const).map((side) => ({
+      side,
+      ...readShoulder(el, side),
+    }));
     this.maxBodyRadius = Math.max(this.maxBodyRadius, foreRadius, aftRadius);
     this.place(
       el,
@@ -1242,7 +1594,41 @@ class Reader {
       },
       x,
     );
-    el.finish([...IGNORED_COMMON]);
+    // D-084: a transition shoulder is a tube of the shoulder's radius, length and wall beyond each
+    // end, with a cap disc when capped: the nose cone rule of D-078, which OpenRocket gives
+    // transitions too (reference/rockets/transition-shoulder-probe/values.txt: fore 3.7605 g, cap
+    // 1.7241 g at 0.0295 m ahead, aft with cap 2.1749 g).
+    // OpenRocket's override would cover the shoulders, which are separate parts here (as for caps).
+    if (
+      shoulders.some((s) => s.shoulder !== undefined) &&
+      (el.has('overridemass') || el.has('overridecg'))
+    ) {
+      throw el.unsupported('a mass or CG override on a transition with shoulders');
+    }
+    for (const { side, shoulder, capped } of shoulders) {
+      if (shoulder === undefined) continue;
+      const fore = side === 'fore' ? x - (shoulder.length as number) : x + length;
+      this.components.push({
+        name: `${el.optionalText('name') ?? ''} (${side} shoulder)`,
+        element: 'transitionshoulder',
+        component: {
+          kind: 'innerTube',
+          length: shoulder.length,
+          outerRadius: shoulder.radius,
+          wallThickness: shoulder.wallThickness,
+          density: el.bulkDensity(),
+        },
+        position: metres(fore),
+      });
+      if (capped)
+        this.placeShoulderCap(
+          el,
+          shoulder,
+          side === 'fore' ? fore : x + length + (shoulder.length as number),
+          side,
+        );
+    }
+    this.finishPart(el, [...IGNORED_COMMON]);
     return x + length;
   }
 
@@ -1269,7 +1655,7 @@ class Reader {
       const parent: Parent = { position: x, length, radius, autoOuterRadius: () => inner };
       this.readInternal(sub, { ...parent, innerTubes: innerTubeSpans(sub, parent) });
     }
-    el.finish([...IGNORED_COMMON]);
+    this.finishPart(el, [...IGNORED_COMMON]);
     return x + length;
   }
 
@@ -1336,6 +1722,7 @@ class Reader {
       maxBodyRadius: metres(this.maxBodyRadius),
       motorMount: this.motorMount,
       recoveryDevices: this.recoveryDevices,
+      approximations: this.approximations,
       notices: this.notices,
     };
   }

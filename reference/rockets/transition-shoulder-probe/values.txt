@@ -1,0 +1,5 @@
+case 0: transition absX0=0.400000000 mass=0.005626569 cgRel=0.023165789 Irot_unit=6.549143915e-04 Ilong_unit=5.324262006e-04
+case 1: transition absX0=0.400000000 mass=0.009387056 cgRel=0.007876444 Irot_unit=7.180437224e-04 Ilong_unit=8.616906919e-04
+case 2: transition absX0=0.400000000 mass=0.011111162 cgRel=0.002076785 Irot_unit=6.674518966e-04 Ilong_unit=9.415437700e-04
+case 3: transition absX0=0.400000000 mass=0.007801494 cgRel=0.034208457 Irot_unit=5.445851118e-04 Ilong_unit=7.473629909e-04
+case 4: transition absX0=0.400000000 mass=0.013286086 cgRel=0.012013217 Irot_unit=6.006149590e-04 Ilong_unit=1.319948921e-03

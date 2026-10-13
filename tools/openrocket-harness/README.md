@@ -46,3 +46,15 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Tab probe
 
 `src/TabProbe.java` (D-081) measures fin sets with fin tabs at each tab reference and an engine block in a motor tube; output in `reference/rockets/tab-probe/`.
+
+## Lug probe
+
+`src/LugProbe.java` (D-084) measures a launch lug of three instances against one and two separate lugs (positions, mass, drag), and rail buttons with and without a screw height; output in `reference/rockets/lug-probe/`.
+
+## Transition shoulder probe
+
+`src/TransitionShoulderProbe.java` (D-084) measures the mass and CG of a transition with fore and aft shoulders, open and capped; output in `reference/rockets/transition-shoulder-probe/`.
+
+## Stage override probe
+
+`src/StageOverrideProbe.java` (D-084) measures what a mass or CG override on the stage does to the rocket's structure mass, CG and inertias, with and without the override covering the subcomponents; output in `reference/rockets/stage-override-probe/`.

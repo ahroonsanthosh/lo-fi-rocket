@@ -1557,12 +1557,16 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       : [
           `This rocket is unstable: at ${unstable.time.toFixed(2)} s its centre of pressure is ${(-unstable.calibers).toFixed(2)} calibers ahead of its centre of mass, so it turns sideways or tumbles instead of flying straight. The apogee, speeds and landing point shown are not a prediction of its flight. Add or enlarge the fins, or add nose weight, until the margin is positive (1 to 2 calibers is the usual target).`,
         ];
-  const approximations = componentApproximations(
-    vehicle.components.map((c, i) => ({
-      ...(vehicle.componentNames?.[i] === undefined ? {} : { name: vehicle.componentNames[i] }),
-      component: c.component,
-    })),
-  );
+  const approximations = [
+    ...(vehicle.approximations ?? []),
+    ...componentApproximations(
+      vehicle.components.map((c, i) => ({
+        ...(vehicle.componentNames?.[i] === undefined ? {} : { name: vehicle.componentNames[i] }),
+        component: c.component,
+        ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
+      })),
+    ),
+  ];
   return {
     samples,
     events,
