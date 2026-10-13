@@ -286,6 +286,22 @@ class Element {
   }
 
   /**
+   * Density of a surface (kg/m²) or line (kg/m) material, from its `type` and `density` attributes
+   * (D-079: a parachute canopy, its lines, a shock cord).
+   */
+  materialDensity(element: string, type: 'surface' | 'line'): number {
+    const m = this.one(element);
+    const found = m.attributes['type'];
+    if (found !== type)
+      throw this.unsupported(`<${element}> of type "${found ?? ''}" where "${type}" is expected`);
+    const text = m.attributes['density'];
+    if (text === undefined) throw this.parseError(`<${element}> has no density attribute`);
+    const density = this.toNumber(`${element} density`, text);
+    if (!(density >= 0)) throw this.parseError(`${element} density must be 0 or more, got ${text}`);
+    return density;
+  }
+
+  /**
    * Every child must have been read or be on the ignore list; anything else
    * is rejected by name. Override elements get a specific message.
    */
@@ -451,6 +467,9 @@ function readMassOverride(el: Element, massIsComponentMass: boolean): MassOverri
   };
 }
 
+/** OpenRocket 24.12's automatic parachute drag coefficient (D-079, reference/rockets/parts-probe/values.txt). */
+const OPENROCKET_AUTO_PARACHUTE_CD = 0.8;
+
 /** The configuration OpenRocket opens a file in when none of several is marked default: no motor. */
 const NO_CONFIGURATION = '';
 
@@ -592,6 +611,15 @@ class Reader {
         case 'parachute':
           this.readParachute(el, parent);
           break;
+        case 'shockcord':
+          this.readShockCord(el, parent);
+          break;
+        case 'tubecoupler':
+          this.readTubeCoupler(el, parent);
+          break;
+        case 'engineblock':
+          this.readEngineBlock(el, parent);
+          break;
         default:
           throw el.unsupported(`element <${node.name}>`);
       }
@@ -711,6 +739,82 @@ class Reader {
     el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'clusterscale', 'clusterrotation']);
   }
 
+  /**
+   * A tube coupler (D-079): a thin tube inside the body, read as an inner tube that is not a motor
+   * mount; OpenRocket's mass for it is the tube's (reference/rockets/parts-probe/values.txt).
+   */
+  private readTubeCoupler(el: Element, parent: Parent): void {
+    el.requireZero('radialposition', 'radially offset tube couplers');
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined && sub.node.children.length > 0) {
+      throw sub.unsupported('components inside a tube coupler');
+    }
+    const length = el.number('length');
+    this.place(
+      el,
+      {
+        kind: 'innerTube',
+        length: metres(length),
+        outerRadius: metres(el.length('outerradius')),
+        wallThickness: metres(el.number('thickness')),
+        density: el.bulkDensity(),
+      },
+      axialPosition(el, parent, length),
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+  }
+
+  /**
+   * An engine block (D-079): a ring of the given outer radius and wall thickness, so its inner
+   * radius is the outer radius minus the thickness (parts-probe: 0.0095 and 0.003 give 0.0065).
+   */
+  private readEngineBlock(el: Element, parent: Parent): void {
+    el.requireValue('instancecount', '1', 'more than one engine block instance');
+    el.requireZero('radialposition', 'radially offset engine blocks');
+    const length = el.number('length');
+    const outer = el.length('outerradius');
+    const thickness = el.number('thickness');
+    if (!(thickness > 0 && thickness <= outer)) {
+      throw el.parseError(
+        `engine block thickness must be greater than 0 and at most the outer radius, got ${String(thickness)} and ${String(outer)}`,
+      );
+    }
+    this.place(
+      el,
+      {
+        kind: 'centeringRing',
+        length: metres(length),
+        outerRadius: metres(outer),
+        innerRadius: metres(outer - thickness),
+        density: el.bulkDensity(),
+      },
+      axialPosition(el, parent, length),
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR, 'instanceseparation']);
+  }
+
+  /**
+   * A shock cord (D-079): a mass of cord length × line density, packed as a cylinder of the
+   * packed length and radius (parts-probe: 1.5 m × 0.005 kg/m = 0.0075 kg at the packed centre).
+   */
+  private readShockCord(el: Element, parent: Parent): void {
+    el.requireZero('radialposition', 'radially offset shock cords');
+    const length = el.number('packedlength');
+    const cord = el.number('cordlength');
+    if (!(cord >= 0)) throw el.parseError(`<cordlength> must be 0 m or more, got ${String(cord)}`);
+    this.place(
+      el,
+      {
+        kind: 'massComponent',
+        mass: kilograms(cord * el.materialDensity('material', 'line')),
+        length: metres(length),
+        radius: metres(el.number('packedradius')),
+      },
+      axialPosition(el, parent, length),
+    );
+    el.finish([...IGNORED_COMMON, ...IGNORED_ANGULAR]);
+  }
+
   private readRing(el: Element, parent: Parent, kind: 'centeringRing' | 'bulkhead'): void {
     el.requireValue('instancecount', '1', `more than one ${kind} instance`);
     el.requireZero('radialposition', `radially offset ${kind}`);
@@ -749,19 +853,26 @@ class Reader {
 
   private readParachute(el: Element, parent: Parent): void {
     el.requireZero('radialposition', 'radially offset parachutes');
-    if (!el.has('overridemass')) {
-      throw el.unsupported('parachute mass from canopy and line materials (no <overridemass>)');
-    }
-    if (el.boolean('overridesubcomponentsmass')) {
+    if (el.has('overridesubcomponentsmass') && el.boolean('overridesubcomponentsmass')) {
       throw el.unsupported('<overridesubcomponentsmass> true');
     }
+    const diameter = el.number('diameter');
+    // D-079: without an override, OpenRocket's parachute mass is the canopy disc, π (d/2)² × the
+    // surface density, plus the lines, count × length × the line density
+    // (reference/rockets/parts-probe/values.txt: 0.018944 + 0.0072 = 0.026144 kg).
+    const mass = el.has('overridemass')
+      ? el.number('overridemass')
+      : Math.PI * (diameter / 2) ** 2 * el.materialDensity('material', 'surface') +
+        el.number('linecount') *
+          el.number('linelength') *
+          el.materialDensity('linematerial', 'line');
     const length = el.number('packedlength');
     const position = axialPosition(el, parent, length);
     const index = this.place(
       el,
       {
         kind: 'parachute',
-        mass: kilograms(el.number('overridemass')),
+        mass: kilograms(mass),
         length: metres(length),
         radius: metres(el.number('packedradius')),
       },
@@ -778,12 +889,18 @@ class Reader {
       throw deploy.unsupported(`deployment event "${event}"`);
     }
     const cdText = el.text('cd');
-    if (cdText === 'auto') throw el.unsupported('parachute drag coefficient "auto"');
+    if (cdText === 'auto') {
+      // D-079 (the owner's choice): OpenRocket's automatic parachute C_D, 0.8 (parts-probe), an
+      // OpenRocket default with no approved source, used and stated.
+      this.notices.push(
+        `Parachute "${el.optionalText('name') ?? ''}" uses OpenRocket's automatic drag coefficient, 0.8. That is OpenRocket's default, not a measured value for this canopy; enter the maker's figure if you have it.`,
+      );
+    }
     this.recoveryDevices.push({
       name: el.optionalText('name') ?? '',
       component: index,
       diameter: metres(el.number('diameter')),
-      dragCoefficient: el.number('cd'),
+      dragCoefficient: cdText === 'auto' ? OPENROCKET_AUTO_PARACHUTE_CD : el.number('cd'),
       deployEvent: event as OrkDeployEvent,
       deployAltitude: metres(deploy.number('deployaltitude')),
       deployDelay: seconds(deploy.number('deploydelay')),
@@ -895,6 +1012,15 @@ class Reader {
           break;
         case 'parachute':
           this.readParachute(el, parent);
+          break;
+        case 'shockcord':
+          this.readShockCord(el, parent);
+          break;
+        case 'tubecoupler':
+          this.readTubeCoupler(el, parent);
+          break;
+        case 'engineblock':
+          this.readEngineBlock(el, parent);
           break;
         default:
           throw el.unsupported(`element <${node.name}> inside a nose cone`);

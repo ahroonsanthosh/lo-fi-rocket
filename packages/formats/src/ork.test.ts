@@ -26,7 +26,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { parseEng } from './eng.js';
 import { OrkParseError, OrkUnsupportedError } from './errors.js';
-import { parseOrk, type OrkRocket } from './ork.js';
+import { parseOrk, type OrkPlacedComponent, type OrkRocket } from './ork.js';
 
 const REFERENCE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'reference');
 const ROCKETS = join(REFERENCE, 'rockets');
@@ -480,7 +480,16 @@ describe('rejected inputs name the element and component', () => {
       edit(r1, '<radius>0.025</radius>', '<radius>0.025</radius><overridemass>-0.1</overridemass>'),
       /<overridemass> must be 0 kg or more/,
     );
-    unsupported(edit(r1, '<overridemass>0.01</overridemass>', ''), /no <overridemass>/);
+    // Without an override the parachute's mass comes from its materials (D-079).
+    expect(
+      parseOrk(edit(r1, '<overridemass>0.01</overridemass>', ''), 'edited.ork').components.find(
+        (c) => c.element === 'parachute',
+      )?.component,
+    ).toMatchObject({ kind: 'parachute' });
+    unsupported(
+      edit(edit(r1, '<overridemass>0.01</overridemass>', ''), 'type="surface"', 'type="bulk"'),
+      /<material> of type "bulk" where "surface" is expected/,
+    );
     unsupported(
       edit(r1, '<overridesubcomponentsmass>false', '<overridesubcomponentsmass>true'),
       /overridesubcomponentsmass/,
@@ -489,7 +498,10 @@ describe('rejected inputs name the element and component', () => {
       edit(r1, '<deployevent>apogee', '<deployevent>lowerstageseparation'),
       /deployment event/,
     );
-    unsupported(edit(r1, '<cd>0.8</cd>', '<cd>auto</cd>'), /drag coefficient "auto"/);
+    expect(
+      parseOrk(edit(r1, '<cd>0.8</cd>', '<cd>auto</cd>'), 'edited.ork').recoveryDevices[0]
+        ?.dragCoefficient,
+    ).toBe(0.8);
     unsupported(
       edit(
         r1,
@@ -751,5 +763,53 @@ describe('capped and zero-thickness shoulders, resolved "auto" sizes (D-078)', (
     expect(transition?.component.kind === 'transition' && transition.component.foreRadius).toBe(
       0.031,
     );
+  });
+});
+
+/**
+ * Parachute mass from its materials, the automatic parachute C_D, shock cords,
+ * tube couplers and engine blocks (D-079), against a file OpenRocket 24.12
+ * saved and reloaded (tools/openrocket-harness/src/PartsProbe.java,
+ * reference/rockets/parts-probe/values.txt).
+ */
+describe('parachute materials, shock cords, couplers and engine blocks (D-079)', () => {
+  const rocket = parseOrk(bytes(join('parts-probe', 'parts.ork')), 'parts.ork');
+  const part = (element: string): OrkPlacedComponent => {
+    const c = rocket.components.find((x) => x.element === element);
+    if (c === undefined) throw new Error(`no ${element}`);
+    return c;
+  };
+  const massCg = (c: OrkPlacedComponent): { mass: number; cg: number } => rocketMassProperties([c]);
+
+  it('parachute: canopy π (0.3)² × 0.067 + lines 8 × 0.5 × 0.0018 = 0.026144 kg, as OpenRocket', () => {
+    // 0.2827433 × 0.067 = 0.0189438; + 0.0072 = 0.0261438. OpenRocket: 0.026143804 kg, CG 0.150 m.
+    const m = massCg(part('parachute'));
+    expect(m.mass).toBeCloseTo(0.026143804, 9);
+    expect(m.cg).toBeCloseTo(0.15, 12);
+  });
+
+  it("automatic parachute C_D is 0.8 and the import says it is OpenRocket's default", () => {
+    expect(rocket.recoveryDevices[0]?.dragCoefficient).toBe(0.8);
+    expect(rocket.notices.join(' ')).toMatch(/automatic drag coefficient, 0\.8/);
+  });
+
+  it('shock cord: 1.5 m × 0.005 kg/m = 0.0075 kg at the packed centre 0.205 m', () => {
+    const m = massCg(part('shockcord'));
+    expect(m.mass).toBeCloseTo(0.0075, 12);
+    expect(m.cg).toBeCloseTo(0.205, 12);
+  });
+
+  it('tube coupler: π (0.024² − 0.0225²) × 0.08 × 700 = 0.0122711 kg, centred at 0.350 m', () => {
+    // π × 0.00006975 × 56 = 0.01227106. OpenRocket: 0.012271061 kg.
+    const m = massCg(part('tubecoupler'));
+    expect(m.mass).toBeCloseTo(0.012271061, 9);
+    expect(m.cg).toBeCloseTo(0.35, 12);
+  });
+
+  it('engine block: inner radius 0.0095 − 0.003; π (0.0095² − 0.0065²) × 0.006 × 700 = 0.000633345 kg', () => {
+    // π × 0.000048 × 4.2 = 0.00063335. OpenRocket: 0.000633345 kg, CG 0.527 m.
+    const m = massCg(part('engineblock'));
+    expect(m.mass).toBeCloseTo(0.000633345, 9);
+    expect(m.cg).toBeCloseTo(0.527, 12);
   });
 });

@@ -34,3 +34,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Shoulder and selection probes
 
 `src/ShoulderProbe.java` (D-078) measures capped and zero-thickness shoulders and resolved automatic radii; output in `reference/rockets/shoulder-probe/`. `src/SelProbe.java` prints which configuration OpenRocket opens a given `.ork` file in.
+
+## Parts probe
+
+`src/PartsProbe.java` (D-079) measures a parachute's mass from its materials, the automatic parachute C_D, and the mass and CG of a shock cord, a tube coupler and an engine block; output in `reference/rockets/parts-probe/`.
