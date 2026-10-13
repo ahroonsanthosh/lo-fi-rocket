@@ -11,6 +11,10 @@ export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
   retries: 0,
+  // The 3D replay builds its scenery on the main thread; CI has no GPU, so software WebGL holds
+  // the page for about 4 s after "Simulate flight" before the results render (issue filed for
+  // the 3d lane). The assertions are unchanged; only the wait for them is longer.
+  expect: { timeout: 15_000 },
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',

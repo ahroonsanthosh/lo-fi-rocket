@@ -73,7 +73,16 @@ test('the example flies to the displayed apogee (DATCOM base drag, D-069) and su
   ).toBeVisible();
   // Rename, wait for the autosave, reload: the design comes back.
   await setField(page, 'Design name', 'Reloaded rocket');
-  await page.waitForTimeout(600);
+  // Wait for the autosave itself rather than a fixed time: under load it can take longer.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Object.keys(localStorage).some((k) =>
+          (localStorage.getItem(k) ?? '').includes('Reloaded rocket'),
+        ),
+      ),
+    )
+    .toBe(true);
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Design name' })).toHaveValue('Reloaded rocket');
   // Units toggle.
