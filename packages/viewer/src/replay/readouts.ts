@@ -24,6 +24,8 @@ export interface Readouts {
   /** The angle of attack is NaN when the sample has no flight parameters (descent); undefined here. */
   readonly angleOfAttack: number | undefined;
   readonly mach: number | undefined;
+  /** Horizontal distance of the stored position from the pad, √(x² + y²), metres (flight frame). */
+  readonly horizontalDistance: number;
 }
 
 function defined(v: number): number | undefined {
@@ -45,6 +47,7 @@ export function readoutsAt(result: FlightResult, index: number): Readouts {
     stabilityCalibers: defined(sample.stabilityCalibers),
     angleOfAttack: defined(sample.angleOfAttack),
     mach: defined(sample.mach),
+    horizontalDistance: Math.hypot(sample.position.x, sample.position.y),
   };
 }
 
