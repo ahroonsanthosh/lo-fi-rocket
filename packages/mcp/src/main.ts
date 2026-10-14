@@ -5,11 +5,13 @@
  */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { createServer } from './server.js';
+import { Session } from './session.js';
+import { thrustCurveTransport } from './transport.js';
 
 /** Largest single message read from the client: twice the largest content a tool accepts. */
 const MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
 
-createServer()
+createServer(new Session(thrustCurveTransport(fetch)))
   .connect(
     new StdioServerTransport(process.stdin, process.stdout, { maxBufferSize: MAX_MESSAGE_BYTES }),
   )

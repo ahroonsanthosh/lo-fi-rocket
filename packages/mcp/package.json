@@ -1,6 +1,6 @@
 {
   "name": "@lo-fi-rocket/mcp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Local MCP server: Claude builds and simulates rocket designs with the engine, on the user's own Claude plan (plan 0062).",
   "type": "module",
@@ -12,7 +12,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "vite build",
+    "smoke": "vitest run --config vitest.smoke.config.ts"
   },
   "dependencies": {
     "@lo-fi-rocket/formats": "workspace:*",
@@ -20,5 +22,10 @@
     "@modelcontextprotocol/sdk": "1.31.0",
     "zod": "4.6.5"
   },
-  "sideEffects": false
+  "sideEffects": false,
+  "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
+    "fflate": "^0.8.3",
+    "vite": "^8.0.0"
+  }
 }

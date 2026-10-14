@@ -31,6 +31,10 @@ jobs:
       - run: pnpm test
       # Relative asset paths, so the site works under https://<owner>.github.io/<repo>/.
       - run: pnpm --filter @lo-fi-rocket/app build --base=./
+      # The MCP server for Claude (plan 0062), published beside the app with its checksums.
+      - run: pnpm --filter @lo-fi-rocket/mcp build
+      - run: pnpm --filter @lo-fi-rocket/mcp smoke
+      - run: cp packages/mcp/dist/lo-fi-rocket-mcp.mjs packages/mcp/dist/lo-fi-rocket.mcpb packages/mcp/dist/SHA256SUMS packages/app/dist/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: packages/app/dist

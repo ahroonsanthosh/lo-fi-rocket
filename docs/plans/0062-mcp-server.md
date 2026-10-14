@@ -7,7 +7,7 @@ Claude, in the user's own Claude Code or Claude Desktop, builds and simulates de
 - `packages/mcp` (`@lo-fi-rocket/mcp`, private). Node 18 or later, ES modules, TypeScript strict as the rest.
 - Dependencies, pinned exactly and older than two weeks when adopted: `@modelcontextprotocol/sdk` 1.31.0 (MIT, the official SDK; stdio transport only) and `zod` 4.6.5 (its schema library).
 - Bundled into one file, `lo-fi-rocket-mcp.mjs`, with Vite's library build, so a user installs nothing but the file. The bundle includes only what the stdio server imports.
-- A Claude Desktop extension `lo-fi-rocket.mcpb`: a zip of `manifest.json` (manifest version 0.3, `server.type` `node`, entry `server/index.js`, run as `node ${__dirname}/server/index.js`; checked against `@anthropic-ai/mcpb` 2.1.2's schema and loader) and the bundled server.
+- A Claude Desktop extension `lo-fi-rocket.mcpb`: a zip of `manifest.json` (manifest version 0.3, `server.type` `node`, entry `server/index.mjs`, run as `node ${__dirname}/server/index.mjs`; checked against `@anthropic-ai/mcpb` 2.1.2's schema and loader) and the bundled server.
 - Both files are built by the deploy workflow and served from the GitHub Pages site, with a page that explains the two ways to connect:
   - Claude Code: `claude mcp add --transport stdio lo-fi-rocket -- node <path>/lo-fi-rocket-mcp.mjs`.
   - Claude Desktop: open the `.mcpb` file, or Settings > Extensions > Install extension.
@@ -36,7 +36,7 @@ Inputs take SI numbers or quantity strings converted with sourced factors (UNIT-
 | `review_design`                              | The checklist before a simulation: fields still at defaults, motor fit, warnings, stability at liftoff and burnout, computed against weighed mass and CG, every approximation and the confidence                                                      |
 | `stability`                                  | CP, CG and margin at liftoff and burnout, with the plain-language assessment                                                                                                                                                                          |
 | `simulate`                                   | Summary values, events, warnings, approximations and the confidence; a time series only when asked, at most 200 samples                                                                                                                               |
-| `monte_carlo`                                | The dispersion summary for a stated number of runs and seed (at most 1000 runs)                                                                                                                                                                       |
+| `monte_carlo`                                | The dispersion summary for a stated number of runs and seed (at most 200 per call)                                                                                                                                                                    |
 
 ## 4. Instructions shipped with the server
 
@@ -45,7 +45,7 @@ The server's `instructions` (sent at connection) tell Claude to: ask the user fo
 ## 5. Security (plan 0061 section 5)
 
 - No tool reads or writes a file, runs a command or contacts any host but ThrustCurve.org (read-only, fixed base URL, 20 s timeout).
-- Every input passes the zod schema of its tool, then the design file's validator and the engine; all reader size limits apply (D-090); file content is limited to 8 Mi characters and one message to 16 MiB, designs to 500 parts, freeform fins to 1000 points, time series to 200 samples, Monte Carlo to 1000 runs, sessions to 50 designs and 200 motors.
+- Every input passes the zod schema of its tool, then the design file's validator and the engine; all reader size limits apply (D-090); file content is limited to 8 Mi characters and one message to 16 MiB, designs to 500 parts, freeform fins to 1000 points, time series to 200 samples, Monte Carlo to 200 runs per call (about 0.3 s a flight), sessions to 50 designs and 200 motors.
 - Text from files and from users (part names, notices) is returned as data in JSON, never as instructions.
 - Errors come back as tool errors with the validator's plain message, never as a crash of the server.
 
@@ -67,5 +67,4 @@ The server's `instructions` (sent at connection) tell Claude to: ask the user fo
 ## 8. Pull requests
 
 1. The server with the design, part, motor (bundled and imported files), recovery, launch, as-built, assumption, review, stability and simulate tools; the moved defaults and motors; UNIT-12 and UNIT-13.
-2. ThrustCurve search and download, `monte_carlo`.
-3. The bundle, the `.mcpb`, the deploy workflow and the connection page.
+2. ThrustCurve search and download, `monte_carlo` (D-093); and the bundle, the `.mcpb`, the deploy workflow and the connection page (D-094), together in one pull request.

@@ -6,6 +6,7 @@
 import {
   BUNDLED_MOTOR_FILES,
   designMotorFitProblems,
+  downloadMotor,
   exampleDesign,
   motorFromEng,
   motorFromRse,
@@ -17,7 +18,14 @@ import {
   parseOrk,
   parseRse,
   parseThrustCurveCsv,
+  runDispersion,
+  searchMotors,
+  ZERO_VARIATIONS,
   type DeployEvent,
+  type DispersionResult,
+  type DispersionVariations,
+  type MotorSummary,
+  type Transport,
   type DesignRecoveryDevice,
   type MotorProvenance,
   type RocketDesign,
@@ -49,7 +57,7 @@ export interface LibraryMotor {
   readonly definition: MotorDefinition;
   readonly provenance: MotorProvenance;
   readonly delays: readonly number[] | 'plugged' | undefined;
-  readonly source: 'bundled' | 'imported';
+  readonly source: 'bundled' | 'imported' | 'thrustcurve';
 }
 
 /** Launch settings a caller can give; the rest stay at the new design's values and are reported. */
@@ -126,12 +134,19 @@ function text(field: string, v: string): string {
   return v;
 }
 
+/**
+ * Largest Monte Carlo batch one tool call runs. A flight with its descent takes about 0.3 s here
+ * (the example rocket), so 200 runs take about a minute; more would outlast a client's patience.
+ */
+export const MAX_RUNS = 200;
+
 export class Session {
   private readonly designs = new Map<string, RocketDesign>();
   private readonly launchGiven = new Map<string, Set<LaunchSetting>>();
   readonly motors = new Map<string, LibraryMotor>();
 
-  constructor() {
+  /** `transport` reaches ThrustCurve.org (transport.ts); without one the catalogue is offline. */
+  constructor(private readonly transport?: Transport) {
     for (const { file, text: fileText } of BUNDLED_MOTOR_FILES) {
       const eng = parseEng(fileText, file)[0];
       if (eng === undefined) continue;
@@ -305,6 +320,89 @@ export class Session {
         return false;
       return true;
     });
+  }
+
+  /** Search the ThrustCurve.org catalogue (motors with data files only). */
+  async searchCatalogue(query: {
+    designation?: string;
+    manufacturer?: string;
+    impulseClass?: string;
+    diameter?: QuantityInput;
+    maxResults?: number;
+  }): Promise<{ matches: number; results: readonly MotorSummary[] }> {
+    if (this.transport === undefined)
+      throw new EditError(
+        'the ThrustCurve.org catalogue is not available in this server (offline)',
+      );
+    const diameter =
+      query.diameter === undefined ? undefined : toSi('diameter', 'length', query.diameter);
+    return searchMotors(this.transport, {
+      ...(query.designation === undefined
+        ? {}
+        : { commonName: text('designation', query.designation) }),
+      ...(query.manufacturer === undefined
+        ? {}
+        : { manufacturer: text('manufacturer', query.manufacturer) }),
+      ...(query.impulseClass === undefined
+        ? {}
+        : { impulseClass: text('impulseClass', query.impulseClass) }),
+      // The API takes millimetres (x_mm = 1000 x_m, the inverse of UNIT-1), as a search key to 0.1 mm.
+      ...(diameter === undefined ? {} : { diameter: Math.round(diameter * 10000) / 10 }),
+      hasDataFiles: true,
+      maxResults: Math.min(50, Math.max(1, query.maxResults ?? 20)),
+    });
+  }
+
+  /** Download a catalogue motor's data file into the session's library. */
+  async addCatalogueMotor(motorId: string): Promise<LibraryMotor> {
+    if (this.transport === undefined)
+      throw new EditError(
+        'the ThrustCurve.org catalogue is not available in this server (offline)',
+      );
+    const id = `thrustcurve:${motorId}`;
+    const known = this.motors.get(id);
+    if (known !== undefined) return known;
+    if (this.motors.size >= MAX_MOTORS)
+      throw new EditError(`the session's motor library holds at most ${String(MAX_MOTORS)} motors`);
+    const d = await downloadMotor(this.transport, text('motorId', motorId));
+    const delays: LibraryMotor['delays'] =
+      d.format === 'RASP'
+        ? (() => {
+            const eng = parseEng(d.fileText)[0];
+            return eng === undefined || eng.delays === 'plugged'
+              ? 'plugged'
+              : eng.delays.map(Number);
+          })()
+        : (parseRse(d.fileText)[0]?.delays.map(Number) ?? undefined);
+    const m: LibraryMotor = {
+      id,
+      definition: d.definition,
+      provenance: { kind: 'thrustcurve', motorId: d.motorId, simfileId: d.simfileId },
+      delays,
+      source: 'thrustcurve',
+    };
+    this.motors.set(id, m);
+    return m;
+  }
+
+  /** A Monte Carlo batch (plan 0017): the design's dispersion record unless the call overrides it. */
+  monteCarlo(
+    id: string,
+    input: { runs?: number; seed?: number; variations?: Partial<DispersionVariations> },
+  ): DispersionResult {
+    const design = this.get(id);
+    const record = design.dispersion;
+    const runs = input.runs ?? record?.runs ?? 100;
+    if (runs > MAX_RUNS) throw new EditError(`at most ${String(MAX_RUNS)} runs per call`);
+    // A seed is always used and reported (CLAUDE.md 5): the given one, the design's, or a fresh one.
+    const seed =
+      input.seed ?? record?.seed ?? globalThis.crypto.getRandomValues(new Uint32Array(1))[0] ?? 1;
+    const variations: DispersionVariations = {
+      ...ZERO_VARIATIONS,
+      ...(record?.variations ?? {}),
+      ...(input.variations ?? {}),
+    };
+    return runDispersion(design, { runs, seed, variations });
   }
 
   setMotor(id: string, input: MotorInput): { design: RocketDesign; fitProblems: string[] } {

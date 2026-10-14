@@ -16,14 +16,16 @@ import { QuantityError, SI_UNIT, UNITS } from './quantity.js';
 import {
   designSummary,
   fieldReference,
+  r,
   reviewReport,
   simulateReport,
   stabilityReport,
 } from './report.js';
-import { motorFacts, Session } from './session.js';
+import { MAX_RUNS, motorFacts, Session } from './session.js';
+import { SERVER_VERSION } from './version.js';
 
 export const SERVER_NAME = 'lo-fi-rocket';
-export const SERVER_VERSION = '0.1.0';
+export { SERVER_VERSION };
 
 /** Longest text a tool accepts (a design or motor file's content): far above any real file. */
 export const MAX_CONTENT_CHARACTERS = 8 * 1024 * 1024;
@@ -93,7 +95,16 @@ function respond(f: () => unknown): CallToolResult {
   }
 }
 
+async function respondAsync(f: () => Promise<unknown>): Promise<CallToolResult> {
+  try {
+    return { content: [{ type: 'text', text: JSON.stringify(await f()) }] };
+  } catch (error) {
+    return { isError: true, content: [{ type: 'text', text: message(error) }] };
+  }
+}
+
 const readOnly = { readOnlyHint: true, openWorldHint: false } as const;
+const catalogue = { readOnlyHint: true, openWorldHint: true } as const;
 const edits = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;
 
 /** A server with its own session; connect it to a transport. */
@@ -301,7 +312,7 @@ export function createServer(session: Session = new Session()): McpServer {
     {
       title: 'Find a motor',
       description:
-        'Search the motor library (the bundled motors and motor files imported in this session) by text, diameter and impulse class letter. Use the id with set_motor.',
+        'Search the motor library (the bundled motors, imported motor files and ThrustCurve.org motors added in this session) by text, diameter and impulse class letter. Use the id with set_motor. For any other motor, search_thrustcurve.',
       inputSchema: {
         text: z.string().max(100).optional(),
         diameter: quantity.optional(),
@@ -319,6 +330,63 @@ export function createServer(session: Session = new Session()): McpServer {
           })
           .map(motorFacts),
       ),
+  );
+
+  server.registerTool(
+    'search_thrustcurve',
+    {
+      title: 'Search ThrustCurve.org',
+      description:
+        'Search the ThrustCurve.org motor catalogue (read-only; motors with data files). Give a designation or common name (for example "H128"), a manufacturer, an impulse class letter or a diameter. Then add_thrustcurve_motor with the motorId.',
+      inputSchema: {
+        designation: z.string().max(100).optional(),
+        manufacturer: z.string().max(100).optional(),
+        impulseClass: z.string().max(4).optional(),
+        diameter: quantity.optional(),
+        maxResults: z.number().int().min(1).max(50).optional(),
+      },
+      annotations: catalogue,
+    },
+    (query) =>
+      respondAsync(async () => {
+        const found = await session.searchCatalogue({
+          ...(query.designation === undefined ? {} : { designation: query.designation }),
+          ...(query.manufacturer === undefined ? {} : { manufacturer: query.manufacturer }),
+          ...(query.impulseClass === undefined ? {} : { impulseClass: query.impulseClass }),
+          ...(query.diameter === undefined ? {} : { diameter: query.diameter }),
+          ...(query.maxResults === undefined ? {} : { maxResults: query.maxResults }),
+        });
+        return {
+          matches: found.matches,
+          results: found.results.map((m) => ({
+            motorId: m.motorId,
+            manufacturer: m.manufacturer,
+            designation: m.designation,
+            common_name: m.commonName,
+            impulse_class: m.impulseClass,
+            diameter_m: m.diameter,
+            length_m: m.length,
+            total_impulse_Ns: m.totImpulseNs,
+            average_thrust_N: m.avgThrustN,
+            burn_time_s: m.burnTimeS,
+            delays: m.delays,
+            availability: m.availability,
+            type: m.type,
+          })),
+        };
+      }),
+  );
+
+  server.registerTool(
+    'add_thrustcurve_motor',
+    {
+      title: 'Add a ThrustCurve.org motor',
+      description:
+        'Download a catalogue motor’s data file (RASP first, else RockSim) into this session’s library, read-only; then set_motor with the returned id.',
+      inputSchema: { motorId: z.string().min(1).max(64) },
+      annotations: catalogue,
+    },
+    ({ motorId }) => respondAsync(async () => motorFacts(await session.addCatalogueMotor(motorId))),
   );
 
   server.registerTool(
@@ -517,6 +585,82 @@ export function createServer(session: Session = new Session()): McpServer {
           impact,
         });
         return { recorded: what };
+      }),
+  );
+
+  server.registerTool(
+    'monte_carlo',
+    {
+      title: 'Monte Carlo dispersion',
+      description:
+        'Fly the design many times with randomly varied wind, rail, motor impulse and structural mass (standard deviations: windSpeed m/s, windDirection rad, railAngle rad, railAzimuth rad, motorImpulseScale and structuralMassScale as fractions). Returns the spread of apogee and landing and the 95 % landing radius, with the seed for reproducing it. Up to 200 runs per call, about 0.3 s each. Variations not given are taken from the design, else 0 (not varied).',
+      inputSchema: {
+        designId: id,
+        runs: z.number().int().min(1).max(MAX_RUNS).optional(),
+        seed: z.number().int().min(0).max(4294967295).optional(),
+        variations: z
+          .object({
+            windSpeed: z.number().min(0).optional(),
+            windDirection: z.number().min(0).optional(),
+            railAngle: z.number().min(0).optional(),
+            railAzimuth: z.number().min(0).optional(),
+            motorImpulseScale: z.number().min(0).optional(),
+            structuralMassScale: z.number().min(0).optional(),
+          })
+          .optional(),
+      },
+      annotations: readOnly,
+    },
+    ({ designId, runs, seed, variations }) =>
+      respond(() => {
+        const v =
+          variations === undefined
+            ? undefined
+            : Object.fromEntries(Object.entries(variations).filter(([, x]) => x !== undefined));
+        const result = session.monteCarlo(designId, {
+          ...(runs === undefined ? {} : { runs }),
+          ...(seed === undefined ? {} : { seed }),
+          ...(v === undefined ? {} : { variations: v }),
+        });
+        const stats = (x: typeof result.summary.apogee): unknown =>
+          x === undefined
+            ? undefined
+            : {
+                mean: r(x.mean),
+                standard_deviation: r(x.standardDeviation),
+                p5: r(x.p5),
+                p50: r(x.p50),
+                p95: r(x.p95),
+                min: r(x.min),
+                max: r(x.max),
+                count: x.count,
+              };
+        const failures = result.runs.filter((run) => run.error !== undefined).slice(0, 5);
+        return {
+          seed: result.seed,
+          runs: result.settings.runs,
+          variations: result.settings.variations,
+          not_varied: Object.entries(result.settings.variations)
+            .filter(([, x]) => x === 0)
+            .map(([k]) => k),
+          apogee_m: stats(result.summary.apogee),
+          landing_distance_m: stats(result.summary.landingDistance),
+          mean_landing_m:
+            result.summary.meanLanding === undefined
+              ? undefined
+              : {
+                  east: r(result.summary.meanLanding.east),
+                  north: r(result.summary.meanLanding.north),
+                },
+          landing_radius_95_m: r(result.summary.containmentRadius95),
+          landed: result.summary.landed,
+          not_landed: result.summary.notLanded,
+          failed: result.summary.failed,
+          ...(failures.length === 0
+            ? {}
+            : { first_failures: failures.map((f) => ({ run: f.index, error: f.error })) }),
+          approximations_and_confidence: 'as for simulate: call simulate for the list',
+        };
       }),
   );
 

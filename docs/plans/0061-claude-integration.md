@@ -82,7 +82,7 @@ A set of rockets with known answers: the OpenRocket references and probes, kit s
 ## 8. Steps (each its own pull request)
 
 1. Security hardening of today's app: file and unzip limits, the DOCTYPE refusal, CSP, CodeQL, the map-services notice (done, D-090); dependency review once the owner switches on the dependency graph.
-2. `packages/mcp` with the tool surface and the review checklist; tests that drive every tool; docs to connect Claude Desktop and Claude Code.
+2. `packages/mcp` with the tool surface and the review checklist; tests that drive every tool; docs to connect Claude Desktop and Claude Code (done: plan 0062, D-092 to D-094).
 3. `design_link` in the web app (open a design from the URL fragment, validated).
 4. The modelling benchmark and its first published results.
 5. Route B, if the owner later chooses it.

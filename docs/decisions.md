@@ -667,3 +667,36 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Imported `.ork` files fly as the formats package flies them (test).
   - Distribution (a single bundled file and a Claude Desktop `.mcpb`) and ThrustCurve search follow in plan 0062's next pull requests.
   - CodeQL found that the readers' number pattern `\d+\.?\d*` backtracks quadratically on long digit runs (a 50 000-digit field took 5.4 s), reachable now from the server's inputs. Every copy (the `.eng`, CSV, `.rse`/`.ork`, unit and display readers) became the equivalent `\d+(?:\.\d*)?`, which runs in linear time (0.3 ms); a test keeps it so.
+
+## D-093 (2026-10-14): The MCP server's one network use, and Monte Carlo per call
+
+- **Decision:**
+  - Two tools reach the network, both read-only and both marked as such to the client (`openWorldHint`): `search_thrustcurve` and `add_thrustcurve_motor`. They use the formats package's tested ThrustCurve.org client (plan 0013) through a transport that:
+    - refuses any URL outside `https://www.thrustcurve.org/api/v1/` before a request is made;
+    - sends no redirects (`redirect: 'error'`), times out after 20 s, and stops reading an answer at 4 Mi characters;
+    - allows 200 requests per session.
+      Search asks only for motors with data files, with the diameter in millimetres as the API defines it. A downloaded motor joins the session's library as `thrustcurve:<motorId>` with its listed delays, held in memory, never on disk.
+  - `monte_carlo` runs the app's dispersion (plan 0017) on the design's record or the call's settings, at most 200 runs per call. A seed is always used and returned: the given one, the design's, or a fresh one (CLAUDE.md 5).
+- **Why:** Plan 0062. "Any rocket" needs the whole motor catalogue, not the eight bundled motors. The bound on requests and answers keeps a runaway loop or a hostile answer from costing the user or the service anything. A flight with its descent takes about 0.3 s here, so 200 runs take about a minute, which is as long as a tool call should block.
+- **Alternatives:**
+  - Fetching any URL Claude gives (rejected: it would make the server a general network tool, which prompt injection could abuse).
+  - Caching downloads on disk (rejected for now: the server writes no files; the app keeps its own cache).
+  - 1000 runs per call, as first planned (rejected after timing it).
+- **Consequences:** A test drives search, download and flight with recorded answers in the API's documented form, and the downloaded D12 flies exactly as the bundled one. With no transport (tests, offline), the two tools say the catalogue is not available.
+
+## D-094 (2026-10-14): How the MCP server reaches users
+
+- **Decision:**
+  - **The files.** The server is built into one self-contained Node file, `lo-fi-rocket-mcp.mjs` (Vite 8 server build, every dependency bundled; 1.6 MB, of which the SDK, zod, ajv, the XML readers and fflate are the outside code). It is also wrapped as a Claude Desktop extension, `lo-fi-rocket.mcpb`: a zip of `manifest.json` (manifest version 0.3) and `server/index.mjs`, run as `node ${__dirname}/server/index.mjs`. The zip is written with a fixed date, so the same sources give the same file.
+  - **Publishing.** The deploy workflow publishes both on the GitHub Pages site beside the app, with `SHA256SUMS`. A static page, `claude.html`, linked from the File menu, explains both ways to connect and how to check the download. The page has its own strict Content-Security-Policy: no script at all.
+  - **Checks.** CI builds both and runs a smoke test:
+    - the file runs with plain `node`, answers the MCP handshake, lists its 22 tools and flies the example;
+    - the extension's manifest passes `validateManifest` of `@anthropic-ai/mcpb` 2.1.2 (the package Claude Desktop uses to load extensions, dev dependency only);
+    - the extension runs from its unpacked folder with its own command line, as Claude Desktop runs it;
+    - the checksums match.
+- **Why:** Plan 0061 route A (D-090) needs something a user can install without a package registry account, a build step or a server. GitHub Pages already serves the app at no cost. The `.mcpb` format and its manifest fields were taken from `@anthropic-ai/mcpb` 2.1.2: its README, its JSON schemas, and its `${__dirname}` substitution in `dist/shared/config.js`. Claude Desktop ships Node.js, so its users install nothing else.
+- **Alternatives:**
+  - Publishing to npm for `npx -y` (deferred: it needs an npm account in the owner's name).
+  - `mcpb pack`, the official packer (not needed for a single file; the official validator checks the result instead).
+  - Code signing of the extension (deferred: it needs a certificate the owner would hold).
+- **Consequences:** The extension is unsigned, so Claude Desktop may say so when installing it, and users who want certainty compare the published SHA-256. Each merge to `main` publishes new files; there is no separate release channel yet.
