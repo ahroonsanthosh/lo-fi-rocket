@@ -4,10 +4,10 @@ This file lists what v1.0 does not do, in a suggested order. For each item it gi
 
 ## Accuracy: drag (the targets not met)
 
-The held-out C_D rms is 7.1 % subsonic (target 7 %), 21.3 % transonic (target 10 %) and 16.4 % supersonic (target 8 %). See `docs/reports/held-out-validation.md`.
+The held-out C_D rms is 7.1 % subsonic (target 7 %), 21.3 % transonic (target 10 %) and 15.0 % supersonic (target 8 %). See `docs/reports/held-out-validation.md`.
 
 1. **DATCOM supersonic base pressure** (approved DATCOM, section 4.2.3.1 C, figures 4.2.3.1-50, -55 and -60). Above Mach 1.5 the base drag is Niskanen's eq. (3.94). The DATCOM charts account for the boattail and the jet-off base pressure. They are the remaining sourced method for the supersonic gap, and the RM-10 flight drag (7.6 % low) is the first check.
-2. **Transonic body and fin wave drag** (approved DATCOM 4.2.3.1 B and 4.1.5.1 B). The transonic excess is largest on the sharp-finned held-out models. Each source term should be compared against the held-out breakdown before anything is changed (D-061: no tuning).
+2. **Transonic body and fin wave drag** (approved DATCOM 4.2.3.1 B and 4.1.5.1 B). The transonic drag is under-predicted just above Mach 1 on every measured dataset (−18 to −38 %, plan 0072), most on the sharp-finned and swept-finned models. Each source term should be compared against the held-out breakdown before anything is changed (D-061: no tuning).
 3. **The base drag of finned bodies** (D-069 conflict). The DATCOM states that fins and stings change the base pressure but gives no correction. A sourced correction, or the owner's choice of default, is needed.
 
 ## Accuracy: large angles of attack

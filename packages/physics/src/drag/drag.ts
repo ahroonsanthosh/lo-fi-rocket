@@ -56,7 +56,7 @@ import {
 export const TRANSONIC_DRAG_WARNING =
   'transonic regime (Mach 0.8 to 1.2): accuracy is lower than in subsonic flight (CLAUDE.md 6.3); against held-out wind tunnel and flight data the drag is within 21 % rms and the drag rise within 0.05 Mach (docs/reports/held-out-validation.md)';
 export const SUPERSONIC_DRAG_WARNING =
-  'supersonic regime (above Mach 1.2): against held-out data the drag is within 16 % rms to Mach 2.0, low by about 20 % for thick wedge fins (docs/reports/held-out-validation.md); above Mach 2.0 it is outside the validated range';
+  'supersonic regime (above Mach 1.2): against held-out data the drag is within 15 % rms to Mach 2.0, low by about 17 % for thick wedge fins (docs/reports/held-out-validation.md); above Mach 2.0 it is outside the validated range';
 
 export function wettedArea(profile: Profile): number {
   return integrate(

@@ -1,17 +1,17 @@
 # Held-out validation (version 1.0, Part B baseline)
 
-**Date:** 2026-10-12. **Status:** regenerated after Part C item 7 (plan 0032, D-069: DATCOM body base drag; before it the held-out C_D rms was 34.7 % subsonic, 36.8 % transonic, 14.6 % supersonic), item 4 (plan 0029, D-066: wedge sections, DATCOM rounded leading edge) and item 3 (plan 0028, D-065: DATCOM fin normal force and body carry-over; before it, transonic CP rms 5.4 and supersonic 9.9 % L); the baseline before Part C is recorded in D-061 and the item 1 state in D-062. The tables are written by `packages/formats/src/held-out.validation.test.ts` (`HELD_OUT_REPORT=<path>`), which reads `reference/digitised/held-out-v1.json`. Nothing in the model was built, chosen or tuned from these data (D-061); the ARCAS CP data of D-056 are no longer independent and are reported in `wind-tunnel-validation.md` instead.
+**Date:** 2026-10-14. **Status:** regenerated after plan 0072 (TN D-3182 model A's fins corrected to the drawing, span 4.95 in and a 1.37 in mean trailing edge, and its C_A compared with the forebody drag, since the report subtracts the measured base drag; before it the supersonic CP rms was 3.8 % L and the C_D rms 16.4 %); earlier after Part C item 7 (plan 0032, D-069: DATCOM body base drag; before it the held-out C_D rms was 34.7 % subsonic, 36.8 % transonic, 14.6 % supersonic), item 4 (plan 0029, D-066: wedge sections, DATCOM rounded leading edge) and item 3 (plan 0028, D-065: DATCOM fin normal force and body carry-over; before it, transonic CP rms 5.4 and supersonic 9.9 % L); the baseline before Part C is recorded in D-061 and the item 1 state in D-062. The tables are written by `packages/formats/src/held-out.validation.test.ts` (`HELD_OUT_REPORT=<path>`), which reads `reference/digitised/held-out-v1.json`. Nothing in the model was built, chosen or tuned from these data (D-061); the ARCAS CP data of D-056 are no longer independent and are reported in `wind-tunnel-validation.md` instead.
 
 ## Datasets, models and comparisons
 
-| Report                | Model                                                                                                                                                | Data                                                                                                                            | Comparison                                                                                                                                |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| NASA TN D-1958 (1963) | Blue Scout 1/15 scale, configuration D (`BLUE_SCOUT_COMPONENTS`): 22° cone, 2.06 in body, conical step to 2.67 in, four single-wedge fins ('square') | figure 8(a) x_cp and C_N_alpha; figure 5(c) C_A (adjusted by the report to free-stream pressure at the base); figure 5(d) C_A,b | CP in percent of the 57.72 in length; forebody C_A against C_D0 without the base term; C_A,b against the base term                        |
-| NACA RM E50D28 (1950) | half-scale RM-10 (`RM10_COMPONENTS`): parabolic nose and boattail, four parallelogram circular-arc fins ('airfoil')                                  | figure 8(c) x_cp at alpha 2°; figure 8(d) C_D at alpha 0                                                                        | CP in percent of the 73.25 in length; total C_D (the balance drag includes the base)                                                      |
-| NACA TN 2944 (1953)   | the same RM-10 (73.25 in flight models)                                                                                                              | figure 9(b) C_D,T and C_D,B; figure 10 Reynolds numbers                                                                         | total C_D in free flight                                                                                                                  |
-| NASA TN D-3182 (1966) | model A (`TN_D3182_MODEL_A_COMPONENTS`): parabolic-series nose κ = 0.825 fitted to the coordinate table, cylinder, four wedge fins ('square')        | figure 4(a) x_cp and C_N_alpha; figure 5(a) C_A; Table II Reynolds numbers                                                      | CP in percent of the 65.9 in length; C_A against the total C_D0 (whether the report removes the base is not stated in the extracted text) |
-| NASA TM X-1661 (1968) | `ARCAS_COMPONENTS` (configuration 1, ogive nose, basic fins)                                                                                         | figure 4 aerodynamic centre; figure 2(a) C_A                                                                                    | CP in percent of the 40.95 in length at Mach 2.01 (counted as the boundary of the validated range); total C_D                             |
-| NACA RM L8A05 (1948)  | fineness-ratio 7.87 model A (`L8A05_COMPONENTS`): parabolic nose and boattail, three circular-arc fins ('airfoil')                                   | figure 8(a) C_D; figure 6 Reynolds numbers                                                                                      | total C_D in free flight                                                                                                                  |
+| Report                | Model                                                                                                                                                                                   | Data                                                                                                                                                | Comparison                                                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| NASA TN D-1958 (1963) | Blue Scout 1/15 scale, configuration D (`BLUE_SCOUT_COMPONENTS`): 22° cone, 2.06 in body, conical step to 2.67 in, four single-wedge fins ('wedge')                                     | figure 8(a) x_cp and C_N_alpha; figure 5(c) C_A (adjusted by the report to free-stream pressure at the base); figure 5(d) C_A,b                     | CP in percent of the 57.72 in length; forebody C_A against C_D0 without the base term; C_A,b against the base term                        |
+| NACA RM E50D28 (1950) | half-scale RM-10 (`RM10_COMPONENTS`): parabolic nose and boattail, four parallelogram circular-arc fins ('airfoil')                                                                     | figure 8(c) x_cp at alpha 2°; figure 8(d) C_D at alpha 0                                                                                            | CP in percent of the 73.25 in length; total C_D (the balance drag includes the base)                                                      |
+| NACA TN 2944 (1953)   | the same RM-10 (73.25 in flight models)                                                                                                                                                 | figure 9(b) C_D,T and C_D,B; figure 10 Reynolds numbers                                                                                             | total C_D in free flight                                                                                                                  |
+| NASA TN D-3182 (1966) | model A (`TN_D3182_MODEL_A_COMPONENTS`): parabolic-series nose κ = 0.825 fitted to the coordinate table, cylinder, four 10° wedge fins ('wedge'), span 4.95, mean trailing edge 1.37 in | figure 4(a) x_cp and C_N_alpha; figure 5(a) C_A, compared with the forebody (the report subtracts the base drag, page 2); Table II Reynolds numbers | CP in percent of the 65.9 in length; C_A against the total C_D0 (whether the report removes the base is not stated in the extracted text) |
+| NASA TM X-1661 (1968) | `ARCAS_COMPONENTS` (configuration 1, ogive nose, basic fins)                                                                                                                            | figure 4 aerodynamic centre; figure 2(a) C_A                                                                                                        | CP in percent of the 40.95 in length at Mach 2.01 (counted as the boundary of the validated range); total C_D                             |
+| NACA RM L8A05 (1948)  | fineness-ratio 7.87 model A (`L8A05_COMPONENTS`): parabolic nose and boattail, three circular-arc fins ('airfoil')                                                                      | figure 8(a) C_D; figure 6 Reynolds numbers                                                                                                          | total C_D in free flight                                                                                                                  |
 
 Digitisation: two passes per series (`held-out-v1.json` records both, the pixel calibrations and the disagreement); uncertainties: CP ±0.5 % of body length (Blue Scout, X-1661), ±0.02 to 0.022 diameters (RM-10, 0.2 % of length), ±0.03 calibers (TN D-3182, 0.3 % of length); C_D ±0.01 (Blue Scout, L8A05, TN 2944 plateau), ±0.013 in the TN 2944 drag rise, ±0.005 (RM-10 tunnel), ±0.015 (X-1661 C_A, overlapping symbols), ±0.15 per radian (TN D-3182 C_N_alpha). The L8A05 pass 1 was read from a thumbnail and is superseded by the pixel pass and a by-eye check at full resolution (worst disagreement 0.004).
 
@@ -45,15 +45,15 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 
 | Mach | regime     | measured x_cp | predicted | error | measured C_N_alpha | predicted | error |
 | ---- | ---------- | ------------- | --------- | ----- | ------------------ | --------- | ----- |
-| 1.79 | supersonic | 80.5          | 76.0      | -4.5  | 12.84              | 10.08     | -21 % |
-| 1.88 | supersonic | 79.7          | 75.4      | -4.2  | 12.73              | 9.92      | -22 % |
-| 1.98 | supersonic | 79.7          | 74.7      | -4.9  | 11.81              | 9.74      | -17 % |
-| 2    | supersonic | 79.7          | 74.6      | -5.1  | 11.45              | 9.70      | -15 % |
-| 2.06 | outside    | 79.2          | 74.2      | -5.0  | 10.88              | 9.54      | -12 % |
-| 2.38 | outside    | 77.7          | 72.3      | -5.4  | 10.52              | 8.77      | -17 % |
-| 2.78 | outside    | 76.1          | 70.0      | -6.1  | 9.51               | 8.05      | -15 % |
-| 3.17 | outside    | 74.7          | 68.1      | -6.6  | 8.92               | 7.46      | -16 % |
-| 3.47 | outside    | 75.1          | 66.8      | -8.3  | 8.64               | 7.12      | -18 % |
+| 1.79 | supersonic | 80.5          | 77.4      | -3.1  | 12.84              | 10.68     | -17 % |
+| 1.88 | supersonic | 79.7          | 76.8      | -2.8  | 12.73              | 10.51     | -18 % |
+| 1.98 | supersonic | 79.7          | 76.2      | -3.5  | 11.81              | 10.32     | -13 % |
+| 2    | supersonic | 79.7          | 76.0      | -3.7  | 11.45              | 10.27     | -10 % |
+| 2.06 | outside    | 79.2          | 75.7      | -3.5  | 10.88              | 10.12     | -7 %  |
+| 2.38 | outside    | 77.7          | 74.2      | -3.5  | 10.52              | 9.44      | -10 % |
+| 2.78 | outside    | 76.1          | 71.9      | -4.2  | 9.51               | 8.60      | -10 % |
+| 3.17 | outside    | 74.7          | 70.0      | -4.7  | 8.92               | 7.94      | -11 % |
+| 3.47 | outside    | 75.1          | 68.7      | -6.4  | 8.64               | 7.56      | -13 % |
 
 ## TM X-1661 configuration 1 (the TN D-4013 ARCAS model) at Mach 2.01: aerodynamic centre in percent body length
 
@@ -111,19 +111,19 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 | 2.42  | outside    | 7.41e+7 | 0.219    | 0.202     | -7.6 %  |
 | 2.49  | outside    | 7.75e+7 | 0.219    | 0.198     | -9.8 %  |
 
-## TN D-3182 model A: C_A at zero normal force (sting mounted with base pressure taps; the extracted text does not say whether C_A is adjusted for the base, so the total is compared and the forebody shown)
+## TN D-3182 model A: C_A at zero normal force (sting mounted; the report subtracts the measured base drag from the balance drag, page 2, so the forebody is compared and the total shown; plan 0072)
 
-| Mach | regime     | Re      | measured | predicted total | error   | predicted forebody |
-| ---- | ---------- | ------- | -------- | --------------- | ------- | ------------------ |
-| 1.79 | supersonic | 2.76e+7 | 0.524    | 0.376           | -28.3 % | 0.236              |
-| 1.88 | supersonic | 2.75e+7 | 0.497    | 0.363           | -27.0 % | 0.230              |
-| 1.98 | supersonic | 2.69e+7 | 0.467    | 0.350           | -25.0 % | 0.224              |
-| 2    | supersonic | 1.37e+7 | 0.452    | 0.358           | -20.7 % | 0.233              |
-| 2.06 | outside    | 2.76e+7 | 0.450    | 0.340           | -24.4 % | 0.218              |
-| 2.38 | outside    | 1.36e+7 | 0.402    | 0.316           | -21.3 % | 0.211              |
-| 2.78 | outside    | 1.29e+7 | 0.349    | 0.284           | -18.6 % | 0.194              |
-| 3.17 | outside    | 1.32e+7 | 0.306    | 0.258           | -15.5 % | 0.180              |
-| 3.47 | outside    | 1.36e+7 | 0.264    | 0.242           | -8.3 %  | 0.170              |
+| Mach | regime     | Re      | measured | predicted forebody | error   | predicted total |
+| ---- | ---------- | ------- | -------- | ------------------ | ------- | --------------- |
+| 1.79 | supersonic | 2.76e+7 | 0.524    | 0.403              | -23.1 % | 0.543           |
+| 1.88 | supersonic | 2.75e+7 | 0.497    | 0.387              | -22.1 % | 0.520           |
+| 1.98 | supersonic | 2.69e+7 | 0.467    | 0.372              | -20.3 % | 0.498           |
+| 2    | supersonic | 1.37e+7 | 0.452    | 0.380              | -15.8 % | 0.505           |
+| 2.06 | outside    | 2.76e+7 | 0.450    | 0.360              | -19.9 % | 0.481           |
+| 2.38 | outside    | 1.36e+7 | 0.402    | 0.333              | -17.3 % | 0.438           |
+| 2.78 | outside    | 1.29e+7 | 0.349    | 0.297              | -14.9 % | 0.387           |
+| 3.17 | outside    | 1.32e+7 | 0.306    | 0.269              | -11.9 % | 0.348           |
+| 3.47 | outside    | 1.36e+7 | 0.264    | 0.252              | -4.6 %  | 0.324           |
 
 ## TM X-1661 configuration 1 at Mach 2.01: C_A at alpha = 0 (ogive nose, basic fins; +-0.015 from the overlapping symbols)
 
@@ -175,18 +175,18 @@ Regimes: subsonic below 0.8, transonic 0.8 to 1.2, supersonic 1.2 to 2.01; data 
 | -------------------- | ---- | --------- | ------ | --------- | ------ | ------------------------ | ----- | ---------------- | ------ |
 | subsonic             | 2    | 0.4 (met) | 3      | 0.5 (met) | 6      | 0.1                      | 7     | 7.1 % (NOT MET)  | 7 %    |
 | transonic            | 6    | 4.3 (met) | 5      | 6.4 (met) | 8      | 0.4                      | 33    | 21.3 % (NOT MET) | 10 %   |
-| supersonic           | 9    | 3.8 (met) | 4      | 5.1 (met) | 7      | 3.6                      | 20    | 16.4 % (NOT MET) | 8 %    |
-| outside (above 2.01) | 5    | 6.4       |        | 8.3       |        | 0.0                      | 10    | 13.8 %           |        |
+| supersonic           | 9    | 3.1 (met) | 4      | 3.7 (met) | 7      | 3.6                      | 20    | 15.0 % (NOT MET) | 8 %    |
+| outside (above 2.01) | 5    | 4.6       |        | 6.4       |        | 0.0                      | 10    | 11.3 %           |        |
 
 Per dataset:
 
 - CP Blue Scout: n=8 rms 3.7 %L worst 6.4 %L mean -2.7 %L
 - CP RM-10: n=4 rms 3.1 %L worst 3.6 %L mean +3.1 %L
-- CP TN D-3182 A: n=9 rms 5.7 %L worst 8.3 %L mean -5.6 %L
+- CP TN D-3182 A: n=9 rms 4.1 %L worst 6.4 %L mean -3.9 %L
 - CP TM X-1661: n=1 rms 0.9 %L worst 0.9 %L mean -0.9 %L
 - C_D Blue Scout (forebody): n=5 rms 16.4 % worst 24.4 % mean -14.7 %
 - C_D RM-10 tunnel: n=4 rms 6.1 % worst 9.2 % mean +4.3 %
 - C_D RM-10 flight: n=26 rms 16.8 % worst 33.8 % mean -7.6 %
-- C_D TN D-3182 A: n=9 rms 21.8 % worst 28.3 % mean -21.0 %
+- C_D TN D-3182 A: n=9 rms 17.5 % worst 23.1 % mean -16.7 %
 - C_D TM X-1661: n=1 rms 17.1 % worst 17.1 % mean -17.1 %
 - C_D L8A05: n=25 rms 19.2 % worst 36.9 % mean -5.5 %

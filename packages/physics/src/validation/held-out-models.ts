@@ -128,10 +128,16 @@ export const RM10_COMPONENTS: readonly PlacedComponent[] = [
  * coordinate table is fitted by Niskanen's parabolic series with κ = 0.825
  * (largest error 0.085 in; a power series misses by 0.16 in, a tangent ogive
  * by 0.31 in; the text calls it "approximately three-quarter-power"),
- * cylinder to the base at 65.9; four fins: root 9.15, tip 6.54, span 4.38,
- * leading edge swept 45° (sweep 4.38), trailing edge at the base (root
- * leading edge at 56.75), 10° included-angle wedge with a blunt trailing
- * edge (mean thickness 0.69 in, 'wedge'; 'square' until D-066).
+ * cylinder to the base at 65.9; four fins: root 9.15, tip 6.54, span 4.95
+ * (figure 1: the 0.57 in strip at the tip is "section B", removed for model C
+ * of span 4.38; 2 × (9.15 + 6.54)/2 × 4.95 = 77.66 sq in, Table I's model A
+ * fin planform area), leading edge swept 45° (sweep 4.95), trailing edge at
+ * the base (root leading edge at 56.75), 10° included-angle wedge (the angle is
+ * dimensioned between the two surfaces, and the drawn section's thickness is
+ * 0.16 of the chord, 2 tan 5° = 0.175) with a blunt trailing edge 2 c tan 5°
+ * thick: 1.60 in at the root and 1.14 in at the tip, 1.37 in on average over
+ * the span ('wedge', whose thickness is the trailing edge's, D-066). Plan 0072
+ * corrected span 4.38 and thickness 0.69 (half the trailing edge).
  */
 export const TN_D3182_DIAMETER_INCHES = 6;
 export const TN_D3182_LENGTH_INCHES = 65.9;
@@ -157,9 +163,9 @@ export const TN_D3182_MODEL_A_COMPONENTS: readonly PlacedComponent[] = [
     count: 4,
     rootChord: metres(9.15 * INCH),
     tipChord: metres(6.54 * INCH),
-    sweep: metres(4.38 * INCH),
-    span: metres(4.38 * INCH),
-    thickness: metres(0.69 * INCH),
+    sweep: metres(4.95 * INCH),
+    span: metres(4.95 * INCH),
+    thickness: metres(1.37 * INCH),
     density: ALUMINIUM,
     bodyRadius: metres(3 * INCH),
   }),
