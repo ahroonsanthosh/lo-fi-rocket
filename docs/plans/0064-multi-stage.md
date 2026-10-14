@@ -41,9 +41,39 @@ The owner's decision (2026-10-13, D-091): multi-stage designs fly as one body wh
 
 ## 3. Design file and import (part 2)
 
-- **Schema version 2** (migration from 1 is the identity). A component may name its stage. The design may list `stages`, each with a name and a separation event and delay, and `motorMounts` with an ignition event each. A version-1 file is a one-stage design.
-- **Import.** The `.ork` reader reads stages, their separation events and the motor mounts' ignition events (default and per configuration). OpenRocket's "automatic" ignition is observed with a probe: the bottom stage at launch, upper stages at the ejection charge below.
-- **Reference.** OpenRocket's "Two stage high power rocket" and "Three stage low power rocket" are measured as a black box (a new probe) and compared: apogee, maximum velocity and separation time, against CLAUDE.md 7.4's tolerances.
+Part 2 is two pull requests: 2a (the engine's further events and the design file) and 2b (the import and the OpenRocket comparison).
+
+- **OpenRocket, measured first** (`StagingProbe`, reference/rockets/staging-probe/values.txt). Its two staged examples, and four staged rockets built by the probe from the reference motors:
+  - `staged-bp`: D12-0 to C6-5 at the charge;
+  - `staged-hpr`: H128W to G80T 0.5 s after burnout, separation at burnout;
+  - `staged-gap-bottom`: a bottom stage with no motor;
+  - `staged-gap-middle`: a middle stage with no motor.
+
+  "Automatic" ignition is launch for the bottom stage only, and the ejection charge of the stage directly below for every other stage. With no motor there, the motor never lights; with none lit at launch, OpenRocket aborts.
+
+- **2a, the engine.**
+  - A motor may be set never to light.
+  - A stage may separate at its own motor's ignition, at apogee, or when climbing or descending through an altitude above the pad: OpenRocket's nine events.
+  - A motor that was due to light and did not, and a stage that was due to separate and did not, are each a warning with the reason.
+  - No motor lit at launch ends the flight on the pad, said plainly (end reason `no-ignition`).
+- **2a, schema version 2** (migration from 1 is the identity; D-097).
+  - Parts and recovery devices may name their stage.
+  - The design may list `stages` (a name each, and a separation for every stage but the top one) and `additionalMotorMounts`.
+  - Each mount may have an `ignition` (OpenRocket's events, automatic when absent); a motor's stage is its mount part's.
+  - The adapter resolves the ignition events to the engine's (Table 4.2) and combines every motor's mass.
+  - Thrust-to-weight counts the motors lit at launch.
+  - Removing a part removes any mount on it, in the app and the MCP server alike.
+- **2a tests.**
+  - The engine: closed-form vacuum flights for each new event (apogee, climbing and descending altitudes, own ignition plus a delay), and the warnings.
+  - The file: version-1 files unchanged, round trips, and a message for each malformed staged file.
+  - The adapter: the staged vehicle of a two-stage design, two motors' mass and CG by hand, thrust-to-weight, a full flight's events, the empty-middle-stage case (as OpenRocket), and a delayed launch ignition.
+- **2b, import.** The `.ork` reader reads:
+  - stages, with x continuing across them;
+  - a motor mount per stage;
+  - separation and ignition events, default and per configuration;
+  - inactive stages;
+  - each stage's recovery devices and stage overrides.
+- **2b, reference.** The probe's staged rockets are imported and flown against OpenRocket's figures: apogee within 5 % and maximum velocity within 3 % (CLAUDE.md 7.4), and the separation and ignition times. OpenRocket's own examples are compared from the recorded values only; their files stay in OpenRocket.
 
 ## 4. App and the MCP server (part 3)
 

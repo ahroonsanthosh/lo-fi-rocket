@@ -1,0 +1,232 @@
+# StagingProbe output (OpenRocket 24.12, reference harness settings, no wind). Plan 0064, D-096.
+# Part 1: OpenRocket's own staged examples (from the 24.12 jar, datafiles/examples).
+file Two stage high power rocket.ork config cf7a0b8c-19e9-4112-912f-505bc8e01067
+  stage 0 "Sustainer" number=0 separation=Current stage ejection charge delay=0.000 active=true
+  stage 1 "Booster" number=1 separation=Current stage motor burnout delay=0.000 active=true
+  mount "Sustainer Motor Mount" stage=0 motor=H148R ignition=First burnout of previous stage ignitionDelay=0.000 ejectionDelay=0.000
+  mount "Booster motor mount" stage=1 motor=H148R ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  sustainer: apogee 678.321 m, max v 158.978 m/s, max Mach 0.4683, rail exit 13.792 m/s, t_apogee 11.029 s, flight time 63.843 s
+  branch 0 "Sustainer" max altitude 678.321 m
+    0.0000 s Launch (Two stage high power rocket)
+    0.0000 s Motor ignition (Booster motor mount)
+    0.0584 s Lift-off 
+    0.2650 s Launch rod clearance 
+    1.5350 s Motor burnout (Booster motor mount)
+    1.5350 s Stage separation (Booster)
+    1.5354 s Motor ignition (Sustainer Motor Mount)
+    3.0704 s Motor burnout (Sustainer Motor Mount)
+    3.0704 s Ejection charge (Sustainer)
+    11.0754 s Apogee (Two stage high power rocket)
+    11.0764 s Recovery device deployment (Sustainer Drogue)
+    40.2457 s Recovery device deployment (Sustainer Main)
+    63.8426 s Ground hit 
+    63.8426 s Simulation end 
+  branch 1 "Booster" max altitude 168.516 m
+    0.0000 s Motor ignition (Booster motor mount)
+    1.5350 s Motor burnout (Booster motor mount)
+    1.5350 s Stage separation (Booster)
+    1.5354 s Ejection charge (Booster)
+    1.5354 s Warning 
+    5.6994 s Apogee (Two stage high power rocket)
+    5.7004 s Recovery device deployment (Booster Chute)
+    26.5373 s Ground hit 
+    26.5373 s Simulation end 
+file Three stage low power rocket.ork config 05896b5a-71a7-48ac-b7ae-eadeb267975b
+  stage 0 "Sustainer" number=0 separation=Current stage ejection charge delay=0.000 active=true
+  stage 1 "Booster stage" number=1 separation=Upper stage motor ignition delay=0.000 active=true
+  stage 2 "Booster stage" number=2 separation=Upper stage motor ignition delay=0.000 active=true
+  mount "Inner Tube" stage=0 motor=C6 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=5.000
+  mount "Inner Tube" stage=1 motor=B6 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  mount "Inner Tube" stage=2 motor=B6 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  sustainer: apogee 495.923 m, max v 120.052 m/s, max Mach 0.3536, rail exit 12.143 m/s, t_apogee 9.092 s, flight time 127.902 s
+  branch 0 "Sustainer" max altitude 495.923 m
+    0.0000 s Launch (Three stage low power rocket)
+    0.0000 s Motor ignition (Inner Tube)
+    0.1014 s Lift-off 
+    0.3110 s Launch rod clearance 
+    0.8570 s Motor burnout (Inner Tube)
+    0.8574 s Ejection charge (Booster stage)
+    0.8574 s Motor ignition (Inner Tube)
+    0.8574 s Stage separation (Booster stage)
+    1.7144 s Motor burnout (Inner Tube)
+    1.7144 s Ejection charge (Booster stage)
+    1.7144 s Motor ignition (Inner Tube)
+    1.7144 s Stage separation (Booster stage)
+    3.5744 s Motor burnout (Inner Tube)
+    8.5744 s Ejection charge (Sustainer)
+    8.5754 s Recovery device deployment (Parachute)
+    9.0922 s Apogee (Three stage low power rocket)
+    127.9015 s Ground hit 
+    127.9015 s Simulation end 
+  branch 1 "Booster stage" max altitude 71.770 m
+    0.8574 s Motor ignition (Inner Tube)
+    1.7144 s Motor burnout (Inner Tube)
+    1.7144 s Ejection charge (Booster stage)
+    1.7144 s Stage separation (Booster stage)
+    1.9884 s Tumbling 
+    3.0576 s Apogee (Three stage low power rocket)
+    12.4071 s Ground hit 
+    12.4071 s Simulation end 
+  branch 2 "Booster stage" max altitude 31.415 m
+    0.0000 s Motor ignition (Inner Tube)
+    0.8570 s Motor burnout (Inner Tube)
+    0.8574 s Ejection charge (Booster stage)
+    0.8574 s Stage separation (Booster stage)
+    1.8754 s Tumbling 
+    2.5380 s Apogee (Three stage low power rocket)
+    6.7642 s Ground hit 
+    6.7642 s Simulation end 
+
+# Part 2: two staged rockets built by the probe (--build), saved here as staged-bp.ork and staged-hpr.ork.
+file staged-bp.ork config 6a0f1c1e-1b2d-4c1a-9f00-0000000000b1
+  stage 0 "Sustainer" number=0 separation=Current stage ejection charge delay=0.000 active=true
+  stage 1 "Booster" number=1 separation=Upper stage motor ignition delay=0.000 active=true
+  mount "Sustainer motor tube" stage=0 motor=C6 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=5.000
+  mount "Booster motor tube" stage=1 motor=D12 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  sustainer: apogee 438.304 m, max v 97.202 m/s, max Mach 0.2864, rail exit 20.206 m/s, t_apogee 8.688 s, flight time 61.085 s
+  branch 0 "Sustainer" max altitude 438.304 m
+    0.0000 s Launch (staged-bp)
+    0.0000 s Motor ignition (Booster motor tube)
+    0.0914 s Lift-off 
+    0.2678 s Launch rod clearance 
+    1.6500 s Motor burnout (Booster motor tube)
+    1.6502 s Ejection charge (Booster)
+    1.6502 s Motor ignition (Sustainer motor tube)
+    1.6502 s Stage separation (Booster)
+    3.5102 s Motor burnout (Sustainer motor tube)
+    8.5102 s Ejection charge (Sustainer)
+    8.7342 s Apogee (staged-bp)
+    8.7352 s Recovery device deployment (Parachute)
+    61.0850 s Ground hit 
+    61.0850 s Simulation end 
+  branch 1 "Booster" max altitude 157.053 m
+    0.0000 s Motor ignition (Booster motor tube)
+    1.6500 s Motor burnout (Booster motor tube)
+    1.6502 s Ejection charge (Booster)
+    1.6502 s Stage separation (Booster)
+    1.6502 s Warning 
+    4.7242 s Apogee (staged-bp)
+    19.0652 s Ground hit 
+    19.0652 s Simulation end 
+    around Motor ignition at 0.0000: t=0.0000 mass=0.145887 cg=0.353186 cd=1.9199
+    around Motor ignition at 0.0000: t=0.0002 mass=0.145887 cg=0.353186 cd=1.9199
+    around Motor ignition at 0.0000: t=0.0004 mass=0.145887 cg=0.353186 cd=1.9199
+    around Motor ignition at 0.0000: t=0.0006 mass=0.145886 cg=0.353185 cd=1.9199
+    around Motor burnout at 1.6500: t=1.6482 mass=0.124792 cg=0.328200 cd=1.1177
+    around Motor burnout at 1.6500: t=1.6492 mass=0.124789 cg=0.328196 cd=1.1177
+    around Motor burnout at 1.6500: t=1.6502 mass=0.085545 cg=0.250108 cd=0.7285
+    around Motor burnout at 1.6500: t=1.6512 mass=0.085544 cg=0.250107 cd=0.7285
+    around Motor burnout at 1.6500: t=1.6522 mass=0.085544 cg=0.250106 cd=0.7285
+    around Motor ignition at 1.6502: t=1.6482 mass=0.124792 cg=0.328200 cd=1.1177
+    around Motor ignition at 1.6502: t=1.6492 mass=0.124789 cg=0.328196 cd=1.1177
+    around Motor ignition at 1.6502: t=1.6502 mass=0.085545 cg=0.250108 cd=0.7285
+    around Motor ignition at 1.6502: t=1.6512 mass=0.085544 cg=0.250107 cd=0.7285
+    around Motor ignition at 1.6502: t=1.6522 mass=0.085544 cg=0.250106 cd=0.7285
+    around Stage separation at 1.6502: t=1.6482 mass=0.124792 cg=0.328200 cd=1.1177
+    around Stage separation at 1.6502: t=1.6492 mass=0.124789 cg=0.328196 cd=1.1177
+    around Stage separation at 1.6502: t=1.6502 mass=0.085545 cg=0.250108 cd=0.7285
+    around Stage separation at 1.6502: t=1.6512 mass=0.085544 cg=0.250107 cd=0.7285
+    around Stage separation at 1.6502: t=1.6522 mass=0.085544 cg=0.250106 cd=0.7285
+    around Motor burnout at 3.5102: t=3.5082 mass=0.074747 cg=0.231198 cd=0.7326
+    around Motor burnout at 3.5102: t=3.5092 mass=0.074746 cg=0.231197 cd=0.7326
+    around Motor burnout at 3.5102: t=3.5102 mass=0.074745 cg=0.231195 cd=0.7326
+    around Motor burnout at 3.5102: t=3.5112 mass=0.074745 cg=0.231195 cd=0.7326
+    around Motor burnout at 3.5102: t=3.5122 mass=0.074745 cg=0.231195 cd=0.7326
+file staged-hpr.ork config 6a0f1c1e-1b2d-4c1a-9f00-0000000000b2
+  stage 0 "Sustainer" number=0 separation=Current stage ejection charge delay=0.000 active=true
+  stage 1 "Booster" number=1 separation=Current stage motor burnout delay=0.000 active=true
+  mount "Sustainer motor tube" stage=0 motor=G80T ignition=First burnout of previous stage ignitionDelay=0.500 ejectionDelay=7.000
+  mount "Booster motor tube" stage=1 motor=H128W ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=14.000
+  sustainer: apogee 1126.746 m, max v 304.574 m/s, max Mach 0.9009, rail exit 30.701 m/s, t_apogee 10.338 s, flight time 143.906 s
+  branch 0 "Sustainer" max altitude 1126.746 m
+    0.0000 s Launch (staged-hpr)
+    0.0000 s Motor ignition (Booster motor tube)
+    0.0258 s Lift-off 
+    0.1222 s Launch rod clearance 
+    1.2930 s Motor burnout (Booster motor tube)
+    1.2930 s Stage separation (Booster)
+    1.7936 s Motor ignition (Sustainer motor tube)
+    3.4946 s Motor burnout (Sustainer motor tube)
+    10.3836 s Apogee (staged-hpr)
+    10.3846 s Recovery device deployment (Parachute)
+    10.4946 s Ejection charge (Sustainer)
+    143.9057 s Ground hit 
+    143.9057 s Simulation end 
+  branch 1 "Booster" max altitude 390.867 m
+    0.0000 s Motor ignition (Booster motor tube)
+    1.2930 s Motor burnout (Booster motor tube)
+    1.2930 s Stage separation (Booster)
+    1.2936 s Warning 
+    5.6276 s Apogee (staged-hpr)
+    15.2936 s Ejection charge (Booster)
+    23.6553 s Ground hit 
+    23.6553 s Simulation end 
+    around Motor ignition at 0.0000: t=0.0000 mass=0.528714 cg=0.676756 cd=1.7603
+    around Motor ignition at 0.0000: t=0.0002 mass=0.528708 cg=0.676754 cd=1.7603
+    around Motor ignition at 0.0000: t=0.0004 mass=0.528703 cg=0.676752 cd=1.7603
+    around Motor ignition at 0.0000: t=0.0006 mass=0.528697 cg=0.676751 cd=1.7603
+    around Motor burnout at 1.2930: t=1.2916 mass=0.434634 cg=0.636443 cd=0.9465
+    around Motor burnout at 1.2930: t=1.2926 mass=0.434634 cg=0.636442 cd=0.9464
+    around Motor burnout at 1.2930: t=1.2936 mass=0.270723 cg=0.497568 cd=0.6490
+    around Motor burnout at 1.2930: t=1.2946 mass=0.270723 cg=0.497568 cd=0.6489
+    around Motor burnout at 1.2930: t=1.2956 mass=0.270723 cg=0.497568 cd=0.6487
+    around Stage separation at 1.2930: t=1.2916 mass=0.434634 cg=0.636443 cd=0.9465
+    around Stage separation at 1.2930: t=1.2926 mass=0.434634 cg=0.636442 cd=0.9464
+    around Stage separation at 1.2930: t=1.2936 mass=0.270723 cg=0.497568 cd=0.6490
+    around Stage separation at 1.2930: t=1.2946 mass=0.270723 cg=0.497568 cd=0.6489
+    around Stage separation at 1.2930: t=1.2956 mass=0.270723 cg=0.497568 cd=0.6487
+    around Motor ignition at 1.7936: t=1.7916 mass=0.270723 cg=0.497568 cd=0.6150
+    around Motor ignition at 1.7936: t=1.7926 mass=0.270723 cg=0.497568 cd=0.6150
+    around Motor ignition at 1.7936: t=1.7936 mass=0.270723 cg=0.497568 cd=0.6150
+    around Motor ignition at 1.7936: t=1.7946 mass=0.270701 cg=0.497555 cd=0.6149
+    around Motor ignition at 1.7936: t=1.7956 mass=0.270678 cg=0.497543 cd=0.6149
+    around Motor burnout at 3.4946: t=3.4926 mass=0.201726 cg=0.446145 cd=0.6451
+    around Motor burnout at 3.4946: t=3.4936 mass=0.201725 cg=0.446143 cd=0.6450
+    around Motor burnout at 3.4946: t=3.4946 mass=0.201723 cg=0.446142 cd=0.6449
+    around Motor burnout at 3.4946: t=3.4956 mass=0.201723 cg=0.446142 cd=0.6447
+    around Motor burnout at 3.4946: t=3.4966 mass=0.201723 cg=0.446142 cd=0.6446
+
+# Part 3: "automatic" ignition with a stage that has no motor (--gaps), saved as staged-gap-bottom.ork and
+# staged-gap-middle.ork. Bottom stage empty: nothing ignites and OpenRocket aborts at launch. Middle stage
+# empty: the bottom stage lights at launch, its charge fires, and the sustainer never lights (no charge
+# from the stage directly below it), so no stage separates. "Automatic" is launch for the bottom stage
+# only, and the ejection charge of the stage directly below for every other stage.
+file staged-gap-bottom.ork config 6a0f1c1e-1b2d-4c1a-9f00-0000000000c1
+  stage 0 "Sustainer" number=0 separation=Current stage ejection charge delay=0.000 active=true
+  stage 1 "Middle" number=1 separation=Upper stage motor ignition delay=0.000 active=true
+  stage 2 "Bottom" number=2 separation=Upper stage motor ignition delay=0.000 active=true
+  mount "Sustainer motor tube" stage=0 motor=C6 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=5.000
+  mount "Booster motor tube" stage=1 motor=D12 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  mount "Booster motor tube" stage=2 motor=none ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  sustainer: apogee 0.000 m, max v 0.000 m/s, max Mach 0.0000, rail exit NaN m/s, t_apogee 0.000 s, flight time 0.000 s
+  branch 0 "Sustainer" max altitude 0.000 m
+    0.0000 s Launch (staged-gap-bottom)
+    0.0000 s Simulation abort 
+file staged-gap-middle.ork config 6a0f1c1e-1b2d-4c1a-9f00-0000000000c2
+  stage 0 "Sustainer" number=0 separation=Current stage ejection charge delay=0.000 active=true
+  stage 1 "Middle" number=1 separation=Upper stage motor ignition delay=0.000 active=true
+  stage 2 "Bottom" number=2 separation=Upper stage motor ignition delay=0.000 active=true
+  mount "Sustainer motor tube" stage=0 motor=C6 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=5.000
+  mount "Booster motor tube" stage=1 motor=none ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  mount "Booster motor tube" stage=2 motor=D12 ignition=Automatic (launch or ejection charge) ignitionDelay=0.000 ejectionDelay=0.000
+  sustainer: apogee 199.682 m, max v 72.663 m/s, max Mach 0.2136, rail exit 19.477 m/s, t_apogee 6.151 s, flight time 24.111 s
+  branch 0 "Sustainer" max altitude 199.682 m
+    0.0000 s Launch (staged-gap-middle)
+    0.0000 s Motor ignition (Booster motor tube)
+    0.0960 s Lift-off 
+    0.2782 s Launch rod clearance 
+    1.6500 s Motor burnout (Booster motor tube)
+    1.6506 s Ejection charge (Bottom)
+    6.1956 s Apogee (staged-gap-middle)
+    6.1966 s Recovery device deployment (Parachute)
+    24.1112 s Ground hit 
+    24.1112 s Simulation end 
+    around Motor ignition at 0.0000: t=0.0000 mass=0.163630 cg=0.412846 cd=2.5645
+    around Motor ignition at 0.0000: t=0.0002 mass=0.163629 cg=0.412846 cd=2.5645
+    around Motor ignition at 0.0000: t=0.0004 mass=0.163629 cg=0.412845 cd=2.5645
+    around Motor ignition at 0.0000: t=0.0006 mass=0.163629 cg=0.412845 cd=2.5645
+    around Motor burnout at 1.6500: t=1.6486 mass=0.142533 cg=0.382038 cd=1.4942
+    around Motor burnout at 1.6500: t=1.6496 mass=0.142531 cg=0.382033 cd=1.4942
+    around Motor burnout at 1.6500: t=1.6506 mass=0.142530 cg=0.382031 cd=1.4941
+    around Motor burnout at 1.6500: t=1.6516 mass=0.142530 cg=0.382031 cd=1.4941
+    around Motor burnout at 1.6500: t=1.6526 mass=0.142530 cg=0.382031 cd=1.4941

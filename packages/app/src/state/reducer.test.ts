@@ -43,6 +43,19 @@ describe('reducer (plan 0012)', () => {
     expect('motorMount' in s.design).toBe(false);
     expect(s.design.components.some((c) => c.id === 'mount')).toBe(false);
   });
+  it('removes an additional motor mount with its part (plan 0064)', () => {
+    const d = exampleDesign();
+    const mount = d.motorMount;
+    if (mount === undefined) throw new Error('the example has a motor mount');
+    let s = initialState({
+      ...d,
+      motorMount: { ...mount, componentId: 'body' },
+      additionalMotorMounts: [mount],
+    });
+    s = reduce(s, { type: 'remove-component', id: 'mount' });
+    expect(s.design.motorMount?.componentId).toBe('body');
+    expect('additionalMotorMounts' in s.design).toBe(false);
+  });
   it('moves components and ignores moves past the ends', () => {
     let s = initialState(exampleDesign());
     const first = s.design.components[0]?.id;

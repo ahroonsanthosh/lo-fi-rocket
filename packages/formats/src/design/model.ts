@@ -19,10 +19,11 @@ import type {
   Pascals,
   Radians,
   Seconds,
+  StageSeparation,
 } from '@lo-fi-rocket/physics';
 
 /** Bumped whenever the file layout changes; migrate.ts carries one step per bump. */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export interface DesignComponent {
   readonly id: string;
@@ -34,6 +35,8 @@ export interface DesignComponent {
   readonly massOverride?: MassOverride;
   /** What this part's entry does not represent exactly, e.g. from an import (D-084). */
   readonly approximations?: readonly Approximation[];
+  /** Plan 0064 (schema 2): the stage the part belongs to, 0 being the top stage; absent means 0. */
+  readonly stage?: number;
 }
 
 /** Where a motor's data came from, for display and for refreshing from the source. */
@@ -62,6 +65,29 @@ export interface MotorMount {
    * Absent for one motor on the axis.
    */
   readonly cluster?: readonly ClusterOffset[];
+  /** Plan 0064 (schema 2): when the motor ignites; absent means 'automatic' with no delay. */
+  readonly ignition?: MotorIgnition;
+}
+
+/**
+ * When a motor ignites (plan 0064), as OpenRocket's ignition events
+ * (reference/rockets/staging-probe/values.txt): 'automatic' is launch for a motor in the bottom
+ * stage and otherwise the ejection charge of the motor in the stage directly below; 'burnout' and
+ * 'ejection' are those of the motor in the stage directly below; 'never' leaves it unlit.
+ */
+export type IgnitionEvent = 'automatic' | 'launch' | 'burnout' | 'ejection' | 'never';
+
+export interface MotorIgnition {
+  readonly event: IgnitionEvent;
+  /** After the event. */
+  readonly delay: Seconds;
+}
+
+/** A stage of a multi-stage design (plan 0064, D-091); its parts name it by index. */
+export interface DesignStage {
+  readonly name: string;
+  /** How the stage leaves the vehicle; given for every stage but the top one, which never separates. */
+  readonly separation?: StageSeparation;
 }
 
 export type DeployEvent = 'apogee' | 'ejection' | 'altitude' | 'launch' | 'never';
@@ -79,6 +105,8 @@ export interface DesignRecoveryDevice {
     readonly altitude?: Metres;
     readonly delay: Seconds;
   };
+  /** Plan 0064 (schema 2): the stage the device is on (it leaves with it); absent means 0. */
+  readonly stage?: number;
 }
 
 export interface LaunchSiteSettings {
@@ -169,6 +197,13 @@ export interface RocketDesign {
   readonly name: string;
   readonly components: readonly DesignComponent[];
   readonly motorMount?: MotorMount;
+  /**
+   * Plan 0064 (schema 2): motor mounts beyond `motorMount`, such as one for each further stage;
+   * each motor belongs to the stage of its mount's part.
+   */
+  readonly additionalMotorMounts?: readonly MotorMount[];
+  /** Plan 0064 (schema 2, D-091): the stages, top first; absent for a one-stage rocket. */
+  readonly stages?: readonly DesignStage[];
   readonly recovery: readonly DesignRecoveryDevice[];
   /** Surface roughness height for the skin friction (DRAG-2, Niskanen Figure 3.10). */
   readonly finish: { readonly roughnessHeight: Metres };

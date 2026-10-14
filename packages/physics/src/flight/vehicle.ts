@@ -55,7 +55,8 @@ export interface StagedMotor {
   /** The stage the motor belongs to; 0 is the top stage. */
   readonly stage: number;
   readonly ignition: {
-    readonly event: 'launch' | 'burnout' | 'ejection';
+    /** 'never': the motor stays unlit, at its loaded mass, for the whole flight (plan 0064 part 2). */
+    readonly event: 'launch' | 'burnout' | 'ejection' | 'never';
     /** For 'burnout' and 'ejection': the index, in `motors`, of the motor whose event it is. */
     readonly of?: number;
     readonly delay: Seconds;
@@ -65,11 +66,29 @@ export interface StagedMotor {
 }
 
 /**
- * When a stage separates (plan 0064): at the ignition of the stage above it, at its own motor's
- * burnout or ejection charge, at launch, or never; then a delay. The thesis has no separation
- * event; this set follows the owner's decision D-091 and OpenRocket's file format.
+ * When a stage separates (plan 0064): at the ignition of the stage above it, at the ignition,
+ * burnout or ejection charge of its own motor, at launch, at apogee, when climbing or descending
+ * through an altitude above the pad, or never; then a delay. The thesis has no separation event;
+ * this set follows the owner's decision D-091 and OpenRocket's file format (its nine events).
  */
-export type SeparationEvent = 'upper-ignition' | 'burnout' | 'ejection' | 'launch' | 'never';
+export type SeparationEvent =
+  | 'upper-ignition'
+  | 'ignition'
+  | 'burnout'
+  | 'ejection'
+  | 'launch'
+  | 'apogee'
+  | 'altitude-ascending'
+  | 'altitude-descending'
+  | 'never';
+
+/** A stage's separation event and delay (plan 0064). */
+export interface StageSeparation {
+  readonly event: SeparationEvent;
+  readonly delay: Seconds;
+  /** For 'altitude-ascending' and 'altitude-descending': the altitude above the pad. */
+  readonly altitude?: Metres;
+}
 
 /**
  * The stages of a multi-stage vehicle (plan 0064). Stage 0 is the top stage; a separating stage
@@ -81,7 +100,7 @@ export interface VehicleStages {
   /** Every motor of the vehicle; with `stages`, the vehicle's `motor` is not used. */
   readonly motors: readonly StagedMotor[];
   /** Index = stage number. Stage 0 never separates; its entry is not read. */
-  readonly separation: readonly { readonly event: SeparationEvent; readonly delay: Seconds }[];
+  readonly separation: readonly StageSeparation[];
   /** The stage of each entry of `recovery`; absent means every device is on the top stage. */
   readonly recoveryStage?: readonly number[];
   /** Stage names, index = stage number, for events and messages. */

@@ -9,6 +9,7 @@
 import {
   burnTime,
   centreOfPressure,
+  combineRocketMotors,
   mach,
   motorMassAt,
   rocketMassProperties,
@@ -16,6 +17,7 @@ import {
   ROUGHNESS_HEIGHTS,
   stabilityMargin,
   seconds,
+  structuralMassParts,
   STANDARD_GRAVITY,
   STANDARD_GRAVITY_MODEL,
   totalImpulse,
@@ -27,12 +29,15 @@ import {
   type RocketMassProperties,
   type SimulationOptions,
   type StabilityResult,
+  type StagedMotor,
+  type StageSeparation,
+  type VehicleStages,
   type Mach,
   type Metres,
   type WindModel,
 } from '@lo-fi-rocket/physics';
 import { DesignError } from './errors.js';
-import type { DesignComponent, MotorSelection, RocketDesign } from './model.js';
+import type { DesignComponent, MotorMount, MotorSelection, RocketDesign } from './model.js';
 
 export type PhysicsMode = 'displayed' | 'openrocket-equivalent';
 
@@ -50,12 +55,37 @@ export function designPlacedComponents(design: RocketDesign): PlacedComponent[] 
   return design.asBuilt === undefined ? parts : withAsBuilt(parts, design.asBuilt);
 }
 
-/** The motor and where its aft end sits, or undefined when no motor is selected. */
-export function designMotor(
-  design: RocketDesign,
-): { readonly selection: MotorSelection; readonly aftEnd: Metres } | undefined {
-  const mount = design.motorMount;
-  if (mount?.motor === undefined) return undefined;
+/** A selected motor in its mount (plan 0064): the mount, the part holding it and its stage. */
+export interface DesignMotor {
+  readonly selection: MotorSelection;
+  /** Where the motor's aft end sits, from the nose tip. */
+  readonly aftEnd: Metres;
+  readonly mount: MotorMount;
+  readonly holder: DesignComponent;
+  /** The stage of the mount's part; 0 is the top stage. */
+  readonly stage: number;
+}
+
+/** Plan 0064: the number of stages, the design's list or one. */
+export function designStageCount(design: RocketDesign): number {
+  return design.stages?.length ?? 1;
+}
+
+/** Plan 0064: a stage's name for messages, its own or "stage n" counted from the top. */
+export function designStageName(design: RocketDesign, stage: number): string {
+  return design.stages?.[stage]?.name ?? `stage ${String(stage + 1)}`;
+}
+
+/** Every motor mount: `motorMount` first, then the additional ones (plan 0064). */
+export function designMotorMounts(design: RocketDesign): MotorMount[] {
+  return [
+    ...(design.motorMount === undefined ? [] : [design.motorMount]),
+    ...(design.additionalMotorMounts ?? []),
+  ];
+}
+
+function mountMotor(design: RocketDesign, mount: MotorMount): DesignMotor | undefined {
+  if (mount.motor === undefined) return undefined;
   const holder = design.components.find((c) => c.id === mount.componentId);
   if (holder === undefined) {
     throw new DesignError(`the motor mount refers to a missing component "${mount.componentId}"`);
@@ -65,7 +95,56 @@ export function designMotor(
       ? holder.component.length
       : 0;
   const aftEnd: number = holder.position + length + mount.overhang;
-  return { selection: mount.motor, aftEnd: aftEnd as Metres };
+  return {
+    selection: mount.motor,
+    aftEnd: aftEnd as Metres,
+    mount,
+    holder,
+    stage: holder.stage ?? 0,
+  };
+}
+
+/** The motor of `motorMount` and where its aft end sits, or undefined when it has none. */
+export function designMotor(design: RocketDesign): DesignMotor | undefined {
+  return design.motorMount === undefined ? undefined : mountMotor(design, design.motorMount);
+}
+
+/** Plan 0064: every selected motor, in the order of designMotorMounts. */
+export function designMotors(design: RocketDesign): DesignMotor[] {
+  return designMotorMounts(design).flatMap((mount) => {
+    const m = mountMotor(design, mount);
+    return m === undefined ? [] : [m];
+  });
+}
+
+/**
+ * Plan 0064: each motor's ignition for the physics, as OpenRocket's events
+ * (reference/rockets/staging-probe/values.txt): 'automatic' is launch in the bottom stage and the
+ * ejection charge of the stage directly below otherwise; 'burnout' and 'ejection' are those of the
+ * stage directly below (its first motor, in the order of designMotors). With no motor there, the
+ * motor never ignites, and `problem` says so.
+ */
+export function designIgnitions(
+  design: RocketDesign,
+  motors: readonly DesignMotor[] = designMotors(design),
+): { readonly ignition: StagedMotor['ignition']; readonly problem?: string }[] {
+  const bottom = designStageCount(design) - 1;
+  return motors.map((m) => {
+    const given = m.mount.ignition ?? { event: 'automatic', delay: seconds(0) };
+    const delay = given.delay;
+    if (given.event === 'launch' || (given.event === 'automatic' && m.stage === bottom)) {
+      return { ignition: { event: 'launch', delay } };
+    }
+    if (given.event === 'never') return { ignition: { event: 'never', delay } };
+    const event = given.event === 'burnout' ? 'burnout' : 'ejection';
+    const of = motors.findIndex((o) => o.stage === m.stage + 1);
+    if (of >= 0) return { ignition: { event, of, delay } };
+    const what = event === 'burnout' ? 'burnout' : 'ejection charge';
+    return {
+      ignition: { event: 'never', delay },
+      problem: `The motor in "${m.holder.name}" never ignites: it is set to ignite at the ${what} of the motor in the stage below${given.event === 'automatic' ? ' (automatic ignition)' : ''}, but ${m.stage === bottom ? `${designStageName(design, m.stage)} is the bottom stage` : `${designStageName(design, m.stage + 1)} has no motor`}. Give that stage a motor, or set this motor to ignite at launch.`,
+    };
+  });
 }
 
 /**
@@ -76,16 +155,12 @@ export function designMotor(
  * Lengths are compared within 1 µm (as the component fit checks, D-074).
  */
 export function designMotorFitProblems(design: RocketDesign): string[] {
-  const m = designMotor(design);
-  const mount = design.motorMount;
-  if (m === undefined || mount === undefined) return [];
-  const holder = design.components.find((c) => c.id === mount.componentId);
-  if (
-    holder === undefined ||
-    (holder.component.kind !== 'innerTube' && holder.component.kind !== 'bodyTube')
-  ) {
-    return [];
-  }
+  return designMotors(design).flatMap((m) => motorFitProblems(m));
+}
+
+function motorFitProblems(m: DesignMotor): string[] {
+  const holder = m.holder;
+  if (holder.component.kind !== 'innerTube' && holder.component.kind !== 'bodyTube') return [];
   const tube = holder.component;
   const def = m.selection.definition;
   const mm = (x: number): string => (x * 1000).toFixed(1);
@@ -112,10 +187,14 @@ export type MassCondition = 'liftoff' | 'burnout' | 'no-motor';
 /** Motor mass at liftoff or burnout, or undefined without a motor; a cluster's motors together (plan 0057). */
 export function designMotorMass(design: RocketDesign, at: MassCondition): MotorMass | undefined {
   const m = designMotor(design);
-  if (m === undefined || at === 'no-motor') return undefined;
+  return m === undefined ? undefined : motorMassOf(m, at);
+}
+
+function motorMassOf(m: DesignMotor, at: MassCondition): MotorMass | undefined {
+  if (at === 'no-motor') return undefined;
   const def = m.selection.definition;
   const one = motorMassAt(def, at === 'liftoff' ? seconds(0) : burnTime(def), m.aftEnd);
-  const cluster = design.motorMount?.cluster;
+  const cluster = m.mount.cluster;
   return cluster === undefined ? one : { ...one, cluster };
 }
 
@@ -124,11 +203,22 @@ export function designMotorCount(design: RocketDesign): number {
   return design.motorMount?.cluster?.length ?? 1;
 }
 
+/**
+ * The design's mass properties with every motor loaded ('liftoff'), every motor spent ('burnout') or
+ * none (plan 0064: a staged design's figures are those of the whole stack).
+ */
 export function designMassProperties(
   design: RocketDesign,
   at: MassCondition,
 ): RocketMassProperties {
-  return rocketMassProperties(designPlacedComponents(design), designMotorMass(design, at));
+  const parts = designPlacedComponents(design);
+  const masses = designMotors(design).flatMap((m) => {
+    const mass = motorMassOf(m, at);
+    return mass === undefined ? [] : [mass];
+  });
+  return masses.length <= 1
+    ? rocketMassProperties(parts, masses[0])
+    : combineRocketMotors(structuralMassParts(parts), masses);
 }
 
 export type StabilityAssessment =
@@ -176,7 +266,7 @@ export function designStability(
   machNumber: Mach = DESIGN_MACH,
 ): DesignStability {
   const components = designPlacedComponents(design);
-  const m = designMotor(design);
+  const noMotor = designMotors(design).length === 0;
   const cp = centreOfPressure(components, {
     mach: machNumber,
     rollAngle: 'worst',
@@ -186,8 +276,8 @@ export function designStability(
       : { referenceDiameter: design.referenceDiameter }),
   });
   // As rocketStability (BAR-9), but tolerating a design without a motor: both CGs are then the empty rocket's.
-  const cgLiftoff = designMassProperties(design, m === undefined ? 'no-motor' : 'liftoff').cg;
-  const cgBurnout = designMassProperties(design, m === undefined ? 'no-motor' : 'burnout').cg;
+  const cgLiftoff = designMassProperties(design, noMotor ? 'no-motor' : 'liftoff').cg;
+  const cgBurnout = designMassProperties(design, noMotor ? 'no-motor' : 'burnout').cg;
   const result: StabilityResult = {
     centreOfPressure: cp,
     cgLiftoff,
@@ -198,33 +288,79 @@ export function designStability(
   return {
     result,
     mode,
-    noMotor: m === undefined,
+    noMotor,
     liftoff: assessMargin(result.marginLiftoff, design.stabilityThresholds),
     burnout: assessMargin(result.marginBurnout, design.stabilityThresholds),
   };
 }
 
+/** A motor as the physics' source: its definition, aft end, ejection delay and cluster. */
+function motorSource(m: DesignMotor): StagedMotor['motor'] {
+  return {
+    kind: 'definition',
+    definition: m.selection.definition,
+    aftEnd: m.aftEnd,
+    ...(m.selection.ejectionDelay === undefined
+      ? {}
+      : { ejectionDelay: m.selection.ejectionDelay }),
+    ...(m.mount.cluster === undefined ? {} : { cluster: m.mount.cluster }),
+  };
+}
+
+/**
+ * Plan 0064: the stages for the physics, or undefined for a one-stage rocket with one motor lit at
+ * launch (whose flight is then exactly the unstaged one).
+ */
+function designVehicleStages(
+  design: RocketDesign,
+  motors: readonly DesignMotor[],
+): VehicleStages | undefined {
+  const ignitions = designIgnitions(design, motors);
+  const [first] = ignitions;
+  if (
+    design.stages === undefined &&
+    motors.length === 1 &&
+    first?.ignition.event === 'launch' &&
+    (first.ignition.delay as number) === 0
+  ) {
+    return undefined;
+  }
+  const never: StageSeparation = { event: 'never', delay: seconds(0) };
+  return {
+    componentStage: design.components.map((c) => c.stage ?? 0),
+    motors: motors.map((m, i) => ({
+      motor: motorSource(m),
+      stage: m.stage,
+      ignition: ignitions[i]?.ignition ?? { event: 'never', delay: seconds(0) },
+      name:
+        design.stages === undefined
+          ? m.selection.definition.designation
+          : `${designStageName(design, m.stage)} ${m.selection.definition.designation}`,
+    })),
+    separation: Array.from({ length: designStageCount(design) }, (_, k) =>
+      k === 0 ? never : (design.stages?.[k]?.separation ?? never),
+    ),
+    recoveryStage: design.recovery.map((d) => d.stage ?? 0),
+    ...(design.stages === undefined ? {} : { names: design.stages.map((s) => s.name) }),
+  };
+}
+
 /** The simulated vehicle. Throws DesignError when no motor is selected. */
 export function designVehicle(design: RocketDesign): FlightVehicle {
-  const m = designMotor(design);
+  const motors = designMotors(design);
+  const [m] = motors;
   if (m === undefined) {
     throw new DesignError(
       'no motor is selected: choose a motor in the motor mount before simulating',
     );
   }
+  const stages = designVehicleStages(design, motors);
   return {
     components: designPlacedComponents(design),
     componentNames: design.components.map((c) => c.name),
     ...(design.approximations === undefined ? {} : { approximations: design.approximations }),
-    motor: {
-      kind: 'definition',
-      definition: m.selection.definition,
-      aftEnd: m.aftEnd,
-      ...(m.selection.ejectionDelay === undefined
-        ? {}
-        : { ejectionDelay: m.selection.ejectionDelay }),
-      ...(design.motorMount?.cluster === undefined ? {} : { cluster: design.motorMount.cluster }),
-    },
+    motor: motorSource(m),
+    ...(stages === undefined ? {} : { stages }),
     recovery: design.recovery.map((d) => ({
       name: d.name,
       diameter: d.diameter,
@@ -310,6 +446,7 @@ export interface DesignWarning {
   readonly code:
     | 'unstable'
     | 'motor-fit'
+    | 'ignition'
     | 'rail-exit-velocity'
     | 'thrust-to-weight'
     | 'deployment-velocity'
@@ -328,13 +465,19 @@ export interface DesignWarning {
 
 /**
  * Thrust-to-weight: the motor's average thrust (total impulse / burn time), times the motors in a
- * cluster (plan 0057), over the liftoff weight at standard gravity.
+ * cluster (plan 0057), over the liftoff weight at standard gravity. Plan 0064: the motors lit at
+ * launch together, over the whole stack's weight; 0 when none is.
  */
 export function designThrustToWeight(design: RocketDesign): number | undefined {
-  const m = designMotor(design);
-  if (m === undefined) return undefined;
-  const def = m.selection.definition;
-  const average: number = (designMotorCount(design) * totalImpulse(def)) / burnTime(def);
+  const motors = designMotors(design);
+  if (motors.length === 0) return undefined;
+  const ignitions = designIgnitions(design, motors);
+  const average = motors.reduce((sum, m, i) => {
+    if (ignitions[i]?.ignition.event !== 'launch') return sum;
+    const def = m.selection.definition;
+    const count = m.mount.cluster?.length ?? 1;
+    return sum + (count * (totalImpulse(def) as number)) / (burnTime(def) as number);
+  }, 0);
   const weight: number = designMassProperties(design, 'liftoff').mass * STANDARD_GRAVITY;
   return average / weight;
 }
@@ -362,6 +505,10 @@ export function designFlightWarnings(design: RocketDesign, result: FlightResult)
   }
   // Issue #36: a motor that does not fit makes every figure that of a rocket that cannot be built.
   for (const message of designMotorFitProblems(design)) out.push({ code: 'motor-fit', message });
+  // Plan 0064: a motor whose ignition event can never come.
+  for (const { problem } of designIgnitions(design)) {
+    if (problem !== undefined) out.push({ code: 'ignition', message: problem });
+  }
   if (s.deploymentVelocity !== undefined && s.deploymentVelocity > t.maxDeploymentVelocity) {
     out.push({
       code: 'deployment-velocity',

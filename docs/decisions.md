@@ -740,3 +740,23 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - A vehicle with one stage and one launch motor flies exactly as the unstaged vehicle, aerodynamics on (test).
   - Two-stage flights in vacuum match the piecewise closed form to 1e-4 m. This covers ignition at burnout, at an ejection charge with a delay after a coast, separation at burnout before ignition, and no separation (tests).
   - The mass never rises during a flight, over random delays (property test).
+
+## D-097 (2026-10-14): Staged designs in the file (schema 2), and OpenRocket's ignition events
+
+- **Decision:** The design file moves to schema 2 (plan 0064 part 2a). The migration from 1 is the identity: every new field is optional, so a version-1 file is the same one-stage design.
+  - **Stages.** `stages` lists the stages, top first, each with a name and, for every stage but the top one, a separation event and delay. A part (`components[].stage`) and a recovery device (`recovery[].stage`) name their stage; absent means 0.
+  - **Motors.** `additionalMotorMounts` holds motor mounts beyond `motorMount`, such as one per further stage. A motor belongs to the stage of its mount's part, so a mount can never disagree with its part. No two mounts share a part.
+  - **Ignition.** `MotorMount.ignition` is OpenRocket's event set: `automatic`, `launch`, `burnout`, `ejection`, `never`, with a delay; absent means automatic with no delay. As observed in OpenRocket 24.12 (reference/rockets/staging-probe/values.txt, parts 1 to 3), "automatic" is launch for a motor in the bottom stage and otherwise the ejection charge of the stage directly below; `burnout` and `ejection` are those of the stage directly below. With no motor there the motor never lights, as in OpenRocket (`staged-gap-middle`), and the design warnings say so (code `ignition`).
+  - **Separation.** The engine now has OpenRocket's nine events: the upper stage's ignition, the stage's own ignition, burnout or ejection charge, launch, apogee, climbing or descending through an altitude above the pad, and never.
+  - **Edge cases, said in the results.** A motor that was due to light and did not, and a stage that was due to separate and did not, are each a warning with the reason. When no motor lights at launch the flight ends at once on the pad (end reason `no-ignition`), where OpenRocket aborts (`staged-gap-bottom`).
+  - **Figures.** The design's mass, CG and stability are the whole stack's: liftoff with every motor loaded, burnout with every motor spent. Thrust-to-weight counts the motors lit at launch over the whole stack's weight.
+  - **Path.** A design with no `stages`, one motor and a launch ignition at 0 s keeps the unstaged path, so every existing result is bit-identical.
+- **Why:** The owner's goal (any design, any file) and D-091. Deriving a motor's stage from its part removes a way for a file to contradict itself. OpenRocket's "automatic" is defined only in its interface text, so it was measured as a black box (CLAUDE.md 3) on its own examples and on two built cases with an empty stage.
+- **Alternatives:**
+  - Replacing `motorMount` with a list (a real migration touching every reader of the field; deferred).
+  - A motor mount inside each stage entry (a mount could then name a part of another stage).
+  - Resolving "automatic" when the file is written (the meaning would not follow later edits to the stages).
+- **Consequences:**
+  - Stage editing in the app and the MCP server is part 3.
+  - The `.ork` stages import with the OpenRocket comparison is part 2b.
+  - The per-configuration stability of a staged rocket (the sustainer alone at its ignition and burnout) is not yet shown; the in-flight margin check covers the flight.

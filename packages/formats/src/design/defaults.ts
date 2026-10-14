@@ -228,3 +228,20 @@ export function defaultRecoveryDevice(id: string, design: RocketDesign): DesignR
     deploy: { event: 'apogee', delay: seconds(0) },
   };
 }
+
+/**
+ * Remove a part and every motor mount on it, `motorMount` and the additional mounts of plan 0064
+ * alike, so that an edit never leaves a mount on a missing part.
+ */
+export function withoutComponent(design: RocketDesign, id: string): RocketDesign {
+  const { motorMount, additionalMotorMounts, ...rest } = design;
+  const additional = additionalMotorMounts?.filter((m) => m.componentId !== id);
+  return {
+    ...rest,
+    components: design.components.filter((c) => c.id !== id),
+    ...(motorMount === undefined || motorMount.componentId === id ? {} : { motorMount }),
+    ...(additional === undefined || additional.length === 0
+      ? {}
+      : { additionalMotorMounts: additional }),
+  };
+}

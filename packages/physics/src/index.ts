@@ -300,6 +300,7 @@ export type {
   MotorSource,
   RecoveryDevice,
   SeparationEvent,
+  StageSeparation,
   SimulationOptions,
   StagedMotor,
   VehicleStages,
