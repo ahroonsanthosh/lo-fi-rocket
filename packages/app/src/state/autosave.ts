@@ -52,15 +52,17 @@ export function loadUnits(storage: Storage): 'metric' | 'imperial' {
   return storage.getItem(UNITS_KEY) === 'imperial' ? 'imperial' : 'metric';
 }
 
-export type Theme = 'dark' | 'light';
+/** The colour theme: follow the system, or a fixed choice (D-UI-12). */
+export type Theme = 'auto' | 'light' | 'dark';
 
 export function saveTheme(storage: Storage, theme: Theme): void {
   storage.setItem(THEME_KEY, theme);
 }
 
-/** The colour theme; dark (the instrument-panel look) unless light was chosen (D-UI-6). */
+/** The stored theme; the system's own setting unless the user picked one. */
 export function loadTheme(storage: Storage): Theme {
-  return storage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+  const t = storage.getItem(THEME_KEY);
+  return t === 'light' || t === 'dark' ? t : 'auto';
 }
 
 /** The browser's local storage, or undefined where it is unavailable (private mode, tests without jsdom). */

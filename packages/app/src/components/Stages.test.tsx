@@ -149,8 +149,11 @@ describe('the checks before a flight', () => {
 describe('the app with a two-stage design', () => {
   it('edits each stage’s motor and ignition, and gauges the sustainer alone at burnout', async () => {
     render(<App storage={memory()} motorStore={memory()} initialDesign={twoStage()} />);
-    // The burnout gauge is the top stage's alone (the whole stack's burnout never flies).
-    expect(screen.getByText('Stability at Sustainer burnout')).toBeInTheDocument();
+    // The burnout figure is the top stage's alone (the whole stack's burnout never flies).
+    const status = screen.getByRole('region', { name: 'Status' });
+    expect(
+      within(status).getByText(/at Sustainer burnout, the top stage alone/),
+    ).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(within(screen.getByRole('listbox', { name: 'Motor' })).getByRole('option'));
     const panel = screen.getByRole('region', { name: 'Motor' });

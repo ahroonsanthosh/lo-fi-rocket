@@ -166,7 +166,6 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
           else setMenuOpen(true);
         }}
       >
-        <Icon name="file" size={18} />
         File
         <Icon name="chevron" size={16} />
       </button>

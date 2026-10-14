@@ -14,8 +14,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
-    "mockups": "vite build --config mockups/vite.config.ts"
+    "test": "vitest run"
   },
   "peerDependencies": {
     "react": "^19.3.0",
