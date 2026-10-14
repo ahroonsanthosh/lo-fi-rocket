@@ -22,6 +22,7 @@ import {
   R5_COMPONENTS,
   REFERENCE_MOTORS,
   rocketMassProperties,
+  withAsBuilt,
   type Approximation,
   type PlacedComponent,
 } from '@lo-fi-rocket/physics';
@@ -1177,22 +1178,36 @@ describe('launch lug instances, rail button screws and transition shoulders (D-0
     expect(listed(rocket)).toEqual([]);
   });
 
-  it('a stage mass or CG override is not applied yet and is listed as major; a drag override as moderate', () => {
-    // OpenRocket makes 0.3 kg the structure's mass here (values.txt case 4); the parts' own
-    // 0.094350290 kg is used and the override listed.
-    const rocket = parseOrk(bytes(join('stage-override-probe', 'so4.ork')), 'so4.ork');
-    expect(rocket.approximations.map((a) => [a.what, a.impact])).toEqual([
-      ['the stage’s mass override', 'major'],
-    ]);
-    expect(rocketMassProperties(rocket.components).mass).toBeCloseTo(0.09435029, 8);
+  it('a stage mass or CG override is the as-built mass and CG, as OpenRocket (D-089); a drag override is listed', () => {
+    // values.txt: OpenRocket's structure mass and CG for each case.
+    const cases: readonly [number, number, number, readonly string[]][] = [
+      [0, 0.09435029, 0.306759079, []],
+      [1, 0.39435029, 0.306759079, ['minor']],
+      [2, 0.09435029, 0.306759079, []],
+      [3, 0.39435029, 0.263579895, ['minor']],
+      [4, 0.3, 0.306759079, []],
+      [5, 0.09435029, 0.25, []],
+      [6, 0.3, 0.25, []],
+    ];
+    for (const [n, mass, cg, impacts] of cases) {
+      const rocket = parseOrk(
+        bytes(join('stage-override-probe', `so${String(n)}.ork`)),
+        `so${String(n)}.ork`,
+      );
+      const m = rocketMassProperties(withAsBuilt(rocket.components, rocket.asBuilt));
+      expect(Math.abs(m.mass / mass - 1)).toBeLessThan(1e-6);
+      expect(Math.abs(m.cg / cg - 1)).toBeLessThan(1e-6);
+      expect(rocket.approximations.map((a) => a.impact)).toEqual(impacts);
+    }
     const r1 = xmlOf('r1-three-fin-conical.ork');
     const drag = parseOrk(
       r1.replace('<name>Sustainer</name>', '<name>Sustainer</name><overridecd>0.5</overridecd>'),
       'r1.ork',
     );
     expect(drag.approximations.map((a) => [a.what, a.impact])).toEqual([
-      ['the stage’s drag override', 'moderate'],
+      ['the stage’s drag coefficient override (0.5)', 'moderate'],
     ]);
+    expect(drag.asBuilt).toBeUndefined();
   });
 });
 

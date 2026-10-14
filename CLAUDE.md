@@ -34,7 +34,7 @@ An amateur builder scratch-building rockets that fly on commercial motors, with 
 ### Non-goals for version 1
 
 - Full CFD.
-- Full staging and cluster dynamics (separation events, booster and pod flight paths). Multi-stage, clustered and podded designs are still simulated, with their approximations listed (rule 3, D-083).
+- Full staging and cluster dynamics (booster and pod flight paths). Multi-stage, clustered and podded designs are still simulated, with their approximations listed (rule 3, D-083); the spent stage separates when the next ignites (changed by the owner on 2026-10-13, D-091).
 - Liquid engine design or combustion modelling (only the ability to import a thrust curve and propellant mass profile).
 
 ## 3. Licensing constraint

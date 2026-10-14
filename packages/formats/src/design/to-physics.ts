@@ -12,6 +12,7 @@ import {
   mach,
   motorMassAt,
   rocketMassProperties,
+  withAsBuilt,
   ROUGHNESS_HEIGHTS,
   stabilityMargin,
   seconds,
@@ -38,13 +39,15 @@ export type PhysicsMode = 'displayed' | 'openrocket-equivalent';
 /** The design's stability Mach number (docs/conventions.md: the design condition is 0.3). */
 export const DESIGN_MACH: Mach = mach(0.3);
 
+/** The design's parts for the physics, scaled and moved to the as-built mass and CG when given (D-089, GEO-17). */
 export function designPlacedComponents(design: RocketDesign): PlacedComponent[] {
-  return design.components.map((c: DesignComponent) => ({
+  const parts = design.components.map((c: DesignComponent) => ({
     component: c.component,
     position: c.position,
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
     ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
   }));
+  return design.asBuilt === undefined ? parts : withAsBuilt(parts, design.asBuilt);
 }
 
 /** The motor and where its aft end sits, or undefined when no motor is selected. */

@@ -1,10 +1,15 @@
-import { seconds, simulateFlight } from '@lo-fi-rocket/physics';
+import { kilograms, metres, seconds, simulateFlight } from '@lo-fi-rocket/physics';
 import { describe, expect, it } from 'vitest';
 import { exampleDesign } from '../design/example.js';
 import type { RocketDesign } from '../design/model.js';
-import { designSimulationOptions, designVehicle } from '../design/to-physics.js';
+import {
+  designMassProperties,
+  designSimulationOptions,
+  designVehicle,
+} from '../design/to-physics.js';
 import {
   percentile,
+  perturbDesign,
   runDispersion,
   sampleStatistics,
   ZERO_VARIATIONS,
@@ -92,5 +97,33 @@ describe('runDispersion (plan 0017)', () => {
         variations: { ...ZERO_VARIATIONS, railAngle: -1 },
       }),
     ).toThrow(/railAngle/);
+  });
+});
+
+describe('perturbDesign scales every mass the user gave (D-089)', () => {
+  it('the as-built mass and a part mass override scale with the structural mass', () => {
+    const base = exampleDesign();
+    const design: RocketDesign = {
+      ...base,
+      asBuilt: { mass: kilograms(0.2), cg: metres(0.35) },
+      components: base.components.map((c, i) =>
+        i === 0 ? { ...c, massOverride: { mass: kilograms(0.05) } } : c,
+      ),
+    };
+    const sampled = {
+      windSpeed: 0,
+      windDirection: 0,
+      railAngle: 0,
+      railAzimuth: 0,
+      motorImpulseScale: 1,
+      structuralMassScale: 1.1,
+      turbulenceSeed: undefined,
+    };
+    const p = perturbDesign(design, sampled);
+    expect(p.asBuilt?.mass).toBeCloseTo(0.22, 14);
+    expect(p.asBuilt?.cg).toBe(0.35);
+    expect(p.components[0]?.massOverride?.mass).toBeCloseTo(0.055, 14);
+    // The empty rocket's mass follows the scaled as-built mass.
+    expect(designMassProperties(p, 'no-motor').mass).toBeCloseTo(0.22, 12);
   });
 });

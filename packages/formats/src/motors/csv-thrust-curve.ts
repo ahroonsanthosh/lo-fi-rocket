@@ -26,6 +26,7 @@ import {
   type MotorDefinition,
 } from '@lo-fi-rocket/physics';
 import { FormatError } from '../errors.js';
+import { MAX_INPUT_BYTES, requireWithin } from '../limits.js';
 
 export class CsvThrustCurveError extends FormatError {
   readonly line: number;
@@ -51,6 +52,7 @@ export function parseThrustCurveCsv(
   meta: CustomMotorMetadata,
   fileName?: string,
 ): MotorDefinition {
+  requireWithin(fileName ?? 'The thrust curve', text.length, MAX_INPUT_BYTES);
   const rows: { line: number; values: number[] }[] = [];
   let columns: number | undefined;
   const lines = text.split(/\r?\n/);

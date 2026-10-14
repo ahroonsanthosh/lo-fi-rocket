@@ -13,14 +13,16 @@
  * Every element is either read, on a documented ignore list, or rejected with
  * an error naming it. Nothing is defaulted.
  */
-import { strFromU8, unzipSync } from 'fflate';
+import { strFromU8, Unzip, UnzipInflate } from 'fflate';
 import {
   kilograms,
   kilogramsPerCubicMetre,
   metres,
   noseProfile,
+  rocketMassProperties,
   seconds,
   type Approximation,
+  type AsBuilt,
   type ClusterOffset,
   type Component,
   type FinShape,
@@ -34,6 +36,13 @@ import {
   type Shoulder,
 } from '@lo-fi-rocket/physics';
 import { OrkParseError, OrkUnsupportedError, OrkUnsupportedFeaturesError } from './errors.js';
+import {
+  InputTooLargeError,
+  MAX_INPUT_BYTES,
+  MAX_UNZIPPED_BYTES,
+  MAX_XML_CHARACTERS,
+  requireWithin,
+} from './limits.js';
 import { NUMBER, parseXmlRoots, XmlSyntaxError, type XmlNode } from './xml.js';
 
 // ---------------------------------------------------------------------------
@@ -93,6 +102,8 @@ export interface OrkRocket {
    * applied. Approximations of one part are on that part (`components[i].approximations`).
    */
   readonly approximations: readonly Approximation[];
+  /** The stage's mass or CG override as the design's as-built mass and CG (D-089). */
+  readonly asBuilt?: AsBuilt;
   /**
    * What the reader chose or approximated, in plain words: the motor
    * configuration used when the file has several (D-077), and differences
@@ -128,29 +139,107 @@ function parseXml(xml: string, file: string | undefined): XmlNode {
   return root;
 }
 
+/** Compressed bytes handed to the decompressor at a time (see unzipEntry). */
+const UNZIP_SLICE_BYTES = 16 * 1024;
+
+/**
+ * The bytes of one entry of a zip archive, decompressed as a stream that is abandoned past
+ * `limit` bytes (plan 0061, D-090): a "zip bomb" whose header understates its size is caught by
+ * the bytes it actually produces, not by what it declares. Undefined when the entry is absent.
+ */
+export function unzipEntry(
+  data: Uint8Array,
+  name: string,
+  limit: number,
+): { entry: Uint8Array | undefined; names: string[] } {
+  const names: string[] = [];
+  const chunks: Uint8Array[] = [];
+  // Written by the decompressor's callbacks.
+  const state: { found: boolean; total: number; failure: Error | undefined } = {
+    found: false,
+    total: 0,
+    failure: undefined,
+  };
+  const unzip = new Unzip((file) => {
+    names.push(file.name);
+    if (file.name !== name || state.found) return;
+    state.found = true;
+    file.ondata = (error, chunk) => {
+      if (state.failure !== undefined) return;
+      if (error !== null) {
+        state.failure = error;
+        return;
+      }
+      state.total += chunk.length;
+      if (state.total > limit) {
+        state.failure = new InputTooLargeError(`The unzipped "${name}"`, state.total, limit);
+        file.terminate();
+        return;
+      }
+      chunks.push(chunk);
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
+  // Fed in small slices: deflate expands at most about 1032:1, so no single decompressed chunk can
+  // exceed about 16 MiB however large the archive claims its entry to be.
+  for (let at = 0; at < data.length && state.failure === undefined; at += UNZIP_SLICE_BYTES) {
+    const end = Math.min(at + UNZIP_SLICE_BYTES, data.length);
+    unzip.push(data.subarray(at, end), end === data.length);
+  }
+  if (state.failure !== undefined) throw state.failure;
+  if (!state.found) return { entry: undefined, names };
+  const entry = new Uint8Array(state.total);
+  let at = 0;
+  for (const c of chunks) {
+    entry.set(c, at);
+    at += c.length;
+  }
+  return { entry, names };
+}
+
+/**
+ * The XML without its stored simulations, which the reader never uses and which hold almost all of
+ * a large file's size: everything from the first `<simulations>` to the last `</simulations>`. The
+ * tags cannot occur inside text or attributes, where `<` is always escaped.
+ */
+function withoutSimulations(xml: string): string {
+  const start = xml.indexOf('<simulations>');
+  const end = xml.lastIndexOf('</simulations>');
+  if (start < 0 || end < start) return xml;
+  return xml.slice(0, start) + xml.slice(end + '</simulations>'.length);
+}
+
 /** Unwrap the zip container if present; otherwise treat the bytes as UTF-8 XML. */
 function toXmlText(data: Uint8Array | string, file: string | undefined): string {
-  if (typeof data === 'string') return data;
-  if (data.length >= 2 && data[0] === 0x50 && data[1] === 0x4b) {
-    let entries: Record<string, Uint8Array>;
+  requireWithin(file ?? 'The file', data.length, MAX_INPUT_BYTES);
+  let text: string;
+  if (typeof data === 'string') {
+    text = data;
+  } else if (data.length >= 2 && data[0] === 0x50 && data[1] === 0x4b) {
+    let unzipped: { entry: Uint8Array | undefined; names: string[] };
     try {
-      entries = unzipSync(data);
+      unzipped = unzipEntry(data, ZIP_ENTRY, MAX_UNZIPPED_BYTES);
     } catch (error) {
+      if (error instanceof InputTooLargeError) throw error;
       throw new OrkParseError(file, 'zip container', 'cannot be read as a zip archive', {
         cause: error,
       });
     }
-    const entry = entries[ZIP_ENTRY];
-    if (entry === undefined) {
+    if (unzipped.entry === undefined) {
       throw new OrkParseError(
         file,
         'zip container',
-        `has no "${ZIP_ENTRY}" entry (entries: ${Object.keys(entries).join(', ') || 'none'})`,
+        `has no "${ZIP_ENTRY}" entry (entries: ${unzipped.names.join(', ') || 'none'})`,
       );
     }
-    return strFromU8(entry);
+    text = strFromU8(unzipped.entry);
+  } else {
+    text = strFromU8(data);
   }
-  return strFromU8(data);
+  const xml = withoutSimulations(text);
+  requireWithin(`The design in ${file ?? 'the file'}`, xml.length, MAX_XML_CHARACTERS);
+  return xml;
 }
 
 // ---------------------------------------------------------------------------
@@ -824,6 +913,8 @@ class Reader {
   readonly problems: OrkUnsupportedError[] = [];
   /** Approximations of the design as a whole (D-084). */
   readonly approximations: Approximation[] = [];
+  /** The stage's mass or CG override as the as-built mass and CG (D-089). */
+  asBuilt: AsBuilt | undefined;
   /** Approximations noted for an element before its part is placed (D-084). */
   private readonly pending = new Map<XmlNode, Approximation[]>();
   /** The index of the (first) part placed for each element. */
@@ -1678,31 +1769,78 @@ class Reader {
       });
     }
     this.length = x;
-    // D-084: a stage-level override is not applied yet (the parts' own masses and drag are used)
-    // and is listed for the design as a whole. OpenRocket makes a stage mass override the stage's
-    // total, or adds it as a point mass, and moves the CG to an overridden one
-    // (reference/rockets/stage-override-probe/values.txt), often to enter a measured weight: so a
-    // mass or CG override is major, a drag override moderate.
-    const stageOverrides = ['overridemass', 'overridecg', 'overridecd'].filter((n) => stage.has(n));
-    if (stageOverrides.length > 0) {
-      for (const n of [
-        ...stageOverrides,
-        'overridesubcomponents',
-        'overridesubcomponentsmass',
-        'overridesubcomponentscg',
-        'overridesubcomponentscd',
-      ])
-        stage.optional(n);
+    this.readStageOverride(stage);
+    stage.finish([...IGNORED_COMMON]);
+  }
+
+  /**
+   * D-089: a stage mass or CG override as the design's as-built mass and CG (GEO-17), as OpenRocket
+   * applies it (reference/rockets/stage-override-probe/values.txt): covering the parts, the stage's
+   * total mass (case 4) and CG (cases 5, 6); not covering them, a point mass added at the stage's CG
+   * or at the overridden CG (cases 1, 3), here spread over the parts in proportion (minor); a CG
+   * override alone not covering the parts does nothing (case 2). A drag override stays listed
+   * (D-084). The stage's front is the nose tip, as it is the only stage.
+   */
+  private readStageOverride(stage: Element): void {
+    const flag = (name: string): boolean | undefined =>
+      stage.has(name) ? stage.boolean(name) : undefined;
+    const both = flag('overridesubcomponents');
+    const coversMass = flag('overridesubcomponentsmass') ?? both ?? false;
+    const coversCg = flag('overridesubcomponentscg') ?? both ?? false;
+    // Read so that it is not reported as unknown; a drag override is listed either way.
+    flag('overridesubcomponentscd');
+    const mass = stage.optionalNumber('overridemass');
+    const cg = stage.optionalNumber('overridecg');
+    const cd = stage.optionalNumber('overridecd');
+    if (cd !== undefined) {
       this.approximations.push({
         subject: subjectOf(stage),
-        what: `the stage’s ${stageOverrides.map((n) => ({ overridemass: 'mass', overridecg: 'CG', overridecd: 'drag' })[n]).join(' and ')} override`,
-        method: 'the masses and drag of the stage’s parts, without the override',
+        what: `the stage’s drag coefficient override (${String(cd)})`,
+        method: 'the drag of the stage’s parts, without the override',
         effect:
-          'the mass, CG or drag differ from what the file’s author set for the whole stage, often a measured weight; enter the measured masses on the parts to use them',
-        impact: stageOverrides.some((n) => n !== 'overridecd') ? 'major' : 'moderate',
+          'the drag differs from what the file’s author set for the whole stage, which moves the apogee',
+        impact: 'moderate',
       });
     }
-    stage.finish([...IGNORED_COMMON]);
+    if (mass !== undefined && !(mass > 0)) {
+      throw stage.parseError(`<overridemass> must be greater than 0 kg, got ${String(mass)}`);
+    }
+    if (mass === undefined && (cg === undefined || !coversCg)) return;
+    if (mass !== undefined && !coversMass) {
+      // Cases 1 and 3: OpenRocket adds the mass as a point at the stage's CG, or at the overridden CG.
+      const parts = rocketMassProperties(this.components);
+      const total = parts.mass + mass;
+      const at = cg ?? parts.cg;
+      this.asBuilt = {
+        mass: kilograms(total),
+        cg: metres((parts.mass * parts.cg + mass * at) / total),
+      };
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what: `the stage’s mass override (${String(Math.round(mass * 1e4) / 10)} g added at ${String(Math.round(at * 1e4) / 10)} mm from the nose)`,
+        method:
+          'the added mass spread over the parts in proportion to theirs, at the same total and CG',
+        effect:
+          'the mass and CG are OpenRocket’s; the pitch inertia differs a little from a point mass, so the pitching motion changes slightly',
+        impact: 'minor',
+      });
+      return;
+    }
+    // Cases 4 to 6: the stage's total and CG.
+    this.asBuilt = {
+      ...(mass === undefined ? {} : { mass: kilograms(mass) }),
+      ...(cg === undefined || !coversCg ? {} : { cg: metres(cg) }),
+    };
+    if (cg !== undefined && !coversCg) {
+      // A CG override for the stage alone beside a total mass: not observed in OpenRocket.
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what: `the stage’s CG override (${String(Math.round(cg * 1e4) / 10)} mm), set for the stage alone beside a mass for the whole stage`,
+        method: 'the parts’ own CG, at the stage’s total mass',
+        effect: 'the CG, and so the stability margin, may differ from the file author’s',
+        impact: 'moderate',
+      });
+    }
   }
 
   private readNoseCone(el: Element, x: number): number {
@@ -1972,6 +2110,7 @@ class Reader {
       motorMount: this.motorMount,
       recoveryDevices: this.recoveryDevices,
       approximations: this.approximations,
+      ...(this.asBuilt === undefined ? {} : { asBuilt: this.asBuilt }),
       notices: this.notices,
     };
   }

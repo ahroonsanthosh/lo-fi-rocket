@@ -18,6 +18,7 @@ import {
   type Seconds,
 } from '@lo-fi-rocket/physics';
 import { EngParseError } from './errors.js';
+import { MAX_INPUT_BYTES, requireWithin } from './limits.js';
 
 export interface ThrustPoint {
   readonly time: Seconds;
@@ -162,6 +163,7 @@ function parseHeader(
  * rule violation, naming the line.
  */
 export function parseEng(text: string, fileName?: string): EngMotor[] {
+  requireWithin(fileName ?? 'The motor file', text.length, MAX_INPUT_BYTES);
   const lines = text.split(/\r?\n/);
   const motors: EngMotor[] = [];
   let comments: string[] = [];

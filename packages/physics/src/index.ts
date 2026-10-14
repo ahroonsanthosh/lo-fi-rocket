@@ -155,6 +155,8 @@ export {
 export {
   clusterSums,
   combineRocket,
+  withAsBuilt,
+  type AsBuilt,
   motorMassPart,
   overriddenMassProperties,
   rocketMassProperties,

@@ -196,14 +196,26 @@ export function perturbDesign(design: RocketDesign, sampled: SampledValues): Roc
     wind.turbulence === undefined || sampled.turbulenceSeed === undefined
       ? {}
       : { turbulence: { intensity: wind.turbulence.intensity, seed: sampled.turbulenceSeed } };
+  // The structural mass scale applies to every mass the user gave as well as the computed ones: a
+  // part's own mass override (D-073) and the as-built mass (D-089), which would otherwise hold the
+  // mass fixed whatever the sample.
+  const scale = sampled.structuralMassScale;
   const components: DesignComponent[] = design.components.map((c) => ({
     ...c,
-    component: scaleComponentMass(c.component, sampled.structuralMassScale),
+    component: scaleComponentMass(c.component, scale),
+    ...(c.massOverride?.mass === undefined
+      ? {}
+      : { massOverride: { ...c.massOverride, mass: kilograms(c.massOverride.mass * scale) } }),
   }));
+  const asBuilt =
+    design.asBuilt?.mass === undefined
+      ? design.asBuilt
+      : { ...design.asBuilt, mass: kilograms(design.asBuilt.mass * scale) };
   const mount = design.motorMount;
   return {
     ...design,
     components,
+    ...(asBuilt === undefined ? {} : { asBuilt }),
     ...(mount?.motor === undefined
       ? {}
       : {

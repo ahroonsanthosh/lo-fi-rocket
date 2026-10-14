@@ -186,6 +186,73 @@ export function structuralMassParts(components: readonly PlacedComponent[]): Mas
   );
 }
 
+/** The empty rocket as weighed (D-089): its mass and/or its CG from the nose tip, motor excluded. */
+export interface AsBuilt {
+  readonly mass?: Kilograms;
+  readonly cg?: Metres;
+}
+
+/**
+ * GEO-17 (D-089): the parts scaled and moved to the as-built mass M and CG C. Each part's mass
+ * properties (with its own override, D-073) are scaled by M/M₀ and its CG moved by C − X̄₀, M₀ and
+ * X̄₀ the parts' computed total and CG; by GEO-12 the result has exactly mass M and CG C, the
+ * inertias scaled with the masses (as D-073) and carried by the parallel axis theorem. Expressed as
+ * each part's mass override, so every consumer of the parts uses it. Parts of no mass stay so.
+ */
+export function withAsBuilt(
+  components: readonly PlacedComponent[],
+  asBuilt: AsBuilt | undefined,
+): PlacedComponent[] {
+  if (asBuilt === undefined || (asBuilt.mass === undefined && asBuilt.cg === undefined)) {
+    return [...components];
+  }
+  const parts = structuralMassParts(components);
+  let m0 = 0;
+  let moment = 0;
+  for (const p of parts) {
+    m0 += p.mass;
+    moment += p.mass * p.cgX;
+  }
+  if (!(m0 > 0)) {
+    throw new InvalidInputError(
+      'as-built mass and CG',
+      m0,
+      'need parts with mass to scale: add the parts first',
+    );
+  }
+  if (asBuilt.mass !== undefined && !(Number.isFinite(asBuilt.mass) && asBuilt.mass > 0)) {
+    throw new InvalidInputError('as-built mass', asBuilt.mass, 'must be greater than 0 kg');
+  }
+  if (asBuilt.cg !== undefined && !Number.isFinite(asBuilt.cg)) {
+    throw new InvalidInputError(
+      'as-built CG',
+      asBuilt.cg,
+      'must be a finite distance from the nose tip',
+    );
+  }
+  const ratio = asBuilt.mass === undefined ? 1 : (asBuilt.mass as number) / m0;
+  const shift = asBuilt.cg === undefined ? 0 : (asBuilt.cg as number) - moment / m0;
+  return components.map((pc, i) => {
+    const p = parts[i];
+    if (p === undefined || !(p.mass > 0)) return pc;
+    const position: number = pc.position;
+    return {
+      ...pc,
+      massOverride: {
+        ...(asBuilt.mass === undefined ? {} : { mass: kilograms(p.mass * ratio) }),
+        ...(asBuilt.cg === undefined ? {} : { cg: metres(p.cgX - position + shift) }),
+        // A part's own override that this one does not replace is kept.
+        ...(asBuilt.mass === undefined && pc.massOverride?.mass !== undefined
+          ? { mass: pc.massOverride.mass }
+          : {}),
+        ...(asBuilt.cg === undefined && pc.massOverride?.cg !== undefined
+          ? { cg: pc.massOverride.cg }
+          : {}),
+      },
+    };
+  });
+}
+
 /** Combine precomputed structural parts with a motor part (GEO-12). */
 export function combineRocket(
   structure: readonly MassProperties[],
