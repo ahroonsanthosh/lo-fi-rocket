@@ -39,6 +39,13 @@ export {
 } from './errors.js';
 export { XmlSyntaxError } from './xml.js';
 export {
+  InputTooLargeError,
+  MAX_INPUT_BYTES,
+  MAX_UNZIPPED_BYTES,
+  MAX_XML_CHARACTERS,
+  requireWithin,
+} from './limits.js';
+export {
   CURRENT_SCHEMA_VERSION,
   newId,
   type DeployEvent,

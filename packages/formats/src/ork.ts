@@ -13,7 +13,7 @@
  * Every element is either read, on a documented ignore list, or rejected with
  * an error naming it. Nothing is defaulted.
  */
-import { strFromU8, unzipSync } from 'fflate';
+import { strFromU8, Unzip, UnzipInflate } from 'fflate';
 import {
   kilograms,
   kilogramsPerCubicMetre,
@@ -36,6 +36,13 @@ import {
   type Shoulder,
 } from '@lo-fi-rocket/physics';
 import { OrkParseError, OrkUnsupportedError, OrkUnsupportedFeaturesError } from './errors.js';
+import {
+  InputTooLargeError,
+  MAX_INPUT_BYTES,
+  MAX_UNZIPPED_BYTES,
+  MAX_XML_CHARACTERS,
+  requireWithin,
+} from './limits.js';
 import { NUMBER, parseXmlRoots, XmlSyntaxError, type XmlNode } from './xml.js';
 
 // ---------------------------------------------------------------------------
@@ -132,29 +139,107 @@ function parseXml(xml: string, file: string | undefined): XmlNode {
   return root;
 }
 
+/** Compressed bytes handed to the decompressor at a time (see unzipEntry). */
+const UNZIP_SLICE_BYTES = 16 * 1024;
+
+/**
+ * The bytes of one entry of a zip archive, decompressed as a stream that is abandoned past
+ * `limit` bytes (plan 0061, D-090): a "zip bomb" whose header understates its size is caught by
+ * the bytes it actually produces, not by what it declares. Undefined when the entry is absent.
+ */
+export function unzipEntry(
+  data: Uint8Array,
+  name: string,
+  limit: number,
+): { entry: Uint8Array | undefined; names: string[] } {
+  const names: string[] = [];
+  const chunks: Uint8Array[] = [];
+  // Written by the decompressor's callbacks.
+  const state: { found: boolean; total: number; failure: Error | undefined } = {
+    found: false,
+    total: 0,
+    failure: undefined,
+  };
+  const unzip = new Unzip((file) => {
+    names.push(file.name);
+    if (file.name !== name || state.found) return;
+    state.found = true;
+    file.ondata = (error, chunk) => {
+      if (state.failure !== undefined) return;
+      if (error !== null) {
+        state.failure = error;
+        return;
+      }
+      state.total += chunk.length;
+      if (state.total > limit) {
+        state.failure = new InputTooLargeError(`The unzipped "${name}"`, state.total, limit);
+        file.terminate();
+        return;
+      }
+      chunks.push(chunk);
+    };
+    file.start();
+  });
+  unzip.register(UnzipInflate);
+  // Fed in small slices: deflate expands at most about 1032:1, so no single decompressed chunk can
+  // exceed about 16 MiB however large the archive claims its entry to be.
+  for (let at = 0; at < data.length && state.failure === undefined; at += UNZIP_SLICE_BYTES) {
+    const end = Math.min(at + UNZIP_SLICE_BYTES, data.length);
+    unzip.push(data.subarray(at, end), end === data.length);
+  }
+  if (state.failure !== undefined) throw state.failure;
+  if (!state.found) return { entry: undefined, names };
+  const entry = new Uint8Array(state.total);
+  let at = 0;
+  for (const c of chunks) {
+    entry.set(c, at);
+    at += c.length;
+  }
+  return { entry, names };
+}
+
+/**
+ * The XML without its stored simulations, which the reader never uses and which hold almost all of
+ * a large file's size: everything from the first `<simulations>` to the last `</simulations>`. The
+ * tags cannot occur inside text or attributes, where `<` is always escaped.
+ */
+function withoutSimulations(xml: string): string {
+  const start = xml.indexOf('<simulations>');
+  const end = xml.lastIndexOf('</simulations>');
+  if (start < 0 || end < start) return xml;
+  return xml.slice(0, start) + xml.slice(end + '</simulations>'.length);
+}
+
 /** Unwrap the zip container if present; otherwise treat the bytes as UTF-8 XML. */
 function toXmlText(data: Uint8Array | string, file: string | undefined): string {
-  if (typeof data === 'string') return data;
-  if (data.length >= 2 && data[0] === 0x50 && data[1] === 0x4b) {
-    let entries: Record<string, Uint8Array>;
+  requireWithin(file ?? 'The file', data.length, MAX_INPUT_BYTES);
+  let text: string;
+  if (typeof data === 'string') {
+    text = data;
+  } else if (data.length >= 2 && data[0] === 0x50 && data[1] === 0x4b) {
+    let unzipped: { entry: Uint8Array | undefined; names: string[] };
     try {
-      entries = unzipSync(data);
+      unzipped = unzipEntry(data, ZIP_ENTRY, MAX_UNZIPPED_BYTES);
     } catch (error) {
+      if (error instanceof InputTooLargeError) throw error;
       throw new OrkParseError(file, 'zip container', 'cannot be read as a zip archive', {
         cause: error,
       });
     }
-    const entry = entries[ZIP_ENTRY];
-    if (entry === undefined) {
+    if (unzipped.entry === undefined) {
       throw new OrkParseError(
         file,
         'zip container',
-        `has no "${ZIP_ENTRY}" entry (entries: ${Object.keys(entries).join(', ') || 'none'})`,
+        `has no "${ZIP_ENTRY}" entry (entries: ${unzipped.names.join(', ') || 'none'})`,
       );
     }
-    return strFromU8(entry);
+    text = strFromU8(unzipped.entry);
+  } else {
+    text = strFromU8(data);
   }
-  return strFromU8(data);
+  const xml = withoutSimulations(text);
+  requireWithin(`The design in ${file ?? 'the file'}`, xml.length, MAX_XML_CHARACTERS);
+  return xml;
 }
 
 // ---------------------------------------------------------------------------

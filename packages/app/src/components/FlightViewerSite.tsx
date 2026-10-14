@@ -159,6 +159,13 @@ export function SitePicker({
         the simulation. Map data is free and loaded only after you choose a site; tiles are kept in
         this browser for offline use.
       </p>
+      <p className="muted small">
+        Privacy: while this panel is open, its map loads tiles from the imagery provider chosen
+        below. A place search sends what you type to OpenStreetMap&apos;s Nominatim service. Once a
+        site is chosen, its imagery and terrain tiles come from that provider and from Amazon&apos;s
+        public terrain tiles. These services see the area you look at; nothing about your rocket is
+        sent to them.
+      </p>
       <form
         className="viewer-site-row"
         style={ROW}

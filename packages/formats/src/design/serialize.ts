@@ -3,6 +3,7 @@
  * sorted order at every level so that the same design always produces the
  * same text, two-space indentation, SI numbers.
  */
+import { MAX_INPUT_BYTES, requireWithin } from '../limits.js';
 import { DesignFileError } from './errors.js';
 import { migrateDesignDocument } from './migrate.js';
 import type { RocketDesign } from './model.js';
@@ -30,6 +31,7 @@ export function serializeDesign(design: RocketDesign): string {
 
 /** Parse, migrate and validate a design file's text. */
 export function parseDesign(text: string, fileName?: string): RocketDesign {
+  requireWithin(fileName ?? 'The design file', text.length, MAX_INPUT_BYTES);
   let document: unknown;
   try {
     document = JSON.parse(text);
