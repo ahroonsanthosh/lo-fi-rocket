@@ -8,8 +8,25 @@ import { CURRENT_SCHEMA_VERSION } from './model.js';
 
 export type Migration = (document: Record<string, unknown>) => Record<string, unknown>;
 
-/** MIGRATIONS[n - 1] upgrades version n to n + 1. Empty while only version 1 exists. */
-export const MIGRATIONS: readonly Migration[] = [];
+/**
+ * MIGRATIONS[n - 1] upgrades version n to n + 1.
+ * 1 to 2 (plan 0064): stages, the stage of a part or device, further motor mounts and ignition
+ * events are all new and optional, so a version-1 file is the same one-stage design unchanged.
+ * 2 to 3 (plan 0070): a part's pod set is new and optional, so a version-2 file has no pods.
+ * 3 to 4 (plan 0073): a part's own finish is new and optional, so in a version-3 file every part
+ * has the design's finish.
+ * 4 to 5 (plan 0073 part 2): a recovery device may be a streamer, so a version-4 file's devices are
+ * all parachutes.
+ * 5 to 6 (plan 0073 part 3b): a fin set's fillets are new and optional, so a version-5 file's fins
+ * have none.
+ */
+export const MIGRATIONS: readonly Migration[] = [
+  (document: Record<string, unknown>): Record<string, unknown> => document,
+  (document: Record<string, unknown>): Record<string, unknown> => document,
+  (document: Record<string, unknown>): Record<string, unknown> => document,
+  (document: Record<string, unknown>): Record<string, unknown> => document,
+  (document: Record<string, unknown>): Record<string, unknown> => document,
+];
 
 function versionOf(document: unknown, fileName: string | undefined): number {
   if (typeof document !== 'object' || document === null || Array.isArray(document)) {

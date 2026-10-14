@@ -24,6 +24,9 @@ export const kilograms = defineQuantity('Kilograms', 'kg');
 export type KilogramsPerCubicMetre = Quantity<'kg/m^3'>;
 export const kilogramsPerCubicMetre = defineQuantity('KilogramsPerCubicMetre', 'kg/m^3');
 
+export type KilogramsPerSquareMetre = Quantity<'kg/m^2'>;
+export const kilogramsPerSquareMetre = defineQuantity('KilogramsPerSquareMetre', 'kg/m^2');
+
 export type KilogramSquareMetres = Quantity<'kg·m^2'>;
 export const kilogramSquareMetres = defineQuantity('KilogramSquareMetres', 'kg·m^2');
 

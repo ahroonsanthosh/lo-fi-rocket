@@ -14,6 +14,7 @@ import {
   kelvin,
   kilograms,
   kilogramsPerCubicMetre,
+  kilogramsPerSquareMetre,
   metres,
   metresPerSecond,
   newtons,
@@ -23,10 +24,13 @@ import {
   type Component,
   type IntegratorOptions,
   type MassOverride,
+  type Metres,
   type MotorDefinition,
   type MotorMassRule,
   type NoseShape,
   type Quantity,
+  type SeparationEvent,
+  type StageSeparation,
 } from '@lo-fi-rocket/physics';
 import { DesignFileError } from './errors.js';
 import {
@@ -35,7 +39,10 @@ import {
   type DispersionSettingsRecord,
   type RecordedFlight,
   type DesignComponent,
+  type DesignPod,
   type DesignRecoveryDevice,
+  type DesignStage,
+  type IgnitionEvent,
   type LaunchConditions,
   type MotorMount,
   type MotorProvenance,
@@ -140,6 +147,24 @@ const COMPONENT_KINDS = [
   'railButton',
 ] as const;
 const DEPLOY_EVENTS: readonly DeployEvent[] = ['apogee', 'ejection', 'altitude', 'launch', 'never'];
+const IGNITION_EVENTS: readonly IgnitionEvent[] = [
+  'automatic',
+  'launch',
+  'burnout',
+  'ejection',
+  'never',
+];
+const SEPARATION_EVENTS: readonly SeparationEvent[] = [
+  'upper-ignition',
+  'ignition',
+  'burnout',
+  'ejection',
+  'launch',
+  'apogee',
+  'altitude-ascending',
+  'altitude-descending',
+  'never',
+];
 const MASS_RULES: readonly MotorMassRule[] = [
   'impulse-proportional',
   'linear-in-time',
@@ -147,6 +172,72 @@ const MASS_RULES: readonly MotorMassRule[] = [
 ];
 const SOURCE_FORMATS = ['RASP', 'RockSim', 'custom'] as const;
 const FIN_SECTIONS = ['square', 'rounded', 'airfoil', 'wedge', 'double-wedge'] as const;
+
+/**
+ * The fields each component kind accepts in a design file, required and optional (the `kind` key
+ * included). The validator below checks against this table, and the MCP server builds its tool
+ * schemas from it (plan 0062), so the two cannot drift apart.
+ */
+export const COMPONENT_FIELDS = {
+  noseCone: {
+    required: ['kind', 'shape', 'length', 'baseRadius', 'density'],
+    optional: ['shapeParameter', 'wallThickness', 'aftShoulder'],
+  },
+  transition: {
+    required: ['kind', 'shape', 'length', 'foreRadius', 'aftRadius', 'density'],
+    optional: ['shapeParameter', 'wallThickness'],
+  },
+  bodyTube: {
+    required: ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
+    optional: ['radialOffset'],
+  },
+  innerTube: {
+    required: ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
+    optional: ['radialOffset'],
+  },
+  launchLug: {
+    required: ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
+    optional: ['radialOffset'],
+  },
+  centeringRing: {
+    required: ['kind', 'length', 'outerRadius', 'innerRadius', 'density'],
+    optional: [],
+  },
+  bulkhead: { required: ['kind', 'length', 'outerRadius', 'innerRadius', 'density'], optional: [] },
+  massComponent: { required: ['kind', 'mass', 'length', 'radius'], optional: [] },
+  parachute: { required: ['kind', 'mass', 'length', 'radius'], optional: [] },
+  finSet: {
+    required: [
+      'kind',
+      'count',
+      'rootChord',
+      'tipChord',
+      'sweep',
+      'span',
+      'thickness',
+      'density',
+      'bodyRadius',
+    ],
+    optional: ['crossSection', 'shearModulus', 'tab', 'shape', 'fillet'],
+  },
+  railButton: {
+    required: [
+      'kind',
+      'count',
+      'outerDiameter',
+      'innerDiameter',
+      'totalHeight',
+      'baseHeight',
+      'flangeHeight',
+      'density',
+      'bodyRadius',
+    ],
+    optional: ['separation'],
+  },
+} as const satisfies Record<
+  Component['kind'],
+  { readonly required: readonly string[]; readonly optional: readonly string[] }
+>;
 
 function component(c: Ctx, path: string, v: unknown): Component {
   const o = c.object(path, v);
@@ -156,12 +247,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
     k in o && o[k] !== undefined ? f(o[k]) : undefined;
   switch (kind) {
     case 'noseCone': {
-      c.keys(
-        path,
-        o,
-        ['kind', 'shape', 'length', 'baseRadius', 'density'],
-        ['shapeParameter', 'wallThickness', 'aftShoulder'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.noseCone.required, COMPONENT_FIELDS.noseCone.optional);
       const shapeParameter = opt('shapeParameter', (x) => c.number(`${path}.shapeParameter`, x));
       const wallThickness = opt('wallThickness', (x) =>
         metres(c.number(`${path}.wallThickness`, x)),
@@ -187,12 +273,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
       };
     }
     case 'transition': {
-      c.keys(
-        path,
-        o,
-        ['kind', 'shape', 'length', 'foreRadius', 'aftRadius', 'density'],
-        ['shapeParameter', 'wallThickness'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.transition.required, COMPONENT_FIELDS.transition.optional);
       const shapeParameter = opt('shapeParameter', (x) => c.number(`${path}.shapeParameter`, x));
       const wallThickness = opt('wallThickness', (x) =>
         metres(c.number(`${path}.wallThickness`, x)),
@@ -211,12 +292,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
     case 'bodyTube':
     case 'innerTube':
     case 'launchLug': {
-      c.keys(
-        path,
-        o,
-        ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
-        ['radialOffset'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS[kind].required, COMPONENT_FIELDS[kind].optional);
       const radialOffset = opt('radialOffset', (x) => metres(c.number(`${path}.radialOffset`, x)));
       return {
         kind,
@@ -229,7 +305,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
     }
     case 'centeringRing':
     case 'bulkhead':
-      c.keys(path, o, ['kind', 'length', 'outerRadius', 'innerRadius', 'density']);
+      c.keys(path, o, COMPONENT_FIELDS[kind].required, COMPONENT_FIELDS[kind].optional);
       return {
         kind,
         length: metres(m('length')),
@@ -239,7 +315,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
       };
     case 'massComponent':
     case 'parachute':
-      c.keys(path, o, ['kind', 'mass', 'length', 'radius']);
+      c.keys(path, o, COMPONENT_FIELDS[kind].required, COMPONENT_FIELDS[kind].optional);
       return {
         kind,
         mass: kilograms(m('mass')),
@@ -247,22 +323,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
         radius: metres(m('radius')),
       };
     case 'finSet': {
-      c.keys(
-        path,
-        o,
-        [
-          'kind',
-          'count',
-          'rootChord',
-          'tipChord',
-          'sweep',
-          'span',
-          'thickness',
-          'density',
-          'bodyRadius',
-        ],
-        ['crossSection', 'shearModulus', 'tab', 'shape'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.finSet.required, COMPONENT_FIELDS.finSet.optional);
       const crossSection = opt('crossSection', (x) =>
         c.oneOf(`${path}.crossSection`, x, FIN_SECTIONS),
       );
@@ -274,6 +335,15 @@ function component(c: Ctx, path: string, v: unknown): Component {
           height: metres(c.number(`${path}.tab.height`, t['height'])),
           length: metres(c.number(`${path}.tab.length`, t['length'])),
           foreOffset: metres(c.number(`${path}.tab.foreOffset`, t['foreOffset'])),
+        };
+      });
+      // Plan 0073 (GEO-19): fillets of their own material; the physics checks the sizes.
+      const fillet = opt('fillet', (x) => {
+        const f = c.object(`${path}.fillet`, x);
+        c.keys(`${path}.fillet`, f, ['radius', 'density']);
+        return {
+          radius: metres(c.number(`${path}.fillet.radius`, f['radius'])),
+          density: kilogramsPerCubicMetre(c.number(`${path}.fillet.density`, f['density'])),
         };
       });
       // D-087: an elliptical or freeform planform; the physics checks the outline against the root and span.
@@ -320,25 +390,11 @@ function component(c: Ctx, path: string, v: unknown): Component {
         ...(shearModulus === undefined ? {} : { shearModulus }),
         ...(tab === undefined ? {} : { tab }),
         ...(shape === undefined ? {} : { shape }),
+        ...(fillet === undefined ? {} : { fillet }),
       };
     }
     case 'railButton': {
-      c.keys(
-        path,
-        o,
-        [
-          'kind',
-          'count',
-          'outerDiameter',
-          'innerDiameter',
-          'totalHeight',
-          'baseHeight',
-          'flangeHeight',
-          'density',
-          'bodyRadius',
-        ],
-        ['separation'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.railButton.required, COMPONENT_FIELDS.railButton.optional);
       const separation = opt('separation', (x) => metres(c.number(`${path}.separation`, x)));
       return {
         kind,
@@ -461,9 +517,45 @@ function motorSelection(c: Ctx, path: string, v: unknown): MotorSelection {
   };
 }
 
+/** Plan 0073: a part's own surface roughness height, 0 m (a smooth surface) or more. */
+function roughness(c: Ctx, path: string, v: unknown): Metres {
+  const r = c.number(path, v);
+  if (!(r >= 0)) c.fail(path, 'must be 0 m or more');
+  return metres(r);
+}
+
+/** Plan 0064: a stage number, an integer from 0; checked against the stage list afterwards. */
+/** Plan 0070: a pod set's count (a whole number, 1 or more) and radial offset (0 m or more). */
+function designPod(c: Ctx, path: string, v: unknown): DesignPod {
+  const o = c.object(path, v);
+  c.keys(path, o, ['count', 'radialOffset'], []);
+  const count = c.integer(`${path}.count`, o['count']);
+  if (count < 1) c.fail(`${path}.count`, 'must be 1 or more pods');
+  const radialOffset = c.number(`${path}.radialOffset`, o['radialOffset']);
+  if (!(radialOffset >= 0)) c.fail(`${path}.radialOffset`, 'must be 0 m or more');
+  return { count, radialOffset: metres(radialOffset) };
+}
+
+function stageNumber(c: Ctx, path: string, v: unknown): number {
+  const k = c.integer(path, v);
+  if (k < 0) c.fail(path, 'must be 0 (the top stage) or more');
+  return k;
+}
+
 function motorMount(c: Ctx, path: string, v: unknown): MotorMount {
   const o = c.object(path, v);
-  c.keys(path, o, ['componentId', 'overhang'], ['motor', 'cluster']);
+  c.keys(path, o, ['componentId', 'overhang'], ['motor', 'cluster', 'ignition']);
+  const ignition =
+    'ignition' in o && o['ignition'] !== undefined
+      ? (() => {
+          const g = c.object(`${path}.ignition`, o['ignition']);
+          c.keys(`${path}.ignition`, g, ['event', 'delay']);
+          return {
+            event: c.oneOf(`${path}.ignition.event`, g['event'], IGNITION_EVENTS),
+            delay: seconds(c.number(`${path}.ignition.delay`, g['delay'])),
+          };
+        })()
+      : undefined;
   const motor =
     'motor' in o && o['motor'] !== undefined
       ? motorSelection(c, `${path}.motor`, o['motor'])
@@ -487,6 +579,44 @@ function motorMount(c: Ctx, path: string, v: unknown): MotorMount {
     overhang: metres(c.number(`${path}.overhang`, o['overhang'])),
     ...(motor === undefined ? {} : { motor }),
     ...(cluster === undefined ? {} : { cluster }),
+    ...(ignition === undefined ? {} : { ignition }),
+  };
+}
+
+/** Plan 0064: a stage with its name and, for every stage but the top one, its separation. */
+function designStage(c: Ctx, path: string, v: unknown, index: number): DesignStage {
+  const o = c.object(path, v);
+  c.keys(path, o, ['name'], ['separation']);
+  const given = 'separation' in o && o['separation'] !== undefined;
+  if (index === 0 && given) {
+    c.fail(`${path}.separation`, 'the top stage never separates; remove its separation');
+  }
+  if (index > 0 && !given) c.fail(path, 'missing required field "separation"');
+  let separation: StageSeparation | undefined;
+  if (given) {
+    const p = `${path}.separation`;
+    const sep = c.object(p, o['separation']);
+    c.keys(p, sep, ['event', 'delay'], ['altitude']);
+    const event = c.oneOf(`${p}.event`, sep['event'], SEPARATION_EVENTS);
+    const altitude =
+      'altitude' in sep && sep['altitude'] !== undefined
+        ? metres(c.number(`${p}.altitude`, sep['altitude']))
+        : undefined;
+    if (
+      (event === 'altitude-ascending' || event === 'altitude-descending') &&
+      altitude === undefined
+    ) {
+      c.fail(p, 'a separation at an altitude needs "altitude"');
+    }
+    separation = {
+      event,
+      delay: seconds(c.number(`${p}.delay`, sep['delay'])),
+      ...(altitude === undefined ? {} : { altitude }),
+    };
+  }
+  return {
+    name: c.string(`${path}.name`, o['name']),
+    ...(separation === undefined ? {} : { separation }),
   };
 }
 
@@ -523,7 +653,18 @@ function designMassOverride(c: Ctx, path: string, v: unknown): MassOverride {
 
 function recoveryDevice(c: Ctx, path: string, v: unknown): DesignRecoveryDevice {
   const o = c.object(path, v);
-  c.keys(path, o, ['id', 'name', 'diameter', 'dragCoefficient', 'deploy']);
+  const streamer =
+    'kind' in o && c.oneOf(`${path}.kind`, o['kind'], ['parachute', 'streamer']) === 'streamer';
+  if (streamer) {
+    c.keys(
+      path,
+      o,
+      ['kind', 'id', 'name', 'length', 'width', 'surfaceDensity', 'deploy'],
+      ['dragCoefficient', 'stage'],
+    );
+  } else {
+    c.keys(path, o, ['id', 'name', 'diameter', 'dragCoefficient', 'deploy'], ['kind', 'stage']);
+  }
   const d = c.object(`${path}.deploy`, o['deploy']);
   c.keys(`${path}.deploy`, d, ['event', 'delay'], ['altitude']);
   const event = c.oneOf(`${path}.deploy.event`, d['event'], DEPLOY_EVENTS);
@@ -534,16 +675,37 @@ function recoveryDevice(c: Ctx, path: string, v: unknown): DesignRecoveryDevice 
   if (event === 'altitude' && altitude === undefined) {
     c.fail(`${path}.deploy`, 'an altitude deployment needs "altitude"');
   }
-  return {
+  const base = {
     id: c.nonEmptyString(`${path}.id`, o['id']),
     name: c.string(`${path}.name`, o['name']),
-    diameter: metres(c.number(`${path}.diameter`, o['diameter'])),
-    dragCoefficient: c.number(`${path}.dragCoefficient`, o['dragCoefficient']),
     deploy: {
       event,
       delay: seconds(c.number(`${path}.deploy.delay`, d['delay'])),
       ...(altitude === undefined ? {} : { altitude }),
     },
+    ...('stage' in o && o['stage'] !== undefined
+      ? { stage: stageNumber(c, `${path}.stage`, o['stage']) }
+      : {}),
+  };
+  if (streamer) {
+    return {
+      kind: 'streamer',
+      ...base,
+      length: metres(c.number(`${path}.length`, o['length'])),
+      width: metres(c.number(`${path}.width`, o['width'])),
+      surfaceDensity: kilogramsPerSquareMetre(
+        c.number(`${path}.surfaceDensity`, o['surfaceDensity']),
+      ),
+      ...('dragCoefficient' in o && o['dragCoefficient'] !== undefined
+        ? { dragCoefficient: c.number(`${path}.dragCoefficient`, o['dragCoefficient']) }
+        : {}),
+    };
+  }
+  return {
+    ...('kind' in o ? { kind: 'parachute' as const } : {}),
+    ...base,
+    diameter: metres(c.number(`${path}.diameter`, o['diameter'])),
+    dragCoefficient: c.number(`${path}.dragCoefficient`, o['dragCoefficient']),
   };
 }
 
@@ -760,6 +922,8 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     ],
     [
       'motorMount',
+      'additionalMotorMounts',
+      'stages',
       'referenceDiameter',
       'dragCurve',
       'recordedFlight',
@@ -779,7 +943,12 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
   const components: DesignComponent[] = c.array('$.components', o['components']).map((v, i) => {
     const path = `$.components[${String(i)}]`;
     const co = c.object(path, v);
-    c.keys(path, co, ['id', 'name', 'position', 'component'], ['massOverride', 'approximations']);
+    c.keys(
+      path,
+      co,
+      ['id', 'name', 'position', 'component'],
+      ['massOverride', 'approximations', 'stage', 'pod', 'roughnessHeight'],
+    );
     const id = c.nonEmptyString(`${path}.id`, co['id']);
     if (ids.has(id)) c.fail(`${path}.id`, `duplicate id "${id}"`);
     ids.add(id);
@@ -796,6 +965,15 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       ...('approximations' in co && co['approximations'] !== undefined
         ? { approximations: approximationList(c, `${path}.approximations`, co['approximations']) }
         : {}),
+      ...('stage' in co && co['stage'] !== undefined
+        ? { stage: stageNumber(c, `${path}.stage`, co['stage']) }
+        : {}),
+      ...('pod' in co && co['pod'] !== undefined
+        ? { pod: designPod(c, `${path}.pod`, co['pod']) }
+        : {}),
+      ...('roughnessHeight' in co && co['roughnessHeight'] !== undefined
+        ? { roughnessHeight: roughness(c, `${path}.roughnessHeight`, co['roughnessHeight']) }
+        : {}),
     };
   });
   const recovery = c.array('$.recovery', o['recovery']).map((v, i) => {
@@ -808,18 +986,58 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     'motorMount' in o && o['motorMount'] !== undefined
       ? motorMount(c, '$.motorMount', o['motorMount'])
       : undefined;
-  if (mount !== undefined) {
-    const target = components.find((x) => x.id === mount.componentId);
+  const additional =
+    'additionalMotorMounts' in o && o['additionalMotorMounts'] !== undefined
+      ? c
+          .array('$.additionalMotorMounts', o['additionalMotorMounts'])
+          .map((v, i) => motorMount(c, `$.additionalMotorMounts[${String(i)}]`, v))
+      : undefined;
+  const mountIds = new Set<string>();
+  const checkMount = (m: MotorMount, path: string): void => {
+    const target = components.find((x) => x.id === m.componentId);
     if (target === undefined) {
-      c.fail('$.motorMount.componentId', `no component has the id "${mount.componentId}"`);
+      c.fail(`${path}.componentId`, `no component has the id "${m.componentId}"`);
     }
     if (target.component.kind !== 'innerTube' && target.component.kind !== 'bodyTube') {
       c.fail(
-        '$.motorMount.componentId',
+        `${path}.componentId`,
         `the motor mount must be an inner tube or a body tube, "${target.name}" is a ${target.component.kind}`,
       );
     }
-  }
+    if (mountIds.has(m.componentId)) {
+      c.fail(`${path}.componentId`, `"${target.name}" is already a motor mount`);
+    }
+    mountIds.add(m.componentId);
+  };
+  if (mount !== undefined) checkMount(mount, '$.motorMount');
+  additional?.forEach((m, i) => {
+    checkMount(m, `$.additionalMotorMounts[${String(i)}]`);
+  });
+  // Plan 0064: the stages, and every part's and device's stage within them.
+  const stages =
+    'stages' in o && o['stages'] !== undefined
+      ? c
+          .array('$.stages', o['stages'])
+          .map((v, i) => designStage(c, `$.stages[${String(i)}]`, v, i))
+      : undefined;
+  if (stages?.length === 0) c.fail('$.stages', 'must list at least one stage');
+  const stageCount = stages?.length ?? 1;
+  const checkStage = (k: number | undefined, path: string): void => {
+    if (k !== undefined && k >= stageCount) {
+      c.fail(
+        path,
+        stages === undefined
+          ? `stage ${String(k)} given, but the design lists no stages (a one-stage rocket is stage 0)`
+          : `stage ${String(k)} given, but the design lists ${String(stageCount)} stage${stageCount === 1 ? '' : 's'} (0 to ${String(stageCount - 1)})`,
+      );
+    }
+  };
+  components.forEach((x, i) => {
+    checkStage(x.stage, `$.components[${String(i)}].stage`);
+  });
+  recovery.forEach((d, i) => {
+    checkStage(d.stage, `$.recovery[${String(i)}].stage`);
+  });
   const finishObj = c.object('$.finish', o['finish']);
   c.keys('$.finish', finishObj, ['roughnessHeight']);
   const referenceDiameter =
@@ -844,6 +1062,8 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
     name: c.string('$.name', o['name']),
     components,
     ...(mount === undefined ? {} : { motorMount: mount }),
+    ...(additional === undefined ? {} : { additionalMotorMounts: additional }),
+    ...(stages === undefined ? {} : { stages }),
     recovery,
     finish: {
       roughnessHeight: metres(c.number('$.finish.roughnessHeight', finishObj['roughnessHeight'])),

@@ -23,7 +23,8 @@ export type QuantityKind =
   | 'angle'
   | 'time'
   | 'ratio'
-  | 'modulus'; // shear modulus of fin materials (plan 0031)
+  | 'modulus' // shear modulus of fin materials (plan 0031)
+  | 'surfaceDensity'; // a streamer's material (plan 0073)
 
 export interface UnitSpec {
   /** Unit label shown after the value. */
@@ -46,6 +47,8 @@ const linear = (label: string, factor: number, decimals: number): UnitSpec => ({
 const KG_PER_M3_PER_LB_PER_FT3 = F.kilogramsPerPound / F.metresPerFoot ** 3;
 /** 1 psi = 4.4482216152605 / 0.0254² Pa = 6894.757293168... (SP 811 B.8 prints 6.894 757 E+03). */
 const PA_PER_PSI = F.newtonsPerPoundForce / F.metresPerInch ** 2;
+/** 1 oz/yd² = 0.028349523125 / 0.9144² kg/m² = 0.0339057... (SP 811 B.8 p. 52 prints 3.390 575 E−02). */
+const KG_PER_M2_PER_OZ_PER_YD2 = F.kilogramsPerOunce / (3 * F.metresPerFoot) ** 2;
 
 const METRIC: Record<QuantityKind, UnitSpec> = {
   mm: linear('mm', 1 / 1000, 1),
@@ -74,6 +77,7 @@ const METRIC: Record<QuantityKind, UnitSpec> = {
   time: linear('s', 1, 2),
   modulus: linear('GPa', 1e9, 2),
   ratio: linear('', 1, 2),
+  surfaceDensity: linear('g/m²', 1 / 1000, 0),
 };
 
 const IMPERIAL: Record<QuantityKind, UnitSpec> = {
@@ -94,6 +98,7 @@ const IMPERIAL: Record<QuantityKind, UnitSpec> = {
   },
   pressure: linear('psi', PA_PER_PSI, 2),
   modulus: linear('10⁶ psi', PA_PER_PSI * 1e6, 3),
+  surfaceDensity: linear('oz/yd²', KG_PER_M2_PER_OZ_PER_YD2, 2),
   angle: METRIC.angle,
   time: METRIC.time,
   ratio: METRIC.ratio,
@@ -127,7 +132,8 @@ export function parseQuantity(
   system: UnitSystem,
 ): number | undefined {
   const trimmed = text.trim();
-  if (trimmed === '' || !/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(trimmed)) return undefined;
+  if (trimmed === '' || !/^[-+]?(\d+(?:\.\d*)?|\.\d+)([eE][-+]?\d+)?$/.test(trimmed))
+    return undefined;
   const n = Number(trimmed);
   return Number.isFinite(n) ? unitFor(kind, system).toSI(n) : undefined;
 }

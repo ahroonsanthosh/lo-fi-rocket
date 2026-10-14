@@ -59,7 +59,7 @@ function parseNumber(
   text: string,
 ): number {
   // RASP numbers are plain decimals, possibly without a leading zero (".0108").
-  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(text)) {
+  if (!/^[+-]?(\d+(?:\.\d*)?|\.\d+)([eE][+-]?\d+)?$/.test(text)) {
     throw new EngParseError(fileName, line, `${field} must be a number, got "${text}"`);
   }
   const value = Number(text);

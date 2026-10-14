@@ -60,15 +60,15 @@ test('a new user builds a basic rocket, picks a motor and reads an apogee', asyn
   await expect(page.getByRole('img', { name: 'Altitude above the pad' })).toBeVisible();
 });
 
-test('the example flies to the displayed apogee (DATCOM base drag, D-069) and survives a reload', async ({
+test('the example flies to the displayed apogee (DATCOM base drag and body form factor, D-069, D-115) and survives a reload', async ({
   page,
 }) => {
   await page.goto('/');
   await fileAction(page, 'Load example');
   await page.getByRole('listbox', { name: 'Flight' }).getByRole('option').click();
   await page.getByRole('button', { name: 'Simulate flight' }).click();
-  await expect(resultValue(page, 'Apogee')).toHaveText('172.94 m');
-  await expect(resultValue(page, 'Maximum velocity')).toHaveText('63.0 m/s');
+  await expect(resultValue(page, 'Apogee')).toHaveText('172.41 m');
+  await expect(resultValue(page, 'Maximum velocity')).toHaveText('62.9 m/s');
   await expect(
     page.getByRole('region', { name: 'Warnings' }).getByText('No warnings.'),
   ).toBeVisible();

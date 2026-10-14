@@ -79,7 +79,13 @@ export function ComponentList(): JSX.Element {
               }}
             >
               <span className="item-name">{c.name}</span>
-              <span className="item-kind">{COMPONENT_LABELS[c.component.kind]}</span>
+              <span className="item-kind">
+                {COMPONENT_LABELS[c.component.kind]}
+                {/* Plan 0070: a pod set's part is repeated around the rocket. */}
+                {c.pod === undefined
+                  ? ''
+                  : ` (${String(c.pod.count)} pod${c.pod.count === 1 ? '' : 's'})`}
+              </span>
             </li>
           ))}
         </ul>
@@ -136,6 +142,14 @@ export function ComponentList(): JSX.Element {
         >
           Add parachute
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            dispatch({ type: 'add-recovery', id: newId(), kind: 'streamer' });
+          }}
+        >
+          Add streamer
+        </button>
       </div>
       {state.design.recovery.length === 0 ? (
         <p className="muted">No recovery device: the rocket would fall ballistically.</p>
@@ -152,7 +166,9 @@ export function ComponentList(): JSX.Element {
               }}
             >
               <span className="item-name">{r.name}</span>
-              <span className="item-kind">deploys at {r.deploy.event}</span>
+              <span className="item-kind">
+                {r.kind === 'streamer' ? 'streamer, ' : ''}deploys at {r.deploy.event}
+              </span>
             </li>
           ))}
         </ul>

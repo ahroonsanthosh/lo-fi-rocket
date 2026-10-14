@@ -254,7 +254,11 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         rail: design.launch.rail,
         wind: { speed: wind.speed, from: wind.from },
         format: appFormatter(props.units),
-        recovery: design.recovery.map((r) => ({ name: r.name, diameter: r.diameter })),
+        // A streamer has no canopy to draw yet (plan 0073): diameter 0 is not drawn.
+        recovery: design.recovery.map((r) => ({
+          name: r.name,
+          diameter: r.kind === 'streamer' ? 0 : r.diameter,
+        })),
         ...motorInputs(design),
         scheme: paint,
         extraGroundPoints:

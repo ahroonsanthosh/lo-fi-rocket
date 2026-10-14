@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { InvalidInputError } from '../errors.js';
 import { mach, metres } from '../units/si.js';
 import {
+  bodyFormFactor,
   compressibleSkinFriction,
   frictionDragCoefficient,
   ROUGHNESS_HEIGHTS,
@@ -32,8 +33,15 @@ describe('DRAG-1, DRAG-2 skin friction coefficient, eqs. (3.78) to (3.81)', () =
     expect(ROUGHNESS_HEIGHTS.regularPaint60um).toBe(60e-6);
     expect(ROUGHNESS_HEIGHTS.averageGlass).toBe(0.1e-6);
   });
-  it('rejects a non-positive roughness or length, or a negative Reynolds number', () => {
-    expect(() => skinFrictionCoefficient(1e6, metres(0), L)).toThrow(InvalidInputError);
+  it('a smooth surface (R_s = 0, plan 0073) is never roughness-limited: R = 10⁹ gives 1/(1.5 ln 10⁹ − 5.6)² = 1.53969·10⁻³', () => {
+    // ln 10⁹ = 20.723266; × 1.5 = 31.084899; − 5.6 = 25.484899; squared 649.48006; inverse 1.539693·10⁻³.
+    const r = skinFrictionCoefficient(1e9, metres(0), L);
+    expect(r.regime).toBe('turbulent');
+    expect(r.reynoldsCritical).toBe(Infinity);
+    expect(r.cf).toBeCloseTo(1.539693e-3, 9);
+  });
+  it('rejects a negative roughness, a non-positive length or a negative Reynolds number', () => {
+    expect(() => skinFrictionCoefficient(1e6, metres(-1e-6), L)).toThrow(InvalidInputError);
     expect(() => skinFrictionCoefficient(1e6, RS, metres(0))).toThrow(InvalidInputError);
     expect(() => skinFrictionCoefficient(-1, RS, L)).toThrow(InvalidInputError);
   });
@@ -91,5 +99,74 @@ describe('DRAG-4 friction drag, eq. (3.85): R1 geometry', () => {
     );
     expect(skinFrictionCoefficient(1e6, RS, L).cf).toBe(skinFrictionCoefficient(1e8, RS, L).cf);
     expect(skinFrictionCoefficient(7.3e5, RS, L).cf).toBeCloseTo(4.658e-3, 5);
+  });
+});
+
+describe('plan 0076: DRAG-25 body form factor and DRAG-24 fin friction at the fin chord', () => {
+  it('DRAG-25: Niskanen 1 + 1/(2f) and the DATCOM 1 + 60/f³ + 0.0025 f', () => {
+    // f = 10: 1 + 1/20 = 1.05; 1 + 60/1000 + 0.025 = 1.085. f = 20: 1.025; 1 + 0.0075 + 0.05 = 1.0575.
+    expect(bodyFormFactor(10, 'niskanen')).toBeCloseTo(1.05, 15);
+    expect(bodyFormFactor(10, 'datcom')).toBeCloseTo(1.085, 15);
+    expect(bodyFormFactor(20, 'niskanen')).toBeCloseTo(1.025, 15);
+    expect(bodyFormFactor(20, 'datcom')).toBeCloseTo(1.0575, 15);
+    expect(() => bodyFormFactor(0, 'datcom')).toThrow(InvalidInputError);
+  });
+
+  // A body of 0.2 m² wetted area and fineness 10, fins of 0.05 m² at t/c̄ = 0.003/0.1, A_ref = 0.002 m².
+  // Rocket length 1 m at R = 10⁶: C_f = 1/(1.5 ln 10⁶ − 5.6)² = 1/15.12327² = 4.372289·10⁻³.
+  // Fin chord 0.1 m at R = 10⁵: C_f = 1/(1.5 ln 10⁵ − 5.6)² = 1/11.66939² = 7.343512·10⁻³.
+  const cfRocket = 4.372289e-3;
+  const cfFin = 7.343512e-3;
+  const geometry = {
+    finenessRatio: 10,
+    wettedBodyArea: 0.2,
+    finSets: [{ wettedArea: 0.05, thickness: 0.003, meanChord: 0.1 }],
+    referenceArea: 0.002,
+  };
+
+  it('eq. (3.85): (1.05 × 0.2 + 1.06 × 0.05) × 4.372289·10⁻³ / 0.002 = 0.574956', () => {
+    expect(frictionDragCoefficient(cfRocket, geometry)).toBeCloseTo(0.574956, 5);
+  });
+  it('the DATCOM body factor: (1.085 × 0.2 + 1.06 × 0.05) × 4.372289·10⁻³ / 0.002 = 0.590259', () => {
+    expect(
+      frictionDragCoefficient(cfRocket, { ...geometry, bodyFormFactor: 'datcom' }),
+    ).toBeCloseTo(0.590259, 5);
+  });
+  it('with each fin set at its own chord: (0.217 × 4.372289·10⁻³ + 0.053 × 7.343512·10⁻³) / 0.002 = 0.668996', () => {
+    expect(
+      frictionDragCoefficient(cfRocket, {
+        ...geometry,
+        bodyFormFactor: 'datcom',
+        finFriction: (chord) => (chord === 0.1 ? cfFin : NaN),
+      }),
+    ).toBeCloseTo(0.668996, 5);
+  });
+  it("Niskanen's factor without fin friction is eq. (3.85) bit for bit (the comparison mode)", () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 1e-4, max: 1e-2, noNaN: true }),
+        fc.double({ min: 2, max: 40, noNaN: true }),
+        fc.double({ min: 0.01, max: 1, noNaN: true }),
+        (cfc, f, wet) => {
+          const g = { ...geometry, finenessRatio: f, wettedBodyArea: wet };
+          const fins = (1 + (2 * 0.003) / 0.1) * 0.05;
+          const expected = (cfc * ((1 + 1 / (2 * f)) * wet + fins)) / 0.002;
+          return (
+            frictionDragCoefficient(cfc, g) === expected &&
+            frictionDragCoefficient(cfc, { ...g, bodyFormFactor: 'niskanen' }) === expected
+          );
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+  it('a fin whose own C_fc equals the body’s gives eq. (3.85) again', () => {
+    const a = frictionDragCoefficient(cfRocket, { ...geometry, bodyFormFactor: 'datcom' });
+    const b = frictionDragCoefficient(cfRocket, {
+      ...geometry,
+      bodyFormFactor: 'datcom',
+      finFriction: () => cfRocket,
+    });
+    expect(b).toBeCloseTo(a, 14);
   });
 });

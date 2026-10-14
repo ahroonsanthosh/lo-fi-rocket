@@ -424,11 +424,11 @@ describe('held-out C_D (relative error of the total zero-lift drag unless stated
   });
   it('TN D-3182 model A: C_A at zero normal force, Mach 1.79 to 3.47', () => {
     log(
-      '## TN D-3182 model A: C_A at zero normal force (sting mounted with base pressure taps; the extracted text does not say whether C_A is adjusted for the base, so the total is compared and the forebody shown)',
+      '## TN D-3182 model A: C_A at zero normal force (sting mounted; the report subtracts the measured base drag from the balance drag, page 2, so the forebody is compared and the total shown; plan 0072)',
     );
     log('');
     log(
-      '| Mach | regime | Re | measured | predicted total | error | predicted forebody |\n| --- | --- | --- | --- | --- | --- | --- |',
+      '| Mach | regime | Re | measured | predicted forebody | error | predicted total |\n| --- | --- | --- | --- | --- | --- | --- |',
     );
     const pts = [...data.tn_d_3182_model_A.ca_zero_normal_force.points].sort(
       (a, b) => a.mach - b.mach,
@@ -436,16 +436,16 @@ describe('held-out C_D (relative error of the total zero-lift drag unless stated
     for (const p of pts) {
       const re = d3182Re(p.mach);
       const d = drag(TN_D3182_MODEL_A_COMPONENTS, p.mach, re);
-      const err = (d.total - p.value) / p.value;
+      const err = (d.forebody - p.value) / p.value;
       cdRows.push({
         set: 'TN D-3182 A',
         mach: p.mach,
         measured: p.value,
-        predicted: d.total,
+        predicted: d.forebody,
         error: err,
       });
       log(
-        `| ${String(p.mach)} | ${regime(p.mach)} | ${re.toExponential(2)} | ${p.value.toFixed(3)} | ${d.total.toFixed(3)} | ${sign(err * 100)} % | ${d.forebody.toFixed(3)} |`,
+        `| ${String(p.mach)} | ${regime(p.mach)} | ${re.toExponential(2)} | ${p.value.toFixed(3)} | ${d.forebody.toFixed(3)} | ${sign(err * 100)} % | ${d.total.toFixed(3)} |`,
       );
     }
     log('');

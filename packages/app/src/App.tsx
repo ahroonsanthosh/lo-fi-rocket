@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useState, type JSX } from 'react';
 import {
   exampleDesign,
+  isDesignLink,
   type KeyValueStore,
   type RocketDesign,
   type Transport,
@@ -29,6 +30,7 @@ import type { FileNotice } from './components/FilesMenu.js';
 import { LaunchEditor } from './components/LaunchEditor.js';
 import { MOTOR_SELECTION_ID, MotorPanel } from './components/MotorPanel.js';
 import { RecoveryEditor } from './components/RecoveryEditor.js';
+import { StagesEditor } from './components/StagesEditor.js';
 import { keyValueStore } from './motors/library.js';
 import { browserServices, ServicesContext, type Services } from './state/services.js';
 import { SideView } from './components/SideView.js';
@@ -44,6 +46,7 @@ import {
   type Storage,
   type Theme,
 } from './state/autosave.js';
+import { readDesignLink } from './state/link.js';
 import { initialState, reduce } from './state/reducer.js';
 import { StoreContext } from './state/store.js';
 import {
@@ -73,6 +76,8 @@ export interface AppProps {
   readonly transport?: Transport;
   readonly motorStore?: KeyValueStore;
   readonly services?: Partial<Services>;
+  /** Injected in tests: the address fragment; the browser's `location.hash` by default. */
+  readonly linkFragment?: string;
 }
 
 const AUTOSAVE_DELAY_MS = 300;
@@ -111,22 +116,44 @@ export function App(props: AppProps): JSX.Element {
   const [guideHidden, setGuideHidden] = useState(() => storage?.getItem(GUIDE_KEY) === 'true');
   const [moreOpen, setMoreOpen] = useState(false);
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(new Set());
-  // Loaded once, on mount: the stored design (or the example), and a notice if the stored one was invalid.
+  // Loaded once, on mount: a design from a link (plan 0063), else the stored design (or the
+  // example), and a notice if either could not be used.
   const [start] = useState(() => {
     const units = storage === undefined ? 'metric' : loadUnits(storage);
     if (props.initialDesign !== undefined) {
-      return { state: initialState(props.initialDesign, units), notice: undefined };
+      return {
+        state: initialState(props.initialDesign, units),
+        notice: undefined,
+        link: undefined,
+      };
+    }
+    const link = readDesignLink(
+      props.linkFragment ?? (typeof window === 'undefined' ? '' : window.location.hash),
+    );
+    if (link.kind === 'design') {
+      return { state: initialState(link.design, units), notice: undefined, link };
     }
     const loaded = storage === undefined ? { kind: 'none' as const } : loadLastDesign(storage);
     if (loaded.kind === 'design')
-      return { state: initialState(loaded.design, units), notice: undefined };
+      return { state: initialState(loaded.design, units), notice: undefined, link };
     const notice =
       loaded.kind === 'invalid'
         ? `The autosaved design could not be loaded and was kept aside under "recovered:${loaded.id}". ${loaded.message}`
         : undefined;
-    return { state: initialState(exampleDesign(), units), notice };
+    return { state: initialState(exampleDesign(), units), notice, link };
   });
   const notice = start.notice;
+  const link = start.link;
+  // A design opened from a link is stored at once, and the fragment is removed from the address,
+  // so a reload opens the autosave instead of a second copy.
+  useEffect(() => {
+    if (link?.kind === 'design' && storage !== undefined) saveDesign(storage, link.design);
+    if (link !== undefined && link.kind !== 'none' && typeof window !== 'undefined') {
+      if (isDesignLink(window.location.hash)) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, [link, storage]);
   const [state, dispatch] = useReducer(reduce, start.state);
   const [view, setView] = useState<View>('overview');
 
@@ -201,6 +228,24 @@ export function App(props: AppProps): JSX.Element {
 
   const warnings = useMemo((): WarningItem[] => {
     const out: WarningItem[] = [];
+    if (link?.kind === 'design') {
+      out.push({
+        id: 'link',
+        severity: 'info',
+        title: `Opened "${link.design.name}" from a link`,
+        reason:
+          'The design came from the link you followed and was checked like a design file. Your previous design is kept under File > Designs.',
+        origin: 'Link',
+      });
+    } else if (link?.kind === 'invalid') {
+      out.push({
+        id: 'link',
+        severity: 'caution',
+        title: 'The design link could not be opened',
+        reason: `${link.message}. Your last design is open instead.`,
+        origin: 'Link',
+      });
+    }
     if (notice !== undefined) {
       out.push({
         id: 'autosave',
@@ -263,7 +308,7 @@ export function App(props: AppProps): JSX.Element {
       );
     }
     return out.map((w) => (acknowledged.has(w.id) ? { ...w, acknowledged: true } : w));
-  }, [notice, fileNotices, simError, state.design, state.units, flight, stale, acknowledged]);
+  }, [link, notice, fileNotices, simError, state.design, state.units, flight, stale, acknowledged]);
 
   const thresholds = state.design.stabilityThresholds;
   const stability = stabilityProps(figures, thresholds);
@@ -318,6 +363,7 @@ export function App(props: AppProps): JSX.Element {
                 </p>
               )}
               <AsBuiltEditor />
+              <StagesEditor />
             </section>
           </>
         );

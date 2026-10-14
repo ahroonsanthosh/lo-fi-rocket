@@ -70,3 +70,41 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Fin shape probe
 
 `src/FinShapeProbe.java` (plan 0059) measures trapezoidal, elliptical and freeform fin sets on the same rocket: the fins' mass, CG, inertias, planform area and outline, and the fin set's and the rocket's CP and C_Nα at Mach 0.3; output in `reference/rockets/fin-shape-probe/`.
+
+## Flipped nose probe
+
+`src/FlippedNoseProbe.java` (plan 0068, D-104) builds the same rocket with a 0.1 m tail for each of the six shapes: once a flipped nose cone and once a transition from 25 mm to 0. It saves, reloads and measures each: the tail's radii, mass, CG, CP and C_Nα, and the rocket's CP and CG. The two agree to every printed digit. A seventh file adds a base shoulder to a flipped cone, which OpenRocket places forward of the base. An eighth puts two mass components inside a flipped cone, at "top" and at "bottom", to show where it places them. Output and files in `reference/rockets/flipped-nose-probe/`.
+
+## Pod probe
+
+`src/PodProbe.java` (plan 0070, D-106) builds R1's airframe with no pods, two plain pods, two finned pods and three pods. It saves, reloads and measures each: every part's instances, position, mass, CP and C_Nα; the rocket's CP, C_Nα, mass, CG and inertias; the drag at Mach 0.3 split into friction, pressure and base; and a flight on a D12-5. Compile it with `src/ReferenceHarness.java`. Output and files in `reference/rockets/pod-probe/`.
+
+With `--positions` (plan 0070 step 3, D-107) it places one pod set by each radius method and each axial method, and a pod whose parts differ in radius, saves and reloads each, and prints where OpenRocket puts the pods; it also prints which parts may hold a pod set. With `--chute <motor dir>` it flies `pods1` with its parachute in the pods. `src/PodLoad.java` loads any files given and prints the pod sets' front and distance from the axis, for files edited by hand. Output in `reference/rockets/pod-probe/positions.txt`.
+
+## Staging probe
+
+`src/StagingProbe.java` (plan 0064, D-096) reports how OpenRocket stages a rocket: each stage's separation event and delay, each motor mount's ignition event and delays, and a flight's events on every branch, with the mass and CG around each separation. Run on OpenRocket's own staged examples it shows "automatic" ignition as launch for the bottom stage and the ejection charge of the stage below for the others. With `--build <motors> <out>` it first builds two staged rockets of our own (`staged-bp`: D12-0 to C6-5 at the charge; `staged-hpr`: H128W to G80T 0.5 s after burnout, separation at burnout). With `--gaps <motors> <out>` it builds two three-stage rockets with a stage that has no motor (`staged-gap-bottom`, `staged-gap-middle`): with the bottom stage empty nothing ignites, and with the middle stage empty the sustainer never lights, so "automatic" means the ejection charge of the stage directly below. `--events <motors> <out>` prints the words the file uses for every ignition and separation event, and `--inactive <motors> <out>` switches a stage off in the configuration (`staged-off-booster`: the sustainer flies alone and lights at launch; `staged-off-middle`: the middle stage's parts leave the flight, the bottom stage keeps its place and the sustainer never lights). `--override <motors> <out>` puts a mass and CG override on staged-bp's booster stage: OpenRocket measures the stage's CG from the stage's front. Output and files in `reference/rockets/staging-probe/`.
+
+With `--motors <motor dir>` (plans 0070 step 4 and 0071) it puts a D12-5 in each pod's tube and flies the rocket with and without the core's motor, and without pods. It prints the mass properties, the flight and the drag coefficient against Mach while thrusting and coasting. Output and files in `reference/rockets/pod-probe/motors.txt` and `pods5.ork` to `pods8.ork`.
+
+## Drag probes
+
+These are plan 0071 (D-108). Output in `reference/rockets/drag-probe/`.
+
+- `src/DragProbe.java`: the drag coefficient of `.ork` files at Mach 0.10 to 0.18, or 0.1 to 0.95 with `--transonic`, split into friction, pressure and base, with the motors in place. It also gives the rail buttons' and lugs' share, found by removing them; `--sustainer` keeps the top stage only. Use it to see that OpenRocket keeps the whole base (`values.txt` parts 1 and 4).
+- `src/PartDrag.java`: each part's drag (fins per fin) at the Mach numbers given (part 4).
+- `src/NoseProbe.java`: nose cone pressure drag against Mach for each shape and fineness ratio (part 5).
+- `src/ProtuberanceProbe.java`: rail button and launch lug drag, as the rocket's drag with the part minus without:
+  - with no argument, one-variable sweeps (`protuberance-sweeps.csv`);
+  - with `--cases <file>`, listed cases (`rail-button-table.csv`, `rail-button-collapse.csv`);
+  - with `--temperature <K> <file>`, at another temperature (`rail-button-temperature.csv`).
+- `reference/digitised/build-openrocket-rail-button-table.py`: builds `packages/physics/src/drag/openrocket-rail-button-table.ts` (DRAG-23) from `rail-button-table.csv`. Run `python3 reference/digitised/build-openrocket-rail-button-table.py` from the repository root.
+
+
+## Finish probe
+
+`src/FinishProbe.java` (plan 0073, D-110) prints the roughness OpenRocket gives each of its nine surface finishes, and builds a 50 mm rocket (ogive nose, tube, three fins, lug) once in each finish and then with mixed finishes, saving each and printing every part's friction and pressure drag at Mach 0.1, 0.3, 0.8 and 1.5 as reloaded. It also builds ten rockets with a streamer and prints the streamer's mass, area and automatic drag coefficient. Output and files in `reference/rockets/finish-probe/`.
+
+## Fillet probe
+
+`src/FilletProbe.java` (plan 0073 part 3b) prints a fin set's mass, volume, CG and unit inertias with and without fillets, against the fillet radius, body radius, root chord, fin count and thickness, planform and fillet material. Output in `reference/rockets/fillet-probe/values.txt`.

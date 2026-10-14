@@ -18,7 +18,7 @@ export class DragCurveCsvError extends FormatError {
   }
 }
 
-const NUMBER = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+const NUMBER = /^[-+]?(\d+(?:\.\d*)?|\.\d+)([eE][-+]?\d+)?$/;
 
 function split(line: string): string[] {
   return line.split(/[,;\t]/).map((f) => f.trim());

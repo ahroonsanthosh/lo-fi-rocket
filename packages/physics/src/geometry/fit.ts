@@ -36,9 +36,21 @@ const NAMES: Record<BodySegment['kind'], string> = {
 const mm = (x: number): string => `${(x * 1000).toFixed(3)} mm`;
 const label = (s: BodySegment): string => `${NAMES[s.kind]} (component ${String(s.index)})`;
 
-function bodySegments(components: readonly PlacedComponent[]): BodySegment[] {
+/**
+ * Plan 0070: which body a part belongs to. The main body, or a pod set's own body: its parts share
+ * a count and a radial offset, so a pod's fins are checked against the pod's tube.
+ */
+function bodyKey(p: PlacedComponent): string {
+  return p.instances === undefined
+    ? 'main'
+    : `${String(p.instances.count)}@${String(p.instances.radialOffset)}`;
+}
+
+function bodySegments(components: readonly PlacedComponent[], key: string): BodySegment[] {
   const out: BodySegment[] = [];
-  components.forEach(({ component: c, position }, index) => {
+  components.forEach((p, index) => {
+    if (bodyKey(p) !== key) return;
+    const { component: c, position } = p;
     const fore: number = position;
     if (c.kind === 'noseCone') {
       out.push({
@@ -86,11 +98,18 @@ function bodySegments(components: readonly PlacedComponent[]): BodySegment[] {
  * body to check against and is accepted.
  */
 export function validateComponentFit(components: readonly PlacedComponent[]): void {
-  const body = bodySegments(components);
+  // Plan 0070: the main body, then each pod set's body, which need not start at the nose tip.
+  for (const key of new Set(['main', ...components.map(bodyKey)])) {
+    validateBody(components, key);
+  }
+}
+
+function validateBody(components: readonly PlacedComponent[], key: string): void {
+  const body = bodySegments(components, key);
   if (body.length === 0) return;
   const first = body[0];
   if (first === undefined) return;
-  if (Math.abs(first.fore) > FIT_TOLERANCE) {
+  if (key === 'main' && Math.abs(first.fore) > FIT_TOLERANCE) {
     throw new InvalidInputError(
       `${label(first)} position`,
       first.fore,
@@ -140,7 +159,10 @@ export function validateComponentFit(components: readonly PlacedComponent[]): vo
     return lo <= hi ? [lo, hi] : undefined;
   };
 
-  components.forEach(({ component: c, position }, index) => {
+  const bodyStart = Math.min(...body.map((b) => b.fore));
+  components.forEach((p, index) => {
+    const { component: c, position } = p;
+    if (bodyKey(p) !== key) return;
     if (c.kind !== 'finSet' && c.kind !== 'railButton') return;
     const name =
       c.kind === 'finSet'
@@ -158,16 +180,18 @@ export function validateComponentFit(components: readonly PlacedComponent[]): vo
           });
     for (const [fore, aft] of spans) {
       const range =
-        fore >= -FIT_TOLERANCE && fore <= bodyEnd + FIT_TOLERANCE
+        fore >= bodyStart - FIT_TOLERANCE && fore <= bodyEnd + FIT_TOLERANCE
           ? radiusRange(fore, aft)
           : undefined;
       if (range === undefined || fore > bodyEnd - FIT_TOLERANCE) {
+        const what = key === 'main' ? 'the rocket body' : 'its pod';
+        const start = key === 'main' ? '0' : bodyStart.toFixed(6);
         throw new InvalidInputError(
           `${name} position`,
           fore,
           c.kind === 'finSet'
-            ? `the root leading edge must be on the rocket body, between 0 and ${bodyEnd.toFixed(6)} m`
-            : `each button must sit on the rocket body, between 0 and ${bodyEnd.toFixed(6)} m; one is at ${fore.toFixed(6)} m`,
+            ? `the root leading edge must be on ${what}, between ${start} and ${bodyEnd.toFixed(6)} m`
+            : `each button must sit on ${what}, between ${start} and ${bodyEnd.toFixed(6)} m; one is at ${fore.toFixed(6)} m`,
         );
       }
       const r: number = c.bodyRadius;

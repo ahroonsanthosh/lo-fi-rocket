@@ -17,23 +17,31 @@ import { strFromU8, Unzip, UnzipInflate } from 'fflate';
 import {
   kilograms,
   kilogramsPerCubicMetre,
+  kilogramsPerSquareMetre,
   metres,
   noseProfile,
+  transitionProfile,
   rocketMassProperties,
   seconds,
+  withAsBuilt,
   type Approximation,
   type AsBuilt,
   type ClusterOffset,
   type Component,
+  type FinFillet,
   type FinShape,
   type FinTab,
   type KilogramsPerCubicMetre,
+  type KilogramsPerSquareMetre,
   type MassOverride,
   type Metres,
   type NoseShape,
   type PlacedComponent,
+  type RecoveryDevice,
   type Seconds,
+  type SeparationEvent,
   type Shoulder,
+  type StageSeparation,
 } from '@lo-fi-rocket/physics';
 import { OrkParseError, OrkUnsupportedError, OrkUnsupportedFeaturesError } from './errors.js';
 import {
@@ -68,20 +76,68 @@ export interface OrkMotorMount {
   readonly mountComponent: number;
   /** The motors' offsets from the axis for a cluster (plan 0057); absent for one motor. */
   readonly cluster?: readonly ClusterOffset[];
+  /** Plan 0064: the stage of the mount's part; 0 is the top stage. */
+  readonly stage: number;
+  /** Plan 0064: when the motor ignites, for the configuration used. */
+  readonly ignition: { readonly event: OrkIgnitionEvent; readonly delay: Seconds };
+}
+
+/**
+ * OpenRocket's ignition events, as the file writes them (reference/rockets/staging-probe/values.txt
+ * part 4: "ejectioncharge" is read as 'ejection').
+ */
+export type OrkIgnitionEvent = 'automatic' | 'launch' | 'ejection' | 'burnout' | 'never';
+
+/** Plan 0064: a stage that flies, top first. */
+export interface OrkStage {
+  readonly name: string;
+  /** How it leaves the vehicle; not given for the top stage, which never separates. */
+  readonly separation?: StageSeparation;
 }
 
 /** OpenRocket deployment events (DeploymentConfiguration.DeployEvent, from the jar's public signature). */
 export type OrkDeployEvent = 'launch' | 'ejection' | 'apogee' | 'altitude' | 'never';
 
-export interface OrkRecoveryDevice {
+interface OrkRecoveryBase {
   readonly name: string;
-  /** Index into `components` of the packed parachute. */
+  /** Index into `components` of the packed parachute or streamer. */
   readonly component: number;
-  readonly diameter: Metres;
-  readonly dragCoefficient: number;
   readonly deployEvent: OrkDeployEvent;
   readonly deployAltitude: Metres;
   readonly deployDelay: Seconds;
+}
+
+export interface OrkParachute extends OrkRecoveryBase {
+  readonly kind?: 'parachute';
+  readonly diameter: Metres;
+  readonly dragCoefficient: number;
+}
+
+/** Plan 0073 part 2: a streamer; its drag coefficient is absent for "auto" (eq. C.6). */
+export interface OrkStreamer extends OrkRecoveryBase {
+  readonly kind: 'streamer';
+  readonly length: Metres;
+  readonly width: Metres;
+  readonly surfaceDensity: KilogramsPerSquareMetre;
+  readonly dragCoefficient?: number;
+}
+
+export type OrkRecoveryDevice = OrkParachute | OrkStreamer;
+
+/** The physics' recovery device for one read from a file, deploying as the file says. */
+export function orkRecoveryDevice(d: OrkRecoveryDevice): RecoveryDevice {
+  const deploy = { event: d.deployEvent, altitude: d.deployAltitude, delay: d.deployDelay };
+  return d.kind === 'streamer'
+    ? {
+        kind: 'streamer',
+        name: d.name,
+        length: d.length,
+        width: d.width,
+        surfaceDensity: d.surfaceDensity,
+        ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
+        deploy,
+      }
+    : { name: d.name, diameter: d.diameter, dragCoefficient: d.dragCoefficient, deploy };
 }
 
 export interface OrkRocket {
@@ -95,8 +151,20 @@ export interface OrkRocket {
   readonly length: Metres;
   /** Largest external radius; the reference length is twice this (`referencetype` maximum). */
   readonly maxBodyRadius: Metres;
+  /** The first of `motorMounts` (in a staged file, the top stage's when it has one). */
   readonly motorMount: OrkMotorMount | undefined;
+  /** Plan 0064: every motor mount with a motor in the configuration used, in file order. */
+  readonly motorMounts: readonly OrkMotorMount[];
+  /** Plan 0064: the stages that fly, top first; one for a one-stage rocket. */
+  readonly stages: readonly OrkStage[];
+  /** Plan 0064: the stage of each entry of `components`. */
+  readonly componentStage: readonly number[];
   readonly recoveryDevices: readonly OrkRecoveryDevice[];
+  /**
+   * Plan 0073 (D-110): the surface finish most parts have, as a roughness height; a part with
+   * another finish carries its own (`components[i].roughnessHeight`).
+   */
+  readonly roughnessHeight: Metres;
   /**
    * Approximations of the design as a whole (D-084), e.g. a stage-level override that is not
    * applied. Approximations of one part are on that part (`components[i].approximations`).
@@ -401,7 +469,7 @@ class Element {
    * Density of a surface (kg/m²) or line (kg/m) material, from its `type` and `density` attributes
    * (D-079: a parachute canopy, its lines, a shock cord).
    */
-  materialDensity(element: string, type: 'surface' | 'line'): number {
+  materialDensity(element: string, type: 'surface' | 'line' | 'bulk'): number {
     const m = this.one(element);
     const found = m.attributes['type'];
     if (found !== type)
@@ -884,6 +952,93 @@ function subjectOf(el: Element): string {
   return name === undefined || name === '' ? label : `${label} "${name}"`;
 }
 
+/**
+ * Plan 0073 part 3: rail buttons the file places past the end of their body. OpenRocket accepts
+ * them and counts their mass and drag where they are; the app needs every button on the body (the
+ * physics' fit check), so the set is moved forward until its last button sits a button's diameter
+ * inside the body's end, and its spacing shortened if it is longer than the body (its first button
+ * a diameter inside the body's front). Listed (minor).
+ */
+function railButtonsOnBody(components: readonly OrkPlacedComponent[]): OrkPlacedComponent[] {
+  // The extent of each body, the main one and each pod set's, as the physics keys them.
+  const key = (p: PlacedComponent): string =>
+    p.instances === undefined
+      ? 'main'
+      : `${String(p.instances.count)}@${String(p.instances.radialOffset)}`;
+  const extent = new Map<string, { start: number; end: number }>();
+  for (const p of components) {
+    const c = p.component;
+    if (c.kind !== 'noseCone' && c.kind !== 'bodyTube' && c.kind !== 'transition') continue;
+    const fore: number = p.position;
+    const e = extent.get(key(p)) ?? { start: Infinity, end: -Infinity };
+    extent.set(key(p), {
+      start: Math.min(e.start, fore),
+      end: Math.max(e.end, fore + (c.length as number)),
+    });
+  }
+  return components.map((p) => {
+    const c = p.component;
+    const body = extent.get(key(p));
+    if (c.kind !== 'railButton' || body === undefined) return p;
+    const n = Math.max(1, c.count);
+    const spacing: number = c.separation ?? 0;
+    const first: number = p.position;
+    const last = first + (n - 1) * spacing;
+    const limit = body.end - (c.outerDiameter as number);
+    if (last <= limit) return p;
+    const front = body.start + (c.outerDiameter as number);
+    const moved = Math.max(front, first - (last - limit));
+    let separation = spacing;
+    if (n > 1 && moved + (n - 1) * spacing > limit) {
+      separation = Math.max(0, (limit - moved) / (n - 1));
+    }
+    const mm = (x: number): string => `${String(Math.round(x * 1e4) / 10)} mm`;
+    const approximation: Approximation = {
+      subject: p.name === '' ? 'Rail buttons' : `Rail buttons "${p.name}"`,
+      what: `buttons the file places past the end of the body (the last ${mm(last - body.end)} beyond it)`,
+      method:
+        separation === spacing
+          ? `the set moved ${mm(first - moved)} forward so that every button sits on the body`
+          : `the set moved to the front of the body and its spacing shortened to ${mm(separation)}`,
+      effect:
+        'their mass and drag are counted a little further forward than OpenRocket counts them: a small change to the CG and drag',
+      impact: 'minor',
+    };
+    return {
+      ...p,
+      position: metres(moved),
+      component: {
+        ...c,
+        ...(c.separation === undefined ? {} : { separation: metres(separation) }),
+      },
+      approximations: [...(p.approximations ?? []), approximation],
+    };
+  });
+}
+
+/**
+ * Plan 0073: the finish most of the parts have, the first of those in file order on a tie, or
+ * OpenRocket's default when no part has one. Only the design's later edits use the choice: every
+ * part with another finish keeps its own.
+ */
+function commonFinish(components: readonly PlacedComponent[]): number {
+  const counts = new Map<number, number>();
+  for (const c of components) {
+    if (c.roughnessHeight !== undefined) {
+      counts.set(c.roughnessHeight, (counts.get(c.roughnessHeight) ?? 0) + 1);
+    }
+  }
+  let best = OPENROCKET_DEFAULT_FINISH;
+  let most = 0;
+  for (const [roughness, n] of counts) {
+    if (n > most) {
+      best = roughness;
+      most = n;
+    }
+  }
+  return best;
+}
+
 /** Parts whose stand-in loses lift or drag that matters to the flight (D-084). */
 const AERODYNAMIC_PARTS = new Set([
   'trapezoidfinset',
@@ -896,8 +1051,38 @@ const AERODYNAMIC_PARTS = new Set([
   'parallelstage',
 ]);
 
+/** The parts stacked along a stage or a pod set. */
+const EXTERNAL_PARTS = new Set(['nosecone', 'bodytube', 'transition']);
+
 /** OpenRocket 24.12's automatic parachute drag coefficient (D-079, reference/rockets/parts-probe/values.txt). */
 const OPENROCKET_AUTO_PARACHUTE_CD = 0.8;
+
+/**
+ * Plan 0073 (D-110): the roughness height, m, of each surface finish an OpenRocket 24.12 file
+ * names, as OpenRocket defines them (`FinishProbe`, reference/rockets/finish-probe/values.txt).
+ * Rough 500 µm, optimum paint 5 µm and a finished, polished surface 0.5 µm are Niskanen's
+ * Table 3.2 values; regular paint 60 µm is Figure 3.10's; 0 µm is a smooth surface (eq. 3.78).
+ */
+export const OPENROCKET_FINISHES: Readonly<Record<string, number>> = {
+  rough: 500e-6,
+  roughunfinished: 250e-6,
+  unfinished: 150e-6,
+  normal: 60e-6,
+  smooth: 20e-6,
+  optimum: 5e-6,
+  polished: 2e-6,
+  finishpolished: 0.5e-6,
+  mirror: 0,
+};
+
+/** OpenRocket's default fillet material, cardboard (`FilletProbe`'s files: 680 kg/m³). */
+const OPENROCKET_DEFAULT_FILLET_DENSITY = 680;
+
+/** OpenRocket's finish for a part that names none ("normal", regular paint). */
+const OPENROCKET_DEFAULT_FINISH = 60e-6;
+
+/** The parts whose skin friction the drag model computes, and so whose finish matters. */
+const FRICTION_KINDS = new Set<Component['kind']>(['noseCone', 'bodyTube', 'transition', 'finSet']);
 
 /** The configuration OpenRocket opens a file in when none of several is marked default: no motor. */
 const NO_CONFIGURATION = '';
@@ -905,7 +1090,10 @@ const NO_CONFIGURATION = '';
 class Reader {
   readonly components: OrkPlacedComponent[] = [];
   readonly recoveryDevices: OrkRecoveryDevice[] = [];
-  motorMount: OrkMotorMount | undefined;
+  readonly motorMounts: OrkMotorMount[] = [];
+  /** Plan 0064: the stage being read, and the index in `components` where each stage starts. */
+  private stage = 0;
+  private readonly stageStarts: number[] = [];
   length = 0;
   maxBodyRadius = 0;
   readonly notices: string[] = [];
@@ -992,7 +1180,7 @@ class Reader {
   ): void {
     const components = this.components.length;
     const devices = this.recoveryDevices.length;
-    const mount = this.motorMount;
+    const mounts = this.motorMounts.length;
     try {
       read();
     } catch (error) {
@@ -1013,7 +1201,7 @@ class Reader {
       this.components.splice(components);
       this.recoveryDevices.splice(devices);
       for (const [node, index] of this.placed) if (index >= components) this.placed.delete(node);
-      this.motorMount = mount;
+      this.motorMounts.splice(mounts);
       standIn.put(error);
     }
   }
@@ -1100,6 +1288,8 @@ class Reader {
             this.note(el, a);
           })
         : override;
+    // Plan 0073 (D-110): the part's own surface finish, for its skin friction.
+    const roughnessHeight = FRICTION_KINDS.has(component.kind) ? this.readFinish(el) : undefined;
     const approximations = this.pending.get(el.node);
     this.pending.delete(el.node);
     if (!this.placed.has(el.node)) this.placed.set(el.node, this.components.length);
@@ -1110,8 +1300,28 @@ class Reader {
       position: metres(position),
       ...(massOverride === undefined ? {} : { massOverride }),
       ...(approximations === undefined ? {} : { approximations }),
+      ...(roughnessHeight === undefined ? {} : { roughnessHeight: metres(roughnessHeight) }),
     });
     return this.components.length - 1;
+  }
+
+  /**
+   * Plan 0073 (D-110): the roughness height of the part's `<finish>`. A part that names none has
+   * OpenRocket's default finish; a finish this app does not know is listed and taken as that.
+   */
+  private readFinish(el: Element): number {
+    const text = el.optionalText('finish')?.trim().toLowerCase();
+    if (text === undefined) return OPENROCKET_DEFAULT_FINISH;
+    const known = OPENROCKET_FINISHES[text];
+    if (known !== undefined) return known;
+    this.note(el, {
+      what: `the surface finish "${text}", which the app does not know`,
+      method: 'regular paint, 60 µm, OpenRocket’s default finish',
+      effect:
+        'the skin friction of this part, a third or more of the drag of most rockets, may be higher or lower than OpenRocket’s; a rougher finish lowers the apogee',
+      impact: 'moderate',
+    });
+    return OPENROCKET_DEFAULT_FINISH;
   }
 
   /**
@@ -1145,27 +1355,53 @@ class Reader {
   }
 
   /**
-   * The selected configuration's ignition, from its <ignitionconfiguration> or else the mount's own
-   * elements, must be at launch with no delay: a single-stage rocket's motor starts on the pad.
+   * Plan 0064: the selected configuration's ignition, from its <ignitionconfiguration> or else the
+   * mount's own elements (D-077), with OpenRocket's words (staging-probe part 4). An event the
+   * reader does not know is read as automatic and listed.
    */
-  private checkIgnition(mount: Element): void {
+  private readIgnition(
+    el: Element,
+    mount: Element,
+  ): { readonly event: OrkIgnitionEvent; readonly delay: Seconds } {
     const own = mount
       .all('ignitionconfiguration')
       .find((n) => n.attributes['configid'] === this.selectedConfig);
     const from = own === undefined ? mount : mount.wrap(own);
-    const event = from.optionalText('ignitionevent');
-    if (event !== undefined && event !== 'automatic' && event !== 'launch') {
-      throw from.unsupported(`motor ignition event "${event}"`);
+    const written = from.optionalText('ignitionevent') ?? 'automatic';
+    const delay = from.optionalNumber('ignitiondelay') ?? 0;
+    if (own !== undefined) {
+      from.finish([]);
+      // The mount's own elements are the other configurations' settings.
+      mount.optional('ignitionevent');
+      mount.optional('ignitiondelay');
     }
-    const delay = from.optionalNumber('ignitiondelay');
-    if (delay !== undefined && delay !== 0) throw from.unsupported('a motor ignition delay');
-    if (own !== undefined) from.finish([]);
+    if (!(delay >= 0))
+      throw from.parseError(`<ignitiondelay> must be 0 s or more, got ${String(delay)}`);
+    const events: Readonly<Record<string, OrkIgnitionEvent>> = {
+      automatic: 'automatic',
+      launch: 'launch',
+      ejectioncharge: 'ejection',
+      ejection: 'ejection',
+      burnout: 'burnout',
+      never: 'never',
+    };
+    const event = events[written];
+    if (event === undefined) {
+      this.note(el, {
+        what: `the motor's ignition event "${written}", which the app does not know`,
+        method:
+          'automatic ignition (launch in the bottom stage, else the charge of the stage below)',
+        effect:
+          'the motor may light at another time than in OpenRocket, which changes the whole flight',
+        impact: 'major',
+      });
+    }
+    return { event: event ?? 'automatic', delay: seconds(delay) };
   }
 
   private readMotorMount(el: Element, mountIndex: number, aftEndOfMount: number): void {
     const mount = el.optionalChild('motormount');
     if (mount === undefined) return;
-    if (this.motorMount !== undefined) throw mount.unsupported('more than one motor mount');
     const motors = mount.all('motor');
     // D-077: the motor of the selected configuration; a file with one configuration may omit the configid.
     const chosen =
@@ -1184,7 +1420,9 @@ class Reader {
       mount.finish([]);
       return;
     }
-    this.checkIgnition(mount);
+    // Plan 0070 step 4 models motors in pods; until then a pod's motor is refused, not dropped.
+    if (this.inPod) throw mount.unsupported('a motor in a pod set');
+    const ignition = this.readIgnition(el, mount);
     const overhang = mount.number('overhang');
     const motor = mount.wrap(chosen);
     // D-081: single-use, reloadable or hybrid is catalogue information; the motor's thrust and mass
@@ -1193,7 +1431,7 @@ class Reader {
     if (type !== undefined && !['single', 'reload', 'hybrid'].includes(type)) {
       throw motor.unsupported(`motor type "${type}"`);
     }
-    this.motorMount = {
+    this.motorMounts.push({
       designation: motor.text('designation'),
       manufacturer: motor.text('manufacturer'),
       diameter: metres(motor.number('diameter')),
@@ -1202,7 +1440,9 @@ class Reader {
       delay: motor.text('delay') === 'none' ? undefined : seconds(motor.number('delay')),
       aftEnd: metres(aftEndOfMount + overhang),
       mountComponent: mountIndex,
-    };
+      stage: this.stage,
+      ignition,
+    });
     motor.finish(['digest']);
     mount.finish(['ignitionevent', 'ignitiondelay', 'ignitionconfiguration']);
   }
@@ -1240,6 +1480,9 @@ class Reader {
             case 'parachute':
               this.readParachute(el, parent);
               break;
+            case 'streamer':
+              this.readStreamer(el, parent);
+              break;
             case 'shockcord':
               this.readShockCord(el, parent);
               break;
@@ -1248,6 +1491,9 @@ class Reader {
               break;
             case 'engineblock':
               this.readEngineBlock(el, parent);
+              break;
+            case 'podset':
+              this.readPodSet(el, parent);
               break;
             default:
               throw el.unsupported(`element <${node.name}>`);
@@ -1260,6 +1506,129 @@ class Reader {
           },
         },
       );
+    }
+  }
+
+  /** Plan 0070: whether a pod set's parts are being read. */
+  private inPod = false;
+
+  /**
+   * Plan 0070 step 3 (D-107): a pod set on a body tube, the only part OpenRocket lets hold one
+   * (reference/rockets/pod-probe/positions.txt). Its parts are stacked from its front, as in a
+   * stage, and each is repeated `<instancecount>` times around the axis (D-106). As OpenRocket
+   * places them (positions.txt, all exact):
+   * - its front is read like any child's, its length the sum of its parts' lengths;
+   * - the distance of each pod's axis from the rocket's, from `<radiusoffset method>`:
+   *   "coaxial" 0 and "surface" R + r_pod, both whatever the value; "free" |v|; "relative"
+   *   |R + v + r_pod|; where R is the holding tube's radius and r_pod the largest radius of the
+   *   pod's own body parts (a negative distance is the same ring of pods turned half a turn);
+   * - a recovery device inside a pod is one per pod (the probe's descent with two pod parachutes).
+   * What the model leaves out of pods is listed by the simulation (podApproximations, D-106).
+   */
+  private readPodSet(el: Element, parent: Parent): void {
+    if (this.inPod) throw el.unsupported('a pod set inside a pod');
+    const count = el.integer('instancecount');
+    if (count < 1) throw el.parseError(`<instancecount> must be 1 or more, got ${String(count)}`);
+    const sub = el.optionalChild('subcomponents');
+    const parts = sub === undefined ? [] : sub.node.children.map((node) => sub.wrap(node));
+    // The pod's length, from its parts read through separate wrappers (their own reading follows).
+    const length = parts.reduce(
+      (sum, part) =>
+        EXTERNAL_PARTS.has(part.node.name)
+          ? sum + new Element(part.node, part.path, part.file).number('length')
+          : sum,
+      0,
+    );
+    const front = axialPosition(el, parent, length);
+    const first = this.components.length;
+    const devices = this.recoveryDevices.length;
+    const largest = this.maxBodyRadius;
+    this.inPod = true;
+    try {
+      let x = front;
+      for (const part of parts) {
+        this.attempt(() => {
+          x = this.readExternal(part, x, 'a pod set');
+        });
+      }
+    } finally {
+      this.inPod = false;
+      // A pod is not the main body: its radius is not the rocket's reference (D-106).
+      this.maxBodyRadius = largest;
+    }
+    const podRadius = Math.max(
+      0,
+      ...this.components
+        .slice(first)
+        .map(({ component: c }) =>
+          c.kind === 'noseCone'
+            ? (c.baseRadius as number)
+            : c.kind === 'bodyTube'
+              ? (c.outerRadius as number)
+              : c.kind === 'transition'
+                ? Math.max(c.foreRadius, c.aftRadius)
+                : 0,
+        ),
+    );
+    const offset = el.one('radiusoffset');
+    const method = offset.attributes['method'] ?? '';
+    if (!NUMBER.test(offset.text)) {
+      throw el.parseError(`<radiusoffset> is not a number: "${offset.text}"`);
+    }
+    const v = Number(offset.text);
+    const distances: Readonly<Record<string, number>> = {
+      coaxial: 0,
+      surface: parent.radius + podRadius,
+      free: Math.abs(v),
+      relative: Math.abs(parent.radius + v + podRadius),
+    };
+    const radialOffset = distances[method];
+    if (radialOffset === undefined) throw el.unsupported(`radius offset method "${method}"`);
+    const instances = { count, radialOffset: metres(radialOffset) };
+    for (let i = first; i < this.components.length; i++) {
+      const c = this.components[i];
+      if (c !== undefined) this.components[i] = { ...c, instances };
+    }
+    // One parachute or streamer per pod, each deployed as the file says.
+    const own = this.recoveryDevices.splice(devices);
+    for (const d of own) {
+      for (let k = 1; k <= count; k++) {
+        this.recoveryDevices.push(
+          count === 1 ? d : { ...d, name: `${d.name} (pod ${String(k)} of ${String(count)})` },
+        );
+      }
+    }
+    // A setting of the pod set the reader does not know is listed on its first part.
+    if (this.components.length > first) this.placed.set(el.node, first);
+    this.finishPart(el, [...IGNORED_COMMON, 'angleoffset']);
+  }
+
+  /**
+   * An external part (nose cone, body tube or transition) stacked at `x`, in a stage or (`where`)
+   * a pod set; returns its aft end.
+   */
+  private readExternal(el: Element, x: number, where?: string): number {
+    const offset = el.optional('axialoffset');
+    if (
+      offset !== undefined &&
+      (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
+    ) {
+      throw el.unsupported(
+        'external components positioned other than stacked after the previous one',
+      );
+    }
+    el.optional('position');
+    switch (el.node.name) {
+      case 'nosecone':
+        return this.readNoseCone(el, x);
+      case 'bodytube':
+        return this.readBodyTube(el, x);
+      case 'transition':
+        return this.readTransition(el, x);
+      default:
+        throw el.unsupported(
+          `element <${el.node.name}>${where === undefined ? '' : ` in ${where}`}`,
+        );
     }
   }
 
@@ -1283,14 +1652,24 @@ class Reader {
         impact: 'minor',
       });
     }
-    const fillet = el.optionalNumber('filletradius') ?? 0;
-    if (fillet !== 0) {
-      this.note(el, {
-        what: `fin fillets of ${String(Math.round(fillet * 1e4) / 10)} mm radius`,
-        method: 'the fins without fillets',
-        effect: 'the fillets’ few grams and small drag are missing',
-        impact: 'minor',
-      });
+    // Plan 0073 (GEO-19): the fillets' mass, of their own material, as OpenRocket counts it.
+    const filletRadius = el.optionalNumber('filletradius') ?? 0;
+    let fillet: FinFillet | undefined;
+    if (filletRadius > 0) {
+      let density = OPENROCKET_DEFAULT_FILLET_DENSITY;
+      if (el.has('filletmaterial')) {
+        density = el.materialDensity('filletmaterial', 'bulk');
+      } else {
+        this.note(el, {
+          what: 'the fillets’ material, which the file does not give',
+          method: 'OpenRocket’s default fillet material, cardboard at 680 kg/m³',
+          effect: 'the fillets’ few grams may be a little off',
+          impact: 'minor',
+        });
+      }
+      if (density > 0) {
+        fillet = { radius: metres(filletRadius), density: kilogramsPerCubicMetre(density) };
+      }
     }
     const written = el.optionalText('crosssection') ?? 'square';
     const known = written === 'square' || written === 'rounded' || written === 'airfoil';
@@ -1325,6 +1704,7 @@ class Reader {
         density: el.bulkDensity(),
         bodyRadius: metres(parent.radius),
         ...(tab === undefined ? {} : { tab }),
+        ...(fillet === undefined ? {} : { fillet }),
       },
       position,
     );
@@ -1444,8 +1824,10 @@ class Reader {
       if (i === 0) index = placed;
     }
     this.readMotorMount(el, index, position + length);
-    if (cluster !== undefined && this.motorMount?.mountComponent === index) {
-      this.motorMount = { ...this.motorMount, cluster };
+    const last = this.motorMounts.length - 1;
+    const read = this.motorMounts[last];
+    if (cluster !== undefined && read?.mountComponent === index) {
+      this.motorMounts[last] = { ...read, cluster };
     }
     // D-081: parts inside an inner tube (an engine block in a motor tube) are positioned against the
     // tube; an automatic outer radius there is its inner radius (tab-probe: 0.009 m in a 0.0095 m
@@ -1653,19 +2035,46 @@ class Reader {
   }
 
   private readParachute(el: Element, parent: Parent): void {
+    this.readRecovery(el, parent, 'parachute');
+  }
+
+  /**
+   * Plan 0073 part 2: a streamer, a strip of `<striplength>` by `<stripwidth>` of a surface
+   * material. Its mass, without an override, is the strip's area times the material's surface
+   * density, and its automatic drag coefficient Niskanen's eq. (C.6), as OpenRocket computes
+   * both (FinishProbe part 3, reference/rockets/finish-probe/values.txt).
+   */
+  private readStreamer(el: Element, parent: Parent): void {
+    this.readRecovery(el, parent, 'streamer');
+  }
+
+  private readRecovery(el: Element, parent: Parent, kind: 'parachute' | 'streamer'): void {
     this.onAxis(el);
-    // An override "including subcomponents" is the parachute's own: OpenRocket gives a parachute no
-    // children, and any in the file are refused by name (D-084).
-    const diameter = el.number('diameter');
-    // D-079: without an override, OpenRocket's parachute mass is the canopy disc, π (d/2)² × the
-    // surface density, plus the lines, count × length × the line density
-    // (reference/rockets/parts-probe/values.txt: 0.018944 + 0.0072 = 0.026144 kg).
-    const mass = el.has('overridemass')
-      ? el.number('overridemass')
-      : Math.PI * (diameter / 2) ** 2 * el.materialDensity('material', 'surface') +
+    // An override "including subcomponents" is the device's own: OpenRocket gives a parachute or a
+    // streamer no children, and any in the file are refused by name (D-084).
+    const surfaceDensity = el.materialDensity('material', 'surface');
+    let mass: number;
+    let shape:
+      | { readonly kind: 'parachute'; readonly diameter: number }
+      | { readonly kind: 'streamer'; readonly length: number; readonly width: number };
+    if (kind === 'streamer') {
+      const length = el.number('striplength');
+      const width = el.number('stripwidth');
+      shape = { kind, length, width };
+      mass = length * width * surfaceDensity;
+    } else {
+      const diameter = el.number('diameter');
+      shape = { kind, diameter };
+      // D-079: without an override, OpenRocket's parachute mass is the canopy disc, π (d/2)² × the
+      // surface density, plus the lines, count × length × the line density
+      // (reference/rockets/parts-probe/values.txt: 0.018944 + 0.0072 = 0.026144 kg).
+      mass =
+        Math.PI * (diameter / 2) ** 2 * surfaceDensity +
         el.number('linecount') *
           el.number('linelength') *
           el.materialDensity('linematerial', 'line');
+    }
+    if (el.has('overridemass')) mass = el.number('overridemass');
     const length = el.number('packedlength');
     const position = axialPosition(el, parent, length);
     const index = this.place(
@@ -1678,7 +2087,7 @@ class Reader {
       },
       position,
     );
-    // D-077: a <deploymentconfiguration> for the selected configuration replaces the parachute's own
+    // D-077: a <deploymentconfiguration> for the selected configuration replaces the device's own
     // deployment elements; the other configurations' entries are not used.
     const own = el
       .all('deploymentconfiguration')
@@ -1700,7 +2109,7 @@ class Reader {
     }
     const event = known ? written : 'apogee';
     const cdText = el.text('cd');
-    if (cdText === 'auto') {
+    if (cdText === 'auto' && shape.kind === 'parachute') {
       // D-079 (the owner's choice): OpenRocket's automatic parachute C_D, 0.8 (parts-probe), an
       // OpenRocket default with no approved source, used and listed (D-084).
       this.attach(index, {
@@ -1712,65 +2121,134 @@ class Reader {
         impact: 'moderate',
       });
     }
-    this.recoveryDevices.push({
+    const common = {
       name: el.optionalText('name') ?? '',
       component: index,
-      diameter: metres(el.number('diameter')),
-      dragCoefficient: cdText === 'auto' ? OPENROCKET_AUTO_PARACHUTE_CD : el.number('cd'),
       deployEvent: event as OrkDeployEvent,
       deployAltitude: metres(deploy.number('deployaltitude')),
       deployDelay: seconds(deploy.number('deploydelay')),
-    });
+    };
+    this.recoveryDevices.push(
+      shape.kind === 'streamer'
+        ? {
+            kind: 'streamer',
+            ...common,
+            length: metres(shape.length),
+            width: metres(shape.width),
+            surfaceDensity: kilogramsPerSquareMetre(surfaceDensity),
+            // "auto": Niskanen's eq. (C.6), which OpenRocket also uses (STREAM-1).
+            ...(cdText === 'auto' ? {} : { dragCoefficient: el.number('cd') }),
+          }
+        : {
+            ...common,
+            diameter: metres(shape.diameter),
+            dragCoefficient: cdText === 'auto' ? OPENROCKET_AUTO_PARACHUTE_CD : el.number('cd'),
+          },
+    );
     if (own !== undefined) {
       deploy.finish([]);
-      // The parachute's own deployment elements are the other configurations' settings.
+      // The device's own deployment elements are the other configurations' settings.
       for (const name of ['deployevent', 'deployaltitude', 'deploydelay']) el.optional(name);
     }
     this.finishPart(el, [
       ...IGNORED_COMMON,
       ...IGNORED_ANGULAR,
       'material',
-      'linecount',
-      'linelength',
-      'linematerial',
+      ...(kind === 'parachute' ? ['linecount', 'linelength', 'linematerial'] : []),
     ]);
   }
 
-  /** External components in a stage: stacked from the nose tip in file order. */
-  private readStage(stage: Element): void {
+  /**
+   * External components in a stage: stacked in file order from `front`, the nose tip for the top
+   * stage and the end of the stage above for the others (plan 0064). Returns the stage's aft end.
+   */
+  private readStage(stage: Element, front: number, only: boolean): number {
+    const offset = stage.optional('axialoffset');
+    if (
+      offset !== undefined &&
+      (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
+    ) {
+      throw stage.unsupported('a stage positioned other than right after the stage above');
+    }
+    stage.optional('position');
+    const first = this.components.length;
     const sub = stage.child('subcomponents');
-    let x = 0;
+    let x = front;
     for (const node of sub.node.children) {
       this.attempt(() => {
-        const el = sub.wrap(node);
-        const offset = el.optional('axialoffset');
-        if (
-          offset !== undefined &&
-          (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
-        ) {
-          throw el.unsupported(
-            'external components positioned other than stacked after the previous one',
-          );
-        }
-        el.optional('position');
-        switch (node.name) {
-          case 'nosecone':
-            x = this.readNoseCone(el, x);
-            break;
-          case 'bodytube':
-            x = this.readBodyTube(el, x);
-            break;
-          case 'transition':
-            x = this.readTransition(el, x);
-            break;
-          default:
-            throw el.unsupported(`element <${node.name}>`);
-        }
+        x = this.readExternal(sub.wrap(node), x);
       });
     }
-    this.length = x;
-    this.readStageOverride(stage);
+    this.readStageOverride(stage, first, front, only);
+    this.separations[this.stage] = this.readSeparation(stage);
     stage.finish([...IGNORED_COMMON]);
+    return x;
+  }
+
+  /** Plan 0064: each stage's separation as read, index = stage number in the file. */
+  private readonly separations: (StageSeparation | undefined)[] = [];
+
+  /**
+   * Plan 0064: the stage's separation for the configuration used, from its
+   * <separationconfiguration> or else its own elements (as the deployment, D-077), in OpenRocket's
+   * words (staging-probe part 4). The top stage's is read and not used: it never separates. An
+   * altitude event at or below the pad is the launch (climbing) or never (descending), exactly.
+   */
+  private readSeparation(stage: Element): StageSeparation | undefined {
+    const own = stage
+      .all('separationconfiguration')
+      .find((n) => n.attributes['configid'] === this.selectedConfig);
+    const from = own === undefined ? stage : stage.wrap(own);
+    const written = from.optionalText('separationevent');
+    const delay = from.optionalNumber('separationdelay') ?? 0;
+    const altitude = from.optionalNumber('separationaltitude');
+    if (own !== undefined) {
+      from.finish([]);
+      for (const name of ['separationevent', 'separationaltitude', 'separationdelay']) {
+        stage.optional(name);
+      }
+    }
+    if (this.stage === 0) return undefined;
+    if (!(delay >= 0)) {
+      throw from.parseError(`<separationdelay> must be 0 s or more, got ${String(delay)}`);
+    }
+    const events: Readonly<Record<string, SeparationEvent>> = {
+      upperignition: 'upper-ignition',
+      ignition: 'ignition',
+      burnout: 'burnout',
+      ejection: 'ejection',
+      launch: 'launch',
+      apogee: 'apogee',
+      altitudeascending: 'altitude-ascending',
+      altitudedescending: 'altitude-descending',
+      never: 'never',
+    };
+    const event = written === undefined ? undefined : events[written];
+    if (event === undefined) {
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what:
+          written === undefined
+            ? 'its separation event, which the file does not give'
+            : `its separation event "${written}", which the app does not know`,
+        method: 'separation at the ignition of the stage above, the usual setting',
+        effect: 'the stage may leave at another time than in OpenRocket, which changes the flight',
+        impact: 'major',
+      });
+      return { event: 'upper-ignition', delay: seconds(delay) };
+    }
+    if (event === 'altitude-ascending' || event === 'altitude-descending') {
+      if (altitude === undefined) throw from.parseError('missing <separationaltitude>');
+      // The rocket is above the pad from launch to landing.
+      if (altitude <= 0) {
+        return {
+          event: event === 'altitude-ascending' ? 'launch' : 'never',
+          delay: seconds(delay),
+        };
+      }
+      return { event, delay: seconds(delay), altitude: metres(altitude) };
+    }
+    return { event, delay: seconds(delay) };
   }
 
   /**
@@ -1779,9 +2257,43 @@ class Reader {
    * total mass (case 4) and CG (cases 5, 6); not covering them, a point mass added at the stage's CG
    * or at the overridden CG (cases 1, 3), here spread over the parts in proportion (minor); a CG
    * override alone not covering the parts does nothing (case 2). A drag override stays listed
-   * (D-084). The stage's front is the nose tip, as it is the only stage.
+   * (D-084). The CG is from the stage's front (staging-probe part 6). Plan 0064: in a one-stage
+   * rocket it is the design's as-built mass and CG; in a staged one it scales and moves that
+   * stage's parts alone (GEO-17), so that they leave with it at separation.
    */
-  private readStageOverride(stage: Element): void {
+  private readStageOverride(stage: Element, first: number, front: number, only: boolean): void {
+    const asBuilt = this.stageOverride(stage, this.components.slice(first), front);
+    if (asBuilt === undefined) return;
+    if (only) {
+      this.asBuilt = asBuilt;
+      return;
+    }
+    const parts = this.components.slice(first);
+    if (!parts.some((p) => rocketMassProperties([p]).mass > 0)) {
+      this.approximations.push({
+        subject: subjectOf(stage),
+        what: 'the stage’s mass or CG override, on a stage with no parts of mass',
+        method: 'not applied',
+        effect: 'the stage’s mass is missing from the flight',
+        impact: 'major',
+      });
+      return;
+    }
+    const scaled = withAsBuilt(parts, asBuilt);
+    scaled.forEach((p, i) => {
+      const c = this.components[first + i];
+      if (c !== undefined && p.massOverride !== undefined) {
+        this.components[first + i] = { ...c, massOverride: p.massOverride };
+      }
+    });
+  }
+
+  /** The stage override as the mass and CG (from the nose tip) of the parts `parts`, if any. */
+  private stageOverride(
+    stage: Element,
+    parts: readonly OrkPlacedComponent[],
+    front: number,
+  ): AsBuilt | undefined {
     const flag = (name: string): boolean | undefined =>
       stage.has(name) ? stage.boolean(name) : undefined;
     const both = flag('overridesubcomponents');
@@ -1805,15 +2317,15 @@ class Reader {
     if (mass !== undefined && !(mass > 0)) {
       throw stage.parseError(`<overridemass> must be greater than 0 kg, got ${String(mass)}`);
     }
-    if (mass === undefined && (cg === undefined || !coversCg)) return;
+    if (mass === undefined && (cg === undefined || !coversCg)) return undefined;
     if (mass !== undefined && !coversMass) {
       // Cases 1 and 3: OpenRocket adds the mass as a point at the stage's CG, or at the overridden CG.
-      const parts = rocketMassProperties(this.components);
-      const total = parts.mass + mass;
-      const at = cg ?? parts.cg;
-      this.asBuilt = {
+      const own = rocketMassProperties(parts);
+      const total = own.mass + mass;
+      const at = cg === undefined ? own.cg : front + cg;
+      const asBuilt: AsBuilt = {
         mass: kilograms(total),
-        cg: metres((parts.mass * parts.cg + mass * at) / total),
+        cg: metres((own.mass * own.cg + mass * at) / total),
       };
       this.approximations.push({
         subject: subjectOf(stage),
@@ -1824,12 +2336,12 @@ class Reader {
           'the mass and CG are OpenRocket’s; the pitch inertia differs a little from a point mass, so the pitching motion changes slightly',
         impact: 'minor',
       });
-      return;
+      return asBuilt;
     }
     // Cases 4 to 6: the stage's total and CG.
-    this.asBuilt = {
+    const asBuilt: AsBuilt = {
       ...(mass === undefined ? {} : { mass: kilograms(mass) }),
-      ...(cg === undefined || !coversCg ? {} : { cg: metres(cg) }),
+      ...(cg === undefined || !coversCg ? {} : { cg: metres(front + cg) }),
     };
     if (cg !== undefined && !coversCg) {
       // A CG override for the stage alone beside a total mass: not observed in OpenRocket.
@@ -1841,10 +2353,11 @@ class Reader {
         impact: 'moderate',
       });
     }
+    return asBuilt;
   }
 
   private readNoseCone(el: Element, x: number): number {
-    if (el.boolean('isflipped')) throw el.unsupported('flipped nose cones');
+    if (el.boolean('isflipped')) return this.readFlippedNoseCone(el, x);
     // <shapeclipped> is written for clippable shapes. For a nose cone the fore
     // radius is zero, so the clipped and non-clipped profiles of Niskanen
     // Appendix A.7 (pp. 103 to 104) coincide and the flag has no effect.
@@ -1896,6 +2409,89 @@ class Reader {
   }
 
   /**
+   * Plan 0068 (D-104): a flipped nose cone, a tail cone. OpenRocket writes it as the cone it is,
+   * <aftradius> its base radius and <aftshoulder…> the base's shoulder, with <isflipped>, and turns
+   * it base forward (reference/rockets/flipped-nose-probe/values.txt). It is then a transition of
+   * the same shape and length from the base radius to 0: OpenRocket gives the two the same mass,
+   * CG, CP and C_Nα for all six shapes. The shoulder reaches forward from the base, a fore
+   * shoulder as on a transition (D-084), its cap at its fore end.
+   */
+  private readFlippedNoseCone(el: Element, x: number): number {
+    // With one end radius 0 the clipped and non-clipped profiles coincide, as on a nose cone.
+    if (el.has('shapeclipped')) el.boolean('shapeclipped');
+    const { shape, shapeParameter } = readShape(el);
+    const length = el.number('length');
+    const baseRadius = el.length('aftradius');
+    const thickness = el.thickness('thickness');
+    const { shoulder, capped } = readShoulder(el, 'aft');
+    this.maxBodyRadius = Math.max(this.maxBodyRadius, baseRadius);
+    this.place(
+      el,
+      {
+        kind: 'transition',
+        shape,
+        length: metres(length),
+        foreRadius: metres(baseRadius),
+        aftRadius: metres(0),
+        ...(shapeParameter === undefined ? {} : { shapeParameter }),
+        ...(thickness === 'filled' ? {} : { wallThickness: metres(thickness) }),
+        density: el.bulkDensity(),
+      },
+      x,
+    );
+    if (shoulder !== undefined) {
+      // As for a transition: OpenRocket's override would cover the shoulder, a separate part here.
+      if (el.has('overridemass') || el.has('overridecg')) {
+        throw el.unsupported('a mass or CG override on a flipped nose cone with a shoulder');
+      }
+      const fore = x - (shoulder.length as number);
+      this.components.push({
+        name: `${el.optionalText('name') ?? ''} (shoulder)`,
+        element: 'transitionshoulder',
+        component: {
+          kind: 'innerTube',
+          length: shoulder.length,
+          outerRadius: shoulder.radius,
+          wallThickness: shoulder.wallThickness,
+          density: el.bulkDensity(),
+        },
+        position: metres(fore),
+      });
+      if (capped) this.placeShoulderCap(el, shoulder, fore, 'fore');
+    }
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined) {
+      // D-080 as in a nose cone, against the reversed profile: the radius less the wall, at the end
+      // of the part where that is smaller (the aft end here).
+      const profile = transitionProfile(
+        shape,
+        metres(length),
+        metres(baseRadius),
+        metres(0),
+        shapeParameter,
+      );
+      const radiusAt = (at: number): number =>
+        profile.radius(Math.min(Math.max(at - x, 0), length)) - (thickness as number);
+      const parent: Parent = {
+        position: x,
+        length,
+        radius: baseRadius,
+        autoOuterRadius:
+          thickness === 'filled'
+            ? () => undefined
+            : (fore, aft) => Math.min(radiusAt(fore), radiusAt(aft)),
+      };
+      this.readNoseInternal(
+        sub,
+        { ...parent, innerTubes: innerTubeSpans(sub, parent) },
+        'a flipped nose cone',
+      );
+    }
+    this.finishPart(el, [...IGNORED_COMMON]);
+    return x + length;
+  }
+
+  /**
    * Children of a nose cone. OpenRocket positions them against the cone's own
    * length, the shoulder excluded, with the same methods as in a body tube
    * (reference/rockets/nose-child-probe/values.txt: "bottom" is the cone's aft
@@ -1920,6 +2516,9 @@ class Reader {
               break;
             case 'parachute':
               this.readParachute(el, parent);
+              break;
+            case 'streamer':
+              this.readStreamer(el, parent);
               break;
             case 'shockcord':
               this.readShockCord(el, parent);
@@ -2059,6 +2658,7 @@ class Reader {
     );
     // D-077: OpenRocket simulates the configuration marked default="true" (config-probe case 3).
     const configs = rocket.all('motorconfiguration');
+    let selectedNode: XmlNode | undefined;
     if (configs.length > 0) {
       const defaults = configs.filter((c) => c.attributes['default'] === 'true');
       if (defaults.length > 1) {
@@ -2076,6 +2676,7 @@ class Reader {
         );
       } else {
         this.selectedConfig = selected.attributes['configid'];
+        selectedNode = selected;
       }
       if (selected !== undefined && configs.length > 1) {
         this.notices.push(
@@ -2090,29 +2691,163 @@ class Reader {
     rocket.optional('position');
     const subcomponents = rocket.child('subcomponents');
     const stages = subcomponents.all('stage');
-    const [stage] = stages;
-    if (stage === undefined || stages.length !== 1) {
-      throw rocket.unsupported(`${String(stages.length)} stages`);
-    }
-    this.readStage(subcomponents.wrap(stage));
+    if (stages.length === 0) throw rocket.parseError('the rocket has no stages');
+    // Plan 0064: the stages one after another, each from the end of the one above.
+    let x = 0;
+    const names: string[] = [];
+    // Each stage's length and largest radius, for the stages that fly.
+    const lengths: number[] = [];
+    const radii: number[] = [];
+    stages.forEach((node, k) => {
+      this.stage = k;
+      this.stageStarts[k] = this.components.length;
+      const stage = subcomponents.wrap(node);
+      names[k] = stage.optionalText('name') ?? `Stage ${String(k + 1)}`;
+      const largest = this.maxBodyRadius;
+      this.maxBodyRadius = 0;
+      const front = x;
+      x = this.readStage(stage, x, stages.length === 1);
+      lengths[k] = x - front;
+      radii[k] = this.maxBodyRadius;
+      this.maxBodyRadius = Math.max(largest, this.maxBodyRadius);
+    });
+    this.length = x;
     subcomponents.finish([]);
     rocket.finish([...IGNORED_COMMON, 'designtype', 'revision', 'designer']);
 
     if (this.problems.length > 0) throw new OrkUnsupportedFeaturesError(root.file, this.problems);
     if (this.components.length === 0) throw rocket.parseError('the rocket has no components');
+    const componentStage = this.components.map((_, i) =>
+      this.stageStarts.reduce((k, start, j) => (i >= start ? j : k), 0),
+    );
+    const { flying, off } = this.activeStages(selectedNode, names);
+    if (off.size === names.length) throw rocket.parseError('every stage is switched off');
+    const kept = (i: number): boolean => {
+      const k = componentStage[i] ?? 0;
+      return flying.has(k) && !off.has(k);
+    };
+    // Plan 0064: the parts, devices and motors of the stages that fly, renumbered from the top.
+    // A stage switched off leaves no gap: the stages below it move up by its length, since the
+    // model needs one continuous body (the gap between stages that fly is listed in activeStages).
+    const shift = (k: number): number =>
+      lengths.reduce((sum, length, j) => (j < k && off.has(j) ? sum + length : sum), 0);
+    const index = new Map<number, number>();
+    this.components.forEach((_, i) => {
+      if (kept(i)) index.set(i, index.size);
+    });
+    const stageNumber = new Map<number, number>();
+    [...flying].sort((a, b) => a - b).forEach((k) => stageNumber.set(k, stageNumber.size));
+    const components = this.components.flatMap((c, i) => {
+      if (!kept(i)) return [];
+      const by = shift(componentStage[i] ?? 0);
+      return [by === 0 ? c : { ...c, position: metres(c.position - by) }];
+    });
+    const mounts = this.motorMounts.flatMap((m) => {
+      const at = index.get(m.mountComponent);
+      const by = shift(m.stage);
+      return at === undefined
+        ? []
+        : [
+            {
+              ...m,
+              mountComponent: at,
+              stage: stageNumber.get(m.stage) ?? 0,
+              aftEnd: by === 0 ? m.aftEnd : metres(m.aftEnd - by),
+            },
+          ];
+    });
+    const devices = this.recoveryDevices.flatMap((d) => {
+      const at = index.get(d.component);
+      return at === undefined ? [] : [{ ...d, component: at }];
+    });
+    const flyingStages = [...stageNumber.keys()].map((k) => {
+      const separation = this.separations[k];
+      return {
+        name: names[k] ?? '',
+        ...(stageNumber.get(k) === 0 || separation === undefined ? {} : { separation }),
+      };
+    });
+    if (components.length === 0) throw rocket.parseError('no stage of the rocket flies');
+    const [mount] = mounts;
+    const finish = commonFinish(components);
     return {
       name: rocket.optionalText('name') ?? '',
       formatVersion: version,
       creator: root.attribute('creator'),
-      components: this.components,
-      length: metres(this.length),
-      maxBodyRadius: metres(this.maxBodyRadius),
-      motorMount: this.motorMount,
-      recoveryDevices: this.recoveryDevices,
+      components: railButtonsOnBody(components).map(({ roughnessHeight, ...c }) =>
+        roughnessHeight === undefined || roughnessHeight === finish ? c : { ...c, roughnessHeight },
+      ),
+      length: metres(
+        off.size === 0
+          ? this.length
+          : lengths.reduce(
+              (sum, length, k) => (flying.has(k) && !off.has(k) ? sum + length : sum),
+              0,
+            ),
+      ),
+      maxBodyRadius: metres(
+        off.size === 0
+          ? this.maxBodyRadius
+          : Math.max(...radii.filter((_, k) => flying.has(k) && !off.has(k))),
+      ),
+      motorMount: mount,
+      motorMounts: mounts,
+      stages: flyingStages,
+      componentStage: componentStage.flatMap((k, i) => {
+        const n = stageNumber.get(k);
+        return n === undefined || !kept(i) ? [] : [n];
+      }),
+      recoveryDevices: devices,
+      roughnessHeight: metres(finish),
       approximations: this.approximations,
       ...(this.asBuilt === undefined ? {} : { asBuilt: this.asBuilt }),
       notices: this.notices,
     };
+  }
+
+  /**
+   * Plan 0064: the stages that fly in the configuration used. OpenRocket leaves a stage switched
+   * off (`<stage number active="false">`) out of the flight (staging-probe part 5). Off at the top
+   * or the bottom of the stack, it is left out here too and the stages renumbered: the sustainer
+   * with its booster off flies alone and lights at launch. Off between stages that fly, it stays
+   * as an empty stage, so that the stage above still waits for its charge and never lights, as in
+   * OpenRocket; the gap it leaves in the airframe is listed, since OpenRocket adds its drag.
+   */
+  private activeStages(
+    selected: XmlNode | undefined,
+    names: readonly string[],
+  ): { readonly flying: Set<number>; readonly off: Set<number> } {
+    const off = new Set<number>();
+    for (const c of selected?.children ?? []) {
+      if (c.name === 'stage' && c.attributes['active'] === 'false') {
+        off.add(Number(c.attributes['number']));
+      }
+    }
+    const all = names.map((_, k) => k);
+    const on = all.filter((k) => !off.has(k));
+    if (on.length === 0) return { flying: new Set(), off };
+    const top = Math.min(...on);
+    const bottom = Math.max(...on);
+    const flying = new Set(all.filter((k) => k >= top && k <= bottom));
+    for (const k of all) {
+      if (!off.has(k)) continue;
+      const name = names[k] ?? '';
+      this.notices.push(
+        `The stage "${name}" is switched off in the motor configuration used, so its parts are not in the flight, as in OpenRocket; switch it on in OpenRocket and import again to fly it.`,
+      );
+      if (flying.has(k)) {
+        this.approximations.push({
+          subject: `Stage "${name}"`,
+          what: 'the gap its parts leave in the airframe while it is switched off',
+          method:
+            'the stages below it moved up to close the gap, since the model needs one continuous body',
+          effect:
+            'OpenRocket keeps the gap, with its CG further aft and drag for the gap (its drag coefficient rose from 1.92 to 2.89 in a probe); here the CG is further forward and the drag lower, so the stability margin and the apogee are higher',
+          impact: 'major',
+        });
+      }
+    }
+    return { flying, off };
   }
 }
 

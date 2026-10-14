@@ -15,6 +15,7 @@ import {
   normalForceAtAngle,
   pitchDampingMoment,
   rollDampingMoment,
+  SUPERSONIC_REVERSE_FLOW_WARNING,
   type AeroInputs,
 } from './aerodynamics.js';
 import { vec3 } from './vector.js';
@@ -248,9 +249,31 @@ describe('HA-3, HA-9, HA-10 the large-angle model (D-070), R1 at Mach 0.3', () =
     expect(at(70).warnings.join()).toContain('above 60°');
     expect(at(30).warnings.join()).not.toContain('above 60°');
   });
-  it('above Mach 1 beyond 90° it throws instead of extrapolating', () => {
-    expect(() =>
-      normalForceAtAngle(R1_COMPONENTS, mach(1.5), radians(2), radians(0), DATCOM),
-    ).toThrow(/supersonic high-angle/);
+  it('above Mach 1 beyond 90°: the supersonic force on the reversed fin, at its mirrored CP (plan 0067)', () => {
+    // R1's fins (c_r 0.1, c_t 0.05, x_t 0.05, s 0.08 m, at x = 0.5 m) at Mach 2, by hand (BAR-10):
+    // β = √3, A = 2s²/A_fin = 2(0.0064)/0.006 = 2.133333, Aβ = 3.695042,
+    // x/MAC = (Aβ − 0.67)/(2Aβ − 1) = 3.025042/6.390084 = 0.473396; MAC = (2/3)(c_r² + c_r c_t + c_t²)/(c_r + c_t) = 0.0777778.
+    // Forward: MAC leading edge x_t(c_r + 2c_t)/(3(c_r + c_t)) = 0.0222222, CP 0.0222222 + 0.0368197 = 0.0590419.
+    // Reversed: x_t′ = c_r − x_t − c_t = 0, CP 0.0368197 from the old trailing edge, so 0.1 − 0.0368197 = 0.0631803.
+    const fins = (deg: number) => {
+      const r = normalForceAtAngle(
+        R1_COMPONENTS,
+        mach(2),
+        radians((deg * Math.PI) / 180),
+        radians(0),
+        DATCOM,
+      );
+      const c = r.contributions.find((x) => x.source.endsWith('large-angle (DATCOM 4.1.3.3)'));
+      if (c === undefined) throw new Error('no fin contribution');
+      return { cn: c.cn, cp: c.cp, warnings: r.warnings };
+    };
+    const forward = fins(60);
+    const backward = fins(120);
+    expect(forward.cp).toBeCloseTo(0.5 + 0.0590419, 6);
+    expect(backward.cp).toBeCloseTo(0.5 + 0.0631803, 6);
+    // The same slope at α′ = 60° times α′: the fin force at 120° equals that at 60° (to rounding in π − α).
+    expect(backward.cn).toBeCloseTo(forward.cn, 12);
+    expect(backward.warnings).toContain(SUPERSONIC_REVERSE_FLOW_WARNING);
+    expect(forward.warnings).not.toContain(SUPERSONIC_REVERSE_FLOW_WARNING);
   });
 });

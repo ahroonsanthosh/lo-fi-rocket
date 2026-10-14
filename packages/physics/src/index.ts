@@ -13,15 +13,21 @@ export { defineQuantity } from './units/quantity.js';
 export * from './units/si.js';
 export {
   celsiusToKelvin,
+  centimetresToMetres,
   CUSTOMARY_UNIT_FACTORS,
   degreesToRadians,
   fahrenheitToKelvin,
   feetPerSecondToMetresPerSecond,
   feetToMetres,
+  gramsPerCubicCentimetreToKilogramsPerCubicMetre,
   gramsToKilograms,
+  hectopascalsToPascals,
   inchesToMetres,
+  kilometresPerHourToMetresPerSecond,
+  kilopascalsToPascals,
   milesPerHourToMetresPerSecond,
   millimetresToMetres,
+  millisecondsToSeconds,
   ouncesToKilograms,
   poundsForceToNewtons,
   poundsToKilograms,
@@ -132,8 +138,10 @@ export {
 export {
   combine,
   componentMassProperties,
+  filletCrossSection,
   type Component,
   type FinCrossSection,
+  type FinFillet,
   type FinTab,
   type MassItemComponent,
   type NoseConeComponent,
@@ -155,16 +163,21 @@ export {
 export {
   clusterSums,
   combineRocket,
+  combineRocketMotors,
   withAsBuilt,
   type AsBuilt,
   motorMassPart,
   overriddenMassProperties,
   rocketMassProperties,
   structuralMassParts,
+  isPodPart,
+  mainBodyParts,
+  repeated,
   type ClusterOffset,
   type MassOverride,
   type MotorMass,
   type PlacedComponent,
+  type Instances,
   type RocketMassProperties,
 } from './geometry/assembly.js';
 export {
@@ -220,7 +233,9 @@ export {
 } from './motor/motor.js';
 export {
   compressibleSkinFriction,
+  bodyFormFactor,
   frictionDragCoefficient,
+  type BodyFormFactor,
   ROUGHNESS_HEIGHTS,
   skinFrictionCoefficient,
   type FrictionDragGeometry,
@@ -258,10 +273,17 @@ export {
   jointAngle,
   meanAerodynamicChord,
   wettedArea,
+  type BaseDragMotorRule,
   type DragInputs,
   type DragResult,
   type DragTerm,
+  type RailButtonDragMethod,
 } from './drag/drag.js';
+export {
+  openRocketRailButtonCoefficient,
+  openRocketRailButtonDrag,
+  type OpenRocketRailButtonInput,
+} from './drag/openrocket-rail-button.js';
 export {
   aerodynamicForcesAndMoments,
   normalForceAtAngle,
@@ -291,10 +313,25 @@ export type {
   FlightVehicle,
   IntegratorOptions,
   MotorSource,
+  ParachuteDevice,
   RecoveryDevice,
+  SeparationEvent,
+  StreamerDevice,
+  StageSeparation,
   SimulationOptions,
+  StagedMotor,
+  VehicleStages,
 } from './flight/vehicle.js';
 export { DEFAULT_MINIMUM_STABILITY_MARGIN } from './flight/vehicle.js';
+export {
+  OPENROCKET_STREAMER_CD_LIMIT,
+  recoveryApproximations,
+  recoveryDragArea,
+  STREAMER_MEASURED_RANGE,
+  streamerDragCoefficient,
+  streamerOutsideMeasured,
+  type StreamerDragMethod,
+} from './flight/recovery.js';
 export {
   AERO_MAX_ANGLE_OF_ATTACK,
   dragCurveAt,
@@ -422,7 +459,9 @@ export {
 export {
   DATCOM_BASE_FAIRING_END,
   DEFAULT_BASE_DRAG_METHOD,
+  DEFAULT_BODY_FORM_FACTOR,
   type BaseDragMethod,
+  type FinFrictionLength,
 } from './drag/drag.js';
 export * from './stability/datcom-large-angle-data.js';
 export {
@@ -453,6 +492,7 @@ export {
   clusterApproximations,
   componentApproximations,
   confidenceOf,
+  podApproximations,
   type Approximation,
   type ApproximationImpact,
   type Confidence,

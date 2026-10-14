@@ -36,7 +36,14 @@ export function norm(a: Vec3): number {
 /** Unit vector; returns undefined for the zero vector (the caller decides what that means). */
 export function normalise(a: Vec3): Vec3 | undefined {
   const n = norm(a);
-  return n === 0 ? undefined : scale(a, 1 / n);
+  if (n === 0) return undefined;
+  // Plan 0065: below 2⁻⁵⁰⁰ (down to the subnormal numbers) 1/n can overflow; the direction is the
+  // same after an exact power-of-two scaling, whose norm is taken afresh.
+  if (n < 2 ** -500) {
+    const b = scale(a, 2 ** 600);
+    return scale(b, 1 / norm(b));
+  }
+  return scale(a, 1 / n);
 }
 export function isFiniteVec3(a: Vec3): boolean {
   return Number.isFinite(a.x) && Number.isFinite(a.y) && Number.isFinite(a.z);

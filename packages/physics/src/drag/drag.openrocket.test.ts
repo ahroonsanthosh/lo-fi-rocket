@@ -1,10 +1,13 @@
 /**
  * Black-box comparison of C_D0 with OpenRocket 24.12's drag coefficient
- * column in reference/rockets/timeseries (zero wind, so α = 0 and C_D = C_A).
- * The bounds asserted are the observed agreement recorded in plan 0009; they
- * are not tolerances the model was tuned to.
+ * column in reference/rockets/timeseries (zero wind, so α = 0 and C_D = C_A),
+ * under OpenRocket's own base and rail button rules (D-108, plan 0071). The
+ * bounds asserted are the observed agreement (mean 0.5 to 1.2 %; the worst
+ * samples are at the highest Mach numbers, where OpenRocket's nose pressure
+ * drag departs from Niskanen's, plan 0071 section 6); they are regression
+ * guards, not tolerances the model was tuned to.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -37,42 +40,38 @@ const CASES = [
     components: R1_COMPONENTS,
     motor: REFERENCE_MOTORS.r1,
     apogee: 5.83,
-    thrustingBound: 0.06,
-    coastingBoundOr: 0.06,
-    meanBoundOr: 0.03,
+    worstBound: 0.025,
+    meanBound: 0.013,
   },
   {
     name: 'r2-ogive-boattail',
     components: R2_COMPONENTS,
     motor: REFERENCE_MOTORS.r2,
     apogee: 10.342,
-    thrustingBound: 0.065,
-    coastingBoundOr: 0.065,
-    meanBoundOr: 0.05,
+    worstBound: 0.05,
+    meanBound: 0.008,
   },
   {
     name: 'r3-minimum-diameter-24',
     components: R3_COMPONENTS,
     motor: REFERENCE_MOTORS.r3,
     apogee: 10.684,
-    thrustingBound: 0.1,
-    coastingBoundOr: 0.1,
-    meanBoundOr: 0.075,
+    worstBound: 0.045,
+    meanBound: 0.008,
   },
   {
     name: 'r4-scratch-38mm',
     components: R4_COMPONENTS,
     motor: REFERENCE_MOTORS.r4,
     apogee: 11.388,
-    thrustingBound: 0.035,
-    coastingBoundOr: 0.035,
-    meanBoundOr: 0.01,
+    worstBound: 0.045,
+    meanBound: 0.006,
   },
 ] as const;
 
 describe('C_D0 against OpenRocket time series (R1 to R4, ascent above 15 m/s)', () => {
   for (const c of CASES) {
-    it(`${c.name}: thrusting within ${String(100 * c.thrustingBound)} %; coasting within ${String(100 * c.coastingBoundOr)} % under the OpenRocket base rule (D-035)`, () => {
+    it(`${c.name}: within ${String(100 * c.worstBound)} % at every sample, ${String(100 * c.meanBound)} % on average, under OpenRocket's base and rail button rules (D-108)`, () => {
       const rows = readFileSync(join(TIMESERIES, `${c.name}-wind0.csv`), 'utf8')
         .trim()
         .split('\n')
@@ -87,11 +86,9 @@ describe('C_D0 against OpenRocket time series (R1 to R4, ascent above 15 m/s)', 
             : s,
         0,
       );
-      let worstThrusting = 0;
-      let worstCoastingOr = 0;
-      let sumCoastingOr = 0;
-      let nCoasting = 0;
-      let sourceRuleJump = 0;
+      let worst = 0;
+      let sum = 0;
+      let n = 0;
       for (const r of rows) {
         const [t, alt, , v, , M, thrust, , cdOr] = r as [
           number,
@@ -107,32 +104,34 @@ describe('C_D0 against OpenRocket time series (R1 to R4, ascent above 15 m/s)', 
         if (t > c.apogee || v < 15) continue;
         const atm = standardAtmosphere1976(metres(alt));
         const reynolds = (v * length) / atm.kinematicViscosity;
+        // D-108: OpenRocket keeps the whole base, thrusting or not, and has its own rail button
+        // drag (DRAG-23); its time series is its static drag coefficient at each Mach number.
         const inputs: DragInputs = {
           components: c.components,
           mach: mach(M),
           reynolds,
           roughnessHeight: metres(ROUGHNESS_HEIGHTS.regularPaint60um),
           motor: { diameter: metres(c.motor.diameter), thrusting: thrust > 0 },
-          baseDragMotorRule: 'always',
+          baseDragMotorRule: 'never',
+          railButtonDragMethod: 'openrocket',
           baseDragMethod: 'niskanen',
+          bodyFormFactor: 'niskanen',
         };
-        const relOr = (dragCoefficient(inputs).cd0 - cdOr) / cdOr;
-        if (thrust > 0) {
-          worstThrusting = Math.max(worstThrusting, Math.abs(relOr));
-        } else {
-          worstCoastingOr = Math.max(worstCoastingOr, Math.abs(relOr));
-          sumCoastingOr += Math.abs(relOr);
-          nCoasting++;
-          const source = dragCoefficient({ ...inputs, baseDragMotorRule: 'while-thrusting' }).cd0;
-          sourceRuleJump = Math.max(sourceRuleJump, (source - cdOr) / cdOr);
-        }
+        const rel = Math.abs((dragCoefficient(inputs).cd0 - cdOr) / cdOr);
+        worst = Math.max(worst, rel);
+        sum += rel;
+        n++;
       }
-      expect(nCoasting).toBeGreaterThan(100);
-      expect(worstThrusting).toBeLessThan(c.thrustingBound);
-      expect(worstCoastingOr).toBeLessThan(c.coastingBoundOr);
-      expect(sumCoastingOr / nCoasting).toBeLessThan(c.meanBoundOr);
-      // Under the source's rule (full base after burnout) OpenRocket is lower by the motor's share of the base drag.
-      expect(sourceRuleJump).toBeGreaterThan(0);
+      expect(n).toBeGreaterThan(100);
+      if (process.env['DRAG_TIMESERIES_REPORT'] !== undefined) {
+        writeFileSync(
+          process.env['DRAG_TIMESERIES_REPORT'],
+          `${c.name} worst ${worst.toFixed(5)} mean ${(sum / n).toFixed(5)} n ${String(n)}\n`,
+          { flag: 'a' },
+        );
+      }
+      expect(worst).toBeLessThan(c.worstBound);
+      expect(sum / n).toBeLessThan(c.meanBound);
     });
   }
 });

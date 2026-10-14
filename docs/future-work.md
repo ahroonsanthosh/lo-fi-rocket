@@ -4,19 +4,19 @@ This file lists what v1.0 does not do, in a suggested order. For each item it gi
 
 ## Accuracy: drag (the targets not met)
 
-The held-out C_D rms is 7.1 % subsonic (target 7 %), 21.3 % transonic (target 10 %) and 16.4 % supersonic (target 8 %). See `docs/reports/held-out-validation.md`.
+The held-out C_D rms is 7.1 % subsonic (target 7 %), 21.3 % transonic (target 10 %) and 15.0 % supersonic (target 8 %). See `docs/reports/held-out-validation.md`.
 
 1. **DATCOM supersonic base pressure** (approved DATCOM, section 4.2.3.1 C, figures 4.2.3.1-50, -55 and -60). Above Mach 1.5 the base drag is Niskanen's eq. (3.94). The DATCOM charts account for the boattail and the jet-off base pressure. They are the remaining sourced method for the supersonic gap, and the RM-10 flight drag (7.6 % low) is the first check.
-2. **Transonic body and fin wave drag** (approved DATCOM 4.2.3.1 B and 4.1.5.1 B). The transonic excess is largest on the sharp-finned held-out models. Each source term should be compared against the held-out breakdown before anything is changed (D-061: no tuning).
+2. **Transonic body and fin wave drag** (approved DATCOM 4.2.3.1 B and 4.1.5.1 B). The transonic drag is under-predicted just above Mach 1 on every measured dataset (−18 to −38 %, plan 0072), most on the sharp-finned and swept-finned models. Each source term should be compared against the held-out breakdown before anything is changed (D-061: no tuning).
 3. **The base drag of finned bodies** (D-069 conflict). The DATCOM states that fins and stings change the base pressure but gives no correction. A sourced correction, or the owner's choice of default, is needed.
 
 ## Accuracy: large angles of attack
 
 4. **Digitise ARCAS (NASA TN D-4013) to 21°** and compare C_N(α) and CP(α) with both normal-force models. This decides the open moderate-angle question of D-070.
 5. **Body-vortex interference on the fins** (approved DATCOM 4.3.1.3 Method 1, figures 4.3.1.3-7 to -15). The DATCOM says it "may become sizable" for missiles.
-6. **Supersonic high-angle fin force** (approved DATCOM 4.1.3.3 C, figures 4.1.3.3-59 to -61). Above Mach 1 a flight still ends at 90°.
+6. **Supersonic high-angle fin force** (approved DATCOM 4.1.3.3 C, figures 4.1.3.3-59 to -63; plan 0067 section 1). Above Mach 1 the displayed mode uses the small-angle fin force to 90° and, since D-103, the same force on the reversed fin beyond 90°, listed as a major approximation.
 7. **Jorgensen's axial force** (approved DATCOM 4.2.3.2), to replace the mirrored axial-drag scaling beyond 90° (D-033).
-8. **High-aspect-ratio and single-wedge fins at large angles.** DATCOM 4.1.3.4 Method 2 needs section maximum-lift data, which flat plates do not have (Hoerner's _Fluid-Dynamic Lift_ would be a new source). For single wedges no chart covers a maximum thickness at the trailing edge.
+8. **High-aspect-ratio and single-wedge fins at large angles.** Approximated and listed since D-102. A sourced method would need section maximum-lift data for flat plates (DATCOM 4.1.3.4 Method 2; Hoerner's _Fluid-Dynamic Lift_ would be a new source), and for single wedges a chart covering a maximum thickness at the trailing edge.
 
 ## Inputs without a source
 

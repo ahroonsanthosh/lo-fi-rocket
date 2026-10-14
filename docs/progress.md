@@ -101,6 +101,66 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - As-built mass and CG (plan 0060, D-089): the weighed mass and balance point of the empty rocket (GEO-17), in the design file, the app (airframe view, "As built") and the Monte Carlo mass variation; OpenRocket's stage mass and CG overrides import as it, matching its structure mass and CG to 1e-6 in all seven probe cases.
 - Claude integration (plan 0061): the owner chose the local route (an MCP server for Claude Code and Claude Desktop on the user's own plan, nothing hosted), deferred the licence, and approved dropping the spent stage at separation (D-091, CLAUDE.md non-goal changed).
   - Step 1, security hardening (D-090): size limits on every reader and in the app, a streaming zip-bomb guard (stops at about 16 MiB whatever the archive claims), stored simulations cut from `.ork` XML, DOCTYPE and ENTITY refused, a Content-Security-Policy in the built site checked by a unit test (every host listed) and by every end-to-end test (no violations), the launch-site privacy note, read-only CI permissions and CodeQL. Dependency review waits for the owner to switch on the dependency graph (open question).
+  - Step 2, the local MCP server (plan 0062, D-092), first pull request: `packages/mcp` with 19 tools (design, parts, motor library and files, recovery, launch, as-built, assumptions, review, stability, simulate), unit strings (UNIT-12 and UNIT-13 added), every value not given recorded as an approximation; the example rocket built through the tools matches the engine bit for bit. The app's part defaults and bundled motors moved into `packages/formats`.
+  - Plan 0062 parts 2 and 3 (D-093, D-094): ThrustCurve.org search and download (read-only, one host, bounded), Monte Carlo (200 runs per call); the single-file server and the Claude Desktop extension, built and smoke-tested in CI (official manifest validator, run as Desktop runs it), published on the site with checksums and a `claude.html` page linked from the File menu.
+  - Step 3, design links (plan 0063, D-095): `#design=v1.` links open a design in the app (fresh id, stored at once, address cleared), bounded like every reader; the MCP server's `design_link` tool makes them.
+- Multi-stage (plan 0064, D-091, D-096), part 1: the engine flies staged vehicles (motors igniting on Table 4.2 events, separated stages leaving with their parts, motors and devices); single-stage results bit-identical; two-stage vacuum flights match the closed form.
+- Multi-stage part 2a (D-097): OpenRocket's staging measured as a black box (its two examples and four built rockets, including an empty stage). The engine has OpenRocket's nine separation events and a "never" ignition, and says why a motor never lit or a stage never separated. The design file is schema 2 (version-1 files unchanged): stages, a stage per part and device, further motor mounts and OpenRocket's ignition events, with "automatic" as OpenRocket does it. Golden outputs unchanged.
+- Multi-stage part 2b (D-098): staged `.ork` files import. The reader handles:
+  - stages one after another;
+  - every motor mount with its ignition;
+  - each stage's separation, per configuration;
+  - stages switched off, as OpenRocket does;
+  - per-stage mass overrides;
+  - ignition delays and second motor mounts, which were refused before.
+
+  The probe's staged rockets fly within tolerance of OpenRocket: apogee +2.78 % and +1.17 %, maximum velocity +2.21 % and −1.89 %, staging times within 1 ms.
+
+- Multi-stage part 3a (D-099): Claude builds staged rockets through the MCP server. The new `set_stages` tool names the stages; parts and parachutes take a stage; `set_motor` gives each stage its motor and ignition, with the resolved ignition shown; `review_design` flags a motor that can never light. A two-stage rocket built through the tools flies exactly as the engine flies it.
+- Multi-stage part 3b (D-100): stages are edited in the app.
+  - The airframe view has a Stages section: names, separations, adding and removing stages.
+  - Parts and parachutes have a stage choice, and the motor view a stage selector with each stage's ignition.
+  - The stability details list each configuration's margin as its bottom stage lights and at its burnout.
+  - For a staged rocket, the burnout gauge shows the top stage alone.
+- Random-design robustness (plan 0065, D-101): a property test flies random sensible designs (40 per run; 300 in the exploration). It found two float64 edge cases (a decaying roll rate and the first instant off the rail overflowing to ∞ or ∞ × 0), a rail tilted by next to nothing, an adaptive-step failure when a canopy opens on a fast rocket after a smooth coast, and the refusal of 0 kg parts. All are fixed and each is tested; golden outputs unchanged. Now 300 of 300 fly: 212 land, 79 end at the model limit (tumbling past 90°), 8 at the time limit.
+- Wedge and high-aspect-ratio fins past 90° (plan 0066, D-102): the large-angle model no longer refuses them in the displayed mode. A single wedge reads the 23b family, and a high aspect ratio uses the low-aspect-ratio method with its charts held at their ends. Each is listed in the result as an approximation. These fin sets caused all 79 model-limit endings; now 300 of 300 random designs land (291) or reach the time limit (9). No reference design has such fins, so the golden outputs and the OpenRocket comparisons are unchanged.
+- Tumbling above Mach 1 (plan 0067, D-103): the displayed mode now continues past 90° at any Mach number. Above Mach 1 the small-angle supersonic fin force is applied to the reversed fin, and a flight that does this lists it as a major approximation. The wedge and high-aspect-ratio listing of D-102 is now minor below the stall and moderate past it. Only the OpenRocket-equivalent mode still stops at 90°.
+- A sample's Mach, angle of attack, C_D0, CP and margin are documented, and tested, as NaN exactly where no attitude is modelled: under a recovery device, after landing, and with no aerodynamics. The app's plots, CSV export, 3D viewer and the MCP report already treat them as "not defined". With this, task 5 (the physics never refuses a sensible design) is complete.
+- Flipped nose cones (plan 0068, D-104): an `.ork` tail cone (a flipped nose cone) is read as a transition to a point, which OpenRocket shows is exact for all six shapes; the physics accepts an aft radius of 0, and so does the app. Probe files and values in `reference/rockets/flipped-nose-probe/`. Found on the way: the boat-tail drag combination in the displayed mode (D-104, open).
+- The boat-tail drag combination checked (plan 0069, D-105): keeping Niskanen's eq. (3.88) on eq. (3.94) beside the DATCOM base, because the alternative doubled the error against the ARCAS wind-tunnel boat-tail data while moving R2 by only 0.66 %. Two limitation lines that named the wrong side as safe for altitude limits are corrected.
+- Pod sets, the physics (plan 0070 steps 1 and 2, D-106, GEO-18): parts repeated around the axis, counted once per pod in the mass, inertias, normal force, drag and damping, with their approximations listed. Against the new OpenRocket pod probe: mass, CG and C_Nα exact, CP within R1's 0.016 %, drag within 0.65 %, apogee +1.1 to +1.7 %.
+- The comparison mode's base and rail button drag (plan 0071, D-108, DRAG-23, owner's option (c)):
+  - **OpenRocket's base.** OpenRocket 24.12 never removes the motor's area from the base, measured statically and in its flight data. D-035's `'always'` rule had been offsetting our rail button drag, which is 6 to 10 times OpenRocket's.
+  - **New comparison mode.** It keeps the whole base and computes rail buttons from a table of OpenRocket's measured coefficients: per button K(Mach, η = height / boundary-layer thickness) times the frontal area, within 0.82 % of OpenRocket on 80 held-out buttons.
+  - **Results.** R1 to R5 apogees are now within 0.16 to 0.51 % of OpenRocket (before −2.42 to +2.48 %), maximum velocity within 0.26 %, and static drag within 0.4 to 0.7 % (R1 1.2 %, its lug).
+  - **Remaining differences:**
+    - OpenRocket's nose pressure drag below Mach 1 (tangent ogives flat to Mach 1 and near zero supersonic; other shapes zero to Mach 0.9), which is not copied;
+    - our skin friction, 1.4 % higher;
+    - the launch lug.
+- Validation corrections (plan 0072, D-109), from the measured-data survey and each checked against the report page:
+  - **TN D-3182 model A.** Its fins are corrected to the drawing (span 4.95 in, not 4.38; a 1.37 in mean trailing edge, not 0.69). Its C_A is compared with the forebody drag, since the report subtracts the base. CP rms is 4.1 % of body length (was 5.7 %) and forebody drag −17 %.
+  - **Blue Scout at angle of attack.** The values behind D-070 were the fins-off configurations. The fins-on CP moves only about 0.03 body lengths to 6°; both models over-predict this, which is conservative.
+  - **Known limitations.** Stale statements were replaced. Two items are newly documented: the ARCAS transonic CP, about 1 caliber on the unsafe side at Mach 0.8 to 0.9, and drag under-predicted just above Mach 1 and on wedge fins.
+  - **OpenRocket issues.** Draft list in `docs/reports/openrocket-issues.md`.
+- Surface finish from `.ork` files (plan 0073 part 1, D-110), the first of the import gaps found by the OpenRocket validation campaign:
+  - **Import.** Each part's `<finish>` is read as OpenRocket's own roughness height (nine names, 0 to 500 µm). The design's finish is the one most parts have; parts with another keep their own (design file schema 4). Before this every part flew at 60 µm, unlisted, moving the apogee −13 to +14 % on the campaign's six rockets with another finish.
+  - **Physics.** The skin friction is the sum over the surfaces, each at its own finish. With one finish it is eq. (3.85) exactly, so every existing result is unchanged. A 0 µm finish is a smooth surface.
+  - **Against OpenRocket.** 14 probe rockets at Mach 0.1 to 1.5: friction 1.24 to 1.46 % above OpenRocket's, the regular-paint offset within ±0.11 %.
+  - **Also fixed.** The MCP part editor dropped a part's pod set; it now keeps that and its finish.
+- The finish and fillets in the app (plan 0073 part 1b): every body part's and fin set's editor sets its surface finish, or the whole rocket's; the fin editor sets fillets. The app had no finish control before.
+- Fin fillets (plan 0073 part 3b, D-113, GEO-19): their mass, CG and inertias by exact plane geometry, read from `.ork` files instead of being left out. OpenRocket's fillet volume is the same geometry: the 17 `FilletProbe` cases agree to 1e-7 in mass and 1e-9 m in CG. Before this, missing fillets put the CG forward and overstated the margin (up to 2.8 % CG on a campaign rocket).
+- Small import and message fixes (plan 0073 part 3a, D-112): an `.ork` file's rail buttons past the end of the body are moved onto it and listed, instead of the stability refusing the design; the RK4 refusal advises a step rounded down, never up; the airfoil fin slab mass is rated moderate by its measured effect.
+- Streamers (plan 0073 part 2, D-111, STREAM-1): a recovery device may be a streamer, with Niskanen's Appendix C drag (eq. C.6), in the physics, the design file (schema 5), the `.ork` reader, the app and the MCP. Before this an imported streamer was dropped with a wrong "no mass" message and the rocket fell ballistically. Against OpenRocket on ten strips: mass and CG to 1e-6, C_D exact (OpenRocket uses the same equation, capped at 0.4, which the comparison mode copies).
+- Pod sets in files (plan 0070 step 3, D-107): the design file's `pod` group (schema 3, with its migration), the `.ork` reader's pod sets on body tubes, placed as OpenRocket places them (every radius and axial method probed exactly; a parachute in a pod is one per pod), and the app's part list and editor naming pod parts. A motor in a pod is still refused (step 4). Issues opened for the UI and 3D lanes to draw pods off the axis.
+- RASAero II import and comparison (plan 0075, D-114):
+  - **Importer.** `.CDX1` files are read: the nose, body, fin can, boat tail and boosters, recovery, site and motor. The file's lift-off weight and CG are reproduced exactly, per stage. The app's File menu has "Import RASAero".
+  - **Running RASAero.** It runs here under Wine, driven by our own script (`reference/rasaero/`; nothing of RASAero committed). An opt-in test (`RASAERO=1`) writes `docs/reports/rasaero-comparison-data.md`.
+  - **Found.** Our trajectory matches RASAero's when flown on its drag (within 1.4 % below Mach 0.95). Our drag is low: on 21 flown rockets our displayed apogee is above the measured one every time, +18.9 % mean below Mach 0.95 and +29.0 % above (RASAero: +0.4 % and +3.9 %). The causes, term by term, are in `docs/reports/rasaero-comparison.md`. The fixes await the owner.
+- Friction from the DATCOM (plan 0076, D-115): the displayed mode uses the DATCOM's body form factor (eq. 4.2.3.1-a) instead of eq. (3.85)'s, because it improved both independent datasets: the 21 flights (+18.9 → +17.7 % below Mach 0.95) and the held-out drag in every regime (subsonic 7.1 → 6.1 %, now within its 7 % target). The fin friction at the fin chord (DATCOM eq. 4.1.5.1-a) is implemented and selectable but not the default: it worsened the held-out supersonic drag. The comparison mode and the goldens are unchanged.
+- RASAero II export and R1 to R5 in three simulators (plan 0077, D-116):
+  - **Export.** The app's File menu and the MCP write a design as a RASAero II `.CDX1` file. What RASAero cannot hold is refused with what to change.
+  - **Agreement.** R1 to R5 flown in RASAero with our own motor curves: the CP agrees within 1.3 mm. R1 (launch lug) agrees within 3 % between all three programs.
+  - **Disagreement.** R2 to R5 (rail buttons) differ by up to 27 % in apogee, mostly from the rail guide drag, where the three programs' models span a factor of about 30. Measured rail button drag would settle it (owner decision 3).
 
 ## In progress
 
@@ -108,7 +168,12 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0061 step 2: `packages/mcp`, the local MCP server (stdio for Claude Code, `.mcpb` for Claude Desktop) with the tool surface and the review checklist. Then plan 0055 step 3 part 2 with staging (D-091).
+- Plan 0073, the rest of the import gaps, one pull request each: none left; re-run the OpenRocket campaign on the fixes, then the owner's decisions of plan 0074 (airfoil drag, lug drag, friction form factor).
+- Validation campaign (owner, 2026-10-14):
+  - **What runs.** Exhaustive comparison against OpenRocket on many generated designs, against the measured NACA/NASA data by regime, and against RASAero II if it can be run here or from its published predictions. Background agents are running all three.
+  - **Output.** A differences report with the reasoning for each difference, and a list of OpenRocket issues for its developers.
+  - **Next comparison items:** skin friction (1.4 %) and the nose pressure drag question.
+- Plan 0070 step 4: motors in pods, as clusters at the pods' offsets (D-086); then booster sets (step 5). Then plan 0061 step 4 (the modelling benchmark). The MCP server's design tools do not yet set a pod group.
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
@@ -131,7 +196,12 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - **Fibreglass shear modulus (D-068).** No approved source gives it. R3 and R5 need at least 0.18 and 0.43 GPa to be flutter-free by TN 4197.
 - **Base drag after burnout (D-035).** The displayed mode uses the source's rule; the comparison mode uses OpenRocket's.
 - **Deployment speed warning (D-042).** It is a rule-of-thumb placeholder. Please state the figure you want.
-- **`.CDX1` import.** It needs sample RASAero II files.
+- **Drag against flown rockets (D-114, `docs/reports/rasaero-comparison.md` section 7).** Six decisions:
+  - **Fin friction.** Should it use each fin's own chord for the Reynolds number (DATCOM eq. 4.1.5.1-a) instead of the rocket's (Niskanen eq. 3.85)? It is implemented and selectable. It helps the flights (+17.7 → about +14 %) and the held-out subsonic and transonic drag, but worsens the supersonic (15.0 → 15.5 % rms), so by plan 0076's rule it is not the default.
+  - **Body form factor.** Done (D-115): the DATCOM's, on the evidence of both datasets.
+  - **Rail guides and fin-body interference.** Please supply Hoerner, _Fluid-Dynamic Drag_, chapter 8 (approved source 4), or measured rail guide drag data.
+  - **Thrust at altitude.** Approve a propulsion text for the nozzle-exit pressure thrust; needed for high flights and for liquid engines.
+  - **The apogee note.** Should every flight carry a note that the apogee of real rockets has been about a fifth lower? The example rocket is currently reviewed to show no warnings.
 - **Default branch.** `main` exists. Making it the default branch needs the owner, because the `gh` token here is invalid.
 - **Review-fix follow-ups for the owner (2026-10-13):**
   - #9 suggests making the example's parachute open at the motor's ejection charge. That would change the example's figures used across the app tests, so it was not done.

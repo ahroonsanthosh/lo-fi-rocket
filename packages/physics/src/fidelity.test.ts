@@ -42,14 +42,19 @@ describe('componentApproximations', () => {
     expect(componentApproximations([{ name: 'Fins', component: finSet }])).toEqual([]);
   });
 
-  it('rounded and airfoil fins list the slab mass as a minor approximation (D-077)', () => {
-    for (const crossSection of ['rounded', 'airfoil'] as const) {
+  it('rounded and airfoil fins list the slab mass (D-077): rounded minor, airfoil moderate (plan 0073)', () => {
+    // OpenRocket makes rounded fins 99 % and airfoil fins 85 % of the slab; on the validation
+    // campaign's rockets the airfoil slab was up to 8.5 % of the structure mass.
+    for (const [crossSection, impact] of [
+      ['rounded', 'minor'],
+      ['airfoil', 'moderate'],
+    ] as const) {
       const [a, ...rest] = componentApproximations([
         { name: 'Fins', component: { ...finSet, crossSection } },
       ]);
       expect(rest).toEqual([]);
       expect(a?.subject).toBe('Fin set "Fins"');
-      expect(a?.impact).toBe('minor');
+      expect(a?.impact).toBe(impact);
       expect(a?.what).toContain(crossSection);
     }
   });
@@ -92,9 +97,9 @@ describe('a flight carries its approximations and confidence', () => {
     expect(r.confidence.level).toBe('high');
   }, 30000);
 
-  it('R1 with airfoil fins: the slab mass is listed and the confidence stays high', () => {
+  it('R1 with airfoil fins: the slab mass is listed and the confidence is medium (plan 0073)', () => {
     const r = simulateFlight(vehicle('airfoil'), options);
     expect(r.approximations.map((a) => a.subject)).toEqual(['Fin set "Fins"']);
-    expect(r.confidence.level).toBe('high');
+    expect(r.confidence.level).toBe('medium');
   }, 30000);
 });

@@ -10,7 +10,7 @@
  * §3.4.7 p. 53 (axial drag at angle of attack, DRAG-14).
  */
 import { axialDragScaling } from '../drag/drag.js';
-import { InvalidInputError, NotImplementedError } from '../errors.js';
+import { InvalidInputError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
 import { finPlanform, trapezoidOf } from '../geometry/fin-planform.js';
@@ -257,7 +257,27 @@ export interface NormalForceResult {
   referenceArea: number;
   referenceDiameter: number;
   bodyPieces: BodyPiece[];
-  finCps: { fin: TrapezoidFinSetComponent; cp: number }[];
+  /** Plan 0070: `count` is the number of pods a pod set's fins are on (1 otherwise). */
+  finCps: { fin: TrapezoidFinSetComponent; cp: number; count: number }[];
+  /** Plan 0070: each pod set's own body pieces and its count of pods. */
+  podBodies: { pieces: BodyPiece[]; count: number }[];
+}
+
+/** Plan 0070: collects each pod set's body pieces, keyed by its count and radial offset. */
+function podBodyCollector(): {
+  add: (instances: NonNullable<PlacedComponent['instances']>, piece: BodyPiece) => void;
+  bodies: () => { pieces: BodyPiece[]; count: number }[];
+} {
+  const map = new Map<string, { pieces: BodyPiece[]; count: number }>();
+  return {
+    add: (instances, piece) => {
+      const key = `${String(instances.count)}@${String(instances.radialOffset)}`;
+      const body = map.get(key) ?? { pieces: [], count: instances.count };
+      body.pieces.push(piece);
+      map.set(key, body);
+    },
+    bodies: () => [...map.values()],
+  };
 }
 
 /** The small-angle model (the 'linear' large-angle method, D-046). */
@@ -278,27 +298,46 @@ function normalForceLinear(
   const contributions: AeroContribution[] = [];
   const warnings: string[] = [];
   const bodyPieces: BodyPiece[] = [];
-  const finCps: { fin: TrapezoidFinSetComponent; cp: number }[] = [];
+  const finCps: { fin: TrapezoidFinSetComponent; cp: number; count: number }[] = [];
+  const pods = podBodyCollector();
   let x = 0;
   let sumCnAlpha = 0;
   let sumMoment = 0;
+  let n = 1;
+  // Plan 0070: a pod set's part counts once per pod.
   const push = (index: number, source: string, cnAlpha: number, cp: number): void => {
     if (cnAlpha === 0) return;
-    contributions.push({ index, source, cn: cnAlpha * a, cp });
-    sumCnAlpha += cnAlpha;
-    sumMoment += cnAlpha * cp;
+    const scaled = cnAlpha * n;
+    contributions.push({
+      index,
+      source: n === 1 ? source : `${source}, × ${String(n)} pods`,
+      cn: scaled * a,
+      cp,
+    });
+    sumCnAlpha += scaled;
+    sumMoment += scaled * cp;
   };
   const statics = staticAero(components, aRef);
   const assembly = datcomBodyAssembly(components);
-  components.forEach(({ component: c, position }, index) => {
+  components.forEach(({ component: c, position, instances }, index) => {
     const pos: number = position;
     const st = statics[index];
     if (st === undefined) return;
+    n = instances?.count ?? 1;
+    // Plan 0070: a pod's body is its own, outside the main body's pieces and length.
+    const addPiece = (): void => {
+      if (st.piece === undefined) return;
+      if (instances === undefined) {
+        bodyPieces.push(st.piece);
+        x = st.end;
+      } else {
+        pods.add(instances, st.piece);
+      }
+    };
     switch (c.kind) {
       case 'noseCone':
       case 'transition': {
-        if (st.piece !== undefined) bodyPieces.push(st.piece);
-        x = st.end;
+        addPiece();
         if (st.term !== undefined) {
           let term = { cnAlpha: st.term.cnAlpha, cp: pos + st.term.cpX };
           let label = c.kind === 'noseCone' ? 'nose cone (3.19)' : 'transition (3.19)';
@@ -320,8 +359,7 @@ function normalForceLinear(
         break;
       }
       case 'bodyTube': {
-        if (st.piece !== undefined) bodyPieces.push(st.piece);
-        x = st.end;
+        addPiece();
         push(
           index,
           'body tube lift (3.26)',
@@ -363,7 +401,7 @@ function normalForceLinear(
             pos + t.carryOver.cpX,
           );
         }
-        finCps.push({ fin: c, cp: pos + finCp });
+        finCps.push({ fin: c, cp: pos + finCp, count: n });
         break;
       }
       case 'innerTube':
@@ -404,6 +442,7 @@ function normalForceLinear(
     referenceDiameter: d,
     bodyPieces,
     finCps,
+    podBodies: pods.bodies(),
   };
 }
 
@@ -418,8 +457,8 @@ export const LARGE_ANGLE_TRANSITION_WARNING =
   'flying backwards (angle of attack above 90°) with a transition on the body: the DATCOM substantiates the reverse-flow body method only for bodies of constant cross section (D-070)';
 export const CROSSFLOW_CHART_HELD_WARNING =
   'body fineness ratio or cross-flow Mach number outside DATCOM figure 4.2.1.2-35 (fineness 2 to 28, cross-flow Mach to 9): the end value of the chart was used (D-070)';
-export const SUPERSONIC_LARGE_ANGLE_ERROR =
-  'fin normal force beyond 90° angle of attack at Mach 1 or above: the DATCOM supersonic high-angle charts (section 4.1.3.3 C) are not implemented';
+export const SUPERSONIC_REVERSE_FLOW_WARNING =
+  'tumbling or flying backward (angle of attack above 90°) at Mach 1 or above: the fin force is the small-angle supersonic force (Niskanen eq. 3.49) applied to the reversed fin, with no sourced method behind it; the DATCOM supersonic high-angle method (section 4.1.3.3 C) is not implemented and covers 0 to 90° only (D-103)';
 
 /**
  * AERO-1, AERO-2 with the large-angle model of D-070 (HA-1 to HA-10). Body:
@@ -433,7 +472,9 @@ export const SUPERSONIC_LARGE_ANGLE_ERROR =
  * Mach 1: the fin set's slope (and its body carry-over) times the DATCOM wing
  * normal-force shape C′_N/C_Nα (HA-7, HA-9), the panel CP from HA-8; beyond
  * 90° the reversed wing (HA-10). Fins at Mach 1 and above keep Niskanen's
- * eq. (3.49) and are applied up to 90° only.
+ * eq. (3.49), linear in α up to 90°; beyond 90° the same force on the reversed
+ * fin, α′ = 180° − α at the mirrored CP of the reversed planform (plan 0067,
+ * D-103: an approximation, listed in the flight result).
  */
 function normalForceLargeAngle(
   components: readonly PlacedComponent[],
@@ -453,26 +494,38 @@ function normalForceLargeAngle(
   const contributions: AeroContribution[] = [];
   const warnings: string[] = [];
   const bodyPieces: BodyPiece[] = [];
-  const finCps: { fin: TrapezoidFinSetComponent; cp: number }[] = [];
+  const finCps: { fin: TrapezoidFinSetComponent; cp: number; count: number }[] = [];
+  const pods = podBodyCollector();
   // At α′ = 0 every term vanishes and the CP is the limit, weighted by the slopes; otherwise by C_N.
   let sumCn = 0;
   let sumWeight = 0;
   let sumMoment = 0;
+  let n = 1;
+  // Plan 0070: a pod set's part counts once per pod.
   const push = (index: number, source: string, slope: number, cn: number, cp: number): void => {
     if (slope === 0 && cn === 0) return;
-    const weight = aPrime === 0 ? slope : cn;
-    contributions.push({ index, source, cn, cp });
-    sumCn += cn;
+    const weight = (aPrime === 0 ? slope : cn) * n;
+    contributions.push({
+      index,
+      source: n === 1 ? source : `${source}, × ${String(n)} pods`,
+      cn: cn * n,
+      cp,
+    });
+    sumCn += cn * n;
     sumWeight += weight;
     sumMoment += weight * cp;
   };
   const statics = staticAero(components, aRef);
   const assembly = datcomBodyAssembly(components);
+  // Plan 0070: the main body's length and parts; a pod set's parts are outside it.
   const bodyLength = statics.reduce(
-    (l, st) => (st.piece === undefined ? l : Math.max(l, st.end)),
+    (l, st, i) =>
+      st.piece === undefined || components[i]?.instances !== undefined ? l : Math.max(l, st.end),
     0,
   );
-  const hasTransition = components.some((p) => p.component.kind === 'transition');
+  const hasTransition = components.some(
+    (p) => p.component.kind === 'transition' && p.instances === undefined,
+  );
   if (!(bodyLength > 0))
     throw new InvalidInputError(
       'components',
@@ -483,14 +536,20 @@ function normalForceLargeAngle(
   const viscous = jorgensenViscousFactor(a, M, bodyLength / maximumBodyDiameter(components));
   if (viscous.eta.held || viscous.cdc.held) warnings.push(CROSSFLOW_CHART_HELD_WARNING);
   const viscousLabel = 'cross-flow (DATCOM 4.2.1.2 Jorgensen)';
-  components.forEach(({ component: c, position }, index) => {
+  components.forEach(({ component: c, position, instances }, index) => {
     const pos: number = position;
     const st = statics[index];
     if (st === undefined) return;
+    n = instances?.count ?? 1;
+    const addPiece = (): void => {
+      if (st.piece === undefined) return;
+      if (instances === undefined) bodyPieces.push(st.piece);
+      else pods.add(instances, st.piece);
+    };
     switch (c.kind) {
       case 'noseCone':
       case 'transition': {
-        if (st.piece !== undefined) bodyPieces.push(st.piece);
+        addPiece();
         if (st.term !== undefined && !reverse) {
           let term = { cnAlpha: st.term.cnAlpha, cp: pos + st.term.cpX };
           let label = c.kind === 'noseCone' ? 'nose cone' : 'transition';
@@ -518,7 +577,7 @@ function normalForceLargeAngle(
         break;
       }
       case 'bodyTube': {
-        if (st.piece !== undefined) bodyPieces.push(st.piece);
+        addPiece();
         push(
           index,
           viscousLabel,
@@ -554,10 +613,32 @@ function normalForceLargeAngle(
         let shape: number;
         let finCp: number;
         let carryCp = t.carryOver.cpX;
-        if (M >= 1) {
-          if (reverse) throw new NotImplementedError(SUPERSONIC_LARGE_ANGLE_ERROR);
+        if (M >= 1 && !reverse) {
           shape = aPrime;
           finCp = forwardCp;
+        } else if (M >= 1) {
+          // Plan 0067 (D-103): the HA-10 reverse-flow idea applied to the supersonic force: the
+          // forward slope (continuous at 90°) times α′, at the reversed planform's CP mirrored along
+          // the root chord. No sourced method covers this regime; the result lists it.
+          const reversed = reversedFin(c);
+          const r = finSetTerm(
+            reversed,
+            squareMetres(aRef),
+            mach,
+            lateralAirflowAngle,
+            options.finRollReduction,
+            aPrime,
+            transonic,
+            supersonic,
+          );
+          const rCarry = r.carryOver.cnAlpha;
+          const rFinSlope = r.cnAlpha - rCarry;
+          const reversedCp =
+            rCarry > 0 ? (r.cnAlpha * r.cpX - rCarry * r.carryOver.cpX) / rFinSlope : r.cpX;
+          warnings.push(SUPERSONIC_REVERSE_FLOW_WARNING);
+          shape = aPrime;
+          finCp = cr - reversedCp;
+          carryCp = cr - t.carryOver.cpX;
         } else if (!reverse) {
           const la = finLargeAngle(c, M, aPrime, false, forwardCp / cr);
           warnings.push(...la.warnings);
@@ -597,7 +678,7 @@ function normalForceLargeAngle(
             carry * shape,
             pos + carryCp,
           );
-        finCps.push({ fin: c, cp: pos + finCp });
+        finCps.push({ fin: c, cp: pos + finCp, count: n });
         break;
       }
       case 'innerTube':
@@ -610,8 +691,10 @@ function normalForceLargeAngle(
         break;
     }
   });
+  n = 1;
   if (reverse) {
-    // Eqs. 4.2.1.2-c and 4.2.2.2-c: (S_b/S) sin 2α′ cos(α′/2) at V_B/S_b from the nose tip.
+    // Eqs. 4.2.1.2-c and 4.2.2.2-c: (S_b/S) sin 2α′ cos(α′/2) at V_B/S_b from the nose tip, for the
+    // main body (plan 0070: a pod's reverse-flow potential term is not modelled; listed).
     const { sBase, volume } = bodyVolumeAndBase(components, bodyPieces);
     if (sBase > 0) {
       const slope = (2 * sBase) / aRef;
@@ -645,6 +728,7 @@ function normalForceLargeAngle(
     referenceDiameter: d,
     bodyPieces,
     finCps,
+    podBodies: pods.bodies(),
   };
 }
 
@@ -703,11 +787,28 @@ const REVERSED_FIN_CACHE = new WeakMap<TrapezoidFinSetComponent, TrapezoidFinSet
  */
 export function pitchDampingMoment(
   bodyPieces: readonly BodyPiece[],
-  finCps: readonly { fin: TrapezoidFinSetComponent; cp: number }[],
+  finCps: readonly { fin: TrapezoidFinSetComponent; cp: number; count?: number }[],
   cg: number,
   density: number,
   transverseRate: number,
+  podBodies: readonly { pieces: readonly BodyPiece[]; count: number }[] = [],
 ): number {
+  // Plan 0070: each pod's body is a body of its own about the same CG, once per pod.
+  let moment = bodyPitchDamping(bodyPieces, cg) * density * transverseRate ** 2;
+  for (const pod of podBodies) {
+    moment += pod.count * bodyPitchDamping(pod.pieces, cg) * density * transverseRate ** 2;
+  }
+  for (const { fin, cp, count } of finCps) {
+    const aFin = finPlanform(fin).area;
+    const xi = Math.abs(cp - cg);
+    moment +=
+      (count ?? 1) * 0.3 * density * Math.min(fin.count, 4) * aFin * xi ** 3 * transverseRate ** 2;
+  }
+  return finiteResult('pitch damping moment', moment);
+}
+
+/** Eq. (3.58) for one body: 0.275 (r̄_fore l_fore⁴ + r̄_aft l_aft⁴), to multiply by ρ ω². */
+function bodyPitchDamping(bodyPieces: readonly BodyPiece[], cg: number): number {
   let foreLength = 0;
   let foreRadiusSum = 0;
   let aftLength = 0;
@@ -729,17 +830,7 @@ export function pitchDampingMoment(
   }
   const foreRadius = foreLength > 0 ? foreRadiusSum / foreLength : 0;
   const aftRadius = aftLength > 0 ? aftRadiusSum / aftLength : 0;
-  let moment =
-    0.275 *
-    density *
-    (foreRadius * foreLength ** 4 + aftRadius * aftLength ** 4) *
-    transverseRate ** 2;
-  for (const { fin, cp } of finCps) {
-    const aFin = finPlanform(fin).area;
-    const xi = Math.abs(cp - cg);
-    moment += 0.3 * density * Math.min(fin.count, 4) * aFin * xi ** 3 * transverseRate ** 2;
-  }
-  return finiteResult('pitch damping moment', moment);
+  return 0.275 * (foreRadius * foreLength ** 4 + aftRadius * aftLength ** 4);
 }
 
 /** AERO-5 subsonic form: N (2π/β)(ω/v₀) q I₂ with I₂ of (3.70). */
@@ -790,7 +881,10 @@ export function rollDampingMoment(
   airspeed: number,
   rollRate: number,
 ): number {
-  if (rollRate === 0 || airspeed === 0) return 0;
+  // Plan 0065: the moment is N (2π/β) (ω/v₀) q Σ = N (2π/β) ω ½ρ v₀ Σ, which goes to 0 with v₀.
+  // At an airspeed so small that q underflows to 0 (below about 1e-154 m/s, the first instant off
+  // a still rail) it is below 1e-150 N·m, 0 in float64; dividing by v₀ there would give ∞ × 0.
+  if (rollRate === 0 || airspeed === 0 || dynamicPressure === 0) return 0;
   const M: number = mach;
   const r = rollRate / airspeed;
   let moment = 0;
@@ -840,14 +934,20 @@ export function aerodynamicForcesAndMoments(input: AeroInputs): AeroResult {
     input.cg,
     input.density,
     transverse,
+    nf.podBodies,
   );
   const dampN: Vec3 =
     transverse === 0
       ? { x: 0, y: 0, z: 0 }
       : { x: 0, y: (-pitchDamping * w.y) / transverse, z: (-pitchDamping * w.z) / transverse };
-  const fins = input.components
-    .map((p) => p.component)
-    .filter((c): c is TrapezoidFinSetComponent => c.kind === 'finSet');
+  // Plan 0070: a pod set's fins once per pod, each about its own pod's axis (listed: about the
+  // rocket's axis their damping is larger).
+  const fins = input.components.flatMap((p) => {
+    const c = p.component;
+    return c.kind === 'finSet'
+      ? Array.from({ length: p.instances?.count ?? 1 }, (): TrapezoidFinSetComponent => c)
+      : [];
+  });
   const rollDamping = rollDampingMoment(fins, input.mach, q, input.airspeed, w.x);
   const pitchDampingCoefficient = pitchDampingMoment(
     nf.bodyPieces,
@@ -855,6 +955,7 @@ export function aerodynamicForcesAndMoments(input: AeroInputs): AeroResult {
     input.cg,
     input.density,
     1,
+    nf.podBodies,
   );
   const rollDampingCoefficient = rollDampingMoment(fins, input.mach, q, input.airspeed, 1);
   const warnings = [...nf.warnings];
