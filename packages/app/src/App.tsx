@@ -30,6 +30,7 @@ import type { FileNotice } from './components/FilesMenu.js';
 import { LaunchEditor } from './components/LaunchEditor.js';
 import { MOTOR_SELECTION_ID, MotorPanel } from './components/MotorPanel.js';
 import { RecoveryEditor } from './components/RecoveryEditor.js';
+import { StagesEditor } from './components/StagesEditor.js';
 import { keyValueStore } from './motors/library.js';
 import { browserServices, ServicesContext, type Services } from './state/services.js';
 import { SideView } from './components/SideView.js';
@@ -362,6 +363,7 @@ export function App(props: AppProps): JSX.Element {
                 </p>
               )}
               <AsBuiltEditor />
+              <StagesEditor />
             </section>
           </>
         );

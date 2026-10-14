@@ -22,6 +22,7 @@ import {
   STANDARD_GRAVITY_MODEL,
   totalImpulse,
   OPENROCKET_REFERENCE_GRAVITY_45N,
+  type CentreOfPressureResult,
   type FlightResult,
   type FlightVehicle,
   type MotorMass,
@@ -343,6 +344,79 @@ function designVehicleStages(
     recoveryStage: design.recovery.map((d) => d.stage ?? 0),
     ...(design.stages === undefined ? {} : { names: design.stages.map((s) => s.name) }),
   };
+}
+
+/** Plan 0064: the stability of one configuration of a staged design, stages 0 to `stage` together. */
+export interface StageConfigurationStability {
+  /** The configuration's bottom stage: stages 0 to `stage` fly together. */
+  readonly stage: number;
+  readonly centreOfPressure: CentreOfPressureResult;
+  /** Every attached motor loaded: the configuration as its bottom stage lights. */
+  readonly cgLoaded: Metres;
+  readonly marginLoaded: number;
+  /** Its bottom stage's motors spent, the stages above still loaded: as that stage burns out. */
+  readonly cgSpent: Metres;
+  readonly marginSpent: number;
+  readonly loaded: StabilityAssessment;
+  readonly spent: StabilityAssessment;
+  /** True when no attached motor: both CGs are the configuration's empty parts. */
+  readonly noMotor: boolean;
+}
+
+/**
+ * Plan 0064: each configuration a staged design flies in, the whole stack first and the top stage
+ * alone last: the CP of the attached parts (BAR-9, as designStability) and the CG with the bottom
+ * stage's motors loaded and spent, the motors above loaded. A one-stage design has one
+ * configuration, the figures of designStability.
+ */
+export function designStageStability(
+  design: RocketDesign,
+  mode: PhysicsMode = 'displayed',
+  machNumber: Mach = DESIGN_MACH,
+): StageConfigurationStability[] {
+  const all = designPlacedComponents(design);
+  const motors = designMotors(design);
+  const out: StageConfigurationStability[] = [];
+  for (let k = designStageCount(design) - 1; k >= 0; k--) {
+    const parts = all.filter((_, i) => (design.components[i]?.stage ?? 0) <= k);
+    if (parts.length === 0) continue;
+    const attached = motors.filter((m) => m.stage <= k);
+    const cp = centreOfPressure(parts, {
+      mach: machNumber,
+      rollAngle: 'worst',
+      finRollReduction: mode === 'displayed',
+      ...(design.referenceDiameter === undefined
+        ? {}
+        : { referenceDiameter: design.referenceDiameter }),
+    });
+    const cgWith = (spent: boolean): Metres => {
+      const masses = attached.flatMap((m) => {
+        const mass = motorMassOf(m, spent && m.stage === k ? 'burnout' : 'liftoff');
+        return mass === undefined ? [] : [mass];
+      });
+      return (
+        masses.length <= 1
+          ? rocketMassProperties(parts, masses[0])
+          : combineRocketMotors(structuralMassParts(parts), masses)
+      ).cg;
+    };
+    const cgLoaded = cgWith(false);
+    const cgSpent = cgWith(true);
+    const marginLoaded = stabilityMargin(cp.cp, cgLoaded, cp.referenceDiameter);
+    const marginSpent = stabilityMargin(cp.cp, cgSpent, cp.referenceDiameter);
+    out.push({
+      stage: k,
+      centreOfPressure: cp,
+      cgLoaded,
+      marginLoaded,
+      cgSpent,
+      marginSpent,
+      loaded: assessMargin(marginLoaded, design.stabilityThresholds),
+      spent: assessMargin(marginSpent, design.stabilityThresholds),
+      noMotor: attached.length === 0,
+    });
+  }
+  return out;
 }
 
 /** The simulated vehicle. Throws DesignError when no motor is selected. */

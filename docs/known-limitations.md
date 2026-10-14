@@ -437,7 +437,7 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 
 - **Separation is instantaneous**, with no separation impulse; the separated stages' own flight (apogee, descent, landing) is not simulated (a version-1 non-goal, D-091).
 - **Interstage aerodynamics** just before and after separation are not represented: each configuration is its attached parts alone.
-- **Imports and editing.** Design files hold stages (schema 2, D-097), and staged `.ork` files import (D-098). Stage editing in the app and the MCP server is plan 0064 part 3.
+- **Imports and editing.** Design files hold stages (schema 2, D-097). Staged `.ork` files import (D-098), and stages are edited in the MCP server (D-099) and the app (D-100). The app's motor view shows one mount per stage; a second motor in a stage (an air start) comes from a file or the MCP server.
 - **A stage switched off between stages that fly** (an `.ork` configuration) has its gap closed: the stages below move up, since the model needs one continuous body. OpenRocket keeps the gap, with its CG further aft and extra drag (listed as major).
-- **Stability figures of a staged design** are the whole stack's: liftoff with every motor loaded, burnout with every motor spent. The sustainer alone at its own ignition and burnout is not yet shown; the in-flight margin check covers the flight.
+- **Stability of a staged design.** The design's CP and CG figures are the whole stack's. Each configuration's margin is listed: its bottom stage's motors loaded, then spent, with the motors above loaded. The burnout gauge shows the top stage alone. The moments between these are covered by the flight's in-flight margin check (plan 0030).
 - **Several motors in the stage below.** An ignition at the burnout or ejection charge of the stage below follows that stage's first motor (`motorMount` first, then the additional mounts in order). OpenRocket's "first burnout of previous stage" is the earliest of them.

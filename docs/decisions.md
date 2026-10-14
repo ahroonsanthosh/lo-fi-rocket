@@ -800,3 +800,23 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - 24 tools (the bundle's smoke test).
   - `update_part` no longer drops a part's stage (it rebuilt parts without it since schema 2).
+
+## D-100 (2026-10-14): Editing stages in the app, and each configuration's stability
+
+- **Decision:**
+  - **Editing.** The app edits stages through pure operations in the formats package (`stages.ts`):
+    - add a stage below the bottom one, separating when the stage above lights (the usual setting, shown and editable);
+    - remove the bottom stage only when it holds no part or device, saying what it still holds rather than moving or deleting anything;
+    - move a part to a stage;
+    - set one stage's motor mount, keeping the others.
+  - **One stage keeps no stage fields.** Back at one stage, the design drops every stage field, so its file is as before staging.
+  - **Stability per configuration.** `designStageStability` gives each configuration the rocket flies in:
+    - stages 0 to k together, from the whole stack to the top stage alone;
+    - the CP of the attached parts (BAR-9, with the design's reference diameter if fixed);
+    - the CG with the configuration's bottom stage's motors loaded and spent, the motors above loaded.
+  - **The gauges.** The liftoff gauge is unchanged (the whole stack, loaded). For a staged rocket, the burnout gauge shows the top stage alone at its burnout.
+- **Why:** The whole stack with every motor spent never flies, so a burnout margin from it would mislead. The configurations are the states that do fly, and the flight's own in-flight margin check still covers the moments between them. Refusing to remove a stage that holds parts keeps every edit reversible and visible.
+- **Consequences:**
+  - A motor that can never light (for example the sustainer once a booster stage without a motor is added) is a danger in the checks before any flight, once, not repeated by the flight check. A motor too wide for its tube is checked for every stage's mount.
+  - The motor view edits one stage at a time.
+  - A second motor in one stage (an air start) comes from a file or the MCP server; the app shows the stage's first mount.

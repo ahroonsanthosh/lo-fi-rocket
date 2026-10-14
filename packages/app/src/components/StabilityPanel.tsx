@@ -1,5 +1,12 @@
 import { PhysicsError } from '@lo-fi-rocket/physics';
-import { designMassProperties, designStability, type DesignStability } from '@lo-fi-rocket/formats';
+import {
+  designMassProperties,
+  designStability,
+  designStageStability,
+  type DesignStability,
+  type RocketDesign,
+  type StageConfigurationStability,
+} from '@lo-fi-rocket/formats';
 import { FIGURE_DISPLAY, Panel, Term } from '@lo-fi-rocket/ui';
 import type { JSX } from 'react';
 import { useStore } from '../state/store.js';
@@ -7,6 +14,14 @@ import { formatQuantity } from '../units/display.js';
 
 export interface Figures {
   readonly stability: DesignStability | undefined;
+  /**
+   * Plan 0064: for a staged design, the top stage alone as it burns out (the burnout that flies;
+   * the whole stack's burnout figure never does) and its name.
+   */
+  readonly topStageBurnout?: {
+    readonly name: string;
+    readonly configuration: StageConfigurationStability;
+  };
   readonly massLiftoff: number | undefined;
   readonly massEmpty: number | undefined;
   readonly length: number;
@@ -37,7 +52,21 @@ export function computeFigures(design: Parameters<typeof designStability>[0]): F
     const massLiftoff: number = stability.noMotor
       ? massEmpty
       : designMassProperties(design, 'liftoff').mass;
-    return { stability, massLiftoff, massEmpty, length, error: undefined };
+    const stages = design.stages;
+    const top =
+      stages !== undefined && stages.length > 1
+        ? designStageStability(design).find((c) => c.stage === 0)
+        : undefined;
+    return {
+      stability,
+      ...(top === undefined
+        ? {}
+        : { topStageBurnout: { name: stages?.[0]?.name ?? 'top stage', configuration: top } }),
+      massLiftoff,
+      massEmpty,
+      length,
+      error: undefined,
+    };
   } catch (error) {
     if (error instanceof PhysicsError) {
       return {
@@ -100,7 +129,51 @@ export function StabilityDetails({ figures }: { readonly figures: Figures }): JS
         Barrowman method with Niskanen’s extensions, worst roll angle, roll-angle reduction applied
         (D-016).
       </p>
+      <StageConfigurations design={state.design} />
     </>
+  );
+}
+
+/**
+ * Plan 0064: a staged rocket's figures above are the whole stack's; each configuration it flies in
+ * has its own margin, as its bottom stage lights and as it burns out.
+ */
+function StageConfigurations({ design }: { readonly design: RocketDesign }): JSX.Element | null {
+  const stages = design.stages;
+  if (stages === undefined || stages.length < 2) return null;
+  let list: ReturnType<typeof designStageStability>;
+  try {
+    list = designStageStability(design);
+  } catch (error) {
+    if (error instanceof PhysicsError) return null;
+    throw error;
+  }
+  const d = FIGURE_DISPLAY.stabilityMargin.decimals;
+  const name = (k: number): string => stages[k]?.name ?? `stage ${String(k + 1)}`;
+  return (
+    <div className="stage-configurations">
+      <h3>Each stage configuration</h3>
+      <ul>
+        {list.map((c) => (
+          <li key={String(c.stage)}>
+            {c.stage === 0
+              ? `${name(0)} alone`
+              : `${name(0)} with ${Array.from({ length: c.stage }, (_, j) => name(j + 1)).join(', ')}`}
+            :{' '}
+            {c.noMotor
+              ? `${c.marginLoaded.toFixed(d)} calibers (no motor)`
+              : `${c.marginLoaded.toFixed(d)} calibers as ${name(c.stage)} lights, ${c.marginSpent.toFixed(d)} at its burnout`}{' '}
+            (
+            {c.loaded.level === 'typical' && c.spent.level === 'typical'
+              ? 'typical'
+              : [c.loaded.level, c.spent.level].includes('unstable')
+                ? 'likely unstable'
+                : 'may be overstable'}
+            )
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

@@ -18,7 +18,14 @@ import {
   type SimulationSettings,
   type StabilityThresholds,
   type WarningThresholds,
+  type DesignStage,
+  stageRemovalProblem,
+  withBottomStageRemoved,
+  withComponentStage,
   withoutComponent,
+  withStageAdded,
+  withStageMotorMount,
+  withStages,
 } from '@lo-fi-rocket/formats';
 import type { UnitSystem } from '../units/display.js';
 
@@ -48,6 +55,16 @@ export type Action =
   | { readonly type: 'remove-component'; readonly id: string }
   | { readonly type: 'move-component'; readonly id: string; readonly direction: -1 | 1 }
   | { readonly type: 'set-motor-mount'; readonly mount: MotorMount | undefined }
+  // Plan 0064: the stages and each stage's motor mount.
+  | { readonly type: 'set-stages'; readonly stages: readonly DesignStage[] }
+  | { readonly type: 'add-stage' }
+  | { readonly type: 'remove-bottom-stage' }
+  | { readonly type: 'set-component-stage'; readonly id: string; readonly stage: number }
+  | {
+      readonly type: 'set-stage-motor-mount';
+      readonly stage: number;
+      readonly mount: MotorMount | undefined;
+    }
   | { readonly type: 'add-recovery'; readonly id: string }
   | {
       readonly type: 'update-recovery';
@@ -144,6 +161,19 @@ export function reduce(state: AppState, action: Action): AppState {
       else (next as { motorMount?: MotorMount }).motorMount = action.mount;
       return withDesign(state, next);
     }
+    case 'set-stages':
+      return withDesign(state, withStages(d, action.stages));
+    case 'add-stage':
+      return withDesign(state, withStageAdded(d));
+    case 'remove-bottom-stage':
+      // Only an empty bottom stage goes (the editor says why otherwise).
+      return stageRemovalProblem(d) === undefined
+        ? withDesign(state, withBottomStageRemoved(d))
+        : state;
+    case 'set-component-stage':
+      return withDesign(state, withComponentStage(d, action.id, action.stage));
+    case 'set-stage-motor-mount':
+      return withDesign(state, withStageMotorMount(d, action.stage, action.mount));
     case 'add-recovery': {
       const device = defaultRecoveryDevice(action.id, d);
       return {

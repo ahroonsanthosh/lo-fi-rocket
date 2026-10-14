@@ -81,7 +81,12 @@ Part 2 is two pull requests: 2a (the engine's further events and the design file
 
 ## 4. App and the MCP server (part 3)
 
-- **App.** Each part's stage is shown and editable. The motor view lists one motor mount per stage with its ignition event, and the launch view shows each stage's separation.
+- **App (part 3b, D-100).**
+  - A "Stages" section in the airframe view: each stage's name and, below the top one, its separation event, delay and altitude. A stage is added below the bottom one, and the bottom stage is removed only once it holds nothing (it says what it still holds).
+  - The part and recovery editors have a stage choice, and the motor view a stage selector that edits that stage's mount, with its ignition event and delay.
+  - The stability details list each configuration the rocket flies in (the whole stack, then down to the top stage alone), with the margin as its bottom stage lights and at that stage's burnout.
+  - The burnout gauge of a staged rocket shows the top stage alone at its burnout, since the whole stack's burnout never flies.
+  - The editing operations are pure functions in the formats package (`stages.ts`), with hand checks. The sustainer-alone configuration of a two-stage rocket equals the one-stage rocket's figures exactly.
 - **MCP server (part 3a, D-099).**
   - A new tool, `set_stages`, names the stages, top first, with each lower stage's separation; a delay left out is 0 s, recorded as "not given".
   - `add_part`, `update_part` and `set_recovery` take a stage; `update_part` keeps a part's stage unless it is moved.
