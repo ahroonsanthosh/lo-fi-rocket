@@ -977,12 +977,15 @@ export class Session {
             name: `${resolved.motor.definition.manufacturer} ${resolved.motor.definition.designation}`,
             source: resolved.motor.source,
             downloaded: resolved.downloaded,
+            // A plugged motor the user wrote ("C6-P") is given; only a missing delay is "not given".
             delay:
-              placed?.ejectionDelay === undefined
-                ? resolved.parsed.delayCode === undefined
-                  ? 'plugged (not given)'
-                  : `plugged: the delay code "${resolved.parsed.delayCode}" is not a time, give the delay in seconds`
-                : `${String(placed.ejectionDelay)} s`,
+              placed?.ejectionDelay !== undefined
+                ? `${String(placed.ejectionDelay)} s`
+                : delay === 'plugged'
+                  ? 'plugged'
+                  : resolved.parsed.delayCode === undefined
+                    ? 'plugged (not given)'
+                    : `plugged: the delay code "${resolved.parsed.delayCode}" is not a time, give the delay in seconds`,
           };
         }
       }

@@ -170,6 +170,15 @@ describe('build_and_fly (plan 0079)', () => {
     );
   });
 
+  it('says a plugged motor the user wrote is plugged, not "not given"', async () => {
+    const c = await connect();
+    const res = await call(c, 'build_and_fly', examplePaste({ name: 'Estes D12-P', overhang: 0 }));
+    expect(res.ok, res.text).toBe(true);
+    expect(get(res.json, 'motor', 'delay')).toBe('plugged');
+    const whats = (res.json['approximations'] as { what: string }[]).map((a) => a.what);
+    expect(whats).not.toContain('ejection delay not given');
+  });
+
   it('returns the stability without a flight when the motor cannot be found', async () => {
     const c = await connect();
     const res = await call(c, 'build_and_fly', examplePaste({ name: 'K550-6' }));
