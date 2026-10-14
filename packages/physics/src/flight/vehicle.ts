@@ -45,9 +45,55 @@ export type MotorSource =
       readonly burnTime: Seconds;
     };
 
+/**
+ * Plan 0064 (D-091): a motor of a staged vehicle and the event that ignites it. Niskanen (2009)
+ * §4.2.6 and Table 4.2 p. 69: a motor ignites at launch, at another motor's burnout or at another
+ * motor's ejection charge, each with a delay.
+ */
+export interface StagedMotor {
+  readonly motor: Extract<MotorSource, { kind: 'definition' }>;
+  /** The stage the motor belongs to; 0 is the top stage. */
+  readonly stage: number;
+  readonly ignition: {
+    readonly event: 'launch' | 'burnout' | 'ejection';
+    /** For 'burnout' and 'ejection': the index, in `motors`, of the motor whose event it is. */
+    readonly of?: number;
+    readonly delay: Seconds;
+  };
+  /** A name for events and messages ("Booster H128W"). */
+  readonly name?: string;
+}
+
+/**
+ * When a stage separates (plan 0064): at the ignition of the stage above it, at its own motor's
+ * burnout or ejection charge, at launch, or never; then a delay. The thesis has no separation
+ * event; this set follows the owner's decision D-091 and OpenRocket's file format.
+ */
+export type SeparationEvent = 'upper-ignition' | 'burnout' | 'ejection' | 'launch' | 'never';
+
+/**
+ * The stages of a multi-stage vehicle (plan 0064). Stage 0 is the top stage; a separating stage
+ * leaves the vehicle with every stage below it, its parts, motors and recovery devices.
+ */
+export interface VehicleStages {
+  /** The stage of each entry of `components`. */
+  readonly componentStage: readonly number[];
+  /** Every motor of the vehicle; with `stages`, the vehicle's `motor` is not used. */
+  readonly motors: readonly StagedMotor[];
+  /** Index = stage number. Stage 0 never separates; its entry is not read. */
+  readonly separation: readonly { readonly event: SeparationEvent; readonly delay: Seconds }[];
+  /** The stage of each entry of `recovery`; absent means every device is on the top stage. */
+  readonly recoveryStage?: readonly number[];
+  /** Stage names, index = stage number, for events and messages. */
+  readonly names?: readonly string[];
+}
+
 export interface FlightVehicle {
   readonly components: readonly PlacedComponent[];
+  /** The motor; for a vehicle with `stages`, the motors are there and this is not used. */
   readonly motor: MotorSource;
+  /** Multi-stage vehicles only (plan 0064); absent for a one-stage rocket. */
+  readonly stages?: VehicleStages;
   readonly recovery: readonly RecoveryDevice[];
   /** Surface roughness height for the skin friction (DRAG-2). */
   readonly roughnessHeight: Metres;

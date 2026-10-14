@@ -161,6 +161,7 @@ export {
 export {
   clusterSums,
   combineRocket,
+  combineRocketMotors,
   withAsBuilt,
   type AsBuilt,
   motorMassPart,
@@ -298,7 +299,10 @@ export type {
   IntegratorOptions,
   MotorSource,
   RecoveryDevice,
+  SeparationEvent,
   SimulationOptions,
+  StagedMotor,
+  VehicleStages,
 } from './flight/vehicle.js';
 export { DEFAULT_MINIMUM_STABILITY_MARGIN } from './flight/vehicle.js';
 export {

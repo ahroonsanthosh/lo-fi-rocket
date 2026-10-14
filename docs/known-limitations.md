@@ -432,3 +432,9 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 - **Defaults.** Values Claude does not give take the app's editing defaults and are listed as approximations; their impact ratings are rules of this app (major for the outline, moderate for masses, minor for lugs and buttons), not measured errors.
 - **Launch settings not given** (site, pad temperature and pressure, rail, wind) are reported with every result but do not lower the confidence rating, as in the app.
 - **Unsigned extension.** The Claude Desktop extension is not code-signed (D-094); its SHA-256 is published beside it. There is no release channel other than the site, which updates on every merge.
+
+## Multi-stage flight (plan 0064, D-096)
+
+- **Separation is instantaneous**, with no separation impulse; the separated stages' own flight (apogee, descent, landing) is not simulated (a version-1 non-goal, D-091).
+- **Interstage aerodynamics** just before and after separation are not represented: each configuration is its attached parts alone.
+- **Design files and imports** cannot hold stages until plan 0064 part 2; until then the engine's staging is reached only through the physics package.
