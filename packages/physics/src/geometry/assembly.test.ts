@@ -11,8 +11,12 @@ import { describe, expect, it } from 'vitest';
 import { InvalidInputError } from '../errors.js';
 import { kilograms, kilogramsPerCubicMetre, metres } from '../units/si.js';
 import {
+  combineRocket,
+  combineRocketMotors,
   overriddenMassProperties,
   rocketMassProperties,
+  structuralMassParts,
+  type MotorMass,
   type PlacedComponent,
 } from './assembly.js';
 import { componentMassProperties } from './components.js';
@@ -116,5 +120,39 @@ describe('mass and CG overrides against OpenRocket (D-073)', () => {
       rocketMassProperties(probe()).mass - componentMassProperties(nose).mass,
       15,
     );
+  });
+});
+
+describe('combineRocketMotors (GEO-12, plan 0064)', () => {
+  const tube = structuralMassParts([
+    {
+      position: metres(0),
+      component: {
+        kind: 'bodyTube',
+        length: metres(1),
+        outerRadius: metres(0.025),
+        wallThickness: metres(0.001),
+        density: kilogramsPerCubicMetre(700),
+      },
+    },
+  ]);
+  const motor = (mass: number, aftEnd: number): MotorMass => ({
+    mass: kilograms(mass),
+    length: metres(0.1),
+    diameter: metres(0.024),
+    aftEnd: metres(aftEnd),
+  });
+  it('is combineRocket exactly for one motor', () => {
+    expect(combineRocketMotors(tube, [motor(0.1, 1)])).toEqual(combineRocket(tube, motor(0.1, 1)));
+    expect(combineRocketMotors(tube, [])).toEqual(combineRocket(tube));
+  });
+  it('sums two motors by hand', () => {
+    // Tube: π (0.025² − 0.024²) × 1 × 700 = 0.107757 kg at x = 0.5 m. Motors of 0.1 kg at x = 0.95 m
+    // (aft end 1.0, mid-length) and 0.05 kg at x = 0.45 m (aft end 0.5): m = 0.257757 kg,
+    // x̄ = (0.107757 × 0.5 + 0.1 × 0.95 + 0.05 × 0.45)/0.257757 = 0.171378/0.257757 = 0.664884 m
+    // (checked in an independent script).
+    const r = combineRocketMotors(tube, [motor(0.1, 1), motor(0.05, 0.5)]);
+    expect(r.mass).toBeCloseTo(0.257757, 6);
+    expect(r.cg).toBeCloseTo(0.664884, 5);
   });
 });

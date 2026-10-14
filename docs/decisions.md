@@ -717,3 +717,26 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - The example and all five reference rockets round-trip exactly (tests).
   - A 64 MiB deflate bomb in a link stops at 4 MiB within the time limit (test).
   - The end-to-end test opens a link in the built app and checks that the address is cleared and the design survives a reload.
+
+## D-096 (2026-10-14): Staged flight in the engine: motors ignite in turn, separated stages leave
+
+- **Decision:** `FlightVehicle` may carry `stages` (plan 0064 part 1).
+  - **Contents:** the stage of each part and recovery device (0 is the top stage); the motors, each with its stage and its ignition event; and each stage's separation event and delay.
+  - **Ignition.** A motor ignites at launch, at another motor's burnout or at another motor's ejection charge, each with a delay (Niskanen Table 4.2 p. 69).
+  - **Separation.** A stage separates at the ignition of the stage above it, at its own motor's burnout or ejection charge, at launch, or never, with a delay. Its parts, motors and recovery devices then leave the vehicle with every stage below it, at once. The state of motion carries on; the attached parts' mass properties, aerodynamics, reference diameter (unless fixed by the user), length and base motor are recomputed.
+  - **Mass.** It combines every attached motor (`combineRocketMotors`, GEO-12): unignited ones loaded, burning ones by their mass rule, spent ones at their burnout mass.
+  - **Phases and events.**
+    - Ignition returns a coasting rocket to powered flight.
+    - `ignition` and `separation` are new events; `burnout` and `ejection-charge` occur per motor.
+    - The summary's burnout is the last motor's. Its ejection charge is the top stage's, since a lower stage's charge is a staging charge meant to fire while climbing.
+    - A recovery device on the ejection charge opens at its own stage's charge.
+  - **Listed approximations.** Three are listed with every staged result (all minor): instantaneous separation with no impulse, the separated stages' own flight not simulated, and interstage aerodynamic interference not represented.
+- **Why:** The owner's decision D-091. Table 4.2 gives the ignition events. The thesis has no separation event, so the separation set follows OpenRocket's file format (`upperignition`, `burnout`, `ejection`, `launch`, `never`), which the importer will read in part 2. What OpenRocket does at separation will be measured as a black box there.
+- **Alternatives:**
+  - Carrying the spent stage to apogee (option (a) of the open question, rejected by the owner).
+  - Simulating the booster's descent (a later step: a second flight path in the results).
+- **Consequences:**
+  - Without `stages` every result is bit-identical (the golden tests pass unchanged).
+  - A vehicle with one stage and one launch motor flies exactly as the unstaged vehicle, aerodynamics on (test).
+  - Two-stage flights in vacuum match the piecewise closed form to 1e-4 m. This covers ignition at burnout, at an ejection charge with a delay after a coast, separation at burnout before ignition, and no separation (tests).
+  - The mass never rises during a flight, over random delays (property test).

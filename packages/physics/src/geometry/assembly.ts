@@ -262,6 +262,17 @@ export function combineRocket(
   return finishRocket(parts);
 }
 
+/**
+ * Plan 0064: structural parts with several motors (GEO-12), the motors in the order given. With one
+ * motor this is `combineRocket` exactly, part for part and in the same order.
+ */
+export function combineRocketMotors(
+  structure: readonly MassProperties[],
+  motors: readonly MotorMass[],
+): RocketMassProperties {
+  return finishRocket([...structure, ...motors.map(motorMassPart)]);
+}
+
 export function rocketMassProperties(
   components: readonly PlacedComponent[],
   motor?: MotorMass,

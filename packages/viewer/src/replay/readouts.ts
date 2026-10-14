@@ -86,6 +86,8 @@ export const EVENT_LABELS: Readonly<Record<FlightEventKind, string>> = {
   landing: 'Landing',
   'max-time': 'Maximum time',
   'model-limit': 'Model limit',
+  ignition: 'Ignition',
+  separation: 'Stage separation',
 };
 
 /**

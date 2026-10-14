@@ -31,8 +31,10 @@ import {
 import {
   clusterSums,
   combineRocket,
+  combineRocketMotors,
   structuralMassParts,
   type MotorMass,
+  type PlacedComponent,
 } from '../geometry/assembly.js';
 import { validateComponentFit } from '../geometry/fit.js';
 import type { MassProperties } from '../geometry/revolution.js';
@@ -71,6 +73,7 @@ import {
   DEFAULT_MINIMUM_STABILITY_MARGIN,
   type DragCurve,
   type FlightVehicle,
+  type MotorSource,
   type RecoveryDevice,
   type SimulationOptions,
 } from './vehicle.js';
@@ -139,7 +142,10 @@ export type FlightEventKind =
   | 'altitude'
   | 'landing'
   | 'max-time'
-  | 'model-limit';
+  | 'model-limit'
+  // Plan 0064: a staged vehicle's motor ignitions and stage separations.
+  | 'ignition'
+  | 'separation';
 
 export interface FlightEvent {
   readonly kind: FlightEventKind;
@@ -358,24 +364,45 @@ export interface StepCheck {
   readonly maxPitchAmplitudeLossPerStep: number;
 }
 
+/**
+ * One motor during a run. A one-stage vehicle has one, ignited at launch; a staged vehicle has one
+ * per entry of its `stages.motors` (plan 0064), ignited by its event.
+ */
+interface MotorRuntime {
+  readonly source: MotorSource;
+  readonly stage: number;
+  /** For events and messages; empty for a one-stage vehicle's motor. */
+  readonly label: string;
+  readonly burn: number;
+  ignitedAt: number | undefined;
+  /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
+  burnedOut: boolean;
+  /** False once the motor's stage has separated. */
+  attached: boolean;
+}
+
+/** The parts still attached (plan 0064): all of them for a one-stage vehicle. */
+interface Configuration {
+  components: readonly PlacedComponent[];
+  /** Index of each attached part in the vehicle's `components`. */
+  indices: ReadonlySet<number>;
+  structure: readonly MassProperties[];
+  rocketLength: number;
+  referenceDiameter: number;
+}
+
 interface Context {
   readonly vehicle: FlightVehicle;
   readonly options: SimulationOptions;
-  readonly structure: readonly MassProperties[];
   readonly atmosphere: (z: Metres) => StandardAtmosphereState;
   readonly railDirection: Vec3;
   readonly railLength: number;
-  readonly rocketLength: number;
-  readonly referenceDiameter: number;
-  readonly burnTime: number;
-  readonly motorDiameter: number | undefined;
-  /** Motors in the cluster (plan 0057); 1 for one motor. */
-  readonly motorCount: number;
+  /** Changed only by a stage separation. */
+  readonly config: Configuration;
+  readonly motors: readonly MotorRuntime[];
   /** The wind for this flight (ENV-1, ENV-3 to ENV-5), built once so every stage reads the same gust. */
   readonly wind: WindField;
   readonly deployedArea: { area: number }; // Σ C_D A of deployed devices (mutable through the run)
-  /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
-  readonly motorState: { burnedOut: boolean };
   /** The large-angle method in effect (D-070): the requested one, or 'linear' when a fin set is not covered. */
   readonly largeAngleMethod: LargeAngleMethod;
 }
@@ -399,20 +426,48 @@ function pack(p: Vec3, v: Vec3, q: Quaternion, w: Vec3): number[] {
   return [p.x, p.y, p.z, v.x, v.y, v.z, q.w, q.x, q.y, q.z, w.x, w.y, w.z];
 }
 
-function motorMass(ctx: Context, t: number): MotorMass | undefined {
-  const m = ctx.vehicle.motor;
+/** A motor's mass at time t of the flight; unignited motors are loaded (plan 0064). */
+function motorMass(motor: MotorRuntime, t: number): MotorMass | undefined {
+  const m = motor.source;
   if (m.kind !== 'definition') return undefined;
-  const one = motorMassAt(m.definition, seconds(Math.max(0, t)), m.aftEnd);
+  const since = motor.ignitedAt === undefined ? 0 : Math.max(0, t - motor.ignitedAt);
+  const one = motorMassAt(m.definition, seconds(since), m.aftEnd);
   return m.cluster === undefined ? one : { ...one, cluster: m.cluster };
 }
 
-function thrustNow(ctx: Context, t: number): number {
-  const m = ctx.vehicle.motor;
-  if (m.kind === 'ideal') return t >= 0 && t <= m.burnTime ? m.thrust : 0;
+/** GEO-12: the attached parts and every attached motor (plan 0064); one motor exactly as before. */
+function rocketMass(ctx: Context, t: number): ReturnType<typeof combineRocket> {
+  const masses: MotorMass[] = [];
+  for (const motor of ctx.motors) {
+    if (!motor.attached) continue;
+    const m = motorMass(motor, t);
+    if (m !== undefined) masses.push(m);
+  }
+  return masses.length <= 1
+    ? combineRocket(ctx.config.structure, masses[0])
+    : combineRocketMotors(ctx.config.structure, masses);
+}
+
+/** One motor's thrust at time t of the flight: 0 before its ignition, after its burnout or once separated. */
+function motorThrust(motor: MotorRuntime, t: number): number {
+  if (!motor.attached || motor.burnedOut || motor.ignitedAt === undefined) return 0;
+  const m = motor.source;
+  const since = t - motor.ignitedAt;
+  if (m.kind === 'ideal') return since >= 0 && since <= m.burnTime ? m.thrust : 0;
   // Plan 0057: a cluster's motors ignite together; their offsets are centred (or listed when not),
   // so the thrust is n times one motor's, along the axis.
-  const one = thrustAt(m.definition, seconds(Math.max(0, t)));
+  const one = thrustAt(m.definition, seconds(Math.max(0, since)));
   return m.cluster === undefined ? one : m.cluster.length * one;
+}
+
+/** The motor at the aft end of the attached vehicle: the lowest attached stage's (base drag, D-035). */
+function baseMotor(ctx: Context): MotorRuntime | undefined {
+  let base: MotorRuntime | undefined;
+  for (const motor of ctx.motors) {
+    if (!motor.attached || motor.source.kind !== 'definition') continue;
+    if (base === undefined || motor.stage > base.stage) base = motor;
+  }
+  return base;
 }
 
 function sampleFlight(
@@ -436,7 +491,7 @@ function derive(
   const altitudeAsl = (ctx.options.site.altitude as number) + s.position.z;
   const atm = ctx.atmosphere(metres(altitudeAsl));
   const wind = ctx.wind(s.position.z, Math.max(0, t));
-  const mp = combineRocket(ctx.structure, motorMass(ctx, t));
+  const mp = rocketMass(ctx, t);
   const m: number = mp.mass;
   const g = gravityAt(ctx.options.gravity, metres(altitudeAsl));
   const weight = vec3(0, 0, -m * g);
@@ -444,8 +499,10 @@ function derive(
 
   let forceWorld = weight;
   let momentBody: Vec3 = vec3(0, 0, 0);
-  const thrust =
-    phase === 'descent' || phase === 'landed' || ctx.motorState.burnedOut ? 0 : thrustNow(ctx, t);
+  const gated = phase === 'descent' || phase === 'landed';
+  let thrust = 0;
+  for (const motor of ctx.motors) thrust += gated ? 0 : motorThrust(motor, t);
+  const base = baseMotor(ctx);
   const nose =
     ctx.options.degreesOfFreedom === 3
       ? velocityAlignedNose(s.velocity, ctx.railDirection)
@@ -473,33 +530,37 @@ function derive(
       density: atm.density,
       speedOfSound: atm.speedOfSound,
       kinematicViscosity: atm.kinematicViscosity,
-      referenceLength: metres(ctx.rocketLength),
+      referenceLength: metres(ctx.config.rocketLength),
     });
-    const thrusting = thrust > 0;
+    // D-035: the base drag depends on whether the motor at the aft end is thrusting.
+    const thrusting =
+      ctx.motors.length === 1 ? thrust > 0 : base !== undefined && motorThrust(base, t) > 0;
     if (ctx.options.dragCurve !== undefined) {
       cd0 = dragCurveAt(ctx.options.dragCurve, flight.mach);
     } else {
+      const baseCount =
+        base?.source.kind === 'definition' ? clusterSums(base.source.cluster).count : 1;
       const drag = dragCoefficient({
-        components: ctx.vehicle.components,
+        components: ctx.config.components,
         mach: flight.mach,
         reynolds: flight.reynolds,
         roughnessHeight: ctx.vehicle.roughnessHeight,
-        ...(ctx.motorDiameter === undefined
+        ...(base?.source.kind !== 'definition'
           ? {}
           : {
               motor: {
-                diameter: metres(ctx.motorDiameter),
+                diameter: base.source.definition.diameter,
                 thrusting,
-                ...(ctx.motorCount === 1 || ctx.options.baseDragClusterMotors === 'one'
+                ...(baseCount === 1 || ctx.options.baseDragClusterMotors === 'one'
                   ? {}
-                  : { count: ctx.motorCount }),
+                  : { count: baseCount }),
               },
             }),
         baseDragMotorRule: ctx.options.baseDragMotorRule,
         ...(ctx.options.baseDragMethod === undefined
           ? {}
           : { baseDragMethod: ctx.options.baseDragMethod }),
-        referenceDiameter: metres(ctx.referenceDiameter),
+        referenceDiameter: metres(ctx.config.referenceDiameter),
       });
       cd0 = drag.cd0;
       warnings.push(...drag.warnings);
@@ -511,7 +572,8 @@ function derive(
       if (speed > 0) {
         const dragForce = scale(
           vAir,
-          (((-(flight.dynamicPressure as number) * (Math.PI * ctx.referenceDiameter ** 2)) / 4) *
+          (((-(flight.dynamicPressure as number) * (Math.PI * ctx.config.referenceDiameter ** 2)) /
+            4) *
             cd0) /
             speed,
         );
@@ -523,7 +585,7 @@ function derive(
       const axialSign: -1 | 0 | 1 =
         flight.airspeedBody.x < 0 ? -1 : flight.airspeedBody.x > 0 ? 1 : 0;
       const aero = aerodynamicForcesAndMoments({
-        components: ctx.vehicle.components,
+        components: ctx.config.components,
         mach: flight.mach,
         angleOfAttack: flight.angleOfAttack,
         lateralAirflowAngle: flight.lateralAirflowAngle,
@@ -536,7 +598,7 @@ function derive(
         cd0: dimensionless(cd0),
         options: {
           finRollReduction: ctx.options.finRollReduction,
-          referenceDiameter: metres(ctx.referenceDiameter),
+          referenceDiameter: metres(ctx.config.referenceDiameter),
           largeAngleMethod: ctx.largeAngleMethod,
         },
       });
@@ -546,7 +608,7 @@ function derive(
       aeroForce = norm(aero.forceBody);
       cp = aero.cp;
       // DYN-17: the linearised rates for the step check.
-      const aRef = (Math.PI * ctx.referenceDiameter ** 2) / 4;
+      const aRef = (Math.PI * ctx.config.referenceDiameter ** 2) / 4;
       const qDyn: number = flight.dynamicPressure;
       const stiffness = qDyn * aRef * aero.cnAlpha * ((aero.cp as number) - (mp.cg as number));
       const transverse = Math.hypot(wBody.y, wBody.z);
@@ -688,6 +750,8 @@ interface PendingTimed {
   readonly kind: FlightEventKind;
   readonly detail: string;
   readonly action: () => void;
+  /** The motor whose burnout or charge this is; dropped if its stage separates first (plan 0064). */
+  readonly owner?: MotorRuntime;
 }
 
 /**
@@ -716,6 +780,132 @@ function effectiveLargeAngleMethod(
   return 'datcom';
 }
 
+/** Plan 0064 (D-091): what a staged flight does not model exactly, listed with its result (rule 3). */
+export function stagingApproximations(stageCount: number): Approximation[] {
+  if (stageCount < 2) return [];
+  return [
+    {
+      subject: 'Stage separation',
+      what: 'the separation itself',
+      method:
+        'instantaneous: the separated stages leave the vehicle at the separation event, with no separation impulse and no gap in time',
+      effect:
+        'a spring or charge that pushes the stages apart, or a slow separation, is not represented; the upper stage’s flight is otherwise unchanged',
+      impact: 'minor',
+    },
+    {
+      subject: 'Stage separation',
+      what: 'the separated stages’ own flight',
+      method:
+        'not simulated (a version-1 non-goal, D-091): only the vehicle that flies on is followed',
+      effect:
+        'nothing on the upper stage’s flight; the booster’s apogee, descent and landing point are not given',
+      impact: 'minor',
+    },
+    {
+      subject: 'Stage separation',
+      what: 'the airflow between the stages just before and after separation',
+      method:
+        'each configuration is the attached parts alone, with Niskanen’s component aerodynamics',
+      effect: 'interstage interference on drag and stability is not represented; it is short-lived',
+      impact: 'minor',
+    },
+  ];
+}
+
+/** Plan 0064: the stages of a vehicle must describe it consistently; plain messages otherwise. */
+function validateStages(vehicle: FlightVehicle): void {
+  const st = vehicle.stages;
+  if (st === undefined) return;
+  const n = st.separation.length;
+  if (!(n >= 1)) throw new InvalidInputError('number of stages', n, 'must be at least 1');
+  const stageOk = (k: number): boolean => Number.isInteger(k) && k >= 0 && k < n;
+  if (st.componentStage.length !== vehicle.components.length) {
+    throw new InvalidInputError(
+      'stage list of the parts',
+      st.componentStage.length,
+      `must give a stage for each of the ${String(vehicle.components.length)} parts`,
+    );
+  }
+  st.componentStage.forEach((k, i) => {
+    if (!stageOk(k)) {
+      throw new InvalidInputError(
+        `stage of part ${String(i)}`,
+        k,
+        `must be a stage from 0 to ${String(n - 1)}`,
+      );
+    }
+  });
+  if (!st.componentStage.includes(0)) {
+    throw new InvalidInputError('top stage', 0, 'must hold at least one part');
+  }
+  if (st.motors.length === 0) {
+    throw new InvalidInputError('motors of the stages', 0, 'at least one motor is required');
+  }
+  st.motors.forEach((m, i) => {
+    validateMotor(m.motor.definition);
+    if (!stageOk(m.stage)) {
+      throw new InvalidInputError(
+        `stage of motor ${String(i + 1)}`,
+        m.stage,
+        `must be a stage from 0 to ${String(n - 1)}`,
+      );
+    }
+    const delay: number = m.ignition.delay;
+    if (!Number.isFinite(delay) || delay < 0) {
+      throw new InvalidInputError(
+        `ignition delay of motor ${String(i + 1)}`,
+        delay,
+        'must be 0 s or more',
+      );
+    }
+    if (m.ignition.event !== 'launch') {
+      const of = m.ignition.of;
+      if (
+        of === undefined ||
+        !Number.isInteger(of) ||
+        of < 0 ||
+        of >= st.motors.length ||
+        of === i
+      ) {
+        throw new InvalidInputError(
+          `ignition of motor ${String(i + 1)}`,
+          of ?? Number.NaN,
+          `must name another motor (1 to ${String(st.motors.length)}) whose ${m.ignition.event === 'burnout' ? 'burnout' : 'ejection charge'} ignites it`,
+        );
+      }
+    }
+  });
+  st.separation.forEach((sep, k) => {
+    const delay: number = sep.delay;
+    if (k > 0 && (!Number.isFinite(delay) || delay < 0)) {
+      throw new InvalidInputError(
+        `separation delay of stage ${String(k + 1)}`,
+        delay,
+        'must be 0 s or more',
+      );
+    }
+  });
+  if (st.recoveryStage !== undefined) {
+    if (st.recoveryStage.length !== vehicle.recovery.length) {
+      throw new InvalidInputError(
+        'stage list of the recovery devices',
+        st.recoveryStage.length,
+        `must give a stage for each of the ${String(vehicle.recovery.length)} devices`,
+      );
+    }
+    st.recoveryStage.forEach((k, i) => {
+      if (!stageOk(k)) {
+        throw new InvalidInputError(
+          `stage of recovery device ${String(i + 1)}`,
+          k,
+          `must be a stage from 0 to ${String(n - 1)}`,
+        );
+      }
+    });
+  }
+}
+
 /** Run the simulation. */
 export function simulateFlight(vehicle: FlightVehicle, options: SimulationOptions): FlightResult {
   const launch = validateLaunch(options.site, options.rail);
@@ -734,25 +924,68 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     beyondValidated: false,
     largeAngle: false,
   };
-  if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
+  const stages = vehicle.stages;
+  if (stages === undefined) {
+    if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
+  } else {
+    validateStages(vehicle);
+  }
   const maxTime: number = options.maxTime;
   if (!(maxTime > 0))
     throw new InvalidInputError('maximum simulation time', maxTime, 'must be greater than 0 s');
   if (options.dragCurve !== undefined) validateDragCurve(options.dragCurve);
   validateComponentFit(vehicle.components);
-  const structure = structuralMassParts(vehicle.components);
-  const rocketLength = vehicle.components.reduce((s, p) => {
-    const c = p.component;
-    return c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition'
-      ? s + (c.length as number)
-      : s;
-  }, 0);
-  const referenceDiameter: number =
-    vehicle.referenceDiameter ?? maximumBodyDiameter(vehicle.components);
+  const configuration = (indices: ReadonlySet<number>): Configuration => {
+    const components = vehicle.components.filter((_, i) => indices.has(i));
+    return {
+      components,
+      indices,
+      structure: structuralMassParts(components),
+      rocketLength: components.reduce((s, p) => {
+        const c = p.component;
+        return c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition'
+          ? s + (c.length as number)
+          : s;
+      }, 0),
+      referenceDiameter: vehicle.referenceDiameter ?? maximumBodyDiameter(components),
+    };
+  };
+  const config = configuration(new Set(vehicle.components.map((_, i) => i)));
+  const burnOf = (m: MotorSource): number =>
+    m.kind === 'definition' ? burnTime(m.definition) : m.burnTime;
+  const motors: MotorRuntime[] =
+    stages === undefined
+      ? [
+          {
+            source: vehicle.motor,
+            stage: 0,
+            label: '',
+            burn: burnOf(vehicle.motor),
+            ignitedAt: undefined,
+            burnedOut: false,
+            attached: true,
+          },
+        ]
+      : stages.motors.map((m, i) => ({
+          source: m.motor,
+          stage: m.stage,
+          label: m.name ?? `Motor ${String(i + 1)}`,
+          burn: burnOf(m.motor),
+          ignitedAt: undefined,
+          burnedOut: false,
+          attached: true,
+        }));
+  // The burn that the launch checks refer to: the one motor's, or the longest of those lit at launch.
   const motorBurn =
-    vehicle.motor.kind === 'definition'
-      ? (burnTime(vehicle.motor.definition) as number)
-      : (vehicle.motor.burnTime as number);
+    stages === undefined
+      ? burnOf(vehicle.motor)
+      : stages.motors.reduce(
+          (b, m, i) =>
+            m.ignition.event === 'launch'
+              ? Math.max(b, (motors[i]?.burn ?? 0) + (m.ignition.delay as number))
+              : b,
+          0,
+        );
   // Issue #32, D-075: a device open while the motor still burns would need thrust and canopy drag together;
   // the descent model (DYN-14, Niskanen §4.2.5 pp. 67 to 68) has the canopy drag and gravity only, and the
   // flight would silently stay on the pad. Refused with a plain message instead.
@@ -770,33 +1003,48 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   const ctx: Context = {
     vehicle,
     options,
-    structure,
     atmosphere: atmosphereModel(options.atmosphere),
     railDirection: launch.railDirection,
     railLength: options.rail.length,
-    rocketLength,
-    referenceDiameter,
-    burnTime: motorBurn,
-    motorDiameter:
-      vehicle.motor.kind === 'definition' ? vehicle.motor.definition.diameter : undefined,
-    motorCount: vehicle.motor.kind === 'definition' ? clusterSums(vehicle.motor.cluster).count : 1,
+    config,
+    motors,
     deployedArea: { area: 0 },
-    motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
     largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, notes),
   };
+  // Plan 0064: the stage of each recovery device; the devices of a separated stage leave with it.
+  const deviceStage = (i: number): number => stages?.recoveryStage?.[i] ?? 0;
+  const activeRecovery = new Set<RecoveryDevice>(vehicle.recovery);
+  const stageName = (k: number): string => stages?.names?.[k] ?? `stage ${String(k + 1)}`;
 
   // M-4: a device on the ejection charge needs a charge. A plugged motor (no delay) or the ideal motor of the
   // analytical cases has none, so the device can never open; say so before the flight, not only after it.
   const ejectionDevices = vehicle.recovery.filter((d) => d.deploy.event === 'ejection');
   const hasEjectionCharge =
     vehicle.motor.kind === 'definition' && vehicle.motor.ejectionDelay !== undefined;
-  if (!hasEjectionCharge) {
-    for (const d of ejectionDevices) {
-      warnings.add(
-        `"${d.name}" is set to open at the motor's ejection charge, but ${vehicle.motor.kind === 'ideal' ? 'this motor model has no ejection charge' : 'the motor is plugged (it has no ejection delay)'}, so it never opens and the rocket comes down without it. Set it to open at apogee or at an altitude (with an altimeter), or choose a motor with an ejection delay.`,
-      );
+  if (stages === undefined) {
+    if (!hasEjectionCharge) {
+      for (const d of ejectionDevices) {
+        warnings.add(
+          `"${d.name}" is set to open at the motor's ejection charge, but ${vehicle.motor.kind === 'ideal' ? 'this motor model has no ejection charge' : 'the motor is plugged (it has no ejection delay)'}, so it never opens and the rocket comes down without it. Set it to open at apogee or at an altitude (with an altimeter), or choose a motor with an ejection delay.`,
+        );
+      }
     }
+  } else {
+    vehicle.recovery.forEach((d, i) => {
+      if (d.deploy.event !== 'ejection') return;
+      const charged = motors.some(
+        (m) =>
+          m.stage === deviceStage(i) &&
+          m.source.kind === 'definition' &&
+          m.source.ejectionDelay !== undefined,
+      );
+      if (!charged) {
+        warnings.add(
+          `"${d.name}" is set to open at the ejection charge of its stage's motor, but no motor of ${stageName(deviceStage(i))} has an ejection charge, so it never opens and that stage comes down without it. Set it to open at apogee or at an altitude, or give the motor an ejection delay.`,
+        );
+      }
+    });
   }
 
   const events: FlightEvent[] = [];
@@ -838,9 +1086,16 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     });
     if (phase !== 'landed') phase = 'descent';
   };
-  const scheduleDeployments = (trigger: RecoveryDevice['deploy']['event'], at: number): void => {
-    for (const device of vehicle.recovery) {
+  const scheduleDeployments = (
+    trigger: RecoveryDevice['deploy']['event'],
+    at: number,
+    stage?: number,
+  ): void => {
+    for (const [i, device] of vehicle.recovery.entries()) {
       if (device.deploy.event !== trigger || deployed.has(device)) continue;
+      if (!activeRecovery.has(device)) continue;
+      // Plan 0064: an ejection charge opens the devices of its own stage only.
+      if (stage !== undefined && stages !== undefined && deviceStage(i) !== stage) continue;
       const delay: number = device.deploy.delay;
       if (delay <= 0) deploy(device, at, `at ${trigger}`);
       else
@@ -855,33 +1110,167 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     }
   };
 
-  events.push({ kind: 'launch', time: seconds(0), detail: 'ignition at t = 0' });
-  scheduleDeployments('launch', 0);
-  timed.push({
-    time: motorBurn,
-    kind: 'burnout',
-    detail: `motor burnout at ${String(motorBurn)} s`,
-    action: () => {
-      ctx.motorState.burnedOut = true;
-      if (phase === 'powered') phase = 'coast';
-    },
-  });
-  if (vehicle.motor.kind === 'definition' && vehicle.motor.ejectionDelay !== undefined) {
-    const tE = motorBurn + (vehicle.motor.ejectionDelay as number);
+  const thrustingNow = (): boolean =>
+    motors.some((m) => m.attached && m.ignitedAt !== undefined && !m.burnedOut);
+  // Plan 0064: the top stage's motor burnout, for the ejection-delay advice of issue #9.
+  let topBurnout: number | undefined;
+  const separated = new Set<number>();
+  /** Separate stage k: it and every stage below it leave the vehicle (plan 0064, D-091). */
+  const separate = (k: number, at: number, why: string): void => {
+    if (stages === undefined || k <= 0 || separated.has(k)) return;
+    for (let j = k; j < stages.separation.length; j++) separated.add(j);
+    const before = rocketMass(ctx, at).mass;
+    for (const m of motors) if (m.stage >= k) m.attached = false;
+    // The burnouts and charges still due of the motors that left are no longer events of this flight.
+    for (let i = timed.length - 1; i >= 0; i--) {
+      const owner = timed[i]?.owner;
+      if (owner !== undefined && !owner.attached) timed.splice(i, 1);
+    }
+    const keep = new Set<number>();
+    stages.componentStage.forEach((st, i) => {
+      if (st < k) keep.add(i);
+    });
+    Object.assign(ctx.config, configuration(keep));
+    vehicle.recovery.forEach((d, i) => {
+      if (deviceStage(i) < k || !activeRecovery.has(d)) return;
+      activeRecovery.delete(d);
+      if (deployed.has(d)) {
+        ctx.deployedArea.area -= (d.dragCoefficient * Math.PI * (d.diameter as number) ** 2) / 4;
+      }
+    });
+    if (phase === 'powered' && !thrustingNow()) phase = 'coast';
+    const after = rocketMass(ctx, at).mass;
+    events.push({
+      kind: 'separation',
+      time: seconds(at),
+      detail: `${stageName(k)} separated (${why}); ${(before - after).toFixed(4)} kg left the vehicle, ${after.toFixed(4)} kg flies on`,
+    });
+  };
+  const scheduleSeparations = (
+    event: 'upper-ignition' | 'burnout' | 'ejection' | 'launch',
+    stage: number | undefined,
+    at: number,
+    why: string,
+  ): void => {
+    stages?.separation.forEach((sep, k) => {
+      if (k === 0 || sep.event !== event || (stage !== undefined && k !== stage)) return;
+      const when = at + (sep.delay as number);
+      timed.push({
+        time: when,
+        kind: 'separation',
+        detail: '',
+        action: () => {
+          separate(
+            k,
+            when,
+            (sep.delay as number) > 0 ? `${String(sep.delay)} s after ${why}` : why,
+          );
+        },
+      });
+    });
+  };
+  /** Ignite a motor and schedule its burnout and ejection charge (Niskanen Table 4.2 p. 69). */
+  const ignite = (index: number, at: number, why: string): void => {
+    const m = motors[index];
+    if (m === undefined || !m.attached || m.ignitedAt !== undefined) return;
+    m.ignitedAt = at;
+    if (stages !== undefined) {
+      events.push({ kind: 'ignition', time: seconds(at), detail: `${m.label} ignition (${why})` });
+      if (phase === 'coast') phase = 'powered';
+      // The stage below the igniting one separates at this ignition when set to.
+      scheduleSeparations('upper-ignition', m.stage + 1, at, `${m.label} ignition`);
+    }
+    const tB = at + m.burn;
+    if (m.stage === 0) topBurnout = tB;
     timed.push({
-      time: tE,
-      kind: 'ejection-charge',
-      detail: `ejection charge at ${tE.toFixed(3)} s`,
+      owner: m,
+      time: tB,
+      kind: 'burnout',
+      detail:
+        stages === undefined
+          ? `motor burnout at ${String(motorBurn)} s`
+          : `${m.label} burnout at ${tB.toFixed(3)} s`,
       action: () => {
-        const st = unpack(y);
-        ejectionCharge = {
-          time: tE,
-          airspeed: norm(sub(st.velocity, ctx.wind(st.position.z, tE))),
-          verticalVelocity: st.velocity.z,
-        };
-        scheduleDeployments('ejection', tE);
+        if (!m.attached) return;
+        m.burnedOut = true;
+        if (phase === 'powered' && !thrustingNow()) phase = 'coast';
+        stages?.motors.forEach((other, j) => {
+          if (other.ignition.event === 'burnout' && other.ignition.of === index) {
+            timed.push({
+              time: tB + (other.ignition.delay as number),
+              kind: 'ignition',
+              detail: '',
+              action: () => {
+                ignite(j, tB + (other.ignition.delay as number), `${m.label} burnout`);
+              },
+            });
+          }
+        });
+        scheduleSeparations('burnout', m.stage, tB, `${m.label} burnout`);
       },
     });
+    const source = m.source;
+    if (source.kind === 'definition' && source.ejectionDelay !== undefined) {
+      const tE = tB + (source.ejectionDelay as number);
+      timed.push({
+        owner: m,
+        time: tE,
+        kind: 'ejection-charge',
+        detail:
+          stages === undefined
+            ? `ejection charge at ${tE.toFixed(3)} s`
+            : `${m.label} ejection charge at ${tE.toFixed(3)} s`,
+        action: () => {
+          if (!m.attached) return;
+          const st = unpack(y);
+          // With stages, the summary's charge is the top stage's: a lower stage's charge lights or
+          // separates the stage above and is meant to fire while climbing (plan 0064).
+          if (stages === undefined || m.stage === 0) {
+            ejectionCharge = {
+              time: tE,
+              airspeed: norm(sub(st.velocity, ctx.wind(st.position.z, tE))),
+              verticalVelocity: st.velocity.z,
+            };
+          }
+          scheduleDeployments('ejection', tE, m.stage);
+          stages?.motors.forEach((other, j) => {
+            if (other.ignition.event === 'ejection' && other.ignition.of === index) {
+              timed.push({
+                time: tE + (other.ignition.delay as number),
+                kind: 'ignition',
+                detail: '',
+                action: () => {
+                  ignite(j, tE + (other.ignition.delay as number), `${m.label} ejection charge`);
+                },
+              });
+            }
+          });
+          scheduleSeparations('ejection', m.stage, tE, `${m.label} ejection charge`);
+        },
+      });
+    }
+  };
+
+  events.push({ kind: 'launch', time: seconds(0), detail: 'ignition at t = 0' });
+  scheduleDeployments('launch', 0);
+  if (stages === undefined) {
+    ignite(0, 0, 'launch');
+  } else {
+    stages.motors.forEach((m, i) => {
+      if (m.ignition.event !== 'launch') return;
+      const at: number = m.ignition.delay;
+      if (at <= 0) ignite(i, 0, 'launch');
+      else
+        timed.push({
+          time: at,
+          kind: 'ignition',
+          detail: '',
+          action: () => {
+            ignite(i, at, `${String(at)} s after launch`);
+          },
+        });
+    });
+    scheduleSeparations('launch', undefined, 0, 'launch');
   }
 
   const recordInterval =
@@ -933,13 +1322,13 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK
     ) {
       const linear = normalForceAtAngle(
-        vehicle.components,
+        ctx.config.components,
         f.mach,
         f.angleOfAttack,
         f.lateralAirflowAngle,
         {
           finRollReduction: options.finRollReduction,
-          referenceDiameter: metres(ctx.referenceDiameter),
+          referenceDiameter: metres(ctx.config.referenceDiameter),
           largeAngleMethod: 'linear',
         },
       ).cp;
@@ -957,7 +1346,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       Number.isFinite(cp) &&
       (f === undefined || (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK)
     ) {
-      const calibers = (cp - derived.cg) / referenceDiameter;
+      const calibers = (cp - derived.cg) / ctx.config.referenceDiameter;
       const current = lowest[phase];
       if (current === undefined || calibers < current.calibers) {
         lowest[phase] = {
@@ -976,6 +1365,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       const atm = ctx.atmosphere(metres((options.site.altitude as number) + unpack(y).position.z));
       for (const { index, fin, geometry } of flutterFins) {
         if (fin.shearModulus === undefined || geometry === undefined || !(airspeed > 0)) continue;
+        // Plan 0064: the fins of a separated stage are no longer flying with the vehicle.
+        if (!ctx.config.indices.has(index)) continue;
         const vf = flutterVelocity(geometry, fin.shearModulus, atm.pressure, atm.speedOfSound);
         const ratio = vf / airspeed;
         const current = flutterLowest.get(index);
@@ -1026,7 +1417,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       mass: derived.mass,
       cg: derived.cg,
       cp: derived.cp,
-      stabilityCalibers: Number.isNaN(cp) ? Number.NaN : (cp - derived.cg) / referenceDiameter,
+      stabilityCalibers: Number.isNaN(cp)
+        ? Number.NaN
+        : (cp - derived.cg) / ctx.config.referenceDiameter,
     });
     for (const w of derived.warnings) notes.add(w);
     lastRecorded = t;
@@ -1094,7 +1487,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (nextTimed !== undefined && nextTimed.time <= t + 1e-12) {
       timed.shift();
       nextTimed.action();
-      if (nextTimed.kind !== 'deployment')
+      if (
+        nextTimed.kind !== 'deployment' &&
+        nextTimed.kind !== 'ignition' &&
+        nextTimed.kind !== 'separation'
+      )
         events.push({
           kind: nextTimed.kind,
           time: seconds(nextTimed.time),
@@ -1217,6 +1614,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       for (const device of vehicle.recovery) {
         if (
           device.deploy.event === 'altitude' &&
+          activeRecovery.has(device) &&
           !deployed.has(device) &&
           device.deploy.altitude !== undefined
         ) {
@@ -1312,7 +1710,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       switch (fired.kind) {
         case 'rail-exit':
           railExit = { t, v: speed };
-          phase = t < motorBurn ? 'powered' : 'coast';
+          phase =
+            stages === undefined
+              ? t < motorBurn
+                ? 'powered'
+                : 'coast'
+              : thrustingNow()
+                ? 'powered'
+                : 'coast';
           events.push({
             kind: 'rail-exit',
             time: seconds(t),
@@ -1333,6 +1738,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           for (const device of vehicle.recovery) {
             if (
               device.deploy.event === 'altitude' &&
+              activeRecovery.has(device) &&
               !deployed.has(device) &&
               device.deploy.altitude !== undefined &&
               Math.abs(s.position.z - (device.deploy.altitude as number)) < 1e-6
@@ -1400,6 +1806,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         case 'launch':
         case 'liftoff':
         case 'max-time':
+        case 'ignition':
+        case 'separation':
           // timed events act through their own handlers; nothing to do here
           break;
       }
@@ -1416,7 +1824,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       detail: `maximum simulation time ${String(maxTime)} s reached in phase ${phase}`,
     });
   // M-4: the charge was due after the flight ended (a delay longer than the flight), so its devices never opened.
-  if (hasEjectionCharge && !events.some((e) => e.kind === 'ejection-charge')) {
+  if (
+    stages === undefined &&
+    hasEjectionCharge &&
+    !events.some((e) => e.kind === 'ejection-charge')
+  ) {
     const due = motorBurn + (vehicle.motor.ejectionDelay as number);
     const ended =
       endReason === 'landing' ? `landed at ${t.toFixed(2)} s` : `ended at ${t.toFixed(2)} s`;
@@ -1495,7 +1907,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ? `the simulation stopped at its time limit, ${t.toFixed(2)} s`
         : `the flight ended at ${t.toFixed(2)} s`;
   for (const d of vehicle.recovery) {
-    if (deployed.has(d)) continue;
+    // Plan 0064: a separated stage's devices left with it; their flight is not simulated.
+    if (deployed.has(d) || !activeRecovery.has(d)) continue;
     const delay: number = d.deploy.delay;
     let reason: string | undefined;
     if (d.deploy.event === 'apogee') {
@@ -1528,6 +1941,15 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (reason !== undefined) {
       warnings.add(
         `"${d.name}" never opened: ${reason}. The landing speed and drift shown are for a rocket coming down without it.`,
+      );
+    }
+  }
+  // Plan 0064: a device on its stage's ejection charge that did not open while still on the vehicle.
+  if (stages !== undefined) {
+    for (const d of vehicle.recovery) {
+      if (d.deploy.event !== 'ejection' || deployed.has(d) || !activeRecovery.has(d)) continue;
+      warnings.add(
+        `"${d.name}" never opened: the ejection charge of its stage's motor did not fire before ${ended}. The landing speed and drift shown are for a rocket coming down without it.`,
       );
     }
   }
@@ -1566,7 +1988,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const toApogee =
       apogee === undefined
         ? ''
-        : `, ${(apogee.t - e.time).toFixed(1)} s before apogee (a delay of about ${(apogee.t - motorBurn).toFixed(1)} s after burnout would fire it near apogee)`;
+        : `, ${(apogee.t - e.time).toFixed(1)} s before apogee (a delay of about ${(apogee.t - (stages === undefined ? motorBurn : (topBurnout ?? motorBurn))).toFixed(1)} s after burnout would fire it near apogee)`;
     warnings.add(
       `The motor's ejection charge fires at ${e.time.toFixed(2)} s while the rocket is still climbing at ${e.airspeed.toFixed(1)} m/s${toApogee}. If the charge deploys the recovery (no altimeter), the parachute opens at that speed and may tear, strip or zipper the airframe; choose a longer delay. If an altimeter deploys the recovery and the charge is only a backup, this still fires the charge early.`,
     );
@@ -1587,7 +2009,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
       })),
     ),
-    ...(vehicle.motor.kind === 'definition' ? clusterApproximations(vehicle.motor.cluster) : []),
+    ...(stages === undefined
+      ? vehicle.motor.kind === 'definition'
+        ? clusterApproximations(vehicle.motor.cluster)
+        : []
+      : [
+          ...stages.motors.flatMap((m) => clusterApproximations(m.motor.cluster)),
+          ...stagingApproximations(stages.separation.length),
+        ]),
   ];
   return {
     samples,

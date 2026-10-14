@@ -104,6 +104,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Step 2, the local MCP server (plan 0062, D-092), first pull request: `packages/mcp` with 19 tools (design, parts, motor library and files, recovery, launch, as-built, assumptions, review, stability, simulate), unit strings (UNIT-12 and UNIT-13 added), every value not given recorded as an approximation; the example rocket built through the tools matches the engine bit for bit. The app's part defaults and bundled motors moved into `packages/formats`.
   - Plan 0062 parts 2 and 3 (D-093, D-094): ThrustCurve.org search and download (read-only, one host, bounded), Monte Carlo (200 runs per call); the single-file server and the Claude Desktop extension, built and smoke-tested in CI (official manifest validator, run as Desktop runs it), published on the site with checksums and a `claude.html` page linked from the File menu.
   - Step 3, design links (plan 0063, D-095): `#design=v1.` links open a design in the app (fresh id, stored at once, address cleared), bounded like every reader; the MCP server's `design_link` tool makes them.
+- Multi-stage (plan 0064, D-091, D-096), part 1: the engine flies staged vehicles (motors igniting on Table 4.2 events, separated stages leaving with their parts, motors and devices); single-stage results bit-identical; two-stage vacuum flights match the closed form. Next: the design file (schema 2) and the `.ork` stages import with an OpenRocket probe, then the app and the MCP server.
 
 ## In progress
 
@@ -111,7 +112,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0061 step 4 (the modelling benchmark). Then plan 0055 step 3 part 2 with staging (D-091).
+- Plan 0064 parts 2 and 3 (multi-stage design file, `.ork` stages, OpenRocket comparison; app and MCP). Then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
