@@ -435,7 +435,7 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - **Combination:** fins and body combine by eq. 4.3.1.3-a without the body-vortex term.
   - **Reverse flow:** 90 to 180° uses α′ = 180° − α on the reversed wing.
 
-  The OpenRocket-equivalent mode (`'linear'`) keeps the small-angle model and the 90° limit of D-046, so the OpenRocket comparisons and the golden series are unchanged. In the displayed mode a flight is continued past 90° below Mach 1. At Mach 1 and above the 90° limit remains, because the DATCOM's supersonic high-angle charts (4.1.3.3 C) are not implemented.
+  The OpenRocket-equivalent mode (`'linear'`) keeps the small-angle model and the 90° limit of D-046, so the OpenRocket comparisons and the golden series are unchanged. In the displayed mode a flight is continued past 90° below Mach 1. At Mach 1 and above the 90° limit remains, because the DATCOM's supersonic high-angle charts (4.1.3.3 C) are not implemented. (Superseded by D-103: above Mach 1 the flight continues too, with a listed approximation.)
 
 - **Choices inside the method** (plan 0033 gives the reasons):
   1. **Body potential term.** Below 90° each nose and transition keeps its validated zero-angle slope times sin 2α cos(α/2)/2. The DATCOM says "the lift-curve slope at zero angle of attack is used for the potential-flow term", and the per-component slopes sum to Jorgensen's 2S_b/S at CP ℓ_B − V_B/S_b. Beyond 90°, eq. 4.2.1.2-c and eq. 4.2.2.2-c are used as printed.
@@ -464,7 +464,7 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - **Wind-tunnel data at higher angles.** The ARCAS reports (TN D-4013) go to 21° and could be digitised for a direct check.
 - **Consequences:**
   - Ballistic and late-ejection flights in still air now run to the ground in the displayed mode. Warnings explain the unverified range above 60° and any chart limits that were reached.
-  - Flights that tumble above Mach 1 still end at 90° with an explanation. (Single-wedge and high-aspect-ratio fins also did until D-102.)
+  - Flights that tumbled above Mach 1 ended at 90° with an explanation until D-103; single-wedge and high-aspect-ratio fins did until D-102.
   - The body-vortex term of 4.3.1.3, the supersonic high-angle charts and Jorgensen's axial force (4.2.3.2, in place of the mirrored axial-drag scaling of D-033) are future work.
 
 ## D-071 (2026-10-12): The 3D viewer draws the simulator's stored output in the flight frame itself; its few drawing conventions, recorded here
@@ -845,7 +845,7 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Decision:** In the displayed mode the large-angle model (D-070) no longer refuses two kinds of fin set.
   - **A single wedge** (thickest at the trailing edge, outside both DATCOM maximum-lift families) reads the 23b family, whose maximum thickness (35 to 50 % of the chord) is the nearer. Δy is the wedge's own. In reverse flow the wedge leads with its square base and reads 23a exactly, as before.
   - **A high aspect ratio** (A ≥ 4/((C₁ + 1) cos Λ_LE), eq. 4.1.3.4-c) uses the low-aspect-ratio method beyond its range, every chart held at its drawn end with a note, as for any design (D-070 item 9).
-  - **Listed.** The result's approximations name the fin set, what is approximated (its normal force beyond the stall, and past 90° when the rocket tumbles), the reason and the effect, impact minor. The chart notes become warnings beyond the stall.
+  - **Listed.** The result's approximations name the fin set, what is approximated (its normal force beyond the stall, and past 90° when the rocket tumbles), the reason and the effect, impact minor. The chart notes become warnings beyond the stall. (D-103 rates it by the flight: minor below the stall, moderate past it.)
   - **The OpenRocket-equivalent mode** is unchanged: small-angle model, 90° limit, nothing listed.
 - **Why:**
   - Rule 3 (D-083): a sensible design must be simulated. The refusal ended the flight at 90°, so a wedge-finned or high-aspect-ratio rocket had no descent, landing point or landing speed. These fin sets caused all 79 model-limit endings among 300 random designs (plan 0065).
@@ -860,5 +860,28 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Use the small-angle model past 90° for these fin sets (the thesis scales its normal force only to 90°, Niskanen §3.4.7, so that would be an undocumented extension too).
   - Read 23a for a wedge (thickest at the leading edge, the farther family).
 - **Consequences:**
-  - Only flights that tumble above Mach 1 still end at the model limit in the displayed mode (D-070: the supersonic high-angle charts are not implemented).
+  - Only flights that tumbled above Mach 1 still ended at the model limit in the displayed mode, until D-103.
   - Rockets with such fins now fly the DATCOM model at every angle, like every other rocket in the displayed mode. Their reported in-flight margin is still the more forward CP of the two models (D-070).
+
+## D-103 (2026-10-14): Tumbling above Mach 1 continues with a listed approximation; the D-102 listing is rated by the flight
+
+- **Decision:**
+  - **Supersonic reverse flow.** In the displayed mode, a flight whose angle of attack passes 90° at Mach 1 or above now continues (plan 0067). Beyond 90° the fins keep the force they have at Mach 1 and above below 90°: Niskanen's eq. (3.49), linear in α. It is applied to the reversed fin, as HA-10 does below Mach 1:
+    - α′ = 180° − α, times the fin set's own slope at α′, so the normal force is continuous at 90°;
+    - the CP is that of the reversed planform (BAR-10), mirrored along the root chord, and the carry-over CP is mirrored too;
+    - the body keeps its supersonic reverse-flow model (Jorgensen, D-070).
+  - **Listed when used.** A flight that did this lists one approximation on the rocket, impact major: the fin force while tumbling or flying backward above Mach 1, with no sourced method behind it. The aerodynamics warning becomes a flight note.
+  - **The D-102 listing rated by the flight.** The wedge or high-aspect-ratio listing is minor while the flight stays below the fins' stall. It becomes moderate once an approximated fin set went past its stall, which the flight knows from the chart notes the model gives only there.
+  - **The OpenRocket-equivalent mode** keeps the 90° limit (D-046), the only model-limit end left.
+- **Why:**
+  - Rule 3 (D-083): this was the last angle-of-attack refusal in the displayed mode.
+  - **Why not the sourced method.** DATCOM 4.1.3.3 C (pp. 4.1.3.3-29 to -33) needs seven charts and three procedures by leading-edge and shock condition, and covers 0 to 90° only. It would also change the supersonic force below 90°, including R5's. It stays future work (`docs/future-work.md` item 6); this decision extends the present model consistently.
+  - **The ratings.** Major, because the small-angle force over-predicts the fin force near 90° and no source bounds the error. The D-102 listing was minor in every flight, but the rule for minor is "under about 1 % on the key results", which is not shown for a flight that went past the stall of an approximated fin.
+- **Evidence:**
+  - R1 with 0.1 kg of tail ballast (−1.26 calibers) on a constant 1200 N motor tumbles at Mach 2.35. It now lands in the displayed mode with the approximation listed, and still ends at 90° in the OpenRocket-equivalent mode.
+  - At Mach 2 and 120° the fin CP is 0.0631803 m behind the fin's root leading edge, against 0.0590419 m at 60° (BAR-10 by hand on R1's reversed and forward planforms).
+  - The golden outputs and the OpenRocket comparisons are unchanged: no reference flight tumbles above Mach 1.
+- **Alternatives:**
+  - Keep the stop (a refusal).
+  - Read the subsonic DATCOM charts at Mach 0.6 above Mach 1, as D-070 does from 0.6 to 1. That has no source either, and the DATCOM's own transonic guidance (4.1.3.3 B) builds the curves from the Mach 1.4 method, not the 0.6 one.
+- **Consequences:** in the displayed mode every flight runs to landing or the time limit. The CP jumps at 90° above Mach 1 (forward and reversed planforms differ); the adaptive step handles it, as it does burnout.

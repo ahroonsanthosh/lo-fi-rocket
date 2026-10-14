@@ -47,11 +47,13 @@ import {
   aerodynamicForcesAndMoments,
   normalForceAtAngle,
   DEFAULT_LARGE_ANGLE_METHOD,
+  SUPERSONIC_REVERSE_FLOW_WARNING,
   type LargeAngleMethod,
 } from './aerodynamics.js';
 import {
   finLargeAngleApproximation,
   finLargeAngleAvailability,
+  isLargeAngleApproximationWarning,
 } from '../stability/datcom-large-angle.js';
 import {
   bodyToWorld,
@@ -795,10 +797,13 @@ function effectiveLargeAngleMethod(
  * Plan 0066 (D-102): the fin sets whose large-angle normal force (DATCOM, D-070) is approximated:
  * a single-wedge section or an aspect ratio above the low-aspect-ratio limit. Listed in the
  * displayed mode only; the OpenRocket-equivalent mode keeps the small-angle model and its limit.
+ * Plan 0067 (D-103): minor while the flight stays below the stall, where the fin keeps its
+ * validated slope; moderate once it went past the stall of an approximated fin set.
  */
 function largeAngleApproximations(
   vehicle: FlightVehicle,
   method: LargeAngleMethod,
+  beyondStall: boolean,
 ): Approximation[] {
   if (method !== 'datcom') return [];
   return vehicle.components.flatMap((p, i) => {
@@ -811,13 +816,32 @@ function largeAngleApproximations(
         subject: `Fin set${name === undefined || name === '' ? '' : ` "${name}"`}`,
         what: 'its normal force beyond the stall, and past 90° when the rocket tumbles',
         method: reason,
-        effect:
-          'small while the rocket flies nose-first at small angles, where the fin keeps its validated slope; past the stall, and when the rocket tumbles or flies backward, its path and landing point are approximate',
-        impact: 'minor',
+        ...(beyondStall
+          ? {
+              effect:
+                'this flight went past the fins’ stall (tumbling, flying backward or at a steep angle), so its path and landing point depend on the approximated force',
+              impact: 'moderate' as const,
+            }
+          : {
+              effect:
+                'small: this flight stayed below the fins’ stall, where they keep their validated slope',
+              impact: 'minor' as const,
+            }),
       },
     ];
   });
 }
+
+/** Plan 0067 (D-103): tumbling or flying backward at Mach 1 or above, listed when a flight did it. */
+const SUPERSONIC_REVERSE_FLOW_APPROXIMATION: Approximation = {
+  subject: 'The rocket',
+  what: 'the fin normal force while tumbling or flying backward above Mach 1',
+  method:
+    'the small-angle supersonic fin force (Niskanen eq. 3.49) applied to the reversed fin, at the reversed planform’s centre of pressure; no sourced method covers this (the DATCOM supersonic high-angle method is for 0 to 90°)',
+  effect:
+    'the tumbling motion, the path and the landing point are uncertain; the small-angle force over-predicts the fin force near 90°',
+  impact: 'major',
+};
 
 /** Plan 0064 (D-091): what a staged flight does not model exactly, listed with its result (rule 3). */
 export function stagingApproximations(stageCount: number): Approximation[] {
@@ -1035,6 +1059,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     beyondValidated: false,
     largeAngle: false,
   };
+  const used = { supersonicReverseFlow: false, approximatedFinBeyondStall: false };
   const stages = vehicle.stages;
   if (stages === undefined) {
     if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
@@ -1512,6 +1537,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       else if (m > 1.2 && m <= 2) regimes.supersonic = true;
       else if (m > 2) regimes.beyondValidated = true;
       if ((derived.flight.angleOfAttack as number) > Math.PI / 3) regimes.largeAngle = true;
+      // Plan 0067 (D-103): which approximated parts of the large-angle model this flight used.
+      for (const w of derived.warnings) {
+        if (w === SUPERSONIC_REVERSE_FLOW_WARNING) used.supersonicReverseFlow = true;
+        else if (isLargeAngleApproximationWarning(w)) used.approximatedFinBeyondStall = true;
+      }
     }
     if (!recordNow) return;
     const s = unpack(y);
@@ -1816,20 +1846,21 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     }
     // D-046: the angle-of-attack limit of the aerodynamic model, checked after the other events of the
     // step (apogee and a deployment at apogee take precedence, and a descent is drag-only).
+    // D-070, D-103: the displayed mode's large-angle model continues through 180° at any Mach number;
+    // the 90° limit remains in the OpenRocket-equivalent mode.
     if (
       fired === undefined &&
       (phase === 'powered' || phase === 'coast') &&
-      options.degreesOfFreedom === 6
+      options.degreesOfFreedom === 6 &&
+      ctx.largeAngleMethod === 'linear'
     ) {
       const aoa = (yy: readonly number[]): number => {
         const f = sampleFlight(ctx, phase, t, yy);
         return f === undefined ? 0 : f.angleOfAttack;
       };
-      // D-070: the DATCOM model continues through 180° below Mach 1; the 90° limit remains otherwise.
       const beyond = (yy: readonly number[]): boolean => {
         const f = sampleFlight(ctx, phase, t, yy);
-        if (f === undefined || f.angleOfAttack <= AERO_MAX_ANGLE_OF_ATTACK) return false;
-        return ctx.largeAngleMethod === 'linear' || (f.mach as number) >= 1;
+        return f !== undefined && f.angleOfAttack > AERO_MAX_ANGLE_OF_ATTACK;
       };
       if (beyond(y)) {
         // Already beyond the limit at the start of the step (a rocket falling tail-first from apogee).
@@ -1943,19 +1974,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           endReason = 'model-limit';
           const f = sampleFlight(ctx, phase, t, y);
           const deg = f === undefined ? Number.NaN : ((f.angleOfAttack as number) * 180) / Math.PI;
-          const supersonic = ctx.largeAngleMethod === 'datcom';
           events.push({
             kind: 'model-limit',
             time: seconds(t),
-            detail: supersonic
-              ? `angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above, beyond the large-angle model (D-070); the flight is not continued`
-              : `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
+            detail: `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
           });
           // Issue #19: the plain message is the design warning for endReason 'model-limit'.
           notes.add(
-            supersonic
-              ? `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above: the large-angle model (DATCOM, D-070) covers fins beyond 90° only below Mach 1, and the DATCOM supersonic high-angle charts are not implemented. The rocket was flying backwards or tumbling at supersonic speed.`
-              : `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
+            `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
           );
           break;
         }
@@ -2186,7 +2212,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
       })),
     ),
-    ...largeAngleApproximations(vehicle, ctx.largeAngleMethod),
+    ...largeAngleApproximations(vehicle, ctx.largeAngleMethod, used.approximatedFinBeyondStall),
+    ...(used.supersonicReverseFlow ? [SUPERSONIC_REVERSE_FLOW_APPROXIMATION] : []),
     ...(stages === undefined
       ? vehicle.motor.kind === 'definition'
         ? clusterApproximations(vehicle.motor.cluster)

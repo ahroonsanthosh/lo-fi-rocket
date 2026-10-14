@@ -190,9 +190,91 @@ describe('wedge fins falling tail-first with no parachute (plan 0066)', () => {
     );
   });
 
+  it('rates it minor while the flight stays below the stall, moderate once it goes past (plan 0067)', () => {
+    // The first second is the vertical climb in still air (angle of attack about 0); the whole
+    // flight falls tail-first after apogee, past the fins' stall.
+    const impact = (maxTime: number): string | undefined =>
+      simulateFlight(vehicle, {
+        ...options('datcom'),
+        maxTime: seconds(maxTime),
+      }).approximations.find((a) => a.subject === 'Fin set "Fins"')?.impact;
+    expect(impact(1)).toBe('minor');
+    expect(impact(120)).toBe('moderate');
+  });
+
   it('keeps the 90° limit in the OpenRocket-equivalent mode, and lists nothing for it', () => {
     const r = simulateFlight(vehicle, options('linear'));
     expect(r.summary.endReason).toBe('model-limit');
     expect(r.approximations.some((a) => a.what.startsWith('its normal force beyond'))).toBe(false);
+  });
+});
+
+describe('an unstable rocket tumbling at Mach 2 (plan 0067)', () => {
+  // R1 with 0.1 kg of ballast at its tail (−1.26 calibers at liftoff) on a constant 1200 N, 0.6 s
+  // motor, in a 3 m/s wind: it passes Mach 2 and turns past 90° while still supersonic.
+  const motor: MotorDefinition = {
+    designation: 'X',
+    manufacturer: 'Test',
+    diameter: metres(0.024),
+    length: metres(0.07),
+    totalMass: kilograms(0.08),
+    propellantMass: kilograms(0.05),
+    points: [
+      { time: seconds(0), thrust: newtons(1200) },
+      { time: seconds(0.6), thrust: newtons(1200) },
+    ],
+    massRule: 'linear-in-time',
+    sourceFormat: 'custom',
+  };
+  const vehicle: FlightVehicle = {
+    components: [
+      ...R1_COMPONENTS,
+      {
+        position: metres(0.58),
+        component: {
+          kind: 'massComponent',
+          mass: kilograms(0.1),
+          length: metres(0.02),
+          radius: metres(0.02),
+        },
+      },
+    ],
+    motor: { kind: 'definition', definition: motor, aftEnd: metres(0.6) },
+    recovery: [],
+    roughnessHeight: metres(60e-6),
+  };
+  const options = (largeAngleMethod: 'datcom' | 'linear'): SimulationOptions => ({
+    site: { altitude: metres(0) },
+    rail: { length: metres(1.5), angleFromVertical: radians(0), azimuth: radians(0) },
+    wind: { kind: 'vector', velocity: { x: 3, y: 0, z: 0 } },
+    gravity: { seaLevel: metresPerSecondSquared(9.80665), altitudeDependence: 'constant' },
+    aerodynamics: 'niskanen',
+    finRollReduction: true,
+    baseDragMotorRule: 'while-thrusting',
+    largeAngleMethod,
+    integrator: {
+      kind: 'dormand-prince',
+      relativeTolerance: 1e-8,
+      absoluteTolerance: 1e-10,
+      initialStep: seconds(0.001),
+      maxStep: seconds(0.05),
+    },
+    maxTime: seconds(200),
+    degreesOfFreedom: 6,
+  });
+
+  it('lands in the displayed mode, the supersonic tumble listed as a major approximation', () => {
+    const r = simulateFlight(vehicle, options('datcom'));
+    expect(r.summary.endReason).toBe('landing');
+    expect(r.summary.maxMach).toBeGreaterThan(2);
+    const listed = r.approximations.filter((a) => a.what.includes('above Mach 1'));
+    expect(listed.map((a) => [a.subject, a.impact])).toEqual([['The rocket', 'major']]);
+    expect(r.notes.some((n) => n.includes('at Mach 1 or above'))).toBe(true);
+  });
+
+  it('keeps the 90° limit in the OpenRocket-equivalent mode, with nothing listed for it', () => {
+    const r = simulateFlight(vehicle, options('linear'));
+    expect(r.summary.endReason).toBe('model-limit');
+    expect(r.approximations.some((a) => a.what.includes('above Mach 1'))).toBe(false);
   });
 });
