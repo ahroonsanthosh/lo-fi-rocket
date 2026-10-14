@@ -416,3 +416,10 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 - **Not included.** The body-vortex interference of DATCOM 4.3.1.3, which the DATCOM says "may become sizable" for missiles, is not included. Neither is Jorgensen's axial force: beyond 90° the axial drag is Niskanen's scaling mirrored (D-033).
 - **Moderate angles.** The two normal-force models differ in the in-flight CP at 10 to 20° by up to 0.8 calibers. Measured Blue Scout data show a larger forward CP shift than either model. The reported in-flight margin uses the more forward CP (D-070).
 - **Chart reading.** In figure 4.1.4.3-23(a) the curves are hidden under the gridline within about ±0.3 of stability index 0. Δ₃ there is interpolated and uncertain by up to about ±0.2 root chords.
+
+## Security (plan 0061 step 1, D-090)
+
+- **Size limits.** Files over 64 MiB, `.ork` archives whose design entry unzips past 256 MiB, and `.ork` designs whose part outside the stored simulations is over 16 MiB are refused with a message. No real design or motor file is near these limits.
+- **Document type declarations.** An XML file with a `<!DOCTYPE` or `<!ENTITY` declaration is refused, even inside a comment. OpenRocket and RockSim never write one.
+- **Framing.** The site is served by GitHub Pages, which cannot send headers, and a Content-Security-Policy in a meta tag cannot carry `frame-ancestors`. Another site can therefore show the app in a frame. The app has no account, password or key that a framing site could misuse; this must be revisited before anything secret is ever entered in the page.
+- **Development server.** `vite` in development runs without the policy, because it injects inline scripts for hot reloading. The built site (`vite build`, `vite preview`, GitHub Pages) has it.

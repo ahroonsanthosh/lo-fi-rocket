@@ -3,7 +3,8 @@
  * rocket without documentation, and the example reproduces the Phase 2
  * figure. Runs against the built app in a real browser.
  */
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 async function addComponent(page: Page, kind: string): Promise<void> {
   await page.getByRole('combobox', { name: 'Add a component' }).selectOption(kind);

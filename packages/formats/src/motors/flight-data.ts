@@ -7,6 +7,7 @@
 import { feetToMetres, metres, seconds } from '@lo-fi-rocket/physics';
 import type { RecordedFlight } from '../design/model.js';
 import { FormatError } from '../errors.js';
+import { MAX_INPUT_BYTES, requireWithin } from '../limits.js';
 
 export class FlightDataCsvError extends FormatError {
   readonly line: number;
@@ -24,6 +25,7 @@ export function parseFlightDataCsv(
   altitudeUnit: 'm' | 'ft',
   fileName?: string,
 ): RecordedFlight {
+  requireWithin(fileName ?? 'The flight data', text.length, MAX_INPUT_BYTES);
   const lines = text.split(/\r?\n/);
   let timeCol: number | undefined;
   let altCol: number | undefined;

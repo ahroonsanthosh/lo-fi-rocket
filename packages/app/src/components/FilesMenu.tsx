@@ -1,11 +1,13 @@
 import {
   DESIGN_FILE_EXTENSION,
   exampleDesign,
+  MAX_INPUT_BYTES,
   newDesign,
   newId,
   orkToDesign,
   parseDesign,
   parseOrk,
+  requireWithin,
   serializeDesign,
 } from '@lo-fi-rocket/formats';
 import { Icon } from '@lo-fi-rocket/ui';
@@ -92,6 +94,7 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
   };
   const importOrk = async (file: File): Promise<void> => {
     try {
+      requireWithin(file.name, file.size, MAX_INPUT_BYTES);
       const bytes = new Uint8Array(await file.arrayBuffer());
       const rocket = parseOrk(bytes, file.name);
       const library = [

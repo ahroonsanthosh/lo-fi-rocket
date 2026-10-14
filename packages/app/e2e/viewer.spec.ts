@@ -5,7 +5,8 @@
  * points appear with a run that can be replayed. With VIEWER_SCREENSHOTS=1
  * the screenshots for docs/reports/3d-viewer.md are written.
  */
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 

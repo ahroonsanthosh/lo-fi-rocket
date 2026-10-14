@@ -1,5 +1,10 @@
 import { createContext, useContext } from 'react';
-import type { KeyValueStore, Transport } from '@lo-fi-rocket/formats';
+import {
+  InputTooLargeError,
+  MAX_INPUT_BYTES,
+  type KeyValueStore,
+  type Transport,
+} from '@lo-fi-rocket/formats';
 import { workerRunner, type Runner } from '../simulation/runner.js';
 
 /** Browser services the components use, injected so tests can replace them. */
@@ -24,7 +29,11 @@ export function browserServices(motorStore: KeyValueStore | undefined): Services
   return {
     transport: (url, init) => fetch(url, init),
     motorStore,
-    readFile: (file) => file.text(),
+    // A huge file is refused before it is read, so it cannot exhaust memory (plan 0061, D-090).
+    readFile: (file) =>
+      file.size > MAX_INPUT_BYTES
+        ? Promise.reject(new InputTooLargeError(file.name, file.size, MAX_INPUT_BYTES))
+        : file.text(),
     runner: workerRunner(),
     saveFile: (name, text, mime) => {
       const url = URL.createObjectURL(new Blob([text], { type: mime }));

@@ -99,12 +99,16 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Step 2 physics (plan 0058, D-087): elliptical and freeform fins by Niskanen's general-planform method (BAR-18, GEO-16); trapezoids unchanged; the trapezoid-only methods use an equivalent trapezoid (listed, minor). Next: their `.ork` import and app display (plan 0059).
   - Step 2 import and display (plan 0059, D-088): elliptical and freeform fin sets from `.ork` files (CP within 0.13 % of OpenRocket), saved in the design file with fin tabs (which could not be loaded back before), drawn in the side view and 3D, chosen in the editor. OpenRocket's examples: 11 of 17 import; the rest are multi-stage or air-start (a decision for the owner, below).
   - As-built mass and CG (plan 0060, D-089): the weighed mass and balance point of the empty rocket (GEO-17), in the design file, the app (airframe view, "As built") and the Monte Carlo mass variation; OpenRocket's stage mass and CG overrides import as it, matching its structure mass and CG to 1e-6 in all seven probe cases.
+- Claude integration (plan 0061): the owner chose the local route (an MCP server for Claude Code and Claude Desktop on the user's own plan, nothing hosted), deferred the licence, and approved dropping the spent stage at separation (D-091, CLAUDE.md non-goal changed).
+  - Step 1, security hardening (D-090): size limits on every reader and in the app, a streaming zip-bomb guard (stops at about 16 MiB whatever the archive claims), stored simulations cut from `.ork` XML, DOCTYPE and ENTITY refused, a Content-Security-Policy in the built site checked by a unit test (every host listed) and by every end-to-end test (no violations), the launch-site privacy note, read-only CI permissions, CodeQL and dependency review.
 
 ## In progress
 
 - Waiting for the review-fix pull requests above to be merged. #30, #43 and #58 all append to `docs/decisions.md` (D-073, D-074, D-075): each later one needs `main` merged in, a small conflict. The other open questions depend on the owner: the large-angle fin force source (D-059), DATCOM for the supersonic CP and sharp fin sections (D-057), the WGS 84 document (D-054), `.CDX1` samples, altimeter data, and the `main` branch for pull requests (not created as of this commit).
 
 ## Next
+
+- Plan 0061 step 2: `packages/mcp`, the local MCP server (stdio for Claude Code, `.mcpb` for Claude Desktop) with the tool surface and the review checklist. Then plan 0055 step 3 part 2 with staging (D-091).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
@@ -118,8 +122,6 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Tag `v1.0.0`; pull request from `claude/v1-completion` into `main`.
 
 ## Open questions
-
-- **Multi-stage designs (plan 0055 step 3).** The sourced model (Niskanen Table 4.2, p. 69) ignites motors at launch, at another motor's burnout or ejection charge, with a delay, on one body; the thesis has no separation event, and CLAUDE.md lists separation events as a version-1 non-goal. Options: (a) fly the stack as one body with motors igniting in turn, the spent stage carried to apogee (listed as major: apogee shown low); (b) also drop the spent stage at separation, as OpenRocket does (needs the non-goal changed). Recommendation: (b), with (a) as its first step.
 
 At v1.0 these are open. Resolved earlier: gravity latitude (D-060), the large-angle force (D-070), and the transonic models (D-055, D-056).
 
