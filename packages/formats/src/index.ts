@@ -187,6 +187,12 @@ export {
   type Cdx1Import,
   type Cdx1Prediction,
 } from './cdx1.js';
+export {
+  Cdx1ExportError,
+  exportCdx1,
+  type Cdx1Export,
+  type Cdx1ExportOptions,
+} from './cdx1-export.js';
 export type { RecordedFlight } from './design/model.js';
 export {
   DispersionError,

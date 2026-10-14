@@ -10,9 +10,10 @@ set -u
 R="$(cd "$(dirname "$0")" && pwd)"
 export DISPLAY="${DISPLAY:-:99}" WINEPREFIX=$R/wine/prefix WINEARCH=win32 WINEDEBUG=-all
 APPDIR="$WINEPREFIX/drive_c/Program Files/RASAero II"
-IN="$1"; OUT="$2"; mkdir -p "$OUT"
+# Absolute paths: the launch below runs from RASAero's own folder.
+mkdir -p "$2"; IN="$(readlink -f "$1")"; OUT="$(cd "$2" && pwd)"
 NAME=$(basename "$IN" | sed 's/\.[Cc][Dd][Xx]1$//; s/[^A-Za-z0-9_-]/_/g')
-cp "$IN" "$OUT/$NAME.CDX1"
+[ "$IN" -ef "$OUT/$NAME.CDX1" ] || cp "$IN" "$OUT/$NAME.CDX1"
 winpath() { echo "Z:$(readlink -f "$1" | sed 's#/#\\#g')"; }
 log() { echo "[$(date +%T)] $*" | tee -a "$OUT/run.log"; }
 shot() { import -window root "$OUT/shot_$1.png" 2>/dev/null; }

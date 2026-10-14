@@ -1129,3 +1129,18 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - **Displayed-mode figures fall slightly.** The example rocket's apogee goes from 172.94 to 172.41 m (−0.31 %) and its maximum velocity from 63.0 to 62.9 m/s.
   - **Unchanged:** the OpenRocket-equivalent mode and every golden output (they use it).
   - **Found on the way.** An MCP test built its expected flight from a design whose parts all had the id "y", so its motor mount resolved to the nose cone. It now gives each part its own id. Design files already refuse duplicate ids.
+
+## D-116 (2026-10-14): Writing designs as RASAero II files; R1 to R5 in three simulators
+
+- **Decision (plan 0077):**
+  - **The writer.** `exportCdx1` writes a one-stage design as a `.CDX1` file, the inverse of the importer: a nose cone, one body tube, one trapezoidal fin set, an optional boat tail, rail guides, a lug, the finish as RASAero's nearest class, the site, up to two parachutes, the motor, and the lift-off weight and CG.
+  - **Refusals.** What RASAero cannot hold is refused with what to change: stages, pods, a step in diameter, non-trapezoidal fins, a nose shape RASAero lacks, no motor. What is mapped is listed.
+  - **Where it is offered.** The app's File menu ("Export RASAero") and the MCP's `export_design` (`format: "cdx1"`).
+- **Field names.** Section names no example file uses ("Double Wedge", "Single Wedge", "Biconvex", "Subsonic NACA") were confirmed from RASAero's own program's string table. That is format discovery, the same as reading its files (CLAUDE.md 3 allows reading a file format to build an importer); nothing of its methods was read.
+- **The three-way comparison.** Our motor files go into RASAero's motor list under names of their own, so all three programs fly the same thrust curves; RASAero's manual allows adding motors (p. 93). Each exported file is read back, so our simulator flies RASAero's exact inputs.
+- **Results** (`docs/reports/rasaero-comparison.md` section 9):
+  - **CP.** Ours agrees with RASAero's within 1.3 mm on all five rockets.
+  - **R1 (launch lug).** The three programs agree within 3 %.
+  - **R2 to R5 (rail buttons).** RASAero's apogee is 10 to 27 % below OpenRocket's. Its rail guide drag, about 3 times Niskanen's and 20 to 30 times OpenRocket's, explains 43 to 84 % of the C_D gap. It decides the most on minimum-diameter rockets, where two guides have up to a quarter of the body's frontal area.
+- **Also fixed.** `run-rasaero.sh` failed with a relative output folder: it wrote Wine's log there after changing into RASAero's folder. It now resolves both paths first.
+- **Not done:** ARCAS in RASAero (plan 0077 section 4). Its RASAero model would carry its authors' modelling choices more than their methods.

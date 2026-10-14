@@ -1,6 +1,7 @@
 import {
   DESIGN_FILE_EXTENSION,
   exampleDesign,
+  exportCdx1,
   importCdx1,
   MAX_INPUT_BYTES,
   newDesign,
@@ -93,6 +94,17 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
       'application/json',
     );
   };
+  // Plan 0077: the design as a RASAero II file; what does not fit is said, never dropped.
+  const exportRasaero = (): void => {
+    try {
+      const name = state.design.name.trim() === '' ? 'rocket' : state.design.name.trim();
+      const exported = exportCdx1(state.design);
+      services.saveFile(`${name}.CDX1`, exported.text, 'application/xml');
+      setNotice([`Exported ${name}.CDX1 for RASAero II.`, ...exported.notices].join(' '));
+    } catch (e) {
+      setNotice(errorText(e), 'error');
+    }
+  };
   const open = async (file: File): Promise<void> => {
     try {
       const design = parseDesign(await services.readFile(file), file.name);
@@ -168,6 +180,15 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
             }}
           >
             Save
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              exportRasaero();
+              close();
+            }}
+          >
+            Export RASAero
           </button>
           <label className="file-button" htmlFor={openId}>
             Open

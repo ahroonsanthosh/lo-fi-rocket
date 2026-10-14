@@ -7,7 +7,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { encodeDesignLink, FormatError, serializeDesign } from '@lo-fi-rocket/formats';
+import { encodeDesignLink, exportCdx1, FormatError, serializeDesign } from '@lo-fi-rocket/formats';
 import { PhysicsError } from '@lo-fi-rocket/physics';
 import * as z from 'zod';
 import { addPart, EditError, removePart, updatePart, type PositionInput } from './edit.js';
@@ -232,12 +232,26 @@ export function createServer(session: Session = new Session()): McpServer {
     {
       title: 'Export a design',
       description:
-        'The design as a .lofi.json file text, to save (the web app opens it with File > Open). Approximations and defaults travel with it.',
-      inputSchema: { designId: id },
+        'The design as file text to save: format "lofi" (the default) is the .lofi.json file the web app opens with File > Open, with its approximations and defaults; format "cdx1" is a RASAero II .CDX1 file (a nose cone, one body tube with one fin set and an optional boat tail; anything else is refused with what to change).',
+      inputSchema: {
+        designId: id,
+        format: z.enum(['lofi', 'cdx1']).optional().describe('lofi (default) or cdx1 (RASAero II)'),
+      },
       annotations: readOnly,
     },
-    ({ designId }) => {
+    ({ designId, format }) => {
       try {
+        if (format === 'cdx1') {
+          const exported = exportCdx1(session.get(designId));
+          return {
+            content: [
+              { type: 'text', text: exported.text },
+              ...(exported.notices.length === 0
+                ? []
+                : [{ type: 'text' as const, text: exported.notices.join('\n') }]),
+            ],
+          };
+        }
         return { content: [{ type: 'text', text: serializeDesign(session.get(designId)) }] };
       } catch (error) {
         return { isError: true, content: [{ type: 'text', text: message(error) }] };

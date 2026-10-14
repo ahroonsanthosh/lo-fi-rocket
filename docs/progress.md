@@ -157,6 +157,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Running RASAero.** It runs here under Wine, driven by our own script (`reference/rasaero/`; nothing of RASAero committed). An opt-in test (`RASAERO=1`) writes `docs/reports/rasaero-comparison-data.md`.
   - **Found.** Our trajectory matches RASAero's when flown on its drag (within 1.4 % below Mach 0.95). Our drag is low: on 21 flown rockets our displayed apogee is above the measured one every time, +18.9 % mean below Mach 0.95 and +29.0 % above (RASAero: +0.4 % and +3.9 %). The causes, term by term, are in `docs/reports/rasaero-comparison.md`. The fixes await the owner.
 - Friction from the DATCOM (plan 0076, D-115): the displayed mode uses the DATCOM's body form factor (eq. 4.2.3.1-a) instead of eq. (3.85)'s, because it improved both independent datasets: the 21 flights (+18.9 → +17.7 % below Mach 0.95) and the held-out drag in every regime (subsonic 7.1 → 6.1 %, now within its 7 % target). The fin friction at the fin chord (DATCOM eq. 4.1.5.1-a) is implemented and selectable but not the default: it worsened the held-out supersonic drag. The comparison mode and the goldens are unchanged.
+- RASAero II export and R1 to R5 in three simulators (plan 0077, D-116):
+  - **Export.** The app's File menu and the MCP write a design as a RASAero II `.CDX1` file. What RASAero cannot hold is refused with what to change.
+  - **Agreement.** R1 to R5 flown in RASAero with our own motor curves: the CP agrees within 1.3 mm. R1 (launch lug) agrees within 3 % between all three programs.
+  - **Disagreement.** R2 to R5 (rail buttons) differ by up to 27 % in apogee, mostly from the rail guide drag, where the three programs' models span a factor of about 30. Measured rail button drag would settle it (owner decision 3).
 
 ## In progress
 
