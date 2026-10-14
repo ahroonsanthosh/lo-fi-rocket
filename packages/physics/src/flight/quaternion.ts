@@ -96,7 +96,12 @@ export function rotationFromAngularVelocity(omega: Vec3, dt: number): Quaternion
   const w = norm(omega);
   if (!Number.isFinite(w)) throw new InvalidInputError('angular velocity', omega, 'must be finite');
   if (w === 0) return IDENTITY_QUATERNION;
-  return quaternionFromAxisAngle(scale(omega, 1 / w), w * dt);
+  // Plan 0065: below 2⁻⁵⁰⁰ rad/s (a roll rate decaying to nothing, down to the subnormal numbers)
+  // 1/w can overflow; the axis is the same after an exact power-of-two scaling of ω.
+  // The scaled vector's norm is taken afresh: a subnormal w carries too few bits for the axis.
+  const scaled = w >= 2 ** -500 ? omega : scale(omega, 2 ** 600);
+  const axis = scale(scaled, 1 / (scaled === omega ? w : norm(scaled)));
+  return quaternionFromAxisAngle(axis, w * dt);
 }
 
 /** Apply eq. (4.24): o₁ = normalise(rotation · o₀). */

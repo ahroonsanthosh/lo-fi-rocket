@@ -790,7 +790,10 @@ export function rollDampingMoment(
   airspeed: number,
   rollRate: number,
 ): number {
-  if (rollRate === 0 || airspeed === 0) return 0;
+  // Plan 0065: the moment is N (2π/β) (ω/v₀) q Σ = N (2π/β) ω ½ρ v₀ Σ, which goes to 0 with v₀.
+  // At an airspeed so small that q underflows to 0 (below about 1e-154 m/s, the first instant off
+  // a still rail) it is below 1e-150 N·m, 0 in float64; dividing by v₀ there would give ∞ × 0.
+  if (rollRate === 0 || airspeed === 0 || dynamicPressure === 0) return 0;
   const M: number = mach;
   const r = rollRate / airspeed;
   let moment = 0;
