@@ -127,6 +127,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - Tumbling above Mach 1 (plan 0067, D-103): the displayed mode now continues past 90° at any Mach number. Above Mach 1 the small-angle supersonic fin force is applied to the reversed fin, and a flight that does this lists it as a major approximation. The wedge and high-aspect-ratio listing of D-102 is now minor below the stall and moderate past it. Only the OpenRocket-equivalent mode still stops at 90°.
 - A sample's Mach, angle of attack, C_D0, CP and margin are documented, and tested, as NaN exactly where no attitude is modelled: under a recovery device, after landing, and with no aerodynamics. The app's plots, CSV export, 3D viewer and the MCP report already treat them as "not defined". With this, task 5 (the physics never refuses a sensible design) is complete.
 - Flipped nose cones (plan 0068, D-104): an `.ork` tail cone (a flipped nose cone) is read as a transition to a point, which OpenRocket shows is exact for all six shapes; the physics accepts an aft radius of 0, and so does the app. Probe files and values in `reference/rockets/flipped-nose-probe/`. Found on the way: the boat-tail drag combination in the displayed mode (D-104, open).
+- The boat-tail drag combination checked (plan 0069, D-105): keeping Niskanen's eq. (3.88) on eq. (3.94) beside the DATCOM base, because the alternative doubled the error against the ARCAS wind-tunnel boat-tail data while moving R2 by only 0.66 %. Two limitation lines that named the wrong side as safe for altitude limits are corrected.
 
 ## In progress
 
@@ -134,7 +135,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Quantify the boat-tail drag combination found in D-104 (Niskanen's eq. 3.88 on his base coefficient beside the DATCOM base of D-069) on the reference rockets; ask the owner if it moves a result beyond tolerance. Then task 4's remaining refusals (pods and booster sets carrying motors, unknown nose shapes, a stage not after the one above), then plan 0061 step 4 (the modelling benchmark).
+- Task 4's remaining refusals (pods and booster sets carrying motors, unknown nose shapes, a stage not after the one above), then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
