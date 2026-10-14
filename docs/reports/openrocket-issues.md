@@ -76,6 +76,8 @@ Status: draft, growing as the validation campaign runs (2026-10-14).
 - **Fin-body interference drag:** none. The thesis ignores it as small (p. 41). RASAero charges about as much again as the fin friction.
 - **Rail buttons:** 20 to 30 times below RASAero's for the same guide (section "Not issues" below, and D-108).
 
+**The same on the reference rockets.** R1 to R5 flown in RASAero II with identical inputs (D-116): where the rocket has rail buttons (R2 to R5), RASAero's apogee is 10 to 27 % below OpenRocket's, most of it from the rail guide drag.
+
 **Why it matters.** A predicted coast that is too long leads to an ejection delay that fires after the real apogee. The fin Reynolds number is a small change with a published basis. Measured rail button drag would settle the largest of the differences.
 
 ## Not issues, recorded for completeness

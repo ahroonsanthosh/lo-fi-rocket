@@ -96,6 +96,32 @@ describe('files (plan 0015)', () => {
     expect(screen.getByRole('textbox', { name: 'Design name' })).toHaveValue('Beta');
   });
 
+  it('exports the design as a RASAero II file (plan 0077) and says what was mapped', async () => {
+    const saved: string[] = [];
+    render(
+      <App
+        storage={memory()}
+        motorStore={memory()}
+        transport={noNetwork}
+        initialDesign={exampleDesign('s')}
+        services={{
+          runner: synchronousRunner(),
+          saveFile: (n, t) => {
+            saved.push(n, t);
+          },
+        }}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('button', { name: 'Export RASAero' }));
+    expect(saved[0]).toBe('Example: three-fin sport rocket (R1).CDX1');
+    expect(saved[1]).toMatch(/^<RASAeroDocument>/);
+    expect(await screen.findByRole('region', { name: 'Warnings' })).toHaveTextContent(
+      /Exported Example: three-fin sport rocket \(R1\)\.CDX1 for RASAero II\..*Rough Camouflage Paint/,
+    );
+  });
+
   it('imports R1 from the .ork file with the bundled D12 and shows its figures', async () => {
     render(
       <App

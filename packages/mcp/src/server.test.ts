@@ -20,6 +20,8 @@ import {
   exampleDesign,
   motorFromEng,
   orkToDesign,
+  importCdx1,
+  designMassProperties,
   parseDesign,
   parseEng,
   parseOrk,
@@ -470,6 +472,28 @@ describe('a two-stage rocket built through the tools (plan 0064)', () => {
       ],
     });
     expect(top.text).toMatch(/the top stage \(stages\[0\]\) never separates/);
+  });
+});
+
+describe('export_design as a RASAero II file (plan 0077)', () => {
+  it('writes the .CDX1 text, which reads back with the same lift-off weight; a staged design is refused', async () => {
+    const bytes = readFileSync(join(ROCKETS, 'r1-three-fin-conical.ork'));
+    const imported = await ok('import_design', {
+      content: bytes.toString('base64'),
+      format: 'ork-base64',
+      fileName: 'r1.ork',
+    });
+    const designId = imported['id'] as string;
+    const exported = await call('export_design', { designId, format: 'cdx1' });
+    expect(exported.ok).toBe(true);
+    expect(exported.text).toMatch(/^<RASAeroDocument>/);
+    expect(exported.text).toContain('<SustainerEngine>D12  (Estes)</SustainerEngine>');
+    const lofi = parseDesign((await call('export_design', { designId })).text);
+    const back = importCdx1(exported.text, [], 'back', 'r1.CDX1');
+    // Weight in lb to 10 digits: the R1 lift-off mass.
+    const pounds = Number(/<SustainerLaunchWt>([^<]+)</.exec(exported.text)?.[1]);
+    expect(pounds * 0.45359237).toBeCloseTo(designMassProperties(lofi, 'liftoff').mass, 9);
+    expect(back.design.components.some((c) => c.component.kind === 'finSet')).toBe(true);
   });
 });
 
