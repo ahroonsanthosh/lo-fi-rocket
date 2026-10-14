@@ -72,7 +72,14 @@ export type Action =
       readonly device: DesignRecoveryDevice;
     }
   | { readonly type: 'remove-recovery'; readonly id: string }
-  | { readonly type: 'set-finish'; readonly roughnessHeight: Metres }
+  /** Plan 0073: the design's finish; with `everyPart`, every part's own finish is cleared. */
+  | { readonly type: 'set-finish'; readonly roughnessHeight: Metres; readonly everyPart?: boolean }
+  /** Plan 0073: a part's own finish, or none (the design's). */
+  | {
+      readonly type: 'set-component-finish';
+      readonly id: string;
+      readonly roughnessHeight: Metres | undefined;
+    }
   | { readonly type: 'set-reference-diameter'; readonly referenceDiameter: Metres | undefined }
   | { readonly type: 'set-as-built'; readonly asBuilt: AsBuilt | undefined }
   | { readonly type: 'set-stability-thresholds'; readonly thresholds: StabilityThresholds }
@@ -192,7 +199,27 @@ export function reduce(state: AppState, action: Action): AppState {
         selectedId: state.selectedId === action.id ? undefined : state.selectedId,
       };
     case 'set-finish':
-      return withDesign(state, { ...d, finish: { roughnessHeight: action.roughnessHeight } });
+      return withDesign(state, {
+        ...d,
+        finish: { roughnessHeight: action.roughnessHeight },
+        ...(action.everyPart === true
+          ? { components: d.components.map((c) => withOwnFinish(c, undefined)) }
+          : {}),
+      });
+    case 'set-component-finish':
+      return withDesign(state, {
+        ...d,
+        components: d.components.map((c) =>
+          c.id === action.id
+            ? withOwnFinish(
+                c,
+                action.roughnessHeight === d.finish.roughnessHeight
+                  ? undefined
+                  : action.roughnessHeight,
+              )
+            : c,
+        ),
+      });
     case 'set-as-built': {
       // D-089: the weighed mass and balance point, or none.
       const next: RocketDesign = { ...d };
@@ -235,4 +262,12 @@ export function reduce(state: AppState, action: Action): AppState {
 
 export function initialState(design: RocketDesign, units: UnitSystem = 'metric'): AppState {
   return { design, selectedId: undefined, units, revision: 0 };
+}
+
+/** Plan 0073: the part with its own finish, or without one (it then has the design's). */
+function withOwnFinish(c: DesignComponent, roughnessHeight: Metres | undefined): DesignComponent {
+  const next: { -readonly [K in keyof DesignComponent]: DesignComponent[K] } = { ...c };
+  if (roughnessHeight === undefined) delete next.roughnessHeight;
+  else next.roughnessHeight = roughnessHeight;
+  return next;
 }

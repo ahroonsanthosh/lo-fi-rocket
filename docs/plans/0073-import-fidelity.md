@@ -128,3 +128,15 @@ The work is split into one pull request per item, in the order above.
 - **Formats.**
   - All 17 probe cases: mass within 1e-7 and CG within 1e-9 m. Elliptical fins are compared by the fillet alone, because OpenRocket's elliptical plate is a polygon, D-087.
   - The design file round trip.
+
+## 5. Part 1b: the finish and fillets in the app
+
+The app had no control for the surface finish at all (CLAUDE.md section 9: no hidden settings), and no fillet fields.
+
+- **Surface finish.** Each nose cone's, body tube's, transition's and fin set's editor has a "Surface finish" choice: OpenRocket's nine named finishes with their roughness (D-110), the rocket's own marked.
+  - Choosing one gives that part its own finish. Choosing the rocket's finish clears the part's own.
+  - "Use this finish on every part" sets the rocket's finish and clears every part's own.
+- **Fillets.** The fin set editor has a fillet radius (0 for none) and, once there are fillets, their material density. It starts at OpenRocket's default, 680 kg/m³ (GEO-19, D-113).
+- **Tests.**
+  - The reducer's two finish actions.
+  - The editor: a part's own finish, then the whole rocket's; fillets added and removed.

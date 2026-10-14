@@ -147,6 +147,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Physics.** The skin friction is the sum over the surfaces, each at its own finish. With one finish it is eq. (3.85) exactly, so every existing result is unchanged. A 0 µm finish is a smooth surface.
   - **Against OpenRocket.** 14 probe rockets at Mach 0.1 to 1.5: friction 1.24 to 1.46 % above OpenRocket's, the regular-paint offset within ±0.11 %.
   - **Also fixed.** The MCP part editor dropped a part's pod set; it now keeps that and its finish.
+- The finish and fillets in the app (plan 0073 part 1b): every body part's and fin set's editor sets its surface finish, or the whole rocket's; the fin editor sets fillets. The app had no finish control before.
 - Fin fillets (plan 0073 part 3b, D-113, GEO-19): their mass, CG and inertias by exact plane geometry, read from `.ork` files instead of being left out. OpenRocket's fillet volume is the same geometry: the 17 `FilletProbe` cases agree to 1e-7 in mass and 1e-9 m in CG. Before this, missing fillets put the CG forward and overstated the margin (up to 2.8 % CG on a campaign rocket).
 - Small import and message fixes (plan 0073 part 3a, D-112): an `.ork` file's rail buttons past the end of the body are moved onto it and listed, instead of the stability refusing the design; the RK4 refusal advises a step rounded down, never up; the airfoil fin slab mass is rated moderate by its measured effect.
 - Streamers (plan 0073 part 2, D-111, STREAM-1): a recovery device may be a streamer, with Niskanen's Appendix C drag (eq. C.6), in the physics, the design file (schema 5), the `.ork` reader, the app and the MCP. Before this an imported streamer was dropped with a wrong "no mass" message and the rocket fell ballistically. Against OpenRocket on ten strips: mass and CG to 1e-6, C_D exact (OpenRocket uses the same equation, capped at 0.4, which the comparison mode copies).
@@ -158,7 +159,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0073, the rest of the import gaps, one pull request each: part 1b, a finish control in the app for the design and for a part, and fillet fields in the app's fin editor.
+- Plan 0073, the rest of the import gaps, one pull request each: none left; re-run the OpenRocket campaign on the fixes, then the owner's decisions of plan 0074 (airfoil drag, lug drag, friction form factor).
 - Validation campaign (owner, 2026-10-14):
   - **What runs.** Exhaustive comparison against OpenRocket on many generated designs, against the measured NACA/NASA data by regime, and against RASAero II if it can be run here or from its published predictions. Background agents are running all three.
   - **Output.** A differences report with the reasoning for each difference, and a list of OpenRocket issues for its developers.
