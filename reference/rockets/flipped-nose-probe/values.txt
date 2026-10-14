@@ -1,0 +1,39 @@
+# FlippedNoseProbe output (OpenRocket 24.12; tools/openrocket-harness/src/FlippedNoseProbe.java). Plan 0068, D-104.
+# Each rocket: a filled balsa ogive nose 0.12 m x 25 mm, a 0.4 m paper body tube (25 mm, wall 1 mm) with three
+# plywood fins (root 0.1, tip 0.05, sweep 0.05, span 0.08, 3 mm, at its aft end), and a 0.1 m ABS (1050 kg/m3) tail of
+# base radius 25 mm and wall 2 mm after the tube: a flipped nose cone (flipped-*) or a transition from 25 mm to 0
+# (transition-*) of the same shape. Measured as loaded from the saved file, Mach 0.3, angle of attack 0.
+# Per tail part: OpenRocket's fore and aft radius, length, its front x, mass (kg), CG x, CP x and C_Na.
+# Per rocket: the worst-case CP x and C_Na, the structure mass and CG (no motor), the length. x from the nose tip, m.
+# flipped-ogive-shoulder adds a base shoulder (NoseCone.setShoulder*: length 30 mm, radius 24 mm, wall 2 mm).
+# flipped-ogive-children: no fins; two 10 g, 20 mm mass components inside the flipped ogive tail, "Top" at top + 0.01 m
+# and "Bottom" at bottom + 0; their front x, length, mass and CG as loaded, and the structure mass and CG.
+flipped-conical: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.015637564 cgAbs=0.551998334 cp=0.553333333 cna=-2.000000000
+flipped-conical: rocket worst CP x=0.397098932 CNa=15.450582104 structure m=0.111493445 cg=0.355938637 length=0.620000
+transition-conical: class=Transition foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.015637564 cgAbs=0.551998334 cp=0.553333333 cna=-2.000000000
+transition-conical: rocket worst CP x=0.397098932 CNa=15.450582104 structure m=0.111493445 cg=0.355938637 length=0.620000
+flipped-ogive: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.021395290 cgAbs=0.557578094 cp=0.574274621 cna=-2.000000000
+flipped-ogive: rocket worst CP x=0.394388188 CNa=15.450582104 structure m=0.117251170 cg=0.366584488 length=0.620000
+transition-ogive: class=Transition foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.021395290 cgAbs=0.557578094 cp=0.574274621 cna=-2.000000000
+transition-ogive: rocket worst CP x=0.394388188 CNa=15.450582104 structure m=0.117251170 cg=0.366584488 length=0.620000
+flipped-ellipsoid: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.025060304 cgAbs=0.562716284 cp=0.586661819 cna=-2.000000000
+flipped-ellipsoid: rocket worst CP x=0.392784728 CNa=15.450582104 structure m=0.120916185 cg=0.373438483 length=0.620000
+transition-ellipsoid: class=Transition foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.025060304 cgAbs=0.562716284 cp=0.586661819 cna=-2.000000000
+transition-ellipsoid: rocket worst CP x=0.392784728 CNa=15.450582104 structure m=0.120916185 cg=0.373438483 length=0.620000
+flipped-power: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.021024690 cgAbs=0.559669013 cp=0.569997751 cna=-2.000000000
+flipped-power: rocket worst CP x=0.394941807 CNa=15.450582104 structure m=0.116880571 cg=0.366355012 length=0.620000
+transition-power: class=Transition foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.021024690 cgAbs=0.559669013 cp=0.569997751 cna=-2.000000000
+transition-power: rocket worst CP x=0.394941807 CNa=15.450582104 structure m=0.116880571 cg=0.366355012 length=0.620000
+flipped-parabolic: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.018881026 cgAbs=0.555476978 cp=0.564532601 cna=-2.000000000
+flipped-parabolic: rocket worst CP x=0.395649243 CNa=15.450582104 structure m=0.114736906 cg=0.362053430 length=0.620000
+transition-parabolic: class=Transition foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.018881026 cgAbs=0.555476978 cp=0.564532601 cna=-2.000000000
+transition-parabolic: rocket worst CP x=0.395649243 CNa=15.450582104 structure m=0.114736906 cg=0.362053430 length=0.620000
+flipped-haack: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.020552627 cgAbs=0.557625212 cp=0.569998622 cna=-2.000000000
+flipped-haack: rocket worst CP x=0.394941695 CNa=15.450582104 structure m=0.116408507 cg=0.365210234 length=0.620000
+transition-haack: class=Transition foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.020552627 cgAbs=0.557625212 cp=0.569998622 cna=-2.000000000
+transition-haack: rocket worst CP x=0.394941695 CNa=15.450582104 structure m=0.116408507 cg=0.365210234 length=0.620000
+flipped-ogive-shoulder: class=NoseCone foreRadius=0.025000 aftRadius=0.000000 length=0.100000 absX0=0.520000000 mass=0.030499625 cgAbs=0.541883193 cp=0.574274621 cna=-2.000000000
+flipped-ogive-shoulder: rocket worst CP x=0.394388188 CNa=15.450582104 structure m=0.126355506 cg=0.376557787 length=0.620000
+flipped-ogive-children: child Top absX0=0.530000000 length=0.020000 mass=0.010000000 cgAbs=0.540000000
+flipped-ogive-children: child Bottom absX0=0.600000000 length=0.020000 mass=0.010000000 cgAbs=0.610000000
+flipped-ogive-children: rocket structure m=0.104851170 cg=0.370949224

@@ -19,6 +19,7 @@ import {
   kilogramsPerCubicMetre,
   metres,
   noseProfile,
+  transitionProfile,
   rocketMassProperties,
   seconds,
   withAsBuilt,
@@ -2018,7 +2019,7 @@ class Reader {
   }
 
   private readNoseCone(el: Element, x: number): number {
-    if (el.boolean('isflipped')) throw el.unsupported('flipped nose cones');
+    if (el.boolean('isflipped')) return this.readFlippedNoseCone(el, x);
     // <shapeclipped> is written for clippable shapes. For a nose cone the fore
     // radius is zero, so the clipped and non-clipped profiles of Niskanen
     // Appendix A.7 (pp. 103 to 104) coincide and the flag has no effect.
@@ -2064,6 +2065,89 @@ class Reader {
             : (fore, aft) => Math.min(radiusAt(fore), radiusAt(aft)),
       };
       this.readNoseInternal(sub, { ...parent, innerTubes: innerTubeSpans(sub, parent) });
+    }
+    this.finishPart(el, [...IGNORED_COMMON]);
+    return x + length;
+  }
+
+  /**
+   * Plan 0068 (D-104): a flipped nose cone, a tail cone. OpenRocket writes it as the cone it is,
+   * <aftradius> its base radius and <aftshoulder…> the base's shoulder, with <isflipped>, and turns
+   * it base forward (reference/rockets/flipped-nose-probe/values.txt). It is then a transition of
+   * the same shape and length from the base radius to 0: OpenRocket gives the two the same mass,
+   * CG, CP and C_Nα for all six shapes. The shoulder reaches forward from the base, a fore
+   * shoulder as on a transition (D-084), its cap at its fore end.
+   */
+  private readFlippedNoseCone(el: Element, x: number): number {
+    // With one end radius 0 the clipped and non-clipped profiles coincide, as on a nose cone.
+    if (el.has('shapeclipped')) el.boolean('shapeclipped');
+    const { shape, shapeParameter } = readShape(el);
+    const length = el.number('length');
+    const baseRadius = el.length('aftradius');
+    const thickness = el.thickness('thickness');
+    const { shoulder, capped } = readShoulder(el, 'aft');
+    this.maxBodyRadius = Math.max(this.maxBodyRadius, baseRadius);
+    this.place(
+      el,
+      {
+        kind: 'transition',
+        shape,
+        length: metres(length),
+        foreRadius: metres(baseRadius),
+        aftRadius: metres(0),
+        ...(shapeParameter === undefined ? {} : { shapeParameter }),
+        ...(thickness === 'filled' ? {} : { wallThickness: metres(thickness) }),
+        density: el.bulkDensity(),
+      },
+      x,
+    );
+    if (shoulder !== undefined) {
+      // As for a transition: OpenRocket's override would cover the shoulder, a separate part here.
+      if (el.has('overridemass') || el.has('overridecg')) {
+        throw el.unsupported('a mass or CG override on a flipped nose cone with a shoulder');
+      }
+      const fore = x - (shoulder.length as number);
+      this.components.push({
+        name: `${el.optionalText('name') ?? ''} (shoulder)`,
+        element: 'transitionshoulder',
+        component: {
+          kind: 'innerTube',
+          length: shoulder.length,
+          outerRadius: shoulder.radius,
+          wallThickness: shoulder.wallThickness,
+          density: el.bulkDensity(),
+        },
+        position: metres(fore),
+      });
+      if (capped) this.placeShoulderCap(el, shoulder, fore, 'fore');
+    }
+    const sub = el.optionalChild('subcomponents');
+    if (sub !== undefined) {
+      // D-080 as in a nose cone, against the reversed profile: the radius less the wall, at the end
+      // of the part where that is smaller (the aft end here).
+      const profile = transitionProfile(
+        shape,
+        metres(length),
+        metres(baseRadius),
+        metres(0),
+        shapeParameter,
+      );
+      const radiusAt = (at: number): number =>
+        profile.radius(Math.min(Math.max(at - x, 0), length)) - (thickness as number);
+      const parent: Parent = {
+        position: x,
+        length,
+        radius: baseRadius,
+        autoOuterRadius:
+          thickness === 'filled'
+            ? () => undefined
+            : (fore, aft) => Math.min(radiusAt(fore), radiusAt(aft)),
+      };
+      this.readNoseInternal(
+        sub,
+        { ...parent, innerTubes: innerTubeSpans(sub, parent) },
+        'a flipped nose cone',
+      );
     }
     this.finishPart(el, [...IGNORED_COMMON]);
     return x + length;

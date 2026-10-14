@@ -425,7 +425,11 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   });
 
   it('nose cones and transitions', () => {
-    unsupported(edit(r1, '<isflipped>false', '<isflipped>true'), /flipped nose cones/);
+    // A flipped nose cone is a transition from its base radius to a point (plan 0068, D-104).
+    expect(
+      parseOrk(edit(r1, '<isflipped>false', '<isflipped>true'), 'edited.ork').components[0]
+        ?.component,
+    ).toMatchObject({ kind: 'transition', foreRadius: 0.025, aftRadius: 0, length: 0.1 });
     // A capped shoulder adds the cap as a disc (D-078).
     expect(
       parseOrk(
@@ -1224,12 +1228,12 @@ describe('launch lug instances, rail button screws and transition shoulders (D-0
 });
 
 describe('every unsupported feature is listed at once (D-082)', () => {
-  it('a flipped nose cone and a pod set in the same file are both reported', () => {
+  it('an unknown nose shape and a pod set in the same file are both reported', () => {
     const r1 = strFromU8(
       unzipSync(bytes('r1-three-fin-conical.ork'))['rocket.ork'] ?? new Uint8Array(),
     );
     const edited = r1
-      .replace('<isflipped>false', '<isflipped>true')
+      .replace('<shape>conical</shape>', '<shape>blob</shape>')
       .replace('</nosecone>', '</nosecone><podset><name>Pods</name></podset>');
     let caught: unknown;
     try {
@@ -1240,9 +1244,9 @@ describe('every unsupported feature is listed at once (D-082)', () => {
     expect(caught).toBeInstanceOf(OrkUnsupportedFeaturesError);
     expect(caught).toBeInstanceOf(OrkUnsupportedError);
     const e = caught as OrkUnsupportedFeaturesError;
-    expect(e.problems.map((p) => p.feature)).toEqual(['flipped nose cones', 'element <podset>']);
+    expect(e.problems.map((p) => p.feature)).toEqual(['shape "blob"', 'element <podset>']);
     expect(e.message).toMatch(
-      /2 parts of this design are not supported yet:\n- .*flipped nose cones\n- .*podset "Pods": element <podset>/,
+      /2 parts of this design are not supported yet:\n- .*shape "blob"\n- .*podset "Pods": element <podset>/,
     );
   });
 });

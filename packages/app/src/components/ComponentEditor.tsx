@@ -80,7 +80,8 @@ const FIELDS: Record<Component['kind'], readonly NumField[]> = {
   transition: [
     { key: 'length', label: 'Length', kind: 'mm', rule: 'positive' },
     { key: 'foreRadius', label: 'Fore radius', kind: 'mm', rule: 'positive' },
-    { key: 'aftRadius', label: 'Aft radius', kind: 'mm', rule: 'positive' },
+    // Plan 0068: 0 is a tail cone ending in a point.
+    { key: 'aftRadius', label: 'Aft radius', kind: 'mm', rule: 'non-negative' },
     { key: 'density', label: 'Material density', kind: 'density', rule: 'positive' },
   ],
   bodyTube: [

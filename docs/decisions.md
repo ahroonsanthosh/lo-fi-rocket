@@ -885,3 +885,19 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Keep the stop (a refusal).
   - Read the subsonic DATCOM charts at Mach 0.6 above Mach 1, as D-070 does from 0.6 to 1. That has no source either, and the DATCOM's own transonic guidance (4.1.3.3 B) builds the curves from the Mach 1.4 method, not the 0.6 one.
 - **Consequences:** in the displayed mode every flight runs to landing or the time limit. The CP jumps at 90° above Mach 1 (forward and reversed planforms differ); the adaptive step handles it, as it does burnout.
+
+## D-104 (2026-10-14): A flipped nose cone is read as a transition to a point
+
+- **Decision:**
+  - **The reader.** An `.ork` nose cone with `<isflipped>true` is read as a transition of the same shape, shape parameter, length and wall, from its base radius (`<aftradius>` in the file) to 0. Its base shoulder (`<aftshoulder…>` in the file) reaches forward from the base, as a fore shoulder on a transition (D-084), with its cap at its fore end. Parts inside it are read as in a nose cone, against the reversed profile.
+  - **The physics.** GEO-7 accepts an aft radius of 0. The narrowing profile is then the nose profile reversed, the function boat tails already use. Nothing else needed changing: the Barrowman CP becomes V/A_fore, and the base drag has a zero area.
+  - **The app.** The transition's aft radius field accepts 0.
+- **Why:** rule 3 (D-083). OpenRocket's flipped cone is a tail cone, and the reader refused the whole file for it. OpenRocket gives a flipped cone and a transition to 0 the same mass, CG, CP and C_Nα for all six shapes (FlippedNoseProbe, `reference/rockets/flipped-nose-probe/values.txt`), so this is exact, not an approximation.
+- **Evidence:**
+  - Our tail is our own nose cone reversed (mass within 1e-9).
+  - Against OpenRocket, the conical tail is within 2.3e-7 in mass (the quadrature, D-025). The curved shells are within 0.022 % in mass and 0.0021 % in CG, least good on the blunt tips of the ellipsoid and the power 0.5 series: the first-order wall offset of D-024, as for nose cones.
+  - The rocket CG is within 0.003 % and the CP within 0.023 % (tolerances 1 % and 2 %).
+  - The base shoulder gives OpenRocket's part mass and CG to 3e-5 and 3e-6.
+  - Parts inside a flipped cone are placed as OpenRocket places them: "top" from the cone's front, "bottom" with the part's aft end at the point.
+- **Open, found here (not changed by this decision):** in the displayed mode a boat tail's pressure drag is Niskanen's eq. (3.88), a fraction of his base drag coefficient (3.94), while the remaining base uses the DATCOM (D-069), which is lower. A tail cone therefore adds drag there instead of removing it: on R1 with an 80 mm ogive tail at Mach 0.3, +0.092 boat tail against −0.060 base. The DATCOM's own subsonic method (4.2.3.1-a) carries the after-body pressure in its fineness-ratio term and gives a closed body no base drag. Which combination to use is a choice between approved sources. It is to be quantified on the reference rockets and put to the owner if it moves a result beyond its tolerance (CLAUDE.md 1 rule 4). The OpenRocket-equivalent mode is consistent (eq. 3.94 throughout).
+- **Consequences:** flipped nose cones no longer refuse a file. The probe's thirteen files and values are kept as references.
