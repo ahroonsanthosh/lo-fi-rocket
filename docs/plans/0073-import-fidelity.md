@@ -92,9 +92,22 @@ The work is split into one pull request per item, in the order above.
 - **App, `Streamers.test.tsx`.** Adding and editing a streamer. `display.test.ts`: the oz/yd² factor against SP 811.
 - **MCP.** `set_recovery` with a streamer, and its error without a diameter or a strip.
 
-## 4. Part 3: the smaller fixes (next)
+## 4. Part 3: the smaller fixes
 
-- **Fillets.** Add the fillet mass, from its cross-section along the root chord (exact geometry).
-- **Approximation ratings.** Rate the airfoil fin mass and any remaining fin approximation by their measured effect, not "minor".
-- **RK4 safe step.** Round it down in the refusal message.
-- **Rail buttons past the body end.** List them and give the stability, instead of throwing.
+### Part 3a (D-112)
+
+- **RK4 safe step.** The refusal and the pitch-accuracy warning round the advised step down to two significant figures (`stepRoundedDown`): 0.00199 s is advised as 0.0019 s, not 0.0020 s. A property test checks that the advice is never above the safe step.
+- **Rail buttons past the body's end.** The `.ork` reader moves such a set forward until its last button sits one button diameter inside the end, shortening the spacing if the set is longer than the body, and lists it (minor).
+  - Test: R2 with its buttons 0.40 m apart. The second would be 50 mm past the boat tail; the set is moved 60 mm forward and the stability is computed.
+- **Airfoil fin mass.** It is rated moderate by its measured effect; rounded fins stay minor.
+
+### Part 3b: fillets (next)
+
+`FilletProbe` (`reference/rockets/fillet-probe/values.txt`) shows OpenRocket's fillet volume is exact plane geometry, to 7 digits.
+
+- **Cross-section.** Per side, the region between the fin's plane (taken through the axis, whatever the fin thickness), the body circle of radius R and an arc of radius r tangent to both:
+  - A = ½ r y_c − ½ r² acos(r/(R + r)) − ½ R² asin(r/(R + r)), with y_c = √((R + r)² − r²).
+- **Volume.** A × the root chord × 2 sides × n fins, for every planform.
+- **Centroid.** At the middle of the root chord.
+
+The plan is to add it as GEO-19 on the fin set, with the fillet's own material, and to read it from `.ork` files instead of listing it.

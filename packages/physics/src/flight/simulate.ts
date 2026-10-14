@@ -33,6 +33,7 @@ import {
   NonFiniteResultError,
   PhysicsError,
   SimulationStalledError,
+  stepRoundedDown,
 } from '../errors.js';
 import {
   clusterSums,
@@ -1733,10 +1734,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       }
       if (check.pitchAmplitudeLoss > RK4_WARN_PITCH_AMPLITUDE_LOSS && !pitchLossWarned) {
         pitchLossWarned = true;
-        const betterStep = (
-          (1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) *
-          0.9
-        ).toPrecision(2);
+        const betterStep = stepRoundedDown(
+          (1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9,
+        );
         warnings.add(
           `RK4 step check: the time step is coarse for this rocket's pitch oscillation, so the calculation damps the wobble by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step. Apogee and speeds are not affected; to see the oscillation, use a step below ${betterStep} s or the Dormand–Prince integrator.`,
         );

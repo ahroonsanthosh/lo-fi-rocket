@@ -859,10 +859,11 @@ describe('motor configurations and fin cross-sections (D-077)', () => {
       const rocket = probe(n);
       const fins = rocket.components.find((c) => c.element === 'trapezoidfinset');
       expect(fins?.component.kind === 'finSet' && fins.component.crossSection).toBe(section);
-      // D-083: the physics lists the slab mass (minor); the import adds nothing of its own.
+      // D-083: the physics lists the slab mass (rounded minor, airfoil moderate, D-112); the
+      // import adds nothing of its own.
       expect(listed(rocket)).toEqual([]);
       expect(componentApproximations(rocket.components).map((a) => a.impact)).toEqual(
-        n === 0 ? [] : ['minor'],
+        n === 0 ? [] : n === 1 ? ['minor'] : ['moderate'],
       );
     }
   });

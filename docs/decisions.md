@@ -1042,3 +1042,15 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - On the ten probe strips the mass, structure mass and CG agree with OpenRocket to 1e-6, and the C_D exactly (or at the cap).
   - The example rocket on a 0.6 × 0.06 m, 80 g/m² streamer lands at its closed-form terminal speed within 1 %: √(C_D A ratio) = 4.16 times the parachute's.
 - **Consequences:** none for any existing design or golden output: they all use parachutes.
+
+## D-112 (2026-10-14): Rail buttons past the body's end, the RK4 step advice, and the airfoil fin mass rating
+
+- **Decision:**
+  - **Rail buttons past the body's end.** When an `.ork` file places rail buttons past the end of their body, the import moves the set forward until its last button sits one button diameter inside the end. If the set is longer than the body, its spacing is shortened between one diameter inside each end. This is listed (minor). A button typed past the body's end in the app is still an input error with what to fix.
+  - **RK4 step advice.** The RK4 refusal and warning advise a time step rounded down to two significant figures, never up.
+  - **Airfoil fin mass.** The slab mass of airfoil fins (D-077) is rated moderate; rounded fins stay minor.
+- **Why:**
+  - **Rail buttons.** OpenRocket accepts such files and counts the buttons where they are; the validation campaign met one, and the stability refused it (rule 3). Moving the set is the smallest change that puts every button on a body the models cover. Its effect, a few grams counted a little further forward, is minor.
+  - **RK4 step.** The campaign saw a refusal advise "at most 0.0020 s", the very step it refused, because the safe 0.00199 s was rounded up.
+  - **Airfoil fins.** The campaign measured the airfoil slab at up to 8.5 % of the structure mass, moving its CG up to 3.4 % aft, which is more than "minor" describes.
+- **Consequences:** a design with airfoil fins and nothing else approximated now reports medium confidence instead of high.

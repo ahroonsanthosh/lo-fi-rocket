@@ -104,3 +104,7 @@ These are plan 0071 (D-108). Output in `reference/rockets/drag-probe/`.
 ## Finish probe
 
 `src/FinishProbe.java` (plan 0073, D-110) prints the roughness OpenRocket gives each of its nine surface finishes, and builds a 50 mm rocket (ogive nose, tube, three fins, lug) once in each finish and then with mixed finishes, saving each and printing every part's friction and pressure drag at Mach 0.1, 0.3, 0.8 and 1.5 as reloaded. It also builds ten rockets with a streamer and prints the streamer's mass, area and automatic drag coefficient. Output and files in `reference/rockets/finish-probe/`.
+
+## Fillet probe
+
+`src/FilletProbe.java` (plan 0073 part 3b) prints a fin set's mass, volume, CG and unit inertias with and without fillets, against the fillet radius, body radius, root chord, fin count and thickness, planform and fillet material. Output in `reference/rockets/fillet-probe/values.txt`.
