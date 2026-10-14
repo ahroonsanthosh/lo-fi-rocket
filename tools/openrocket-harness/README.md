@@ -70,3 +70,7 @@ Every OpenRocket option that affects the results is set explicitly in `Reference
 ## Fin shape probe
 
 `src/FinShapeProbe.java` (plan 0059) measures trapezoidal, elliptical and freeform fin sets on the same rocket: the fins' mass, CG, inertias, planform area and outline, and the fin set's and the rocket's CP and C_Nα at Mach 0.3; output in `reference/rockets/fin-shape-probe/`.
+
+## Staging probe
+
+`src/StagingProbe.java` (plan 0064, D-096) reports how OpenRocket stages a rocket: each stage's separation event and delay, each motor mount's ignition event and delays, and a flight's events on every branch, with the mass and CG around each separation. Run on OpenRocket's own staged examples it shows "automatic" ignition as launch for the bottom stage and the ejection charge of the stage below for the others. With `--build <motors> <out>` it first builds two staged rockets of our own (`staged-bp`: D12-0 to C6-5 at the charge; `staged-hpr`: H128W to G80T 0.5 s after burnout, separation at burnout). With `--gaps <motors> <out>` it builds two three-stage rockets with a stage that has no motor (`staged-gap-bottom`, `staged-gap-middle`): with the bottom stage empty nothing ignites, and with the middle stage empty the sustainer never lights, so "automatic" means the ejection charge of the stage directly below. Output and files in `reference/rockets/staging-probe/`.

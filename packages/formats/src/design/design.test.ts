@@ -162,7 +162,9 @@ describe('validation names the path and the problem', () => {
       /\$\.schemaVersion: expected a positive integer, received string/,
     );
     expect(() => parseDesign(`{"schemaVersion":${String(CURRENT_SCHEMA_VERSION + 1)}}`)).toThrow(
-      /this file is version 2 but this app reads up to version 1; update the app/,
+      new RegExp(
+        `this file is version ${String(CURRENT_SCHEMA_VERSION + 1)} but this app reads up to version ${String(CURRENT_SCHEMA_VERSION)}; update the app`,
+      ),
     );
     expect(() => applyMigrations({ schemaVersion: 1 }, [], 2)).toThrow(
       /no migration from version 1 to 2/,

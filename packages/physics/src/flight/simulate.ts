@@ -75,7 +75,10 @@ import {
   type FlightVehicle,
   type MotorSource,
   type RecoveryDevice,
+  type SeparationEvent,
   type SimulationOptions,
+  type StageSeparation,
+  type VehicleStages,
 } from './vehicle.js';
 
 /** D-047: linear interpolation of an imported C_D table in Mach; outside the table is an error. */
@@ -226,8 +229,12 @@ export interface FlightSummary {
     readonly beyondValidated: boolean;
     readonly largeAngle: boolean;
   };
-  /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
-  readonly endReason: 'landing' | 'max-time' | 'model-limit';
+  /**
+   * 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not
+   * continued. 'no-ignition': no motor lit at launch or was due to light, so the rocket stayed on the
+   * pad (plan 0064 part 2).
+   */
+  readonly endReason: 'landing' | 'max-time' | 'model-limit' | 'no-ignition';
   /**
    * The smallest stability margin, at the CP for the actual Mach number and
    * angle of attack and the CG of the moment, over every accepted step of
@@ -813,6 +820,67 @@ export function stagingApproximations(stageCount: number): Approximation[] {
   ];
 }
 
+/** Plan 0064 part 2: a separation event in words, with its delay ("1.5 s after its motor's burnout"). */
+function separationInWords(sep: StageSeparation): string {
+  const altitude = sep.altitude === undefined ? '' : `${(sep.altitude as number).toFixed(1)} m`;
+  const event: Record<SeparationEvent, string> = {
+    'upper-ignition': 'the ignition of the stage above it',
+    ignition: 'its own motor’s ignition',
+    burnout: 'its own motor’s burnout',
+    ejection: 'its own motor’s ejection charge',
+    launch: 'launch',
+    apogee: 'apogee',
+    'altitude-ascending': `climbing through ${altitude} above the pad`,
+    'altitude-descending': `descending through ${altitude} above the pad`,
+    never: 'never',
+  };
+  const delay: number = sep.delay;
+  return delay > 0 ? `${String(delay)} s after ${event[sep.event]}` : `at ${event[sep.event]}`;
+}
+
+/**
+ * Plan 0064 part 2 (rule 3): a motor that was due to ignite and never did, and a stage that was due
+ * to separate and never did, change the flight in kind; each is said with its reason.
+ */
+function stagingWarnings(
+  stages: VehicleStages,
+  motors: readonly MotorRuntime[],
+  separated: ReadonlySet<number>,
+  stageName: (k: number) => string,
+  ended: string,
+): string[] {
+  const out: string[] = [];
+  stages.motors.forEach((m, i) => {
+    const rt = motors[i];
+    if (rt === undefined || rt.ignitedAt !== undefined || m.ignition.event === 'never') return;
+    const of = m.ignition.of === undefined ? undefined : motors[m.ignition.of];
+    let reason: string;
+    if (!rt.attached) reason = `${stageName(m.stage)} separated before it was due`;
+    else if (m.ignition.event === 'launch') {
+      reason = `it was due ${String(m.ignition.delay)} s after launch, but ${ended} first`;
+    } else if (of?.ignitedAt === undefined) {
+      reason = `it is set to ignite at the ${m.ignition.event === 'burnout' ? 'burnout' : 'ejection charge'} of ${of?.label ?? 'another motor'}, which never ignited`;
+    } else if (
+      m.ignition.event === 'ejection' &&
+      (of.source.kind !== 'definition' || of.source.ejectionDelay === undefined)
+    ) {
+      reason = `it is set to ignite at the ejection charge of ${of.label}, which is plugged (it has no ejection charge)`;
+    } else {
+      reason = `it is set to ignite ${m.ignition.delay > 0 ? `${String(m.ignition.delay)} s after` : 'at'} the ${m.ignition.event === 'burnout' ? 'burnout' : 'ejection charge'} of ${of.label}, but ${ended} first`;
+    }
+    out.push(
+      `${rt.label} never ignited: ${reason}. The flight shown is without its thrust${rt.attached ? ', carrying the unburnt motor as dead weight' : ''}; check its ignition event.`,
+    );
+  });
+  stages.separation.forEach((sep, k) => {
+    if (k === 0 || sep.event === 'never' || separated.has(k)) return;
+    out.push(
+      `${stageName(k)} never separated: it is set to separate ${separationInWords(sep)}, which did not happen before ${ended}. The flight shown carries it, with its mass and drag, to the end.`,
+    );
+  });
+  return out;
+}
+
 /** Plan 0064: the stages of a vehicle must describe it consistently; plain messages otherwise. */
 function validateStages(vehicle: FlightVehicle): void {
   const st = vehicle.stages;
@@ -859,7 +927,7 @@ function validateStages(vehicle: FlightVehicle): void {
         'must be 0 s or more',
       );
     }
-    if (m.ignition.event !== 'launch') {
+    if (m.ignition.event === 'burnout' || m.ignition.event === 'ejection') {
       const of = m.ignition.of;
       if (
         of === undefined ||
@@ -877,13 +945,24 @@ function validateStages(vehicle: FlightVehicle): void {
     }
   });
   st.separation.forEach((sep, k) => {
+    if (k === 0) return;
     const delay: number = sep.delay;
-    if (k > 0 && (!Number.isFinite(delay) || delay < 0)) {
+    if (!Number.isFinite(delay) || delay < 0) {
       throw new InvalidInputError(
         `separation delay of stage ${String(k + 1)}`,
         delay,
         'must be 0 s or more',
       );
+    }
+    if (sep.event === 'altitude-ascending' || sep.event === 'altitude-descending') {
+      const altitude = sep.altitude === undefined ? Number.NaN : (sep.altitude as number);
+      if (!Number.isFinite(altitude) || altitude <= 0) {
+        throw new InvalidInputError(
+          `separation altitude of stage ${String(k + 1)}`,
+          altitude,
+          'must be greater than 0 m above the pad',
+        );
+      }
     }
   });
   if (st.recoveryStage !== undefined) {
@@ -1146,29 +1225,40 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       detail: `${stageName(k)} separated (${why}); ${(before - after).toFixed(4)} kg left the vehicle, ${after.toFixed(4)} kg flies on`,
     });
   };
+  /** Separate stage k after its delay from the event at `at`. */
+  const scheduleSeparation = (k: number, sep: StageSeparation, at: number, why: string): void => {
+    const when = at + (sep.delay as number);
+    timed.push({
+      time: when,
+      kind: 'separation',
+      detail: '',
+      action: () => {
+        separate(k, when, (sep.delay as number) > 0 ? `${String(sep.delay)} s after ${why}` : why);
+      },
+    });
+  };
   const scheduleSeparations = (
-    event: 'upper-ignition' | 'burnout' | 'ejection' | 'launch',
+    event: SeparationEvent,
     stage: number | undefined,
     at: number,
     why: string,
   ): void => {
     stages?.separation.forEach((sep, k) => {
       if (k === 0 || sep.event !== event || (stage !== undefined && k !== stage)) return;
-      const when = at + (sep.delay as number);
-      timed.push({
-        time: when,
-        kind: 'separation',
-        detail: '',
-        action: () => {
-          separate(
-            k,
-            when,
-            (sep.delay as number) > 0 ? `${String(sep.delay)} s after ${why}` : why,
-          );
-        },
-      });
+      scheduleSeparation(k, sep, at, why);
     });
   };
+  // Plan 0064 part 2: the stages whose separation altitude has been crossed.
+  const altitudeTriggered = new Set<number>();
+  /** Whether stage k waits for an altitude crossing now: climbing before apogee, descending after. */
+  const altitudeSeparationDue = (sep: StageSeparation, k: number): boolean =>
+    k > 0 &&
+    !separated.has(k) &&
+    !altitudeTriggered.has(k) &&
+    sep.altitude !== undefined &&
+    (sep.event === 'altitude-ascending'
+      ? !apogeeReached
+      : sep.event === 'altitude-descending' && apogeeReached);
   /** Ignite a motor and schedule its burnout and ejection charge (Niskanen Table 4.2 p. 69). */
   const ignite = (index: number, at: number, why: string): void => {
     const m = motors[index];
@@ -1177,8 +1267,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (stages !== undefined) {
       events.push({ kind: 'ignition', time: seconds(at), detail: `${m.label} ignition (${why})` });
       if (phase === 'coast') phase = 'powered';
-      // The stage below the igniting one separates at this ignition when set to.
+      // The stage below the igniting one, or its own stage, separates at this ignition when set to.
       scheduleSeparations('upper-ignition', m.stage + 1, at, `${m.label} ignition`);
+      scheduleSeparations('ignition', m.stage, at, `${m.label} ignition`);
     }
     const tB = at + m.burn;
     if (m.stage === 0) topBurnout = tB;
@@ -1463,7 +1554,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let burnout: { t: number; v: number } | undefined;
   let apogee: { t: number; z: number } | undefined;
   let landing: { t: number; vz: number; speed: number; x: number; y: number } | undefined;
-  let endReason: 'landing' | 'max-time' | 'model-limit' = 'max-time';
+  let endReason: FlightSummary['endReason'] = 'max-time';
   let stopped = false;
   let maxVelocity = 0;
   let maxMach = 0;
@@ -1500,6 +1591,17 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       if (nextTimed.kind === 'burnout') burnout = { t, v: norm(unpack(y).velocity) };
       record(true);
       continue;
+    }
+    // Plan 0064 part 2: on the pad with no motor lit and none due to light, nothing more can happen.
+    if (
+      stages !== undefined &&
+      phase === 'on-rail' &&
+      !motors.some((m) => m.ignitedAt !== undefined) &&
+      !timed.some((x) => x.kind === 'ignition')
+    ) {
+      stopped = true;
+      endReason = 'no-ignition';
+      break;
     }
     if (options.integrator.kind === 'rk4') {
       // D-063: never take an RK4 step outside the stability region of the linearised dynamics.
@@ -1610,6 +1712,16 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (phase !== 'on-rail')
       candidates.push({ kind: 'landing', g: altitudeAbovePad, direction: 'down' });
 
+    // Plan 0064 part 2: separations at an altitude, climbing before apogee and descending after it.
+    stages?.separation.forEach((sep, k) => {
+      if (!altitudeSeparationDue(sep, k)) return;
+      const alt = sep.altitude as number;
+      candidates.push({
+        kind: 'separation',
+        g: (yy) => altitudeAbovePad(yy) - alt,
+        direction: sep.event === 'altitude-ascending' ? 'up' : 'down',
+      });
+    });
     if (apogeeReached) {
       for (const device of vehicle.recovery) {
         if (
@@ -1733,6 +1845,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
             detail: `apogee ${s.position.z.toFixed(3)} m above the pad`,
           });
           scheduleDeployments('apogee', t);
+          scheduleSeparations('apogee', undefined, t, 'apogee');
           break;
         case 'altitude':
           for (const device of vehicle.recovery) {
@@ -1803,11 +1916,24 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         case 'burnout':
         case 'deployment':
         case 'ejection-charge':
+        case 'separation':
+          // Plan 0064 part 2: a stage set to separate when climbing or descending through an altitude.
+          stages?.separation.forEach((sep, k) => {
+            if (!altitudeSeparationDue(sep, k)) return;
+            if (Math.abs(s.position.z - (sep.altitude as number)) >= 1e-6) return;
+            altitudeTriggered.add(k);
+            scheduleSeparation(
+              k,
+              sep,
+              t,
+              `${sep.event === 'altitude-ascending' ? 'climbing' : 'descending'} through ${String(sep.altitude)} m`,
+            );
+          });
+          break;
         case 'launch':
         case 'liftoff':
         case 'max-time':
         case 'ignition':
-        case 'separation':
           // timed events act through their own handlers; nothing to do here
           break;
       }
@@ -1841,7 +1967,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   }
 
   // Issue #32: a rocket that never left the rail has no rail-exit, burnout or apogee figures (NaN in the summary).
-  if (railExit === undefined) {
+  if (endReason === 'no-ignition') {
+    warnings.add(
+      'No motor is set to ignite at launch, so the rocket never leaves the pad and there is no flight. Set a motor of the bottom stage to ignite at launch.',
+    );
+  } else if (railExit === undefined) {
     warnings.add(
       `The rocket never left the launch rail${phase === 'landed' ? ' (it slid back down)' : ''}: the motor's thrust did not carry it to the end of the rail, so there is no real flight. Use a more powerful motor or a lighter rocket; rail exit, apogee and burnout figures are not available.`,
     );
@@ -1952,6 +2082,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         `"${d.name}" never opened: the ejection charge of its stage's motor did not fire before ${ended}. The landing speed and drift shown are for a rocket coming down without it.`,
       );
     }
+    for (const w of stagingWarnings(stages, motors, separated, stageName, ended)) warnings.add(w);
   }
   for (const f of summary.flutter) {
     if (f.ratio === undefined) {

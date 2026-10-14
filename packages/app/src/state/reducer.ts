@@ -18,6 +18,7 @@ import {
   type SimulationSettings,
   type StabilityThresholds,
   type WarningThresholds,
+  withoutComponent,
 } from '@lo-fi-rocket/formats';
 import type { UnitSystem } from '../units/display.js';
 
@@ -118,10 +119,8 @@ export function reduce(state: AppState, action: Action): AppState {
         ),
       });
     case 'remove-component': {
-      const components = d.components.filter((c) => c.id !== action.id);
-      const mount = d.motorMount?.componentId === action.id ? undefined : d.motorMount;
-      const next: RocketDesign = { ...d, components };
-      if (mount === undefined) delete (next as { motorMount?: MotorMount }).motorMount;
+      // Plan 0064: the part and every motor mount on it.
+      const next = withoutComponent(d, action.id);
       return {
         ...withDesign(state, next),
         selectedId: state.selectedId === action.id ? undefined : state.selectedId,

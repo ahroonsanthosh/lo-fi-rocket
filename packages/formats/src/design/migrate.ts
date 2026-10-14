@@ -8,8 +8,14 @@ import { CURRENT_SCHEMA_VERSION } from './model.js';
 
 export type Migration = (document: Record<string, unknown>) => Record<string, unknown>;
 
-/** MIGRATIONS[n - 1] upgrades version n to n + 1. Empty while only version 1 exists. */
-export const MIGRATIONS: readonly Migration[] = [];
+/**
+ * MIGRATIONS[n - 1] upgrades version n to n + 1.
+ * 1 to 2 (plan 0064): stages, the stage of a part or device, further motor mounts and ignition
+ * events are all new and optional, so a version-1 file is the same one-stage design unchanged.
+ */
+export const MIGRATIONS: readonly Migration[] = [
+  (document: Record<string, unknown>): Record<string, unknown> => document,
+];
 
 function versionOf(document: unknown, fileName: string | undefined): number {
   if (typeof document !== 'object' || document === null || Array.isArray(document)) {

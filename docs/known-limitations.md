@@ -437,4 +437,6 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 
 - **Separation is instantaneous**, with no separation impulse; the separated stages' own flight (apogee, descent, landing) is not simulated (a version-1 non-goal, D-091).
 - **Interstage aerodynamics** just before and after separation are not represented: each configuration is its attached parts alone.
-- **Design files and imports** cannot hold stages until plan 0064 part 2; until then the engine's staging is reached only through the physics package.
+- **Imports and editing.** Design files hold stages (schema 2, D-097). The `.ork` stages import is plan 0064 part 2b, and stage editing in the app and the MCP server is part 3.
+- **Stability figures of a staged design** are the whole stack's: liftoff with every motor loaded, burnout with every motor spent. The sustainer alone at its own ignition and burnout is not yet shown; the in-flight margin check covers the flight.
+- **Several motors in the stage below.** An ignition at the burnout or ejection charge of the stage below follows that stage's first motor (`motorMount` first, then the additional mounts in order). OpenRocket's "first burnout of previous stage" is the earliest of them.

@@ -14,6 +14,7 @@ import {
   isExternal,
   newId,
   validateDesign,
+  withoutComponent,
   type ComponentKind,
   type DesignComponent,
   type RocketDesign,
@@ -508,16 +509,10 @@ export function updatePart(design: RocketDesign, id: string, input: UpdatePartIn
   return { design: next, part: next.components.find((c) => c.id === id), defaulted: [] };
 }
 
-/** Remove a part, and the motor mount if it was the mount. */
+/** Remove a part, and every motor mount on it. */
 export function removePart(design: RocketDesign, id: string): RocketDesign {
   if (!design.components.some((c) => c.id === id)) {
     throw new EditError(`no part with id "${id}" in this design (get_design lists them)`);
   }
-  const { motorMount, ...rest } = design;
-  const keepMount = motorMount !== undefined && motorMount.componentId !== id;
-  return checked({
-    ...rest,
-    components: design.components.filter((c) => c.id !== id),
-    ...(keepMount ? { motorMount } : {}),
-  });
+  return checked(withoutComponent(design, id));
 }

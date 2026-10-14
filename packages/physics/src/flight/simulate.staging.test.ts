@@ -20,7 +20,7 @@ import {
   seconds,
 } from '../units/si.js';
 import { simulateFlight } from './simulate.js';
-import type { FlightVehicle, SimulationOptions, StagedMotor } from './vehicle.js';
+import type { FlightVehicle, SimulationOptions, StagedMotor, StageSeparation } from './vehicle.js';
 
 const G = 9.80665;
 
@@ -338,5 +338,158 @@ describe('the stages of a vehicle', () => {
       ),
       { seed: 20261014, numRuns: 15 },
     );
+  });
+});
+
+describe('the further staging events (plan 0064 part 2)', () => {
+  // As above: M1 = 0.330631 kg, a1 = 20/M1 − g = 50.6837 m/s², v1 = 50.6837 m/s, z1 = 25.3419 m at
+  // the booster's burnout (1 s); M2 = 0.198304 kg, a2 = 8/M2 − g = 30.5355 m/s².
+  const M1 = ALL_STRUCTURE + 0.1 + 0.05;
+  const M2 = TOP_STRUCTURE + 0.05;
+  const a1 = 20 / M1 - G;
+  const a2 = 8 / M2 - G;
+  const v1 = a1;
+  const z1 = 0.5 * a1;
+  const withStages = (
+    sustainerIgnition: StagedMotor['ignition'],
+    separation: StageSeparation,
+    boosterIgnition?: StagedMotor['ignition'],
+  ): FlightVehicle => {
+    const v = staged(sustainerIgnition);
+    const st = v.stages!;
+    return {
+      ...v,
+      stages: {
+        ...st,
+        motors: st.motors.map((m, i) =>
+          i === 0 && boosterIgnition !== undefined ? { ...m, ignition: boosterIgnition } : m,
+        ),
+        separation: [{ event: 'never', delay: seconds(0) }, separation],
+      },
+    };
+  };
+  const never: StagedMotor['ignition'] = { event: 'never', delay: seconds(0) };
+  const at = (r: ReturnType<typeof simulateFlight>, kind: string): number =>
+    r.events.find((e) => e.kind === kind)?.time as number;
+
+  it('separate at apogee, the sustainer never lit and carried as dead weight', () => {
+    // The ascent is M1 throughout: apogee = z1 + v1²/(2g) = 25.3419 + 2568.84/19.6133 = 156.316 m at
+    // 1 + v1/g = 6.16830 s, where 0.1323 kg (the tube and the spent booster) leaves.
+    const r = simulateFlight(
+      withStages(never, { event: 'apogee', delay: seconds(0) }),
+      options({ integrator: { kind: 'rk4', timeStep: seconds(0.01) } }),
+    );
+    expect(r.summary.apogee).toBeCloseTo(z1 + (v1 * v1) / (2 * G), 4);
+    expect(at(r, 'separation')).toBeCloseTo(1 + v1 / G, 6);
+    expect(r.events.find((e) => e.kind === 'separation')?.detail).toMatch(
+      /Booster separated \(apogee\); 0\.1323 kg left the vehicle, 0\.1983 kg flies on/,
+    );
+    // 'never' is a choice: no warning that the sustainer did not light.
+    expect(r.warnings.join(' ')).not.toMatch(/never ignited/);
+  });
+
+  it('separate when climbing through an altitude, part way through the sustainer’s burn', () => {
+    // After the booster's burnout the sustainer burns on M1: a2n = 8/M1 − g = 14.3895 m/s². Climbing to
+    // 50 m: 25.3419 + 50.6837 τ + 7.19475 τ² = 50, so τ = 0.456878 s (separation at 1.456878 s) with
+    // v = 50.6837 + 14.3895 τ = 57.2580 m/s. Then M2 for the 1.043122 s left of the burn:
+    // v2 = 57.2580 + 30.5355 × 1.043122 = 89.1102 m/s, z2 = 50 + 57.2580 × 1.043122 + 0.5 × 30.5355
+    // × 1.043122² = 126.3399 m; apogee = 126.3399 + 89.1102²/19.6133 = 531.199 m.
+    const a2n = 8 / M1 - G;
+    const tau = (-v1 + Math.sqrt(v1 * v1 - 2 * a2n * (z1 - 50))) / a2n;
+    const vs = v1 + a2n * tau;
+    const rest = 1.5 - tau;
+    const v2 = vs + a2 * rest;
+    const z2 = 50 + vs * rest + 0.5 * a2 * rest * rest;
+    expect(tau).toBeCloseTo(0.456878, 6);
+    // (R1's structure rounded to 0.148304 kg in the working; the code uses the exact figure.)
+    expect(z2 + (v2 * v2) / (2 * G)).toBeCloseTo(531.2, 2);
+    const r = simulateFlight(
+      withStages(
+        { event: 'burnout', of: 0, delay: seconds(0) },
+        { event: 'altitude-ascending', delay: seconds(0), altitude: metres(50) },
+      ),
+      options(),
+    );
+    expect(at(r, 'separation')).toBeCloseTo(1 + tau, 8);
+    expect(r.summary.apogee).toBeCloseTo(z2 + (v2 * v2) / (2 * G), 4);
+  });
+
+  it('separate when descending through an altitude, after apogee', () => {
+    // Apogee 156.316 m at 6.16830 s; falling 56.316 m from rest takes √(2 × 56.316/g) = 3.38900 s.
+    const apogee = z1 + (v1 * v1) / (2 * G);
+    const r = simulateFlight(
+      withStages(never, { event: 'altitude-descending', delay: seconds(0), altitude: metres(100) }),
+      options(),
+    );
+    expect(at(r, 'separation')).toBeCloseTo(1 + v1 / G + Math.sqrt((2 * (apogee - 100)) / G), 6);
+    expect(at(r, 'separation')).toBeCloseTo(9.5573, 4);
+  });
+
+  it('separate 0.5 s after the stage’s own ignition, both motors lit at launch', () => {
+    // 0 to 0.5 s: 28 N on M1, a = 28/M1 − g = 74.8799 m/s², v = 37.4400 m/s, z = 9.3600 m. The booster
+    // and its motor leave at 0.5 s (its burnout at 1 s never comes); 0.5 to 1.5 s: 8 N on M2,
+    // v = 67.9754 m/s, z = 62.0677 m; apogee = 62.0677 + 67.9754²/19.6133 = 297.656 m.
+    const a = 28 / M1 - G;
+    const va = 0.5 * a;
+    const za = 0.125 * a;
+    const vb = va + a2;
+    const zb = za + va + 0.5 * a2;
+    expect(zb + (vb * vb) / (2 * G)).toBeCloseTo(297.656, 3);
+    const r = simulateFlight(
+      withStages(
+        { event: 'launch', delay: seconds(0) },
+        { event: 'ignition', delay: seconds(0.5) },
+      ),
+      options(),
+    );
+    expect(at(r, 'separation')).toBeCloseTo(0.5, 12);
+    expect(r.events.filter((e) => e.kind === 'burnout')).toHaveLength(1);
+    expect(r.summary.apogee).toBeCloseTo(zb + (vb * vb) / (2 * G), 4);
+  });
+
+  it('say why a motor never lit and a stage never separated', () => {
+    // The booster is plugged: the sustainer, set to light at its charge, never does, and the booster,
+    // set to separate at the sustainer's ignition, stays on.
+    const r = simulateFlight(
+      withStages(
+        { event: 'ejection', of: 0, delay: seconds(0) },
+        { event: 'upper-ignition', delay: seconds(0) },
+      ),
+      options(),
+    );
+    const text = r.warnings.join(' ');
+    expect(text).toMatch(
+      /Sustainer S never ignited: it is set to ignite at the ejection charge of Booster B, which is plugged \(it has no ejection charge\)\. The flight shown is without its thrust, carrying the unburnt motor as dead weight/,
+    );
+    expect(text).toMatch(
+      /Booster never separated: it is set to separate at the ignition of the stage above it, which did not happen before the rocket landed at/,
+    );
+    expect(r.summary.apogee).toBeCloseTo(z1 + (v1 * v1) / (2 * G), 4);
+  });
+
+  it('stop on the pad, saying so, when no motor is set to light at launch', () => {
+    const r = simulateFlight(
+      withStages(
+        { event: 'burnout', of: 0, delay: seconds(0) },
+        { event: 'upper-ignition', delay: seconds(0) },
+        never,
+      ),
+      options(),
+    );
+    expect(r.summary.endReason).toBe('no-ignition');
+    expect(r.summary.flightTime).toBe(0);
+    expect(r.warnings.join(' ')).toMatch(/No motor is set to ignite at launch/);
+    expect(r.warnings.join(' ')).toMatch(
+      /Sustainer S never ignited: .* Booster B, which never ignited/,
+    );
+  });
+
+  it('check a separation altitude', () => {
+    expect(() =>
+      simulateFlight(
+        withStages(never, { event: 'altitude-ascending', delay: seconds(0) }),
+        options(),
+      ),
+    ).toThrow(/separation altitude of stage 2 .* must be greater than 0 m above the pad/);
   });
 });
