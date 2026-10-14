@@ -127,7 +127,8 @@ export function parseQuantity(
   system: UnitSystem,
 ): number | undefined {
   const trimmed = text.trim();
-  if (trimmed === '' || !/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(trimmed)) return undefined;
+  if (trimmed === '' || !/^[-+]?(\d+(?:\.\d*)?|\.\d+)([eE][-+]?\d+)?$/.test(trimmed))
+    return undefined;
   const n = Number(trimmed);
   return Number.isFinite(n) ? unitFor(kind, system).toSI(n) : undefined;
 }

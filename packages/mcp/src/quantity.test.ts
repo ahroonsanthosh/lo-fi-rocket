@@ -48,3 +48,12 @@ describe('toSi', () => {
     expect(() => toSi('x', 'number', '3 mm')).toThrow(/a plain number/);
   });
 });
+
+describe('toSi on hostile input (CodeQL js/polynomial-redos)', () => {
+  it('rejects a long digit run with many spaces in linear time', () => {
+    const start = performance.now();
+    expect(() => toSi('x', 'length', `.9${' '.repeat(50_000)}x`)).toThrow(QuantityError);
+    expect(() => toSi('x', 'length', `${'9'.repeat(50_000)}x`)).toThrow(QuantityError);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+});

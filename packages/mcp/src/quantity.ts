@@ -103,7 +103,9 @@ export class QuantityError extends Error {
   }
 }
 
-const NUMBER = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)\s*(.*)$/;
+// Unambiguous, so it runs in linear time on any input (no polynomial backtracking, CodeQL
+// js/polynomial-redos); the unit is everything after the number, trimmed.
+const NUMBER = /^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)(.*)$/;
 
 /** The SI value of `value` for `field`, or a QuantityError naming the field and the accepted units. */
 export function toSi(field: string, dimension: Dimension, value: number | string): number {
@@ -127,7 +129,10 @@ export function toSi(field: string, dimension: Dimension, value: number | string
   }
   const convert = UNITS[dimension][unit];
   if (convert === undefined) {
-    throw new QuantityError(field, `unit "${m[2] ?? ''}" is not accepted; give ${accepted()}`);
+    throw new QuantityError(
+      field,
+      `unit "${(m[2] ?? '').trim()}" is not accepted; give ${accepted()}`,
+    );
   }
   return convert(x);
 }

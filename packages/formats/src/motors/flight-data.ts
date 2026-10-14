@@ -17,7 +17,7 @@ export class FlightDataCsvError extends FormatError {
   }
 }
 
-const NUMBER = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+const NUMBER = /^[-+]?(\d+(?:\.\d*)?|\.\d+)([eE][-+]?\d+)?$/;
 
 export function parseFlightDataCsv(
   text: string,

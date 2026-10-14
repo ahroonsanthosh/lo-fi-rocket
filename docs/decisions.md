@@ -666,3 +666,4 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - The example rocket built part by part through the tools reproduces `exampleDesign()` and its flight bit for bit (test).
   - Imported `.ork` files fly as the formats package flies them (test).
   - Distribution (a single bundled file and a Claude Desktop `.mcpb`) and ThrustCurve search follow in plan 0062's next pull requests.
+  - CodeQL found that the readers' number pattern `\d+\.?\d*` backtracks quadratically on long digit runs (a 50 000-digit field took 5.4 s), reachable now from the server's inputs. Every copy (the `.eng`, CSV, `.rse`/`.ork`, unit and display readers) became the equivalent `\d+(?:\.\d*)?`, which runs in linear time (0.3 ms); a test keeps it so.
