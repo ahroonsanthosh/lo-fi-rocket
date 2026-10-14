@@ -19,15 +19,15 @@ import {
   parseRse,
   parseThrustCurveCsv,
   runDispersion,
-  searchMotors,
+  searchMotorsWithData,
   ZERO_VARIATIONS,
+  type DataSearchResult,
   type DeployEvent,
   type DesignStage,
   type DispersionResult,
   type IgnitionEvent,
   type MotorMount,
   type DispersionVariations,
-  type MotorSummary,
   type Transport,
   type DesignRecoveryDevice,
   type MotorProvenance,
@@ -361,14 +361,15 @@ export class Session {
     impulseClass?: string;
     diameter?: QuantityInput;
     maxResults?: number;
-  }): Promise<{ matches: number; results: readonly MotorSummary[] }> {
+  }): Promise<DataSearchResult> {
     if (this.transport === undefined)
       throw new EditError(
         'the ThrustCurve.org catalogue is not available in this server (offline)',
       );
     const diameter =
       query.diameter === undefined ? undefined : toSi('diameter', 'length', query.diameter);
-    return searchMotors(this.transport, {
+    // Only motors with a data file are kept (issue #8: the API's hasDataFiles criterion matched nothing).
+    return searchMotorsWithData(this.transport, {
       ...(query.designation === undefined
         ? {}
         : { commonName: text('designation', query.designation) }),
@@ -380,7 +381,6 @@ export class Session {
         : { impulseClass: text('impulseClass', query.impulseClass) }),
       // The API takes millimetres (x_mm = 1000 x_m, the inverse of UNIT-1), as a search key to 0.1 mm.
       ...(diameter === undefined ? {} : { diameter: Math.round(diameter * 10000) / 10 }),
-      hasDataFiles: true,
       maxResults: Math.min(50, Math.max(1, query.maxResults ?? 20)),
     });
   }

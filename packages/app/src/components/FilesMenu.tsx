@@ -151,6 +151,10 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
       setNotice(errorText(e), 'error');
     }
   };
+  // Issue #39: a delete asks first. The list is read on every render, so bumping the version after
+  // a delete draws it again (two calls to setListOpen were batched into nothing).
+  const [confirmDelete, setConfirmDelete] = useState<string | undefined>(undefined);
+  const [, setListVersion] = useState(0);
   const stored = listOpen && storage !== undefined ? listStoredDesigns(storage) : [];
 
   return (
@@ -299,19 +303,44 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
                   >
                     Open
                   </button>
-                  <button
-                    type="button"
-                    className="danger"
-                    aria-label={`Delete ${d.name}`}
-                    disabled={storage === undefined || d.id === state.design.id}
-                    onClick={() => {
-                      if (storage !== undefined) deleteStoredDesign(storage, d.id);
-                      setListOpen(false);
-                      setListOpen(true);
-                    }}
-                  >
-                    Delete
-                  </button>
+                  {confirmDelete === d.id ? (
+                    <>
+                      <span role="alert">Delete “{d.name}”? This cannot be undone.</span>
+                      <button
+                        type="button"
+                        className="danger"
+                        aria-label={`Delete ${d.name} for good`}
+                        onClick={() => {
+                          if (storage !== undefined) deleteStoredDesign(storage, d.id);
+                          setConfirmDelete(undefined);
+                          setListVersion((v) => v + 1);
+                        }}
+                      >
+                        Delete for good
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Keep ${d.name}`}
+                        onClick={() => {
+                          setConfirmDelete(undefined);
+                        }}
+                      >
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="danger"
+                      aria-label={`Delete ${d.name}`}
+                      disabled={storage === undefined || d.id === state.design.id}
+                      onClick={() => {
+                        setConfirmDelete(d.id);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </span>
               </li>
             ))}

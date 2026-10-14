@@ -157,6 +157,16 @@ describe('the app with a two-stage design', () => {
     const user = userEvent.setup();
     await user.click(within(screen.getByRole('listbox', { name: 'Motor' })).getByRole('option'));
     const panel = screen.getByRole('region', { name: 'Motor' });
+    // A delay note from the sustainer's motor change does not follow to the booster's page.
+    await user.click(within(panel).getByRole('button', { name: 'Use AT F39T' }));
+    expect(within(panel).getByRole('status')).toHaveTextContent(/Delay changed from 5 s to 6 s/);
+    await user.selectOptions(within(panel).getByLabelText('Stage'), '1');
+    expect(within(panel).queryByRole('status')).toBeNull();
+    await user.selectOptions(within(panel).getByLabelText('Stage'), '0');
+    // Back to the D12: 6 s is between its 5 s and 7 s, so the longer is taken; set 5 s again.
+    await user.click(within(panel).getByRole('button', { name: 'Use Estes D12' }));
+    expect(within(panel).getByLabelText('Ejection delay after burnout')).toHaveValue('7');
+    await user.selectOptions(within(panel).getByLabelText('Ejection delay after burnout'), '5');
     const stage = within(panel).getByLabelText('Stage');
     expect(within(panel).getByLabelText('Motor mount tube')).toHaveValue('mount');
     await user.selectOptions(stage, '1');

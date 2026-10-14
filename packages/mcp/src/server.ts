@@ -382,7 +382,7 @@ export function createServer(session: Session = new Session()): McpServer {
     {
       title: 'Search ThrustCurve.org',
       description:
-        'Search the ThrustCurve.org motor catalogue (read-only; motors with data files). Give a designation or common name (for example "H128"), a manufacturer, an impulse class letter or a diameter. Then add_thrustcurve_motor with the motorId.',
+        'Search the ThrustCurve.org motor catalogue (read-only). Only motors with a data file are listed; without_data counts those left out. Give a designation or common name (for example "H128"), a manufacturer, an impulse class letter or a diameter. Then add_thrustcurve_motor with the motorId.',
       inputSchema: {
         designation: z.string().max(100).optional(),
         manufacturer: z.string().max(100).optional(),
@@ -403,6 +403,7 @@ export function createServer(session: Session = new Session()): McpServer {
         });
         return {
           matches: found.matches,
+          without_data: found.withoutData,
           results: found.results.map((m) => ({
             motorId: m.motorId,
             manufacturer: m.manufacturer,

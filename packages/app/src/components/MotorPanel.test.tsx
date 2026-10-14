@@ -31,12 +31,14 @@ function memory(): Storage & KeyValueStore & { map: Map<string, string> } {
 
 const b64 = (text: string): string => btoa(text);
 
-function fixtureTransport(): Transport & { calls: string[] } {
+function fixtureTransport(): Transport & { calls: string[]; bodies: Record<string, unknown>[] } {
   const calls: string[] = [];
+  const bodies: Record<string, unknown>[] = [];
   const t: Transport = (url, init) => {
     const endpoint = url.split('/').pop() ?? '';
     calls.push(endpoint);
     const body = JSON.parse(init.body) as Record<string, unknown>;
+    bodies.push(body);
     if (endpoint === 'search.json') {
       return Promise.resolve({
         ok: true,
@@ -44,8 +46,27 @@ function fixtureTransport(): Transport & { calls: string[] } {
         text: () =>
           Promise.resolve(
             JSON.stringify({
-              matches: 1,
+              matches: 2,
               results: [
+                // Issue #8: a motor without a data file is counted, not offered.
+                {
+                  motorId: 'tc-nodata',
+                  manufacturer: 'Estes Industries',
+                  manufacturerAbbrev: 'Estes',
+                  designation: 'X9',
+                  commonName: 'X9',
+                  impulseClass: 'C',
+                  certOrg: 'NAR',
+                  diameter: body['diameter'],
+                  length: 70,
+                  type: 'SU',
+                  avgThrustN: 4.7,
+                  maxThrustN: 14.1,
+                  totImpulseNs: 8.8,
+                  burnTimeS: 1.9,
+                  dataFiles: 0,
+                  availability: 'OOP',
+                },
                 {
                   motorId: 'tc-c6',
                   manufacturer: 'Estes Industries',
@@ -91,7 +112,7 @@ function fixtureTransport(): Transport & { calls: string[] } {
     }
     return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve('') });
   };
-  return Object.assign(t, { calls });
+  return Object.assign(t, { calls, bodies });
 }
 
 async function openMotorPanel(): Promise<ReturnType<typeof userEvent.setup>> {
@@ -123,6 +144,36 @@ describe('MotorPanel (plan 0013)', () => {
     const lib = within(panel).getByRole('list', { name: 'Motor library' });
     // Only motors fitting the 24 mm mount (inner diameter 24 mm): C6 18, D12 24, F39T 24
     expect(within(lib).getAllByRole('listitem').length).toBe(3);
+  });
+
+  it('a new motor keeps the delay it is sold with, or the nearest, and says so (issue #10)', async () => {
+    render(
+      <App
+        storage={memory()}
+        motorStore={memory()}
+        transport={fixtureTransport()}
+        initialDesign={exampleDesign('m')}
+      />,
+    );
+    const user = await openMotorPanel();
+    const panel = screen.getByRole('region', { name: 'Motor' });
+    const delay = (): HTMLElement => within(panel).getByLabelText('Ejection delay after burnout');
+    expect(delay()).toHaveValue('5');
+    // The F39T is sold with 3, 6 and 9 s: 6 s is the nearest to 5 s.
+    await user.click(screen.getByRole('button', { name: 'Use AT F39T' }));
+    expect(delay()).toHaveValue('6');
+    expect(within(panel).getByRole('status')).toHaveTextContent(
+      'Delay changed from 5 s to 6 s: the AT F39T is sold with 3, 6, 9 s.',
+    );
+    // The C6 (0, 3, 5, 7 s): 5 s and 7 s are both 1 s from 6 s; the longer is taken, never 0 s.
+    await user.click(screen.getByRole('button', { name: 'Use E C6' }));
+    expect(delay()).toHaveValue('7');
+    expect(within(panel).getByRole('status')).toHaveTextContent(
+      'Delay changed from 6 s to 7 s: the E C6 is sold with 0, 3, 5, 7 s.',
+    );
+    // Choosing a delay clears the note.
+    await user.selectOptions(delay(), '5');
+    expect(within(panel).queryByRole('status')).toBeNull();
   });
 
   it('using the C6 from the library changes the liftoff mass and the delay options', async () => {
@@ -178,7 +229,14 @@ describe('MotorPanel (plan 0013)', () => {
     await user.click(screen.getByRole('tab', { name: 'ThrustCurve.org' }));
     expect(screen.getByLabelText('Diameter (mm)')).toHaveValue('24');
     await user.click(screen.getByRole('button', { name: 'Search ThrustCurve.org' }));
-    expect(await screen.findByText('1 motor found')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        '1 motor with a thrust curve; 1 more without a thrust curve on ThrustCurve.org is not listed',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Download and use Estes X9' })).toBeNull();
+    // Issue #8: hasDataFiles matched nothing on the live service, so it is not sent.
+    expect(transport.bodies[0]).toEqual({ diameter: 24, maxResults: 50 });
     await user.click(screen.getByRole('button', { name: 'Download and use Estes C6' }));
     expect(await screen.findByText('Downloaded and added to the library.')).toBeInTheDocument();
     expect(transport.calls).toEqual(['search.json', 'download.json']);
