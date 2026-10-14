@@ -13,20 +13,17 @@
  * design, so they are drawn at +z (90° from fin 1). Internal components
  * (inner tubes, rings, bulkheads, masses, packed parachutes) are not drawn.
  */
-import { finOutline, noseProfile, transitionProfile, type Component } from '@lo-fi-rocket/physics';
 import {
-  BufferAttribute,
-  BufferGeometry,
-  Color,
-  DoubleSide,
-  Group,
-  Mesh,
-  MeshPhysicalMaterial,
-  ShapeUtils,
-  SRGBColorSpace,
-  Vector2,
-  type Material,
-} from 'three';
+  finOutline,
+  noseProfile,
+  transitionProfile,
+  type Component,
+  type FinCrossSection,
+} from '@lo-fi-rocket/physics';
+import { BufferAttribute, BufferGeometry, Group, Mesh, ShapeUtils, Vector2 } from 'three';
+import { finSectionGeometry } from './fin-section.js';
+import { finishMaterial, PAINT_SCHEMES, type PaintSchemeId } from './finish.js';
+import { buildMotors, mountWall, type MotorInputs } from './motor-model.js';
 
 /** An (x, r) outline point in the body frame, metres. */
 export type OutlinePoint = readonly [number, number];
@@ -39,6 +36,8 @@ export interface RevolvedPart {
   readonly outline: readonly OutlinePoint[];
   /** Radial distance and angle of the part's own axis from the rocket axis (launch lugs); absent for coaxial parts. */
   readonly offset?: { readonly distance: number; readonly angle: number };
+  /** Inner radius of a hollow part (a launch lug's bore), metres; drawn as a tube. */
+  readonly bore?: number;
 }
 
 export interface FinPart {
@@ -53,6 +52,8 @@ export interface FinPart {
   readonly thickness: number;
   /** Angle of the fin's half-plane about +x from +y towards +z. */
   readonly angle: number;
+  /** The design's cross-section ('square' when the design gives none). */
+  readonly section?: FinCrossSection;
 }
 
 export interface ButtonPart {
@@ -65,6 +66,10 @@ export interface ButtonPart {
   readonly height: number;
   readonly outerDiameter: number;
   readonly angle: number;
+  /** Shaft diameter, base and flange heights (the design's), metres; drawn turned when given. */
+  readonly innerDiameter?: number;
+  readonly baseHeight?: number;
+  readonly flangeHeight?: number;
 }
 
 export type ModelPart = RevolvedPart | FinPart | ButtonPart;
@@ -165,6 +170,7 @@ export function rocketModelParts(
             name,
             outline: cylinderOutline(x0, c.length, c.outerRadius),
             offset: { distance: c.radialOffset ?? 0, angle: UNPLACED_PART_ANGLE },
+            bore: Math.max(0, c.outerRadius - c.wallThickness),
           });
           break;
         case 'finSet': {
@@ -181,6 +187,7 @@ export function rocketModelParts(
               corners,
               thickness: c.thickness,
               angle: (2 * Math.PI * k) / n,
+              section: c.crossSection ?? 'square',
             });
           }
           break;
@@ -198,6 +205,9 @@ export function rocketModelParts(
               height: c.totalHeight,
               outerDiameter: c.outerDiameter,
               angle: UNPLACED_PART_ANGLE,
+              innerDiameter: c.innerDiameter,
+              baseHeight: c.baseHeight,
+              flangeHeight: c.flangeHeight,
             });
           }
           break;
@@ -248,13 +258,18 @@ export function rocketModelExtent(parts: readonly ModelPart[]): ModelExtent {
 export function revolveOutline(outline: readonly OutlinePoint[], segments: number): BufferGeometry {
   const rings = outline.length;
   const positions = new Float32Array(rings * (segments + 1) * 3);
+  // Texture coordinates: u round the axis (0 to 1), v along it in metres (finish.ts).
+  const uvs = new Float32Array(rings * (segments + 1) * 2);
   let k = 0;
+  let t = 0;
   for (const [x, r] of outline) {
     for (let j = 0; j <= segments; j++) {
       const phi = (2 * Math.PI * j) / segments;
       positions[k++] = x;
       positions[k++] = r * Math.cos(phi);
       positions[k++] = r * Math.sin(phi);
+      uvs[t++] = j / segments;
+      uvs[t++] = x;
     }
   }
   const indices: number[] = [];
@@ -268,9 +283,64 @@ export function revolveOutline(outline: readonly OutlinePoint[], segments: numbe
   }
   const g = new BufferGeometry();
   g.setAttribute('position', new BufferAttribute(positions, 3));
+  g.setAttribute('uv', new BufferAttribute(uvs, 2));
   g.setIndex(indices);
   g.computeVertexNormals();
   return g;
+}
+
+/**
+ * A rail button turned to the design's dimensions: base, shaft and flange
+ * stacked radially on the body surface at the button's angle (the design's
+ * RailButtonComponent). Without them, the plain cylinder of `buttonGeometry`.
+ */
+export function railButtonGeometry(b: ButtonPart): BufferGeometry {
+  const ro = b.outerDiameter / 2;
+  const ri = (b.innerDiameter ?? b.outerDiameter) / 2;
+  const base = b.baseHeight ?? 0;
+  const flange = b.flangeHeight ?? 0;
+  const top = b.height;
+  // Profile along the button's own axis a (from the body surface outward), radius about it.
+  const profile: OutlinePoint[] = [
+    [-0.001, 0],
+    [-0.001, ro],
+    [base, ro],
+    [base, ri],
+    [Math.max(base, top - flange), ri],
+    [Math.max(base, top - flange), ro],
+    [top, ro],
+    [top, 0],
+  ];
+  const g = revolveOutline(creasedOutline(profile), 24);
+  // Local (a, p, q) about local x → body frame: x = b.x + p, radial = bodyRadius + a, normal = q.
+  const u = [Math.cos(b.angle), Math.sin(b.angle)] as const;
+  const n = [-Math.sin(b.angle), Math.cos(b.angle)] as const;
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const a = pos.getX(i);
+    const p = pos.getY(i);
+    const q = pos.getZ(i);
+    const radial = b.bodyRadius + a;
+    pos.setXYZ(i, b.x + p, radial * u[0] + q * n[0], radial * u[1] + q * n[1]);
+  }
+  pos.needsUpdate = true;
+  g.computeVertexNormals();
+  return g;
+}
+
+/** A hollow tube's closed outline (a launch lug with its bore). */
+export function tubeOutline(outline: readonly OutlinePoint[], bore: number): OutlinePoint[] {
+  const xs = outline.map(([x]) => x);
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const ro = Math.max(...outline.map(([, r]) => r));
+  return [
+    [x0, bore],
+    [x0, ro],
+    [x1, ro],
+    [x1, bore],
+    [x0, bore],
+  ];
 }
 
 /**
@@ -362,21 +432,6 @@ export function buttonGeometry(b: ButtonPart): BufferGeometry {
   return g;
 }
 
-/** Paint colours, sRGB (drawing choices; the design stores no colours). */
-export const PART_COLOURS: Readonly<Record<Component['kind'], number>> = {
-  noseCone: 0xc4231d,
-  bodyTube: 0xf1f0ea,
-  transition: 0xc4231d,
-  finSet: 0x1c2026,
-  launchLug: 0xa7adb4,
-  railButton: 0x2a2a2a,
-  innerTube: 0x888888,
-  centeringRing: 0x888888,
-  bulkhead: 0x888888,
-  massComponent: 0x888888,
-  parachute: 0x888888,
-};
-
 /** Outline corners sharper than this turn are drawn as hard edges (a drawing choice). */
 export const CREASE_ANGLE = (25 * Math.PI) / 180;
 
@@ -413,35 +468,66 @@ export interface RocketObject {
   readonly extent: ModelExtent;
 }
 
+export interface RocketLook {
+  /** The paint scheme (finish.ts); the design stores none. */
+  readonly scheme?: PaintSchemeId;
+  /** The motors to draw, from the design (motor-model.ts). */
+  readonly motor?: MotorInputs;
+}
+
 /** The three.js object of the model, built from the parts; origin at the nose tip. */
-export function buildRocketObject(parts: readonly ModelPart[]): RocketObject {
+export function buildRocketObject(
+  parts: readonly ModelPart[],
+  look: RocketLook = {},
+): RocketObject {
   const group = new Group();
   group.name = 'rocket-body';
-  const materials = new Map<number, Material>();
-  const material = (colour: number, metal = false): Material => {
-    let m = materials.get(colour);
-    if (m === undefined) {
-      // Gloss paint: a clear coat over a smooth base; bare metal for lugs.
-      m = new MeshPhysicalMaterial({
-        color: new Color().setHex(colour, SRGBColorSpace),
-        metalness: metal ? 0.85 : 0,
-        roughness: metal ? 0.35 : 0.42,
-        clearcoat: metal ? 0 : 0.9,
-        clearcoatRoughness: 0.12,
-        side: DoubleSide,
-      });
-      materials.set(colour, m);
-    }
-    return m;
-  };
+  const scheme = PAINT_SCHEMES[look.scheme ?? 'classic'];
+  const metal = finishMaterial({ kind: 'metal', colour: 0xa7adb4 });
+  const button = finishMaterial({ kind: 'plastic', colour: 0x1d1d1f });
+  const bodyRadius = parts.reduce(
+    (r, p) =>
+      p.kind === 'revolved' && p.offset === undefined
+        ? Math.max(r, ...p.outline.map(([, pr]) => pr))
+        : r,
+    0,
+  );
+  const around = 2 * Math.PI * Math.max(bodyRadius, 1e-3);
+  const noseMat = finishMaterial(scheme.nose, around);
+  const bodyMat = finishMaterial(scheme.body, around);
+  const finMat = finishMaterial(scheme.fins);
+  // A single motor on the axis: the aft face of the aftmost body part opens to the motor mount.
+  const motor = look.motor;
+  const axis = motor?.offsets.length === 1 ? motor.offsets[0] : undefined;
+  const onAxis = axis !== undefined && Math.hypot(axis.y, axis.z) < 1e-9 ? motor : undefined;
+  const aftX = Math.max(
+    0,
+    ...parts.flatMap((p) =>
+      p.kind === 'revolved' && p.offset === undefined ? p.outline.map(([x]) => x) : [],
+    ),
+  );
+  const mountRadius = motor === undefined ? 0 : 1.04 * (motor.diameter / 2);
   for (const p of parts) {
     let mesh: Mesh;
     switch (p.kind) {
       case 'revolved': {
-        mesh = new Mesh(
-          revolveOutline(creasedOutline(p.outline), REVOLUTION_SEGMENTS),
-          material(PART_COLOURS[p.component], p.component === 'launchLug'),
-        );
+        let outline: readonly OutlinePoint[] = p.outline;
+        const last = outline[outline.length - 1];
+        const opens =
+          onAxis !== undefined &&
+          p.offset === undefined &&
+          last !== undefined &&
+          Math.abs(last[0] - aftX) < 1e-9 &&
+          last[1] === 0;
+        if (opens && mountRadius > 0) outline = [...outline.slice(0, -1), [aftX, mountRadius]];
+        if (p.bore !== undefined && p.bore > 0) outline = tubeOutline(outline, p.bore);
+        const mat =
+          p.component === 'launchLug'
+            ? metal
+            : p.component === 'noseCone' || p.component === 'transition'
+              ? noseMat
+              : bodyMat;
+        mesh = new Mesh(revolveOutline(creasedOutline(outline), REVOLUTION_SEGMENTS), mat);
         if (p.offset !== undefined) {
           mesh.position.set(
             0,
@@ -449,17 +535,40 @@ export function buildRocketObject(parts: readonly ModelPart[]): RocketObject {
             p.offset.distance * Math.sin(p.offset.angle),
           );
         }
+        if (opens) {
+          // The mount tube's inner wall down to a recessed motor.
+          const wall = mountWall(aftX, mountRadius, onAxis.aftEnd);
+          if (wall !== undefined) {
+            const w = new Mesh(wall, finishMaterial({ kind: 'matte', colour: 0x2a2622 }));
+            w.name = `${p.name} motor mount`;
+            mesh.add(w);
+          }
+        }
         break;
       }
       case 'fin': {
-        // Flat faces: each triangle its own normal.
-        const g = finGeometry(p).toNonIndexed();
-        g.computeVertexNormals();
-        mesh = new Mesh(g, material(PART_COLOURS.finSet));
+        const section = p.section ?? 'square';
+        // Square: the flat plate with sharp edges, each triangle its own normal; others lofted.
+        const g =
+          section === 'square' ? finGeometry(p).toNonIndexed() : finSectionGeometry(p, section);
+        if (section === 'square') {
+          g.computeVertexNormals();
+          const pos = g.getAttribute('position');
+          const uv = new Float32Array(2 * pos.count);
+          for (let i = 0; i < pos.count; i++) {
+            uv[2 * i] = pos.getX(i);
+            uv[2 * i + 1] = Math.hypot(pos.getY(i), pos.getZ(i));
+          }
+          g.setAttribute('uv', new BufferAttribute(uv, 2));
+        }
+        mesh = new Mesh(g, finMat);
         break;
       }
       case 'button':
-        mesh = new Mesh(buttonGeometry(p), material(PART_COLOURS.railButton));
+        mesh = new Mesh(
+          p.innerDiameter !== undefined ? railButtonGeometry(p) : buttonGeometry(p),
+          button,
+        );
         break;
     }
     mesh.name = p.name;
@@ -467,5 +576,6 @@ export function buildRocketObject(parts: readonly ModelPart[]): RocketObject {
     mesh.receiveShadow = true;
     group.add(mesh);
   }
+  if (motor !== undefined) group.add(buildMotors(motor));
   return { group, parts, extent: rocketModelExtent(parts) };
 }

@@ -14,7 +14,8 @@ import {
   ElevationGrid,
   ELEVATION_SOURCE,
   IMAGERY_SOURCES,
-  mapExtents,
+  mapLevels,
+  metresPerPixel,
   terrainDeviation,
   tileRange,
   TILE_SIZE,
@@ -25,9 +26,12 @@ import {
 } from '../map/tiles.js';
 import { buildMapTerrain, rangeBounds } from '../scene/map-terrain.js';
 import type { FlightScene } from '../scene/flight-scene.js';
+import { loadSceneAssets } from './assets.js';
 
 export interface MapScenery {
   readonly terrain: Mesh;
+  /** Radius of the drawn terrain, metres. */
+  readonly radius: number;
   /** Fog visibility for the map's size, metres. */
   readonly visibility: number;
   /** Elevation above mean sea level at the pad from the terrain data, metres. */
@@ -134,54 +138,91 @@ export async function loadMapScenery(
   const invalid = validateSite(site);
   if (invalid !== undefined) throw new Error(invalid);
   const source = imagerySource(sourceId);
-  const ext = mapExtents(scene.layout.flatRadius);
+  const lv = mapLevels(scene.layout.flatRadius);
 
-  const ez = chooseZoom(site, ext.outer, 4, ELEVATION_SOURCE.maxZoom);
-  const eRange = tileRange(site, ext.outer, ez);
-  const oz = chooseZoom(site, ext.outer, 8, source.maxZoom);
-  const oRange = tileRange(site, ext.outer, oz);
-  const iz = chooseZoom(site, ext.inner, 8, source.maxZoom);
-  const iRange = tileRange(site, ext.inner, iz);
+  // Elevation: a fine grid over the outer level and a coarse one out to the horizon.
+  const nz = chooseZoom(site, lv.nearElevation, 6, ELEVATION_SOURCE.maxZoom);
+  const nRange = tileRange(site, lv.nearElevation, nz);
+  const fz = chooseZoom(site, lv.far, 4, ELEVATION_SOURCE.maxZoom);
+  const fRange = tileRange(site, lv.far, fz);
+  // Imagery: four levels, finest first; a level no sharper than the next is skipped.
+  const wanted = [
+    { half: lv.inner, tiles: 6 },
+    { half: lv.mid, tiles: 4 },
+    { half: lv.outer, tiles: 6 },
+    { half: lv.far, tiles: 4 },
+  ].map((l) => ({
+    ...l,
+    range: tileRange(site, l.half, chooseZoom(site, l.half, l.tiles, source.maxZoom)),
+  }));
+  const levels = wanted.filter((l, i) => {
+    const coarser = wanted[i + 1];
+    return coarser === undefined || l.range.z > coarser.range.z;
+  });
 
-  const [eCanvas, oCanvas, iCanvas] = await Promise.all([
-    mosaic(eRange, ELEVATION_SOURCE.url, 'the elevation service (AWS Terrain Tiles)', signal),
-    mosaic(oRange, source.url, source.label, signal),
-    iz > oz ? mosaic(iRange, source.url, source.label, signal) : Promise.resolve(undefined),
+  const [nCanvas, fCanvas, ...imagery] = await Promise.all([
+    mosaic(nRange, ELEVATION_SOURCE.url, 'the elevation service (AWS Terrain Tiles)', signal),
+    mosaic(fRange, ELEVATION_SOURCE.url, 'the elevation service (AWS Terrain Tiles)', signal),
+    ...levels.map((l) => mosaic(l.range, source.url, source.label, signal)),
   ]);
+  const near = elevationGrid(site, nRange, nCanvas);
+  const far = elevationGrid(site, fRange, fCanvas);
+  const nb = rangeBounds(site, nRange);
+  // The fine grid inside its rectangle, blending to the coarse one over its last 10 %.
+  const heightAt = (x: number, y: number): number => {
+    const e = Math.min(x - nb.minX, nb.maxX - x, y - nb.minY, nb.maxY - y) / (nb.maxX - nb.minX);
+    const w = Math.min(1, Math.max(0, e / 0.1));
+    return w <= 0
+      ? far.at(x, y)
+      : w >= 1
+        ? near.at(x, y)
+        : w * near.at(x, y) + (1 - w) * far.at(x, y);
+  };
 
-  const ctx = eCanvas.getContext('2d', { willReadFrequently: true });
-  if (ctx === null) throw new Error('The browser could not read the elevation tiles.');
-  const px = ctx.getImageData(0, 0, eCanvas.width, eCanvas.height).data;
-  const metres = new Float32Array(eCanvas.width * eCanvas.height);
-  for (let k = 0; k < metres.length; k++) {
-    metres[k] = decodeTerrarium(px[4 * k] ?? 0, px[4 * k + 1] ?? 0, px[4 * k + 2] ?? 0);
-  }
-  const grid = new ElevationGrid(site, eRange, metres);
-  const heightAt = (x: number, y: number): number => grid.at(x, y);
-
+  const detail = await loadSceneAssets().then(
+    (a) => a.ground.grass.diffuse,
+    () => undefined,
+  );
   const terrain = buildMapTerrain({
     heightAt,
-    half: ext.outer,
+    radius: lv.far,
     groundZ: scene.layout.groundZ,
-    outer: { texture: texture(oCanvas), bounds: rangeBounds(site, oRange) },
-    inner:
-      iCanvas === undefined
-        ? undefined
-        : { texture: texture(iCanvas), bounds: rangeBounds(site, iRange) },
+    levels: levels.map((l, i) => {
+      const c = imagery[i];
+      if (c === undefined) throw new Error('A map imagery level is missing.');
+      return { texture: texture(c), bounds: rangeBounds(site, l.range) };
+    }),
+    ...(detail === undefined ? {} : { detail }),
   });
   const points = scene.result.samples.map((s) => ({ x: s.position.x, y: s.position.y }));
   const dev = terrainDeviation(heightAt, points);
+  const finest = levels[0]?.range.z ?? 0;
   return {
     terrain,
-    visibility: 1.4 * ext.outer,
+    radius: lv.far,
+    // Haze: the ground fades out towards the horizon ring's edge.
+    visibility: 1.1 * lv.far,
     padElevation: heightAt(0, 0),
     deviation: dev.metres,
     deviationAt: dev.at,
     attributions: [source.attribution, ELEVATION_SOURCE.attribution],
-    imageryResolution:
-      (2 * Math.PI * 6_378_137 * Math.cos((site.lat * Math.PI) / 180)) /
-      (TILE_SIZE * 2 ** Math.max(iz, oz)),
+    imageryResolution: metresPerPixel(site.lat, finest),
   };
+}
+
+function elevationGrid(
+  site: LaunchSite,
+  range: TileRange,
+  canvas: HTMLCanvasElement,
+): ElevationGrid {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (ctx === null) throw new Error('The browser could not read the elevation tiles.');
+  const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const metres = new Float32Array(canvas.width * canvas.height);
+  for (let k = 0; k < metres.length; k++) {
+    metres[k] = decodeTerrarium(px[4 * k] ?? 0, px[4 * k + 1] ?? 0, px[4 * k + 2] ?? 0);
+  }
+  return new ElevationGrid(site, range, metres);
 }
 
 /** A place search with OpenStreetMap Nominatim (free; one request per search the user makes). */

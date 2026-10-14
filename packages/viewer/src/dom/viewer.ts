@@ -15,13 +15,32 @@ import {
   PMREMGenerator,
   Scene,
   SphereGeometry,
+  Vector3,
   WebGLRenderer,
 } from 'three';
-import { cameraPose, type CameraMode, type FlightScene } from '../scene/flight-scene.js';
+import {
+  cameraPose,
+  type CameraMode,
+  type FlightScene,
+  type SceneLabel,
+} from '../scene/flight-scene.js';
+import { frameStep } from '../replay/clock.js';
+import { mergeLabels } from '../scene/labels.js';
+import { buildLightDome } from '../scene/sky.js';
+import { loadSceneAssets } from './assets.js';
 
 export interface ViewerOptions {
-  /** Called once per animation frame with the wall-clock seconds since the previous frame. */
-  readonly onFrame?: (deltaSeconds: number) => void;
+  /**
+   * Called once per animation frame with the wall-clock seconds since the
+   * previous frame, at most `MAX_FRAME_STEP` (a stall does not jump the
+   * replay); returns true when the scene changed (the replay time
+   * moved) so the frame must be drawn. Frames are drawn only on a change.
+   */
+  readonly onFrame?: (deltaSeconds: number) => boolean;
+  /** Called when the photographic scenery could not be loaded (the plain scenery stays). */
+  readonly onAssetsError?: (message: string) => void;
+  /** Called when the photographic scenery is on. */
+  readonly onAssetsReady?: () => void;
   readonly initialCamera?: CameraMode;
   /** Show a close-up of the rocket in a corner when the main camera is not following it (default true). */
   readonly inset?: boolean;
@@ -38,6 +57,20 @@ export interface ViewerHandle {
   render(): void;
   dispose(): void;
 }
+
+/** Merge order of the labels (#29): lower first. */
+const LABEL_PRIORITY: Readonly<Record<SceneLabel['kind'], number>> = {
+  event: 0,
+  pad: 1,
+  wind: 2,
+  compass: 3,
+  scale: 4,
+};
+/** Kinds whose text is folded into the label they collide with; others are only hidden. */
+const MERGED_KINDS: ReadonlySet<SceneLabel['kind']> = new Set(['event', 'pad', 'wind']);
+/** Labels closer than this on screen are merged, pixels (a drawing choice). */
+const LABEL_MERGE_X = 90;
+const LABEL_MERGE_Y = 18;
 
 /** Average frame interval above which the quality drops, seconds (about 14 frames per second). */
 const SLOW_FRAME = 0.07;
@@ -80,15 +113,36 @@ export function mountViewer(
   );
   const software = /swiftshader|llvmpipe|software|basic render/i.test(rendererName);
 
-  // Image-based lighting from the sky, so the gloss paint reflects it.
+  // Image-based lighting: from the gradient sky now, from the photograph's HDR once loaded.
   const pmrem = new PMREMGenerator(renderer);
-  const skyMaterial = scene.skyMaterial;
   const envScene = new Scene();
-  envScene.add(new Mesh(new SphereGeometry(100, 32, 16), skyMaterial));
-  const env = pmrem.fromScene(envScene, 0, 0.1, 1000);
+  envScene.add(new Mesh(new SphereGeometry(100, 32, 16), scene.skyMaterial));
+  let env = pmrem.fromScene(envScene, 0, 0.1, 1000);
   scene.scene.environment = env.texture;
   scene.scene.environmentIntensity = 0.55;
-  pmrem.dispose();
+  let disposed = false;
+  loadSceneAssets(renderer.capabilities.getMaxAnisotropy()).then(
+    (assets) => {
+      if (disposed) return;
+      scene.applyAssets(assets);
+      const lightScene = new Scene();
+      lightScene.add(buildLightDome(assets.skyLight));
+      const next = pmrem.fromScene(lightScene, 0, 0.1, 1000);
+      env.dispose();
+      env = next;
+      scene.scene.environment = env.texture;
+      scene.scene.environmentIntensity = 1.0;
+      scene.useImageLighting();
+      invalidate();
+      options.onAssetsReady?.();
+    },
+    (error: unknown) => {
+      if (disposed) return;
+      options.onAssetsError?.(
+        `The photographic scenery could not be loaded (${error instanceof Error ? error.message : String(error)}); the plain scenery is shown.`,
+      );
+    },
+  );
   renderer.domElement.setAttribute('aria-label', '3D replay of the flight');
   renderer.domElement.setAttribute('role', 'img');
   container.appendChild(renderer.domElement);
@@ -102,7 +156,11 @@ export function mountViewer(
   container.appendChild(labelRenderer.domElement);
 
   const labelObjects: CSS2DObject[] = [];
-  for (const label of scene.labels) {
+  const labelText = new Map<CSS2DObject, string>();
+  const labelKind = new Map<CSS2DObject, SceneLabel['kind']>();
+  // In priority order for merging (#29): events (in time order), then the pad, wind, compass, scale.
+  const ordered = [...scene.labels].sort((a, b) => LABEL_PRIORITY[a.kind] - LABEL_PRIORITY[b.kind]);
+  for (const label of ordered) {
     const div = document.createElement('div');
     div.className = `viewer-label viewer-label-${label.kind}`;
     div.textContent = label.text;
@@ -110,10 +168,49 @@ export function mountViewer(
     obj.position.set(label.position.x, label.position.y, label.position.z);
     scene.scene.add(obj);
     labelObjects.push(obj);
+    labelText.set(obj, label.text);
+    labelKind.set(obj, label.kind);
   }
+
+  // Labels that land on top of each other on screen are merged into the first (#29).
+  const projected = new Vector3();
+  const declutter = (camera: PerspectiveCamera, w: number, h: number): void => {
+    const points = labelObjects.map((obj) => {
+      projected.setFromMatrixPosition(obj.matrixWorld).project(camera);
+      if (projected.z < -1 || projected.z > 1) return undefined;
+      return { x: ((projected.x + 1) / 2) * w, y: ((1 - projected.y) / 2) * h };
+    });
+    const into = mergeLabels(points, LABEL_MERGE_X, LABEL_MERGE_Y);
+    const texts = labelObjects.map((obj) => [labelText.get(obj) ?? '']);
+    // Events, the pad and the wind fold their text into the label they land on; the distance
+    // scale and the compass are only hidden when they collide.
+    labelObjects.forEach((obj, i) => {
+      const k = into[i] ?? i;
+      const host = labelObjects[k];
+      if (k < 0 || k === i || host === undefined) return;
+      if (
+        MERGED_KINDS.has(labelKind.get(obj) ?? 'scale') &&
+        MERGED_KINDS.has(labelKind.get(host) ?? 'scale')
+      ) {
+        texts[k]?.push(labelText.get(obj) ?? '');
+      }
+    });
+    labelObjects.forEach((obj, i) => {
+      const k = into[i] ?? i;
+      obj.element.style.visibility = k === i || k < 0 ? '' : 'hidden';
+      const text = (texts[i] ?? []).join(' · ');
+      if (k === i && obj.element.textContent !== text) obj.element.textContent = text;
+    });
+  };
 
   const controls = new OrbitControls(scene.camera, renderer.domElement);
   controls.enableDamping = false;
+  // Drawing on demand: a frame is drawn only when something changed.
+  let dirty = true;
+  const invalidate = (): void => {
+    dirty = true;
+  };
+  controls.addEventListener('change', invalidate);
   let mode: CameraMode = options.initialCamera ?? 'follow';
 
   // The close-up inset: its own camera, a corner viewport and a frame.
@@ -152,6 +249,7 @@ export function mountViewer(
     insetFrame.style.height = `${String(ih)}px`;
     insetCamera.aspect = iw / Math.max(1, ih);
     insetCamera.updateProjectionMatrix();
+    invalidate();
   };
   // A software renderer shades every pixel on the CPU: half the resolution in each direction.
   if (software) setLow(0.5);
@@ -169,6 +267,7 @@ export function mountViewer(
     scene.prepareRender(scene.camera, h);
     renderer.render(scene.scene, scene.camera);
     labelRenderer.render(scene.scene, scene.camera);
+    declutter(scene.camera, w, h);
     const showInset = useInset && quality === 'high' && mode !== 'follow' && inset.w > 0;
     insetFrame.style.display = showInset ? 'block' : 'none';
     if (showInset) {
@@ -205,10 +304,12 @@ export function mountViewer(
   let frame = 0;
   let slowSum = 0;
   let slowCount = 0;
+  let drewLast = false;
   const loop = (now: number): void => {
     const dt = Math.max(0, (now - last) / 1000);
     last = now;
-    if (quality === 'high' && dt < 2) {
+    // Only intervals between two drawn frames say how fast drawing is.
+    if (quality === 'high' && drewLast && dt < 2) {
       slowSum += dt;
       slowCount++;
       if (slowCount === 30) {
@@ -217,8 +318,12 @@ export function mountViewer(
         slowCount = 0;
       }
     }
-    options.onFrame?.(dt);
-    render();
+    if (options.onFrame?.(frameStep(dt)) === true) dirty = true;
+    drewLast = dirty;
+    if (dirty) {
+      dirty = false;
+      render();
+    }
     frame = requestAnimationFrame(loop);
   };
   frame = requestAnimationFrame(loop);
@@ -234,11 +339,14 @@ export function mountViewer(
     canvas: renderer.domElement,
     render,
     dispose: () => {
+      disposed = true;
       cancelAnimationFrame(frame);
+      controls.removeEventListener('change', invalidate);
       observer?.disconnect();
       controls.dispose();
       for (const o of labelObjects) scene.scene.remove(o);
       env.dispose();
+      pmrem.dispose();
       renderer.dispose();
       renderer.domElement.remove();
       insetFrame.remove();

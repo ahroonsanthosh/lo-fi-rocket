@@ -11,14 +11,17 @@ import { SI_FORMATTER } from '../units.js';
 import { REFERENCE_ROCKETS, referenceFlight } from '../test-support/reference-flights.js';
 import {
   bracket,
+  CANOPY_DOME_ANGLE,
+  canopyPoint,
   deployedCanopies,
+  groundCloud,
   displayThrust,
   inflation,
   smokeEmissions,
   smokePuffs,
   windVelocity,
 } from './effects.js';
-import { FlightScene } from './flight-scene.js';
+import { FlightScene, PAD_GAP, PAD_HEIGHT } from './flight-scene.js';
 
 function sample(time: number, thrust: number, z: number): FlightSample {
   return {
@@ -163,5 +166,91 @@ describe.each(REFERENCE_ROCKETS)('effects on the stored flight of $id', (rocket)
       expect(g?.visible).toBe(true);
       expect(g?.userData['diameter']).toBe(c.diameter);
     }
+  });
+});
+
+describe('groundCloud by hand', () => {
+  const o = { groundZ: -0.3, start: 0, end: 0.5, reach: 2, size: 1, fade: 6 };
+  it('has no puff before ignition and only the puffs born so far', () => {
+    expect(groundCloud({ x: 0, y: 0, z: 0 }, -0.1, o)).toHaveLength(0);
+    // Puffs are born every 0.5/24 s: at t = 0.1, the five puffs 0..4 (born 0, 0.0208, … 0.0833).
+    expect(groundCloud({ x: 0, y: 0, z: 0 }, 0.1, o)).toHaveLength(5);
+  });
+  it('puff 0 at age 1 s: rolled out 2 × 0.6 × (1 − e^(−1/0.8)) along +x, drifted by the wind, risen 0.3 m', () => {
+    const [p] = groundCloud({ x: 1, y: 0, z: 0 }, 1, o);
+    const roll = 2 * 0.6 * (1 - Math.exp(-1 / 0.8)); // 0.8562
+    expect(p!.position.x).toBeCloseTo(roll + 1, 12);
+    expect(p!.position.y).toBeCloseTo(0, 12);
+    expect(p!.position.z).toBeCloseTo(-0.3 + 0.3 * 1 + 0.3, 12);
+    expect(p!.size).toBeCloseTo(0.35 + 0.65 * (1 - Math.exp(-1 / 0.6)), 12);
+  });
+});
+
+describe('canopyPoint', () => {
+  it('pulls the seams in to 93 % and keeps the rim within 10 % under the design radius', () => {
+    const D = 0.6;
+    const R = D / 2 / Math.sin(CANOPY_DOME_ANGLE);
+    // At a seam (φ = 0) the hem is at the full dome angle: radius 0.93 × D/2.
+    const seam = canopyPoint(0, Math.PI, R);
+    expect(Math.hypot(seam.x, seam.z)).toBeCloseTo((0.93 * D) / 2, 12);
+    let max = 0;
+    for (let k = 0; k <= 240; k++) {
+      const p = canopyPoint((2 * Math.PI * k) / 240, Math.PI, R);
+      max = Math.max(max, Math.hypot(p.x, p.z));
+    }
+    expect(max).toBeLessThanOrEqual(D / 2);
+    expect(max).toBeGreaterThan((0.9 * D) / 2);
+  });
+});
+
+describe('the scene with motors and a launcher (plan 3d-0002)', () => {
+  const f = referenceFlight(REFERENCE_ROCKETS[0]);
+  const make = (offsets: { y: number; z: number }[]): FlightScene =>
+    new FlightScene({
+      result: f.result,
+      components: f.components,
+      rail: {
+        length: 1.5,
+        angleFromVertical: f.options.rail.angleFromVertical,
+        azimuth: f.options.rail.azimuth,
+      },
+      wind: undefined,
+      format: SI_FORMATTER,
+      motor: { diameter: 0.018, length: 0.07, aftEnd: 0.62, offsets, manufacturer: 'AeroTech' },
+      scheme: 'carbon',
+    });
+
+  it('draws the ground below the nozzle at rest by the pad gap and height', () => {
+    const scene = make([{ y: 0, z: 0 }]);
+    scene.setStep(0);
+    expect(scene.groundZ).toBeCloseTo(scene.restBottomZ - PAD_GAP - PAD_HEIGHT, 12);
+    expect(scene.scene.getObjectByName('motors')).toBeDefined();
+    expect(scene.scene.getObjectByName('launch-rail')).toBeDefined();
+  });
+
+  it('hangs the igniter leads from the nozzle until liftoff, then drops them on the deflector', () => {
+    const scene = make([{ y: 0, z: 0 }]);
+    const liftoff = f.result.events.find(
+      (e) => e.kind === 'liftoff' || e.kind === 'rail-exit',
+    )!.time;
+    scene.setTime(Math.max(0, liftoff - 0.01));
+    expect(scene.scene.getObjectByName('igniter-leads')!.visible).toBe(true);
+    expect(scene.scene.getObjectByName('igniter-leads-fallen')!.visible).toBe(false);
+    scene.setTime(liftoff + 0.5);
+    expect(scene.scene.getObjectByName('igniter-leads')!.visible).toBe(false);
+    expect(scene.scene.getObjectByName('igniter-leads-fallen')!.visible).toBe(true);
+  });
+
+  it('lights one flame per motor of a cluster', () => {
+    const scene = make([
+      { y: 0.01, z: 0 },
+      { y: -0.01, z: 0 },
+    ]);
+    scene.setTime(0.2);
+    let flames = 0;
+    scene.scene.traverse((o) => {
+      if (o.name === 'exhaust-flame' && o.visible) flames++;
+    });
+    expect(flames).toBe(2);
   });
 });

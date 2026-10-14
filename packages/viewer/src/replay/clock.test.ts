@@ -3,7 +3,7 @@
  */
 import { seconds, type FlightSample } from '@lo-fi-rocket/physics';
 import { describe, expect, it } from 'vitest';
-import { displayPose, nearestStep, ReplayController } from './clock.js';
+import { displayPose, frameStep, MAX_FRAME_STEP, nearestStep, ReplayController } from './clock.js';
 
 describe('nearestStep', () => {
   const times = [0, 0.5, 1, 2];
@@ -112,5 +112,24 @@ describe('ReplayController', () => {
     expect(() => {
       new ReplayController(1).setSpeed(0);
     }).toThrow(/greater than 0/);
+  });
+});
+
+describe('frameStep', () => {
+  it('passes a normal frame through and limits a stall to MAX_FRAME_STEP', () => {
+    // A 60 Hz frame is 1/60 s of replay; a 3 s stall (a shader compiled before "Play") adds 0.25 s,
+    // so at half speed the replay moves 0.125 s instead of jumping 1.5 s.
+    expect(frameStep(1 / 60)).toBe(1 / 60);
+    expect(frameStep(0.25)).toBe(0.25);
+    expect(frameStep(3)).toBe(MAX_FRAME_STEP);
+    expect(MAX_FRAME_STEP).toBe(0.25);
+    const c = new ReplayController(10);
+    c.play();
+    c.setSpeed(0.5);
+    expect(c.advance(frameStep(3)).time).toBe(0.125);
+    // A clock that went backwards, or no time at all, moves nothing.
+    expect(frameStep(-0.5)).toBe(0);
+    expect(frameStep(0)).toBe(0);
+    expect(frameStep(Number.NaN)).toBe(0);
   });
 });
