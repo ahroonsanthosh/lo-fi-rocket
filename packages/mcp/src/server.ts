@@ -7,7 +7,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { FormatError, serializeDesign } from '@lo-fi-rocket/formats';
+import { encodeDesignLink, FormatError, serializeDesign } from '@lo-fi-rocket/formats';
 import { PhysicsError } from '@lo-fi-rocket/physics';
 import * as z from 'zod';
 import { addPart, EditError, removePart, updatePart, type PositionInput } from './edit.js';
@@ -25,6 +25,9 @@ import { MAX_RUNS, motorFacts, Session } from './session.js';
 import { SERVER_VERSION } from './version.js';
 
 export const SERVER_NAME = 'lo-fi-rocket';
+
+/** The published web app, which opens design links (plan 0063). */
+export const SITE_URL = 'https://ahroonsanthosh.github.io/lo-fi-rocket/';
 export { SERVER_VERSION };
 
 /** Longest text a tool accepts (a design or motor file's content): far above any real file. */
@@ -37,7 +40,7 @@ export const INSTRUCTIONS = `Lo-Fi Rocket models and simulates model and high-po
 4. If the rocket is built, ask for its weighed mass and balance point with the motor out, and set_as_built.
 5. Run review_design and clear or explain every "must" item before simulate. Never compute physics yourself.
 6. With every result, report the confidence and the largest approximations, the warnings, and the launch settings not given. Say plainly that the figures are predictions with the stated confidence, not guarantees; safety decisions (stability, rail exit speed, deployment speed) need the user's own judgement and their club's or the manufacturer's rules.
-7. Designs live only while this connection is open: export_design gives the .lofi.json file to save, which the web app opens with File > Open.`;
+7. Designs live only while this connection is open: design_link gives a link that opens the design in the web app, and export_design gives the .lofi.json file to save (the web app opens it with File > Open).`;
 
 const quantity = z.union([z.number(), z.string().max(64)]);
 const id = z.string().min(1).max(200);
@@ -232,6 +235,22 @@ export function createServer(session: Session = new Session()): McpServer {
         return { isError: true, content: [{ type: 'text', text: message(error) }] };
       }
     },
+  );
+
+  server.registerTool(
+    'design_link',
+    {
+      title: 'Link to open the design in the web app',
+      description:
+        'A link that opens the design in the Lo-Fi Rocket web app, with its approximations and "not given" notes, for the user to view, edit or keep. The design travels in the part after "#", which browsers never send to a server.',
+      inputSchema: { designId: id },
+      annotations: readOnly,
+    },
+    ({ designId }) =>
+      respond(() => {
+        const url = `${SITE_URL}${encodeDesignLink(session.get(designId))}`;
+        return { url, characters: url.length };
+      }),
   );
 
   server.registerTool(

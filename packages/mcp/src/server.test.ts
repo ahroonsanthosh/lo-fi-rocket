@@ -10,6 +10,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import {
   BUNDLED_MOTOR_FILES,
+  decodeDesignLink,
   runDispersion,
   type Transport,
   designSimulationOptions,
@@ -94,6 +95,7 @@ describe('tool list', () => {
       [
         'about',
         'add_part',
+        'design_link',
         'export_design',
         'find_motor',
         'get_design',
@@ -541,4 +543,22 @@ describe('Monte Carlo', () => {
     expect(again).toEqual(mc);
     expect((await call('monte_carlo', { designId, runs: 5000 })).ok).toBe(false);
   }, 60_000);
+});
+
+describe('design_link', () => {
+  it('gives a link to the web app that carries the design exactly', async () => {
+    const designId = (await ok('new_design', { name: 'Linked', from: 'example' }))['id'] as string;
+    await ok('note_assumption', {
+      designId,
+      what: 'fin thickness',
+      method: 'from a photo',
+      effect: 'mass',
+      impact: 'minor',
+    });
+    const link = await ok('design_link', { designId });
+    const url = link['url'] as string;
+    expect(url.startsWith('https://ahroonsanthosh.github.io/lo-fi-rocket/#design=v1.')).toBe(true);
+    const exported = parseDesign((await call('export_design', { designId })).text);
+    expect(decodeDesignLink(url.slice(url.indexOf('#')))).toEqual(exported);
+  });
 });
