@@ -225,6 +225,54 @@ describe('importCdx1: a single-stage rocket', () => {
     expect(imp.motorName).toBe('H128W (AT)');
   });
 
+  // Plan 0080: the notes of RASAero's flown examples, as they write their apogees.
+  it.each([
+    [
+      'two altimeters averaged',
+      'Two Barometric Altimeters\nTransolve 6400 ft\nOlsen 5975 ft\nAverage of Two Barometric Altimeters = 6188 ft\n\nRASAero Prediction = 6328 ft',
+      6188,
+      'barometric',
+    ],
+    [
+      'the author’s final figure among four instruments',
+      'GPS Altitude = 42771 ft\nAdept Barometric Altitude = 42231 ft\nARTS II Integrated Accelerometer Altitude = 44924 ft\n\nFinal Altitude - GPS Altitude - 42771 ft',
+      42771,
+      'GPS',
+    ],
+    [
+      'an accelerometer apogee without "="',
+      'Apogee Altitude 85067 ft based on integrated accelerometer data, average of the two accelerometers.\nRASAero II Prediction = 81499 ft, Error = -4.19%',
+      85067,
+      'accelerometer',
+    ],
+    [
+      'a GPS altitude on the next line',
+      'GPS Altitude\nAltitude = 104659 ft\n\nRASAero II Prediction = 113786 ft',
+      104659,
+      'GPS',
+    ],
+    ['optical tracking', 'Optical Track\nAltitude = 37981 ft', 37981, 'optical tracking'],
+  ])('reads a flown apogee from %s', (_label, comments, feet, instrument) => {
+    const text = single.replace(
+      /<Comments>[\s\S]*?<\/Comments>/,
+      `<Comments>${comments}</Comments>`,
+    );
+    const i = importCdx1(text, library, 'm', 'notes.CDX1');
+    expect(i.measuredApogee).toBeCloseTo(feet * 0.3048, 9);
+    expect(i.measuredBy).toBe(instrument);
+  });
+
+  it('never takes RASAero’s prediction or an over-long line as the flown apogee', () => {
+    const only = (comments: string): number | undefined =>
+      importCdx1(
+        single.replace(/<Comments>[\s\S]*?<\/Comments>/, `<Comments>${comments}</Comments>`),
+        library,
+        'm',
+      ).measuredApogee;
+    expect(only('RASAero II Prediction = 1300 ft')).toBeUndefined();
+    expect(only(`Altitude = ${'1'.repeat(600)} ft`)).toBeUndefined();
+  });
+
   it('simulates', () => {
     const r = simulateFlight(designVehicle(d), designSimulationOptions(d));
     expect(r.summary.apogee).toBeGreaterThan(0);

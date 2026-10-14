@@ -11,6 +11,7 @@ import {
   designVehicle,
   exampleDesign,
   exportCdx1,
+  realFlightRange,
   serializeDesign,
   type Transport,
 } from '@lo-fi-rocket/formats';
@@ -115,6 +116,11 @@ describe('build_and_fly (plan 0079)', () => {
     );
     expect(get(out, 'flight', 'confidence')).toEqual(expectedFlight.confidence);
     expect(get(out, 'flight', 'launch_settings_not_given')).toEqual(['temperature', 'pressure']);
+    // Plan 0080 (D-119): the range measured flights reached, beside the physics, said to be such.
+    const range = realFlightRange(expectedFlight.summary.apogee, expectedFlight.summary.maxMach);
+    expect(get(out, 'flight', 'real_flights', 'apogee_low_m')).toBe(r(range?.low));
+    expect(get(out, 'flight', 'real_flights', 'apogee_high_m')).toBe(r(range?.high));
+    expect(get(out, 'flight', 'real_flights', 'note')).toMatch(/^Measured flights, not physics: /);
     expect(String(out['link'])).toMatch(/^https:\/\/ahroonsanthosh\.github\.io\/lo-fi-rocket\/#/);
     // The design stays in the session for refining.
     const list = await call(c, 'list_designs', {});

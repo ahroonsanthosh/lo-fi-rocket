@@ -46,6 +46,8 @@ test('the replay shows the stored apogee figure of the flight panel at the apoge
     .locator('dt')
     .filter({ has: page.getByRole('button', { name: 'Apogee', exact: true }) })
     .locator('xpath=following-sibling::dd[1]')
+    // The figure itself, without its real-flight range (plan 0080).
+    .locator('.lfr-result__number')
     .textContent();
   const toApogee = await results.locator('dt:text-is("Time to apogee") + dd').textContent();
   await viewer.getByRole('button', { name: /^Apogee / }).click();

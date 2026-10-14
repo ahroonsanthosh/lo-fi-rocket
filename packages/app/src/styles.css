@@ -277,6 +277,11 @@ body {
   color: var(--lfr-caution-text);
   font-weight: 600;
 }
+/* Plan 0080: what measured flights of this speed range reached, on its own line. */
+.figure__range {
+  display: block;
+  color: var(--ink);
+}
 .stage__sentence {
   margin: 0;
   max-width: 62ch;

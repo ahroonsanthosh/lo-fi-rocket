@@ -20,11 +20,15 @@ async function addComponent(page: Page, kind: string): Promise<void> {
 /** A result card's value: the dd after the dt whose visible label (or glossary term) is `label`. */
 function resultValue(page: Page, label: string): Locator {
   const results = page.getByRole('region', { name: 'Flight' });
-  return results
-    .locator('dt')
-    .filter({ has: page.getByRole('button', { name: label, exact: true }) })
-    .or(results.locator(`dt:text-is("${label}")`))
-    .locator('xpath=following-sibling::dd[1]');
+  return (
+    results
+      .locator('dt')
+      .filter({ has: page.getByRole('button', { name: label, exact: true }) })
+      .or(results.locator(`dt:text-is("${label}")`))
+      .locator('xpath=following-sibling::dd[1]')
+      // The figure itself, without its detail line (plan 0080 adds the real-flight range to Apogee).
+      .locator('.lfr-result__number')
+  );
 }
 
 /** File actions sit behind the File menu in the top bar. */

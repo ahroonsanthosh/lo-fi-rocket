@@ -20,7 +20,6 @@ import {
 } from '@lo-fi-rocket/physics';
 import { describe, expect, it, vi } from 'vitest';
 import { importCdx1, type Cdx1Import } from './cdx1.js';
-import type { LibraryMotorRef } from './design/from-ork.js';
 import type { RocketDesign } from './design/model.js';
 import {
   designPlacedComponents,
@@ -28,40 +27,16 @@ import {
   designVehicle,
   type PhysicsMode,
 } from './design/to-physics.js';
-import { parseEng } from './eng.js';
-import { motorFromEng } from './motor-definition.js';
+import { RASAERO_DATA, raspLibrary } from './validation/rasaero-examples.js';
 
 vi.setConfig({ testTimeout: 3_600_000 });
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 const RASAERO = join(ROOT, 'reference', 'rasaero');
-const DATA = process.env['RASAERO_DIR'] ?? join(RASAERO, 'download', 'RASAero II');
+const DATA = RASAERO_DATA;
 const RUNS = process.env['RASAERO_RUNS'] ?? join(RASAERO, 'runs');
 const OUT = join(ROOT, 'docs', 'reports', 'rasaero-comparison-data.md');
 const FT = 0.3048;
-
-/** RASAero's `rasp.eng`, each motor read on its own so that one malformed entry skips only itself. */
-function raspLibrary(text: string): { library: LibraryMotorRef[]; skipped: string[] } {
-  const blocks: string[][] = [];
-  for (const line of text.split(/\r?\n/)) {
-    const t = line.trim();
-    if (t === '' || t.startsWith(';')) continue;
-    if (/^[-+.\d]/.test(t)) blocks.at(-1)?.push(t);
-    else blocks.push([t]);
-  }
-  const library: LibraryMotorRef[] = [];
-  const skipped: string[] = [];
-  for (const b of blocks) {
-    try {
-      for (const eng of parseEng(b.join('\n'))) {
-        library.push({ definition: motorFromEng(eng), provenance: { kind: 'custom' } });
-      }
-    } catch (e) {
-      skipped.push(`${b[0] ?? '?'}: ${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-  return { library, skipped };
-}
 
 /** The run directory's name for an example, as run-rasaero.sh writes it. */
 const runName = (file: string): string =>

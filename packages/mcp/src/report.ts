@@ -16,6 +16,8 @@ import {
   designThrustToWeight,
   designVehicle,
   isExternal,
+  REAL_FLIGHT_MACH_SPLIT,
+  realFlightRange,
   type RocketDesign,
 } from '@lo-fi-rocket/formats';
 import {
@@ -248,6 +250,7 @@ export function simulateReport(
     events: result.events.map((e) => ({ kind: e.kind, t_s: r(e.time), detail: e.detail })),
     warnings: designFlightWarnings(design, result).map((w) => w.message),
     launch_settings_not_given: LAUNCH_SETTINGS.filter((k) => !launchGiven.has(k)),
+    ...realFlights(s.apogee, s.maxMach),
     approximations: [...result.approximations],
     confidence: result.confidence,
     model: {
@@ -256,6 +259,24 @@ export function simulateReport(
       drag_curve: result.modes.dragCurve ?? 'computed',
     },
     ...(series === undefined ? {} : { time_series: series }),
+  };
+}
+
+/**
+ * Plan 0080 (D-119): the apogee range flown rockets of this speed range reached, from the
+ * real-flight benchmark; measured facts beside the physics, never part of it.
+ */
+function realFlights(apogee: number, maxMach: number): Record<string, unknown> {
+  const range = realFlightRange(apogee, maxMach);
+  if (range === undefined) return {};
+  const pct = (x: number): number => Math.round(x * 100);
+  return {
+    real_flights: {
+      apogee_low_m: r(range.low),
+      apogee_median_m: r(range.median),
+      apogee_high_m: r(range.high),
+      note: `Measured flights, not physics: ${String(range.flights)} flown rockets ${range.below ? 'below' : 'at or above'} Mach ${String(REAL_FLIGHT_MACH_SPLIT)} reached ${String(pct(range.lowRatio))} to ${String(pct(range.highRatio))} % of this simulator's apogee (median ${String(pct(range.medianRatio))} %). Report this range with the apogee.`,
+    },
   };
 }
 

@@ -170,6 +170,12 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **`build_and_fly`** takes the parts, the motor by name ("D12-5", "G80-7T"), the recovery and the launch in one call. A motor the library lacks is looked up on ThrustCurve.org.
   - **`import_design`** reads RASAero `.CDX1` too, and can fly the file in the same call.
   - **No questions first.** The instructions no longer ask for every value before flying; what was left out is listed with the result.
+- Real flights at the core (plan 0080, D-119), step 1:
+  - **The benchmark.** All 24 flown rockets among RASAero II's examples are flown in CI on every change (`docs/reports/real-flights.md`).
+  - **Today's gap.** Displayed apogee +16.4 % mean below Mach 0.95 (13 flights) and +24.7 % above (11).
+  - **Shown with every result.** Each apogee in the app and the MCP now carries the range measured flights reached.
+  - **Sources approved:** NACA TM 1299 and NASA SP-125.
+  - **Next:** the fin friction at the fin chord as the default (step 2), then the DATCOM wing-body build-up (step 3).
 
 ## In progress
 

@@ -2,6 +2,8 @@
 
 **Date:** 2026-10-14. **Plan:** 0075, updated by plan 0076. **Decisions:** D-114, D-115.
 
+**Current figures (plan 0080, D-119).** The importer now reads every flown example's apogee, including averages of several altimeters and accelerometer apogees, so the flight benchmark has 24 flights, not 21. It runs in CI with every change and is `docs/reports/real-flights.md`. The figures below are this report's own runs.
+
 **Update (plan 0076, D-115).** The DATCOM's body form factor (section 4.3) is now the displayed mode's: it improved both independent datasets, the 21 flights (+18.9 → +17.7 % below Mach 0.95, +29.0 → +26.7 % above) and the held-out wind tunnel and free-flight drag in every regime (subsonic rms 7.1 → 6.1 %, meeting its 7 % target). The fin friction at the fin chord (section 4.1) is implemented and selectable but not the default: it helps the flights more but worsens the held-out supersonic drag (section 7, decision 1). The figures below are before plan 0076 unless marked; `rasaero-comparison-data.md` has the current ones. **Data:** `rasaero-comparison-data.md`, written by `packages/formats/src/rasaero-comparison.test.ts` (opt-in, `RASAERO=1`).
 
 ## 1. In short

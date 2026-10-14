@@ -4,7 +4,7 @@
  * stability. After a simulation the 3D replay can take the rocket's
  * place. Every figure is the physics' own, formatted by the display rules.
  */
-import type { RocketDesign } from '@lo-fi-rocket/formats';
+import { realFlightRange, type RocketDesign } from '@lo-fi-rocket/formats';
 import {
   FIGURE_DISPLAY,
   formatFixed,
@@ -101,6 +101,8 @@ export function Stage(props: StageProps): JSX.Element {
   const m = unitFor('m', units);
   const v = unitFor('velocity', units);
   const summary = flight?.result.summary;
+  const range =
+    summary === undefined ? undefined : realFlightRange(summary.apogee, summary.maxMach);
   const railMin = design.warningThresholds.minRailExitVelocity;
   const railMinText = formatQuantity(railMin, 'velocity', units);
   const margin = FIGURE_DISPLAY.stabilityMargin;
@@ -163,9 +165,20 @@ export function Stage(props: StageProps): JSX.Element {
           unit={m.label}
           stale={stale}
           note={
-            summary === undefined
-              ? 'Simulate to see'
-              : `at ${summary.timeToApogee.toFixed(FIGURE_DISPLAY.timeToApogee.decimals)} s`
+            summary === undefined ? (
+              'Simulate to see'
+            ) : (
+              <>
+                at {summary.timeToApogee.toFixed(FIGURE_DISPLAY.timeToApogee.decimals)} s
+                {range === undefined ? null : (
+                  // Plan 0080 (D-119): measured flights of this speed range, beside the physics.
+                  <span className="figure__range">
+                    Real flights: {formatQuantity(range.low, 'm', units)} to{' '}
+                    {formatQuantity(range.high, 'm', units)}
+                  </span>
+                )}
+              </>
+            )
           }
         />
         <Figure

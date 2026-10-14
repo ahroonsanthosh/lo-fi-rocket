@@ -1,4 +1,9 @@
-import type { RocketDesign } from '@lo-fi-rocket/formats';
+import {
+  REAL_FLIGHT_MACH_SPLIT,
+  realFlightRange,
+  type RealFlightRange,
+  type RocketDesign,
+} from '@lo-fi-rocket/formats';
 import type { FlightResult, StabilityPoint } from '@lo-fi-rocket/physics';
 import { Button, FIGURE_DISPLAY, ResultCard, ResultGrid } from '@lo-fi-rocket/ui';
 import { useState, type JSX, type ReactNode } from 'react';
@@ -162,6 +167,8 @@ function Summary({
   const v = unitFor('velocity', units);
   const a = unitFor('acceleration', units);
   const fd = FIGURE_DISPLAY;
+  // Plan 0080 (D-119): what measured flights of this speed range reached, beside the physics.
+  const range = realFlightRange(s.apogee, s.maxMach);
   const opt = (x: number | undefined, f: (y: number) => string): string =>
     x === undefined ? '—' : f(x);
   return (
@@ -174,6 +181,7 @@ function Summary({
           decimals={m.decimals}
           unit={m.label}
           stale={stale}
+          {...(range === undefined ? {} : { detail: realFlightText(range, units) })}
         />
         <ResultCard
           label="Time to apogee"
@@ -309,4 +317,13 @@ function Summary({
       </p>
     </div>
   );
+}
+
+/**
+ * Plan 0080 (D-119): the apogee range measured flights of this speed range reached, in words.
+ * It comes from flown rockets, not from the physics, and says so.
+ */
+export function realFlightText(range: RealFlightRange, units: UnitSystem): string {
+  const pct = (x: number): string => (x * 100).toFixed(0);
+  return `Real flights: ${String(range.flights)} flown rockets ${range.below ? 'below' : 'at or above'} Mach ${String(REAL_FLIGHT_MACH_SPLIT)} reached ${pct(range.lowRatio)} to ${pct(range.highRatio)} % of the predicted apogee (median ${pct(range.medianRatio)} %): about ${formatQuantity(range.low, 'm', units)} to ${formatQuantity(range.high, 'm', units)} here.`;
 }

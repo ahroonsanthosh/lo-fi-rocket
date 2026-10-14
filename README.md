@@ -45,7 +45,10 @@ The numbers below come from the tests and reports named beside them. They are th
 **Trust with care:**
 
 - **Transonic and supersonic drag.** It is 21 % (transonic) and 15 % (supersonic) rms from measured data. Apogees of rockets that pass Mach 0.8 are correspondingly less certain. The app warns in those regimes.
-- **Apogee of real amateur rockets.** On 21 flown rockets with measured apogees (RASAero II's examples, D-114), the displayed apogee was above the measured one on every flight, by 17.7 % on average below Mach 0.95 (D-115). The cause is drag that real rockets have and the model leaves out (rail guides, fin junctions); see `docs/reports/rasaero-comparison.md`.
+- **Apogee of real amateur rockets (plan 0080, the project's first priority).**
+  - **The benchmark.** All 24 flown rockets among RASAero II's examples are flown on every change (`docs/reports/real-flights.md`, D-119).
+  - **The gap.** The displayed apogee is above the measured one on every flight: +16.4 % on average on the 13 below Mach 0.95, +24.7 % on the 11 above. The cause is drag real rockets have that the model leaves out or underestimates (fin friction length, fin junctions, rail guides). The sourced fixes are under way.
+  - **Until then,** every flight result shows beside its apogee the range that measured flights of its speed range reached.
 - **Above Mach 2.** Nothing has been validated there; every result says so.
 - **In-flight stability margin.** It uses the more conservative of two normal-force models at angle of attack. Real long, slender rockets have shown a larger forward CP shift than either model predicts (D-070).
 - **Large angles of attack.** Tumbling and backward flight above 60° use DATCOM correlations with no test verification there. They are approximate and flagged.
