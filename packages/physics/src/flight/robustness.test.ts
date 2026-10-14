@@ -21,7 +21,9 @@ import { rollDampingMoment } from './aerodynamics.js';
 import { initialOrientation } from './frames.js';
 import { quaternionNorm, rotationFromAngularVelocity } from './quaternion.js';
 import { simulateFlight } from './simulate.js';
-import type { SimulationOptions } from './vehicle.js';
+import type { FlightVehicle, SimulationOptions } from './vehicle.js';
+import type { MotorDefinition } from '../motor/motor.js';
+import { kilograms } from '../units/si.js';
 
 describe('near-zero rates (plan 0065)', () => {
   it('rotate by a subnormal angular velocity: the axis is still the unit ω̂, the angle |ω|Δt', () => {
@@ -128,4 +130,69 @@ describe('a canopy opening at 261 m/s after a smooth vacuum coast (plan 0065)', 
       expect(r.summary.groundHitVelocity).toBeCloseTo(terminal, 3);
     });
   }
+});
+
+describe('wedge fins falling tail-first with no parachute (plan 0066)', () => {
+  // R1 on a constant 12 N, 1.6 s motor with single-wedge fins and no recovery device: after apogee
+  // it falls tail-first, past 90° angle of attack. The DATCOM large-angle model now covers the
+  // wedge with the nearer chart family (listed), so the flight lands instead of ending there.
+  const motor: MotorDefinition = {
+    designation: 'C',
+    manufacturer: 'Test',
+    diameter: metres(0.024),
+    length: metres(0.07),
+    totalMass: kilograms(0.04),
+    propellantMass: kilograms(0.02),
+    points: [
+      { time: seconds(0), thrust: newtons(12) },
+      { time: seconds(1.6), thrust: newtons(12) },
+    ],
+    massRule: 'linear-in-time',
+    sourceFormat: 'custom',
+  };
+  const vehicle: FlightVehicle = {
+    components: R1_COMPONENTS.map((p) =>
+      p.component.kind === 'finSet'
+        ? { ...p, component: { ...p.component, crossSection: 'wedge' as const } }
+        : p,
+    ),
+    componentNames: R1_COMPONENTS.map((p) => (p.component.kind === 'finSet' ? 'Fins' : '')),
+    motor: { kind: 'definition', definition: motor, aftEnd: metres(0.6) },
+    recovery: [],
+    roughnessHeight: metres(60e-6),
+  };
+  const options = (largeAngleMethod: 'datcom' | 'linear'): SimulationOptions => ({
+    site: { altitude: metres(0) },
+    rail: { length: metres(1.5), angleFromVertical: radians(0), azimuth: radians(0) },
+    wind: { kind: 'vector', velocity: { x: 0, y: 0, z: 0 } },
+    gravity: { seaLevel: metresPerSecondSquared(9.80665), altitudeDependence: 'constant' },
+    aerodynamics: 'niskanen',
+    finRollReduction: true,
+    baseDragMotorRule: 'while-thrusting',
+    largeAngleMethod,
+    integrator: {
+      kind: 'dormand-prince',
+      relativeTolerance: 1e-8,
+      absoluteTolerance: 1e-10,
+      initialStep: seconds(0.001),
+      maxStep: seconds(0.05),
+    },
+    maxTime: seconds(120),
+    degreesOfFreedom: 6,
+  });
+
+  it("lands in the displayed mode, with the wedge fins' large-angle force listed", () => {
+    const r = simulateFlight(vehicle, options('datcom'));
+    expect(r.summary.endReason).toBe('landing');
+    const listed = r.approximations.filter((a) => a.subject === 'Fin set "Fins"');
+    expect(listed.map((a) => a.what)).toContain(
+      'its normal force beyond the stall, and past 90° when the rocket tumbles',
+    );
+  });
+
+  it('keeps the 90° limit in the OpenRocket-equivalent mode, and lists nothing for it', () => {
+    const r = simulateFlight(vehicle, options('linear'));
+    expect(r.summary.endReason).toBe('model-limit');
+    expect(r.approximations.some((a) => a.what.startsWith('its normal force beyond'))).toBe(false);
+  });
 });

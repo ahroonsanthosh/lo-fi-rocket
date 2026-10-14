@@ -123,6 +123,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - The stability details list each configuration's margin as its bottom stage lights and at its burnout.
   - For a staged rocket, the burnout gauge shows the top stage alone.
 - Random-design robustness (plan 0065, D-101): a property test flies random sensible designs (40 per run; 300 in the exploration). It found two float64 edge cases (a decaying roll rate and the first instant off the rail overflowing to ∞ or ∞ × 0), a rail tilted by next to nothing, an adaptive-step failure when a canopy opens on a fast rocket after a smooth coast, and the refusal of 0 kg parts. All are fixed and each is tested; golden outputs unchanged. Now 300 of 300 fly: 212 land, 79 end at the model limit (tumbling past 90°), 8 at the time limit.
+- Wedge and high-aspect-ratio fins past 90° (plan 0066, D-102): the large-angle model no longer refuses them in the displayed mode. A single wedge reads the 23b family, and a high aspect ratio uses the low-aspect-ratio method with its charts held at their ends. Each is listed in the result as an approximation. These fin sets caused all 79 model-limit endings; now 300 of 300 random designs land (291) or reach the time limit (9). No reference design has such fins, so the golden outputs and the OpenRocket comparisons are unchanged.
 
 ## In progress
 
@@ -130,7 +131,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Task 5: designs that tumble past 90° end at the model limit (79 of 300 random designs); the flight after that, and the remaining refusals. Then plan 0061 step 4 (the modelling benchmark). Then plan 0061 step 4 (the modelling benchmark).
+- Task 5, the remaining refusals: a rocket tumbling above Mach 1 still ends at the model limit (D-070, no supersonic high-angle charts). Also document that a sample's Mach and angle of attack are NaN while no attitude is modelled (descent under a recovery device). Then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
