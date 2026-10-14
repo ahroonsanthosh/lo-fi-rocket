@@ -142,6 +142,11 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Blue Scout at angle of attack.** The values behind D-070 were the fins-off configurations. The fins-on CP moves only about 0.03 body lengths to 6°; both models over-predict this, which is conservative.
   - **Known limitations.** Stale statements were replaced. Two items are newly documented: the ARCAS transonic CP, about 1 caliber on the unsafe side at Mach 0.8 to 0.9, and drag under-predicted just above Mach 1 and on wedge fins.
   - **OpenRocket issues.** Draft list in `docs/reports/openrocket-issues.md`.
+- Surface finish from `.ork` files (plan 0073 part 1, D-110), the first of the import gaps found by the OpenRocket validation campaign:
+  - **Import.** Each part's `<finish>` is read as OpenRocket's own roughness height (nine names, 0 to 500 µm). The design's finish is the one most parts have; parts with another keep their own (design file schema 4). Before this every part flew at 60 µm, unlisted, moving the apogee −13 to +14 % on the campaign's six rockets with another finish.
+  - **Physics.** The skin friction is the sum over the surfaces, each at its own finish. With one finish it is eq. (3.85) exactly, so every existing result is unchanged. A 0 µm finish is a smooth surface.
+  - **Against OpenRocket.** 14 probe rockets at Mach 0.1 to 1.5: friction 1.24 to 1.46 % above OpenRocket's, the regular-paint offset within ±0.11 %.
+  - **Also fixed.** The MCP part editor dropped a part's pod set; it now keeps that and its finish.
 - Pod sets in files (plan 0070 step 3, D-107): the design file's `pod` group (schema 3, with its migration), the `.ork` reader's pod sets on body tubes, placed as OpenRocket places them (every radius and axial method probed exactly; a parachute in a pod is one per pod), and the app's part list and editor naming pod parts. A motor in a pod is still refused (step 4). Issues opened for the UI and 3D lanes to draw pods off the axis.
 
 ## In progress
@@ -150,6 +155,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
+- Plan 0073, the rest of the import gaps, one pull request each: part 1b, a finish control in the app for the design and for a part; part 2, streamers (Niskanen Appendix C, eq. C.6, which OpenRocket also uses, capped at 0.4); part 3, fillet mass, the airfoil fin mass rating, the RK4 refusal message's rounding, and rail buttons past the end of the body.
 - Validation campaign (owner, 2026-10-14):
   - **What runs.** Exhaustive comparison against OpenRocket on many generated designs, against the measured NACA/NASA data by regime, and against RASAero II if it can be run here or from its published predictions. Background agents are running all three.
   - **Output.** A differences report with the reasoning for each difference, and a list of OpenRocket issues for its developers.

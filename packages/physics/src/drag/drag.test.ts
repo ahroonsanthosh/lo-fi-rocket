@@ -67,6 +67,36 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
     const r = dragCoefficient({ ...base, mach: mach(0), reynolds: 0 });
     expect(r.cd0).toBeCloseTo(1.39231, 4);
   });
+  it('plan 0073: fins at their own 5 µm finish: friction 0.232511 (body, 60 µm) + 0.073940 (fins) = 0.30645', () => {
+    // Body as above: 5.05881e-3 × 1.0416667 × 0.0866355/1.9634954e-3 = 0.232511.
+    // Fins at 5 µm: R_crit = 51 (5e-6/0.6)^(−1.039) = 9.657·10⁶ > R, so turbulent:
+    //   1.5 ln(2224095.3) − 5.6 = 16.32221, C_f = 1/266.414 = 3.75355·10⁻³, × (1 − 0.1 × 0.025326) = 3.74401·10⁻³;
+    //   × 1.0771429 × 0.036/1.9634954e-3 = 0.073940.
+    const fins = R1_COMPONENTS.map((p) =>
+      p.component.kind === 'finSet' ? { ...p, roughnessHeight: metres(5e-6) } : p,
+    );
+    const r = dragCoefficient({ ...base, components: fins });
+    expect(r.skinFriction.cd).toBeCloseTo(0.30645, 5);
+    // The other terms do not depend on the finish.
+    const uniform = dragCoefficient(base);
+    expect(r.cd0 - r.skinFriction.cd).toBeCloseTo(uniform.cd0 - uniform.skinFriction.cd, 12);
+  });
+  it('plan 0073: a part given the design’s own finish, or every part one other finish, changes nothing', () => {
+    const same = R1_COMPONENTS.map((p) => ({ ...p, roughnessHeight: metres(60e-6) }));
+    expect(dragCoefficient({ ...base, components: same }).cd0).toBe(dragCoefficient(base).cd0);
+    const all = R1_COMPONENTS.map((p) => ({ ...p, roughnessHeight: metres(20e-6) }));
+    expect(dragCoefficient({ ...base, components: all }).skinFriction.cd).toBe(
+      dragCoefficient({ ...base, roughnessHeight: metres(20e-6) }).skinFriction.cd,
+    );
+    // The DATCOM base drag takes the body's wetted-area mean C_f, the one finish here.
+    const datcom = { ...base, baseDragMethod: 'datcom' as const };
+    expect(dragCoefficient({ ...datcom, components: all }).cd0).toBeCloseTo(
+      dragCoefficient({ ...datcom, roughnessHeight: metres(20e-6) }).cd0,
+      12,
+    );
+    const bad = R1_COMPONENTS.map((p, i) => (i === 0 ? { ...p, roughnessHeight: metres(-1) } : p));
+    expect(() => dragCoefficient({ ...base, components: bad })).toThrow(InvalidInputError);
+  });
   it('after burnout the base drag covers the whole base under the source rule, and keeps the motor removed under the OpenRocket rule (D-035)', () => {
     const coasting = dragCoefficient({
       ...base,

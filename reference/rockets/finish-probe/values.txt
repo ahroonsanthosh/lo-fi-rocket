@@ -1,0 +1,340 @@
+FINISH ROUGH roughness=5.000000000e-04 label="Rough (500 ?m)"
+FINISH ROUGHUNFINISHED roughness=2.500000000e-04 label="Rough unfinished (250 ?m)"
+FINISH UNFINISHED roughness=1.500000000e-04 label="Unfinished (150 ?m)"
+FINISH NORMAL roughness=6.000000000e-05 label="Regular paint (60 ?m)"
+FINISH SMOOTH roughness=2.000000000e-05 label="Smooth paint (20 ?m)"
+FINISH OPTIMUM roughness=5.000000000e-06 label="Optimum paint (5 ?m)"
+FINISH POLISHED roughness=2.000000000e-06 label="Aircraft sheet-metal (2 ?m)"
+FINISH FINISHPOLISHED roughness=5.000000000e-07 label="Finished/polished surface (0.5 ?m)"
+FINISH MIRROR roughness=0.000000000e+00 label="Mirror surface (0 ?m)"
+uniform-rough M=0.10 NoseCone finish=ROUGH friction=6.121956421e-02 pressure=1.621623754e-03
+uniform-rough M=0.10 BodyTube finish=ROUGH friction=3.613400394e-01 pressure=0.000000000e+00
+uniform-rough M=0.10 TrapezoidFinSet finish=ROUGH friction=2.976611820e-02 pressure=7.361377336e-02
+uniform-rough M=0.10 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.134589570e-02
+uniform-rough M=0.10 total cd=8.669667977e-01 friction=5.118579582e-01 pressure=2.338088395e-01 base=1.213000000e-01
+uniform-rough M=0.30 NoseCone finish=ROUGH friction=6.072931745e-02 pressure=1.621623754e-03
+uniform-rough M=0.30 BodyTube finish=ROUGH friction=3.584464255e-01 pressure=0.000000000e+00
+uniform-rough M=0.30 TrapezoidFinSet finish=ROUGH friction=2.952775088e-02 pressure=7.582639886e-02
+uniform-rough M=0.30 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.129586746e-02
+uniform-rough M=0.30 total cd=8.798556834e-01 friction=5.077589956e-01 pressure=2.403966878e-01 base=1.317000000e-01
+uniform-rough M=0.80 NoseCone finish=ROUGH friction=5.735887097e-02 pressure=1.621623754e-03
+uniform-rough M=0.80 BodyTube finish=ROUGH friction=3.385528297e-01 pressure=0.000000000e+00
+uniform-rough M=0.80 TrapezoidFinSet finish=ROUGH friction=2.788897561e-02 pressure=9.157820040e-02
+uniform-rough M=0.80 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.185531005e-02
+uniform-rough M=0.80 total cd=9.709901625e-01 friction=4.795786275e-01 pressure=2.882115350e-01 base=2.032000000e-01
+uniform-rough M=1.50 NoseCone finish=ROUGH friction=4.361625982e-02 pressure=7.307344830e-04
+uniform-rough M=1.50 BodyTube finish=ROUGH friction=2.574389617e-01 pressure=0.000000000e+00
+uniform-rough M=1.50 TrapezoidFinSet finish=ROUGH friction=2.120705631e-02 pressure=1.111597251e-01
+uniform-rough M=1.50 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.269145456e-02
+uniform-rough M=1.50 total cd=8.782444215e-01 friction=3.646763904e-01 pressure=3.469013644e-01 base=1.666666667e-01
+uniform-roughunfinished M=0.10 NoseCone finish=ROUGHUNFINISHED friction=5.329472610e-02 pressure=1.621623754e-03
+uniform-roughunfinished M=0.10 BodyTube finish=ROUGHUNFINISHED friction=3.145647748e-01 pressure=0.000000000e+00
+uniform-roughunfinished M=0.10 TrapezoidFinSet finish=ROUGHUNFINISHED friction=2.591291096e-02 pressure=7.361377336e-02
+uniform-roughunfinished M=0.10 LaunchLug finish=ROUGHUNFINISHED friction=0.000000000e+00 pressure=8.973851995e-03
+uniform-roughunfinished M=0.10 total cd=7.983350297e-01 friction=4.455982338e-01 pressure=2.314367958e-01 base=1.213000000e-01
+uniform-roughunfinished M=0.30 NoseCone finish=ROUGHUNFINISHED friction=5.286794151e-02 pressure=1.621623754e-03
+uniform-roughunfinished M=0.30 BodyTube finish=ROUGHUNFINISHED friction=3.120457376e-01 pressure=0.000000000e+00
+uniform-roughunfinished M=0.30 TrapezoidFinSet finish=ROUGHUNFINISHED friction=2.570540016e-02 pressure=7.582639886e-02
+uniform-roughunfinished M=0.30 LaunchLug finish=ROUGHUNFINISHED friction=0.000000000e+00 pressure=8.901547311e-03
+uniform-roughunfinished M=0.30 total cd=8.117322473e-01 friction=4.420298796e-01 pressure=2.380023676e-01 base=1.317000000e-01
+uniform-roughunfinished M=0.80 NoseCone finish=ROUGHUNFINISHED friction=4.993379743e-02 pressure=1.621623754e-03
+uniform-roughunfinished M=0.80 BodyTube finish=ROUGHUNFINISHED friction=2.947273566e-01 pressure=0.000000000e+00
+uniform-roughunfinished M=0.80 TrapezoidFinSet finish=ROUGHUNFINISHED friction=2.427876343e-02 pressure=9.157820040e-02
+uniform-roughunfinished M=0.80 LaunchLug finish=ROUGHUNFINISHED friction=0.000000000e+00 pressure=9.452776253e-03
+uniform-roughunfinished M=0.80 total cd=9.065064455e-01 friction=4.174974443e-01 pressure=2.858090012e-01 base=2.032000000e-01
+uniform-roughunfinished M=1.50 NoseCone finish=ROUGHUNFINISHED friction=3.797015956e-02 pressure=7.307344830e-04
+uniform-roughunfinished M=1.50 BodyTube finish=ROUGHUNFINISHED friction=2.241136331e-01 pressure=0.000000000e+00
+uniform-roughunfinished M=1.50 TrapezoidFinSet finish=ROUGHUNFINISHED friction=1.846181481e-02 pressure=1.111597251e-01
+uniform-roughunfinished M=1.50 LaunchLug finish=ROUGHUNFINISHED friction=0.000000000e+00 pressure=1.028636570e-02
+uniform-roughunfinished M=1.50 total cd=8.286321793e-01 friction=3.174692371e-01 pressure=3.444962755e-01 base=1.666666667e-01
+uniform-unfinished M=0.10 NoseCone finish=UNFINISHED friction=4.811876636e-02 pressure=1.621623754e-03
+uniform-unfinished M=0.10 BodyTube finish=UNFINISHED friction=2.840143859e-01 pressure=0.000000000e+00
+uniform-unfinished M=0.10 TrapezoidFinSet finish=UNFINISHED friction=2.339626075e-02 pressure=7.361377336e-02
+uniform-unfinished M=0.10 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=7.867430354e-03
+uniform-unfinished M=0.10 total cd=7.539523087e-01 friction=4.023219345e-01 pressure=2.303303742e-01 base=1.213000000e-01
+uniform-unfinished M=0.30 NoseCone finish=UNFINISHED friction=4.773343090e-02 pressure=1.621623754e-03
+uniform-unfinished M=0.30 BodyTube finish=UNFINISHED friction=2.817399964e-01 pressure=0.000000000e+00
+uniform-unfinished M=0.30 TrapezoidFinSet finish=UNFINISHED friction=2.320890331e-02 pressure=7.582639886e-02
+uniform-unfinished M=0.30 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=7.768772063e-03
+uniform-unfinished M=0.30 total cd=7.676697297e-01 friction=3.991001373e-01 pressure=2.368695924e-01 base=1.317000000e-01
+uniform-unfinished M=0.80 NoseCone finish=UNFINISHED friction=4.508424957e-02 pressure=1.621623754e-03
+uniform-unfinished M=0.80 BodyTube finish=UNFINISHED friction=2.661035688e-01 pressure=0.000000000e+00
+uniform-unfinished M=0.80 TrapezoidFinSet finish=UNFINISHED friction=2.192082088e-02 pressure=9.157820040e-02
+uniform-unfinished M=0.80 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=8.309994671e-03
+uniform-unfinished M=0.80 total cd=8.648165006e-01 friction=3.769502810e-01 pressure=2.846662196e-01 base=2.032000000e-01
+uniform-unfinished M=1.50 NoseCone finish=UNFINISHED friction=3.428251480e-02 pressure=7.307344830e-04
+uniform-unfinished M=1.50 BodyTube finish=UNFINISHED friction=2.023478182e-01 pressure=0.000000000e+00
+uniform-unfinished M=1.50 TrapezoidFinSet finish=UNFINISHED friction=1.666881169e-02 pressure=1.111597251e-01
+uniform-unfinished M=1.50 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=9.140437978e-03
+uniform-unfinished M=1.50 total cd=7.966537826e-01 friction=2.866367681e-01 pressure=3.433503478e-01 base=1.666666667e-01
+uniform-normal M=0.10 NoseCone finish=NORMAL friction=4.006143327e-02 pressure=1.621623754e-03
+uniform-normal M=0.10 BodyTube finish=NORMAL friction=2.364570879e-01 pressure=0.000000000e+00
+uniform-normal M=0.10 TrapezoidFinSet finish=NORMAL friction=1.947863193e-02 pressure=7.361377336e-02
+uniform-normal M=0.10 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.641409605e-03
+uniform-normal M=0.10 total cd=6.853587705e-01 friction=3.349544170e-01 pressure=2.291043534e-01 base=1.213000000e-01
+uniform-normal M=0.30 NoseCone finish=NORMAL friction=3.974062099e-02 pressure=1.621623754e-03
+uniform-normal M=0.30 BodyTube finish=NORMAL friction=2.345635377e-01 pressure=0.000000000e+00
+uniform-normal M=0.30 TrapezoidFinSet finish=NORMAL friction=1.932264689e-02 pressure=7.582639886e-02
+uniform-normal M=0.30 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.473398238e-03
+uniform-normal M=0.30 total cd=6.995463179e-01 friction=3.322720994e-01 pressure=2.355742186e-01 base=1.317000000e-01
+uniform-normal M=0.80 NoseCone finish=NORMAL friction=3.753503658e-02 pressure=1.621623754e-03
+uniform-normal M=0.80 BodyTube finish=NORMAL friction=2.215453797e-01 pressure=0.000000000e+00
+uniform-normal M=0.80 TrapezoidFinSet finish=NORMAL friction=1.825024973e-02 pressure=9.157820040e-02
+uniform-normal M=0.80 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.986150557e-03
+uniform-normal M=0.80 total cd=8.003735410e-01 friction=3.138311655e-01 pressure=2.833423755e-01 base=2.032000000e-01
+uniform-normal M=1.50 NoseCone finish=NORMAL friction=2.854201766e-02 pressure=7.307344830e-04
+uniform-normal M=1.50 BodyTube finish=NORMAL friction=1.684653251e-01 pressure=0.000000000e+00
+uniform-normal M=1.50 TrapezoidFinSet finish=NORMAL friction=1.387767264e-02 pressure=1.111597251e-01
+uniform-normal M=1.50 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=7.807367319e-03
+uniform-normal M=1.50 total cd=7.473243045e-01 friction=2.386403606e-01 pressure=3.420172772e-01 base=1.666666667e-01
+uniform-smooth M=0.10 NoseCone finish=SMOOTH friction=3.263498719e-02 pressure=1.621623754e-03
+uniform-smooth M=0.10 BodyTube finish=SMOOTH friction=1.926235136e-01 pressure=0.000000000e+00
+uniform-smooth M=0.10 TrapezoidFinSet finish=SMOOTH friction=1.586775239e-02 pressure=7.361377336e-02
+uniform-smooth M=0.10 LaunchLug finish=SMOOTH friction=0.000000000e+00 pressure=5.903075984e-03
+uniform-smooth M=0.10 total cd=6.225277777e-01 friction=2.728617579e-01 pressure=2.283660198e-01 base=1.213000000e-01
+uniform-smooth M=0.30 NoseCone finish=SMOOTH friction=3.190144816e-02 pressure=1.621623754e-03
+uniform-smooth M=0.30 BodyTube finish=SMOOTH friction=1.882939006e-01 pressure=0.000000000e+00
+uniform-smooth M=0.30 TrapezoidFinSet finish=SMOOTH friction=1.551109174e-02 pressure=7.582639886e-02
+uniform-smooth M=0.30 LaunchLug finish=SMOOTH friction=0.000000000e+00 pressure=5.623296942e-03
+uniform-smooth M=0.30 total cd=6.331527412e-01 friction=2.667286240e-01 pressure=2.347241173e-01 base=1.317000000e-01
+uniform-smooth M=0.80 NoseCone finish=SMOOTH friction=3.013093389e-02 pressure=1.621623754e-03
+uniform-smooth M=0.80 BodyTube finish=SMOOTH friction=1.778436841e-01 pressure=0.000000000e+00
+uniform-smooth M=0.80 TrapezoidFinSet finish=SMOOTH friction=1.465023397e-02 pressure=9.157820040e-02
+uniform-smooth M=0.80 LaunchLug finish=SMOOTH friction=0.000000000e+00 pressure=6.079854672e-03
+uniform-smooth M=0.80 total cd=7.375613995e-01 friction=2.519253199e-01 pressure=2.824360796e-01 base=2.032000000e-01
+uniform-smooth M=1.50 NoseCone finish=SMOOTH friction=2.291186383e-02 pressure=7.307344830e-04
+uniform-smooth M=1.50 BodyTube finish=SMOOTH friction=1.352341182e-01 pressure=0.000000000e+00
+uniform-smooth M=1.50 TrapezoidFinSet finish=SMOOTH friction=1.114018461e-02 pressure=1.111597251e-01
+uniform-smooth M=1.50 LaunchLug finish=SMOOTH friction=0.000000000e+00 pressure=6.881110669e-03
+uniform-smooth M=1.50 total cd=6.993242230e-01 friction=1.915665358e-01 pressure=3.410910205e-01 base=1.666666667e-01
+uniform-optimum M=0.10 NoseCone finish=OPTIMUM friction=3.263498719e-02 pressure=1.621623754e-03
+uniform-optimum M=0.10 BodyTube finish=OPTIMUM friction=1.926235136e-01 pressure=0.000000000e+00
+uniform-optimum M=0.10 TrapezoidFinSet finish=OPTIMUM friction=1.586775239e-02 pressure=7.361377336e-02
+uniform-optimum M=0.10 LaunchLug finish=OPTIMUM friction=0.000000000e+00 pressure=5.539992047e-03
+uniform-optimum M=0.10 total cd=6.221646938e-01 friction=2.728617579e-01 pressure=2.280029359e-01 base=1.213000000e-01
+uniform-optimum M=0.30 NoseCone finish=OPTIMUM friction=2.658151863e-02 pressure=1.621623754e-03
+uniform-optimum M=0.30 BodyTube finish=OPTIMUM friction=1.568937498e-01 pressure=0.000000000e+00
+uniform-optimum M=0.30 TrapezoidFinSet finish=OPTIMUM friction=1.292444067e-02 pressure=7.582639886e-02
+uniform-optimum M=0.30 LaunchLug finish=OPTIMUM friction=0.000000000e+00 pressure=5.133079136e-03
+uniform-optimum M=0.30 total cd=5.881824899e-01 friction=2.222485904e-01 pressure=2.342338995e-01 base=1.317000000e-01
+uniform-optimum M=0.80 NoseCone finish=OPTIMUM friction=2.283497783e-02 pressure=1.621623754e-03
+uniform-optimum M=0.80 BodyTube finish=OPTIMUM friction=1.347803091e-01 pressure=0.000000000e+00
+uniform-optimum M=0.80 TrapezoidFinSet finish=OPTIMUM friction=1.110280117e-02 pressure=9.157820040e-02
+uniform-optimum M=0.80 LaunchLug finish=OPTIMUM friction=0.000000000e+00 pressure=5.495183455e-03
+uniform-optimum M=0.80 total cd=6.759750989e-01 friction=1.909236905e-01 pressure=2.818514084e-01 base=2.032000000e-01
+uniform-optimum M=1.50 NoseCone finish=OPTIMUM friction=1.751250402e-02 pressure=7.307344830e-04
+uniform-optimum M=1.50 BodyTube finish=OPTIMUM friction=1.033651411e-01 pressure=0.000000000e+00
+uniform-optimum M=1.50 TrapezoidFinSet finish=OPTIMUM friction=8.514913025e-03 pressure=1.111597251e-01
+uniform-optimum M=1.50 LaunchLug finish=OPTIMUM friction=0.000000000e+00 pressure=6.253815857e-03
+uniform-optimum M=1.50 total cd=6.535527766e-01 friction=1.464223842e-01 pressure=3.404637257e-01 base=1.666666667e-01
+uniform-polished M=0.10 NoseCone finish=POLISHED friction=3.263498719e-02 pressure=1.621623754e-03
+uniform-polished M=0.10 BodyTube finish=POLISHED friction=1.926235136e-01 pressure=0.000000000e+00
+uniform-polished M=0.10 TrapezoidFinSet finish=POLISHED friction=1.586775239e-02 pressure=7.361377336e-02
+uniform-polished M=0.10 LaunchLug finish=POLISHED friction=0.000000000e+00 pressure=5.456118966e-03
+uniform-polished M=0.10 total cd=6.220808207e-01 friction=2.728617579e-01 pressure=2.279190628e-01 base=1.213000000e-01
+uniform-polished M=0.30 NoseCone finish=POLISHED friction=2.658151863e-02 pressure=1.621623754e-03
+uniform-polished M=0.30 BodyTube finish=POLISHED friction=1.568937498e-01 pressure=0.000000000e+00
+uniform-polished M=0.30 TrapezoidFinSet finish=POLISHED friction=1.292444067e-02 pressure=7.582639886e-02
+uniform-polished M=0.30 LaunchLug finish=POLISHED friction=0.000000000e+00 pressure=5.001427657e-03
+uniform-polished M=0.30 total cd=5.880508384e-01 friction=2.222485904e-01 pressure=2.341022480e-01 base=1.317000000e-01
+uniform-polished M=0.80 NoseCone finish=POLISHED friction=2.137391715e-02 pressure=1.621623754e-03
+uniform-polished M=0.80 BodyTube finish=POLISHED friction=1.261565998e-01 pressure=0.000000000e+00
+uniform-polished M=0.80 TrapezoidFinSet finish=POLISHED friction=1.039240564e-02 pressure=9.157820040e-02
+uniform-polished M=0.80 LaunchLug finish=POLISHED friction=0.000000000e+00 pressure=5.311043662e-03
+uniform-polished M=0.80 total cd=6.635750025e-01 friction=1.787077339e-01 pressure=2.816672686e-01 base=2.032000000e-01
+uniform-polished M=1.50 NoseCone finish=POLISHED friction=1.751250402e-02 pressure=7.307344830e-04
+uniform-polished M=1.50 BodyTube finish=POLISHED friction=1.033651411e-01 pressure=0.000000000e+00
+uniform-polished M=1.50 TrapezoidFinSet finish=POLISHED friction=8.514913025e-03 pressure=1.111597251e-01
+uniform-polished M=1.50 LaunchLug finish=POLISHED friction=0.000000000e+00 pressure=6.037309195e-03
+uniform-polished M=1.50 total cd=6.533362699e-01 friction=1.464223842e-01 pressure=3.402472190e-01 base=1.666666667e-01
+uniform-finishpolished M=0.10 NoseCone finish=FINISHPOLISHED friction=3.263498719e-02 pressure=1.621623754e-03
+uniform-finishpolished M=0.10 BodyTube finish=FINISHPOLISHED friction=1.926235136e-01 pressure=0.000000000e+00
+uniform-finishpolished M=0.10 TrapezoidFinSet finish=FINISHPOLISHED friction=1.586775239e-02 pressure=7.361377336e-02
+uniform-finishpolished M=0.10 LaunchLug finish=FINISHPOLISHED friction=0.000000000e+00 pressure=5.412207820e-03
+uniform-finishpolished M=0.10 total cd=6.220369096e-01 friction=2.728617579e-01 pressure=2.278751517e-01 base=1.213000000e-01
+uniform-finishpolished M=0.30 NoseCone finish=FINISHPOLISHED friction=2.658151863e-02 pressure=1.621623754e-03
+uniform-finishpolished M=0.30 BodyTube finish=FINISHPOLISHED friction=1.568937498e-01 pressure=0.000000000e+00
+uniform-finishpolished M=0.30 TrapezoidFinSet finish=FINISHPOLISHED friction=1.292444067e-02 pressure=7.582639886e-02
+uniform-finishpolished M=0.30 LaunchLug finish=FINISHPOLISHED friction=0.000000000e+00 pressure=4.927404212e-03
+uniform-finishpolished M=0.30 total cd=5.879768149e-01 friction=2.222485904e-01 pressure=2.340282245e-01 base=1.317000000e-01
+uniform-finishpolished M=0.80 NoseCone finish=FINISHPOLISHED friction=2.137391715e-02 pressure=1.621623754e-03
+uniform-finishpolished M=0.80 BodyTube finish=FINISHPOLISHED friction=1.261565998e-01 pressure=0.000000000e+00
+uniform-finishpolished M=0.80 TrapezoidFinSet finish=FINISHPOLISHED friction=1.039240564e-02 pressure=9.157820040e-02
+uniform-finishpolished M=0.80 LaunchLug finish=FINISHPOLISHED friction=0.000000000e+00 pressure=5.194968024e-03
+uniform-finishpolished M=0.80 total cd=6.634589269e-01 friction=1.787077339e-01 pressure=2.815511930e-01 base=2.032000000e-01
+uniform-finishpolished M=1.50 NoseCone finish=FINISHPOLISHED friction=1.751250402e-02 pressure=7.307344830e-04
+uniform-finishpolished M=1.50 BodyTube finish=FINISHPOLISHED friction=1.033651411e-01 pressure=0.000000000e+00
+uniform-finishpolished M=1.50 TrapezoidFinSet finish=FINISHPOLISHED friction=8.514913025e-03 pressure=1.111597251e-01
+uniform-finishpolished M=1.50 LaunchLug finish=FINISHPOLISHED friction=0.000000000e+00 pressure=5.887332344e-03
+uniform-finishpolished M=1.50 total cd=6.531862931e-01 friction=1.464223842e-01 pressure=3.400972422e-01 base=1.666666667e-01
+uniform-mirror M=0.10 NoseCone finish=MIRROR friction=3.263498719e-02 pressure=1.621623754e-03
+uniform-mirror M=0.10 BodyTube finish=MIRROR friction=1.926235136e-01 pressure=0.000000000e+00
+uniform-mirror M=0.10 TrapezoidFinSet finish=MIRROR friction=1.586775239e-02 pressure=7.361377336e-02
+uniform-mirror M=0.10 LaunchLug finish=MIRROR friction=0.000000000e+00 pressure=5.397245349e-03
+uniform-mirror M=0.10 total cd=6.220219471e-01 friction=2.728617579e-01 pressure=2.278601892e-01 base=1.213000000e-01
+uniform-mirror M=0.30 NoseCone finish=MIRROR friction=2.658151863e-02 pressure=1.621623754e-03
+uniform-mirror M=0.30 BodyTube finish=MIRROR friction=1.568937498e-01 pressure=0.000000000e+00
+uniform-mirror M=0.30 TrapezoidFinSet finish=MIRROR friction=1.292444067e-02 pressure=7.582639886e-02
+uniform-mirror M=0.30 LaunchLug finish=MIRROR friction=0.000000000e+00 pressure=4.901161704e-03
+uniform-mirror M=0.30 total cd=5.879505724e-01 friction=2.222485904e-01 pressure=2.340019820e-01 base=1.317000000e-01
+uniform-mirror M=0.80 NoseCone finish=MIRROR friction=2.137391715e-02 pressure=1.621623754e-03
+uniform-mirror M=0.80 BodyTube finish=MIRROR friction=1.261565998e-01 pressure=0.000000000e+00
+uniform-mirror M=0.80 TrapezoidFinSet finish=MIRROR friction=1.039240564e-02 pressure=9.157820040e-02
+uniform-mirror M=0.80 LaunchLug finish=MIRROR friction=0.000000000e+00 pressure=5.150401616e-03
+uniform-mirror M=0.80 total cd=6.634143605e-01 friction=1.787077339e-01 pressure=2.815066266e-01 base=2.032000000e-01
+uniform-mirror M=1.50 NoseCone finish=MIRROR friction=1.751250402e-02 pressure=7.307344830e-04
+uniform-mirror M=1.50 BodyTube finish=MIRROR friction=1.033651411e-01 pressure=0.000000000e+00
+uniform-mirror M=1.50 TrapezoidFinSet finish=MIRROR friction=8.514913025e-03 pressure=1.111597251e-01
+uniform-mirror M=1.50 LaunchLug finish=MIRROR friction=0.000000000e+00 pressure=5.824628502e-03
+uniform-mirror M=1.50 total cd=6.531235892e-01 friction=1.464223842e-01 pressure=3.400345383e-01 base=1.666666667e-01
+mixed M=0.10 NoseCone finish=POLISHED friction=3.263498719e-02 pressure=1.621623754e-03
+mixed M=0.10 BodyTube finish=ROUGH friction=3.613400394e-01 pressure=0.000000000e+00
+mixed M=0.10 TrapezoidFinSet finish=SMOOTH friction=1.586775239e-02 pressure=7.361377336e-02
+mixed M=0.10 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=7.867430354e-03
+mixed M=0.10 total cd=7.932086580e-01 friction=4.415782838e-01 pressure=2.303303742e-01 base=1.213000000e-01
+mixed M=0.30 NoseCone finish=POLISHED friction=2.658151863e-02 pressure=1.621623754e-03
+mixed M=0.30 BodyTube finish=ROUGH friction=3.584464255e-01 pressure=0.000000000e+00
+mixed M=0.30 TrapezoidFinSet finish=SMOOTH friction=1.551109174e-02 pressure=7.582639886e-02
+mixed M=0.30 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=7.768772063e-03
+mixed M=0.30 total cd=8.001308117e-01 friction=4.315612193e-01 pressure=2.368695924e-01 base=1.317000000e-01
+mixed M=0.80 NoseCone finish=POLISHED friction=2.137391715e-02 pressure=1.621623754e-03
+mixed M=0.80 BodyTube finish=ROUGH friction=3.385528297e-01 pressure=0.000000000e+00
+mixed M=0.80 TrapezoidFinSet finish=SMOOTH friction=1.465023397e-02 pressure=9.157820040e-02
+mixed M=0.80 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=8.309994671e-03
+mixed M=0.80 total cd=8.917436684e-01 friction=4.038774488e-01 pressure=2.846662196e-01 base=2.032000000e-01
+mixed M=1.50 NoseCone finish=POLISHED friction=1.751250402e-02 pressure=7.307344830e-04
+mixed M=1.50 BodyTube finish=ROUGH friction=2.574389617e-01 pressure=0.000000000e+00
+mixed M=1.50 TrapezoidFinSet finish=SMOOTH friction=1.114018461e-02 pressure=1.111597251e-01
+mixed M=1.50 LaunchLug finish=UNFINISHED friction=0.000000000e+00 pressure=9.140437978e-03
+mixed M=1.50 total cd=8.183890340e-01 friction=3.083720195e-01 pressure=3.433503478e-01 base=1.666666667e-01
+nose-rough M=0.10 NoseCone finish=ROUGH friction=6.121956421e-02 pressure=1.621623754e-03
+nose-rough M=0.10 BodyTube finish=NORMAL friction=2.364570879e-01 pressure=0.000000000e+00
+nose-rough M=0.10 TrapezoidFinSet finish=NORMAL friction=1.947863193e-02 pressure=7.361377336e-02
+nose-rough M=0.10 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.641409605e-03
+nose-rough M=0.10 total cd=7.065169014e-01 friction=3.561125479e-01 pressure=2.291043534e-01 base=1.213000000e-01
+nose-rough M=0.30 NoseCone finish=ROUGH friction=6.072931745e-02 pressure=1.621623754e-03
+nose-rough M=0.30 BodyTube finish=NORMAL friction=2.345635377e-01 pressure=0.000000000e+00
+nose-rough M=0.30 TrapezoidFinSet finish=NORMAL friction=1.932264689e-02 pressure=7.582639886e-02
+nose-rough M=0.30 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.473398238e-03
+nose-rough M=0.30 total cd=7.205350144e-01 friction=3.532607958e-01 pressure=2.355742186e-01 base=1.317000000e-01
+nose-rough M=0.80 NoseCone finish=ROUGH friction=5.735887097e-02 pressure=1.621623754e-03
+nose-rough M=0.80 BodyTube finish=NORMAL friction=2.215453797e-01 pressure=0.000000000e+00
+nose-rough M=0.80 TrapezoidFinSet finish=NORMAL friction=1.825024973e-02 pressure=9.157820040e-02
+nose-rough M=0.80 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.986150557e-03
+nose-rough M=0.80 total cd=8.201973754e-01 friction=3.336549999e-01 pressure=2.833423755e-01 base=2.032000000e-01
+nose-rough M=1.50 NoseCone finish=ROUGH friction=4.361625982e-02 pressure=7.307344830e-04
+nose-rough M=1.50 BodyTube finish=NORMAL friction=1.684653251e-01 pressure=0.000000000e+00
+nose-rough M=1.50 TrapezoidFinSet finish=NORMAL friction=1.387767264e-02 pressure=1.111597251e-01
+nose-rough M=1.50 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=7.807367319e-03
+nose-rough M=1.50 total cd=7.623985466e-01 friction=2.537146028e-01 pressure=3.420172772e-01 base=1.666666667e-01
+body-rough M=0.10 NoseCone finish=NORMAL friction=4.006143327e-02 pressure=1.621623754e-03
+body-rough M=0.10 BodyTube finish=ROUGH friction=3.613400394e-01 pressure=0.000000000e+00
+body-rough M=0.10 TrapezoidFinSet finish=NORMAL friction=1.947863193e-02 pressure=7.361377336e-02
+body-rough M=0.10 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.641409605e-03
+body-rough M=0.10 total cd=8.102417219e-01 friction=4.598373685e-01 pressure=2.291043534e-01 base=1.213000000e-01
+body-rough M=0.30 NoseCone finish=NORMAL friction=3.974062099e-02 pressure=1.621623754e-03
+body-rough M=0.30 BodyTube finish=ROUGH friction=3.584464255e-01 pressure=0.000000000e+00
+body-rough M=0.30 TrapezoidFinSet finish=NORMAL friction=1.932264689e-02 pressure=7.582639886e-02
+body-rough M=0.30 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.473398238e-03
+body-rough M=0.30 total cd=8.234292057e-01 friction=4.561549871e-01 pressure=2.355742186e-01 base=1.317000000e-01
+body-rough M=0.80 NoseCone finish=NORMAL friction=3.753503658e-02 pressure=1.621623754e-03
+body-rough M=0.80 BodyTube finish=ROUGH friction=3.385528297e-01 pressure=0.000000000e+00
+body-rough M=0.80 TrapezoidFinSet finish=NORMAL friction=1.825024973e-02 pressure=9.157820040e-02
+body-rough M=0.80 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.986150557e-03
+body-rough M=0.80 total cd=9.173809910e-01 friction=4.308386155e-01 pressure=2.833423755e-01 base=2.032000000e-01
+body-rough M=1.50 NoseCone finish=NORMAL friction=2.854201766e-02 pressure=7.307344830e-04
+body-rough M=1.50 BodyTube finish=ROUGH friction=2.574389617e-01 pressure=0.000000000e+00
+body-rough M=1.50 TrapezoidFinSet finish=NORMAL friction=1.387767264e-02 pressure=1.111597251e-01
+body-rough M=1.50 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=7.807367319e-03
+body-rough M=1.50 total cd=8.362979411e-01 friction=3.276139972e-01 pressure=3.420172772e-01 base=1.666666667e-01
+fins-rough M=0.10 NoseCone finish=NORMAL friction=4.006143327e-02 pressure=1.621623754e-03
+fins-rough M=0.10 BodyTube finish=NORMAL friction=2.364570879e-01 pressure=0.000000000e+00
+fins-rough M=0.10 TrapezoidFinSet finish=ROUGH friction=2.976611820e-02 pressure=7.361377336e-02
+fins-rough M=0.10 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.641409605e-03
+fins-rough M=0.10 total cd=7.162212293e-01 friction=3.658168758e-01 pressure=2.291043534e-01 base=1.213000000e-01
+fins-rough M=0.30 NoseCone finish=NORMAL friction=3.974062099e-02 pressure=1.621623754e-03
+fins-rough M=0.30 BodyTube finish=NORMAL friction=2.345635377e-01 pressure=0.000000000e+00
+fins-rough M=0.30 TrapezoidFinSet finish=ROUGH friction=2.952775088e-02 pressure=7.582639886e-02
+fins-rough M=0.30 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.473398238e-03
+fins-rough M=0.30 total cd=7.301616299e-01 friction=3.628874113e-01 pressure=2.355742186e-01 base=1.317000000e-01
+fins-rough M=0.80 NoseCone finish=NORMAL friction=3.753503658e-02 pressure=1.621623754e-03
+fins-rough M=0.80 BodyTube finish=NORMAL friction=2.215453797e-01 pressure=0.000000000e+00
+fins-rough M=0.80 TrapezoidFinSet finish=ROUGH friction=2.788897561e-02 pressure=9.157820040e-02
+fins-rough M=0.80 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=6.986150557e-03
+fins-rough M=0.80 total cd=8.292897186e-01 friction=3.427473431e-01 pressure=2.833423755e-01 base=2.032000000e-01
+fins-rough M=1.50 NoseCone finish=NORMAL friction=2.854201766e-02 pressure=7.307344830e-04
+fins-rough M=1.50 BodyTube finish=NORMAL friction=1.684653251e-01 pressure=0.000000000e+00
+fins-rough M=1.50 TrapezoidFinSet finish=ROUGH friction=2.120705631e-02 pressure=1.111597251e-01
+fins-rough M=1.50 LaunchLug finish=NORMAL friction=0.000000000e+00 pressure=7.807367319e-03
+fins-rough M=1.50 total cd=7.693124555e-01 friction=2.606285117e-01 pressure=3.420172772e-01 base=1.666666667e-01
+lug-rough M=0.10 NoseCone finish=NORMAL friction=4.006143327e-02 pressure=1.621623754e-03
+lug-rough M=0.10 BodyTube finish=NORMAL friction=2.364570879e-01 pressure=0.000000000e+00
+lug-rough M=0.10 TrapezoidFinSet finish=NORMAL friction=1.947863193e-02 pressure=7.361377336e-02
+lug-rough M=0.10 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.134589570e-02
+lug-rough M=0.10 total cd=6.900632565e-01 friction=3.349544170e-01 pressure=2.338088395e-01 base=1.213000000e-01
+lug-rough M=0.30 NoseCone finish=NORMAL friction=3.974062099e-02 pressure=1.621623754e-03
+lug-rough M=0.30 BodyTube finish=NORMAL friction=2.345635377e-01 pressure=0.000000000e+00
+lug-rough M=0.30 TrapezoidFinSet finish=NORMAL friction=1.932264689e-02 pressure=7.582639886e-02
+lug-rough M=0.30 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.129586746e-02
+lug-rough M=0.30 total cd=7.043687871e-01 friction=3.322720994e-01 pressure=2.403966878e-01 base=1.317000000e-01
+lug-rough M=0.80 NoseCone finish=NORMAL friction=3.753503658e-02 pressure=1.621623754e-03
+lug-rough M=0.80 BodyTube finish=NORMAL friction=2.215453797e-01 pressure=0.000000000e+00
+lug-rough M=0.80 TrapezoidFinSet finish=NORMAL friction=1.825024973e-02 pressure=9.157820040e-02
+lug-rough M=0.80 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.185531005e-02
+lug-rough M=0.80 total cd=8.052427005e-01 friction=3.138311655e-01 pressure=2.882115350e-01 base=2.032000000e-01
+lug-rough M=1.50 NoseCone finish=NORMAL friction=2.854201766e-02 pressure=7.307344830e-04
+lug-rough M=1.50 BodyTube finish=NORMAL friction=1.684653251e-01 pressure=0.000000000e+00
+lug-rough M=1.50 TrapezoidFinSet finish=NORMAL friction=1.387767264e-02 pressure=1.111597251e-01
+lug-rough M=1.50 LaunchLug finish=ROUGH friction=0.000000000e+00 pressure=1.269145456e-02
+lug-rough M=1.50 total cd=7.522083917e-01 friction=2.386403606e-01 pressure=3.469013644e-01 base=1.666666667e-01
+STREAMER DEFAULT_CD=6.000000000e-01 MAX_COMPUTED_CD=4.000000000e-01
+STREAMER 0 length=0.6000 width=0.0600 density=0.0800 mass=2.880000000e-03 area=3.600000000e-02 cdAuto=true cd=9.066666667e-02 cdA=3.264000000e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 0 componentCD(0.00)=9.066666667e-02
+STREAMER 0 componentCD(0.05)=9.066666667e-02
+STREAMER 0 componentCD(0.30)=9.066666667e-02
+STREAMER 0 structure mass=1.357974098e-02 cg=0.197705259
+STREAMER 1 length=0.2100 width=0.0700 density=0.0210 mass=3.087000000e-04 area=1.470000000e-02 cdAuto=true cd=8.582494331e-02 cdA=1.261626667e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 1 componentCD(0.00)=8.582494331e-02
+STREAMER 1 componentCD(0.05)=8.582494331e-02
+STREAMER 1 componentCD(0.30)=8.582494331e-02
+STREAMER 1 structure mass=1.100844098e-02 cg=0.205928338
+STREAMER 2 length=0.4900 width=0.0700 density=0.0410 mass=1.406300000e-03 area=3.430000000e-02 cdAuto=true cd=6.498658892e-02 cdA=2.229040000e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 2 componentCD(0.00)=6.498658892e-02
+STREAMER 2 componentCD(0.05)=6.498658892e-02
+STREAMER 2 componentCD(0.30)=6.498658892e-02
+STREAMER 2 structure mass=1.210604098e-02 cg=0.201990887
+STREAMER 3 length=0.2400 width=0.0800 density=0.0100 mass=1.920000000e-04 area=1.920000000e-02 cdAuto=true cd=5.855555556e-02 cdA=1.124266667e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 3 componentCD(0.00)=5.855555556e-02
+STREAMER 3 componentCD(0.05)=5.855555556e-02
+STREAMER 3 componentCD(0.30)=5.855555556e-02
+STREAMER 3 structure mass=1.089174098e-02 cg=0.206393653
+STREAMER 4 length=0.7000 width=0.0600 density=0.0200 mass=8.400000000e-04 area=4.200000000e-02 cdAuto=true cd=3.538775510e-02 cdA=1.486285714e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 4 componentCD(0.00)=3.538775510e-02
+STREAMER 4 componentCD(0.05)=3.538775510e-02
+STREAMER 4 componentCD(0.30)=3.538775510e-02
+STREAMER 4 structure mass=1.153974098e-02 cg=0.203928859
+STREAMER 5 length=0.5000 width=0.0600 density=0.0240 mass=7.200000000e-04 area=3.000000000e-02 cdAuto=true cd=4.760000000e-02 cdA=1.428000000e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 5 componentCD(0.00)=4.760000000e-02
+STREAMER 5 componentCD(0.05)=4.760000000e-02
+STREAMER 5 componentCD(0.30)=4.760000000e-02
+STREAMER 5 structure mass=1.141974098e-02 cg=0.204364198
+STREAMER 6 length=1.0000 width=0.1000 density=0.0800 mass=8.000000000e-03 area=1.000000000e-01 cdAuto=true cd=6.800000000e-02 cdA=6.800000000e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 6 componentCD(0.00)=6.800000000e-02
+STREAMER 6 componentCD(0.05)=6.800000000e-02
+STREAMER 6 componentCD(0.30)=6.800000000e-02
+STREAMER 6 structure mass=1.869974098e-02 cg=0.188066039
+STREAMER 7 length=0.1000 width=0.1000 density=0.0800 mass=8.000000000e-04 area=1.000000000e-02 cdAuto=true cd=3.740000000e-01 cdA=3.740000000e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 7 componentCD(0.00)=3.740000000e-01
+STREAMER 7 componentCD(0.05)=3.740000000e-01
+STREAMER 7 componentCD(0.30)=3.740000000e-01
+STREAMER 7 structure mass=1.149974098e-02 cg=0.204072962
+STREAMER 8 length=2.0000 width=0.0500 density=0.0300 mass=3.000000000e-03 area=1.000000000e-01 cdAuto=true cd=2.671428571e-02 cdA=2.671428571e-03 packedLength=0.025000 packedRadius=0.012500
+STREAMER 8 componentCD(0.00)=2.671428571e-02
+STREAMER 8 componentCD(0.05)=2.671428571e-02
+STREAMER 8 componentCD(0.30)=2.671428571e-02
+STREAMER 8 structure mass=1.369974098e-02 cg=0.197396886
+STREAMER 9 length=0.0500 width=0.5000 density=0.0800 mass=2.000000000e-03 area=2.500000000e-02 cdAuto=true cd=4.000000000e-01 cdA=1.000000000e-02 packedLength=0.025000 packedRadius=0.012500
+STREAMER 9 componentCD(0.00)=4.000000000e-01
+STREAMER 9 componentCD(0.05)=4.000000000e-01
+STREAMER 9 componentCD(0.30)=4.000000000e-01
+STREAMER 9 structure mass=1.269974098e-02 cg=0.200144728

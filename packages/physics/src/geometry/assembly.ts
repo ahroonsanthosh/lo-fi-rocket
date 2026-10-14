@@ -66,6 +66,12 @@ export interface PlacedComponent {
   /** Optional mass and CG override (D-073). */
   readonly massOverride?: MassOverride;
   /**
+   * Plan 0073 (D-110): the part's own surface roughness height R_s when it differs from the
+   * design's finish (an OpenRocket file gives each external part its own). Only the skin friction
+   * of a nose cone, body tube, transition or fin set uses it; absent means the design's finish.
+   */
+  readonly roughnessHeight?: Metres;
+  /**
    * What this part's entry does not represent exactly, carried with the part so that it travels
    * with it and disappears when the part is replaced (D-083, D-084); listed in every result.
    */

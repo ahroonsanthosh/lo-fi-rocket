@@ -508,6 +508,9 @@ export function updatePart(design: RocketDesign, id: string, input: UpdatePartIn
     ...(approximations.length === 0 ? {} : { approximations }),
     // Plan 0064: the part keeps its stage unless moved.
     ...((input.stage ?? old.stage ?? 0) === 0 ? {} : { stage: input.stage ?? old.stage }),
+    // Plan 0070 and plan 0073: it keeps its pod set and its own surface finish.
+    ...(old.pod === undefined ? {} : { pod: old.pod }),
+    ...(old.roughnessHeight === undefined ? {} : { roughnessHeight: old.roughnessHeight }),
   };
   const next = checked({
     ...design,

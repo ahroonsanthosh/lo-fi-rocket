@@ -54,6 +54,8 @@ export function designPlacedComponents(design: RocketDesign): PlacedComponent[] 
     ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
     // Plan 0070: a pod set's part is repeated around the axis (D-106).
     ...(c.pod === undefined ? {} : { instances: c.pod }),
+    // Plan 0073: the part's own finish (D-110).
+    ...(c.roughnessHeight === undefined ? {} : { roughnessHeight: c.roughnessHeight }),
   }));
   return design.asBuilt === undefined ? parts : withAsBuilt(parts, design.asBuilt);
 }

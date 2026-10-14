@@ -13,8 +13,11 @@ export type Migration = (document: Record<string, unknown>) => Record<string, un
  * 1 to 2 (plan 0064): stages, the stage of a part or device, further motor mounts and ignition
  * events are all new and optional, so a version-1 file is the same one-stage design unchanged.
  * 2 to 3 (plan 0070): a part's pod set is new and optional, so a version-2 file has no pods.
+ * 3 to 4 (plan 0073): a part's own finish is new and optional, so in a version-3 file every part
+ * has the design's finish.
  */
 export const MIGRATIONS: readonly Migration[] = [
+  (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,
 ];
