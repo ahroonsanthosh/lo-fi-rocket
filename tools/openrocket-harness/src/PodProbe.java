@@ -30,7 +30,10 @@
  *   java -Djava.awt.headless=true -cp out:lib/OpenRocket-24.12.jar PodProbe <motor dir>
  * Plan 0070 step 3: "PodProbe --positions" places one pod set by each radius and axial method,
  * and a pod whose parts differ in radius, and prints where OpenRocket puts it; "PodProbe --chute
- * <motor dir>" flies pods1 with its parachute in the pods (pods4).
+ * <motor dir>" flies pods1 with its parachute in the pods (pods4). Plans 0070 step 4 and 0071:
+ * "PodProbe --motors <motor dir>" puts a D12-5 in each pod's tube (pods5 with the core's D12-5
+ * too, pods6 without it), and flies pods7 (core only) and pods8 (no pods) the same way, printing
+ * the mass properties, the flight and the drag coefficient against Mach thrusting and coasting.
  */
 import info.openrocket.core.aerodynamics.AerodynamicForces;
 import info.openrocket.core.aerodynamics.BarrowmanCalculator;
@@ -50,8 +53,12 @@ import info.openrocket.core.rocketcomponent.position.AxialMethod;
 import info.openrocket.core.startup.OpenRocketCore;
 import info.openrocket.core.util.Coordinate;
 import java.io.*;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import info.openrocket.core.simulation.FlightDataBranch;
+import info.openrocket.core.simulation.FlightDataType;
+import info.openrocket.core.simulation.FlightEvent;
 
 public final class PodProbe {
   static Material bulk(String n, double d) { return Material.newMaterial(Material.Type.BULK, n, d, true); }
@@ -61,6 +68,15 @@ public final class PodProbe {
   public static void main(String[] a) throws Exception {
     Locale.setDefault(Locale.US);
     OpenRocketCore.initialize();
+    if (a.length > 1 && a[0].equals("--motors")) {
+      motorDir = new File(a[1]);
+      motors(5, true, true);
+      motors(6, false, true);
+      motors(7, true, false);
+      noPods = true;
+      motors(8, true, false);
+      return;
+    }
     if (a.length > 1 && a[0].equals("--chute")) {
       motorDir = new File(a[1]);
       run(4, 2, false, true);
@@ -278,5 +294,125 @@ public final class PodProbe {
     FlightData d = sim.getSimulatedData();
     System.out.printf("%s: apogee %.3f m, max v %.3f m/s, rail exit %.3f m/s, t_apogee %.3f s, ground hit %.3f m/s%n", name,
         d.getMaxAltitude(), d.getMaxVelocity(), d.getLaunchRodVelocity(), d.getTimeToApogee(), d.getGroundHitVelocity());
+  }
+
+  /**
+   * Plan 0070 step 4, --motors: pods1 with each pod's tube (inner radius 12 mm) a motor mount holding
+   * an Estes D12-5, all igniting at launch: pods5 with the core's D12-5 as well, pods6 with the
+   * core's mount empty. Prints the pod tube's instance offsets, the structure, motors and launch
+   * mass properties, the flight, and the flight's drag coefficient against Mach while thrusting
+   * and while coasting.
+   */
+  static boolean noPods = false;
+
+  static void motors(int c, boolean core, boolean inPods) throws Exception {
+    String name = "pods" + c;
+    Rocket r = new Rocket(); r.setName(name);
+    AxialStage st = new AxialStage(); r.addChild(st);
+    NoseCone nose = new NoseCone(Transition.Shape.CONICAL, 0.100, 0.025);
+    nose.setFilled(true); nose.setMaterial(bulk("balsa160", 160));
+    st.addChild(nose);
+    BodyTube bt = new BodyTube(0.5, 0.025, 0.001); bt.setMaterial(bulk("paper700", 700));
+    st.addChild(bt);
+    bt.setAxialMethod(AxialMethod.AFTER); bt.setAxialOffset(0.0);
+    TrapezoidFinSet fins = new TrapezoidFinSet(3, 0.1, 0.05, 0.05, 0.08);
+    fins.setName("Fins"); fins.setThickness(0.003); fins.setMaterial(bulk("ply600", 600));
+    fins.setCrossSection(FinSet.CrossSection.SQUARE);
+    bt.addChild(fins);
+    fins.setAxialMethod(AxialMethod.BOTTOM); fins.setAxialOffset(0.0);
+    InnerTube mt = new InnerTube(); mt.setName("Motor tube"); mt.setLength(0.075);
+    mt.setOuterRadius(0.0125); mt.setThickness(0.0005); mt.setMaterial(bulk("paper700", 700));
+    bt.addChild(mt);
+    mt.setAxialMethod(AxialMethod.BOTTOM); mt.setAxialOffset(0.0);
+    Parachute chute = new Parachute(); chute.setName("Parachute"); chute.setDiameter(0.3);
+    chute.setCD(0.8); chute.setMassOverridden(true); chute.setOverrideMass(0.01);
+    chute.setLength(0.05); chute.setRadiusAutomatic(false); chute.setRadius(0.02);
+    bt.addChild(chute);
+    chute.setAxialMethod(AxialMethod.TOP); chute.setAxialOffset(0.1);
+    PodSet ps = new PodSet(); ps.setName("Pods");
+    bt.addChild(ps);
+    ps.setInstanceCount(2);
+    ps.setRadiusOffset(0.0375);
+    ps.setAngleOffset(0.0);
+    ps.setAxialMethod(AxialMethod.BOTTOM); ps.setAxialOffset(0.0);
+    NoseCone pn = new NoseCone(Transition.Shape.CONICAL, 0.05, 0.0125);
+    pn.setName("Pod nose"); pn.setFilled(true); pn.setMaterial(bulk("balsa160", 160));
+    ps.addChild(pn);
+    BodyTube pt = new BodyTube(0.15, 0.0125, 0.0005); pt.setName("Pod tube"); pt.setMaterial(bulk("paper700", 700));
+    ps.addChild(pt);
+    pt.setAxialMethod(AxialMethod.AFTER); pt.setAxialOffset(0.0);
+    FlightConfigurationId id = new FlightConfigurationId("5c1a2b3c-4d5e-4f60-8a7b-0000000000b" + c);
+    Motor motor = ReferenceHarness.loadMotor(motorDir, "Estes_D12.eng", "D12");
+    if (core) {
+      mt.setMotorMount(true);
+      MotorConfiguration mc = new MotorConfiguration(mt, id);
+      mc.setMotor(motor); mc.setEjectionDelay(5.0);
+      mt.setMotorConfig(mc, id);
+    }
+    if (inPods) {
+      pt.setMotorMount(true);
+      MotorConfiguration pc = new MotorConfiguration(pt, id);
+      pc.setMotor(motor); pc.setEjectionDelay(5.0);
+      pt.setMotorConfig(pc, id);
+    }
+    r.createFlightConfiguration(id);
+    r.setSelectedConfiguration(id);
+    if (noPods) bt.removeChild(ps);
+    File file = new File(name + ".ork");
+    new GeneralRocketSaver().save(file, OpenRocketDocumentFactory.createDocumentFromRocket(r));
+    OpenRocketDocument loadedDoc = new GeneralRocketLoader(file).load();
+    Rocket loaded = loadedDoc.getRocket();
+    FlightConfiguration config = loaded.getSelectedConfiguration();
+    for (RocketComponent k : loaded) {
+      if ("Pod tube".equals(k.getName())) {
+        StringBuilder sb = new StringBuilder();
+        for (Coordinate p : k.toAbsolute(Coordinate.NUL)) sb.append(String.format(Locale.US, " (%.9f, %.9f, %.9f)", p.x, p.y, p.z));
+        System.out.printf("%s: pod tube at [%s ]%n", name, sb);
+      }
+    }
+    RigidBody structure = MassCalculator.calculateStructure(config);
+    RigidBody motors = MassCalculator.calculateMotor(config);
+    RigidBody launch = MassCalculator.calculateLaunch(config);
+    System.out.printf("%s: structure m=%.9f cg=%.9f Ixx=%.9e Iyy=%.9e Izz=%.9e%n", name, structure.getMass(), structure.getCM().x, structure.getIxx(), structure.getIyy(), structure.getIzz());
+    System.out.printf("%s: motors m=%.9f cg=%.9f Ixx=%.9e Iyy=%.9e Izz=%.9e%n", name, motors.getMass(), motors.getCM().x, motors.getIxx(), motors.getIyy(), motors.getIzz());
+    System.out.printf("%s: launch m=%.9f cg=%.9f%n", name, launch.getMass(), launch.getCM().x);
+    Simulation sim = new Simulation(loadedDoc, loaded);
+    sim.setFlightConfigurationId(config.getFlightConfigurationID());
+    ReferenceHarness.configure(sim.getOptions(), 0.0);
+    sim.simulate();
+    FlightData d = sim.getSimulatedData();
+    System.out.printf("%s: apogee %.3f m, max v %.3f m/s, rail exit %.3f m/s, t_apogee %.3f s, ground hit %.3f m/s%n", name,
+        d.getMaxAltitude(), d.getMaxVelocity(), d.getLaunchRodVelocity(), d.getTimeToApogee(), d.getGroundHitVelocity());
+    FlightDataBranch b = d.getBranch(0);
+    List<Double> t = b.get(FlightDataType.TYPE_TIME);
+    List<Double> mach = b.get(FlightDataType.TYPE_MACH_NUMBER);
+    List<Double> cd = b.get(FlightDataType.TYPE_DRAG_COEFF);
+    double burnout = Double.NaN, apogee = Double.NaN;
+    for (FlightEvent e : b.getEvents()) {
+      if (e.getType() == FlightEvent.Type.BURNOUT && Double.isNaN(burnout)) burnout = e.getTime();
+      if (e.getType() == FlightEvent.Type.APOGEE) apogee = e.getTime();
+    }
+    System.out.printf("%s: burnout %.4f s, apogee %.4f s%n", name, burnout, apogee);
+    double[] at = { 0.10, 0.12, 0.14, 0.16, 0.18 };
+    for (double m : at) {
+      FlightConditions fc = new FlightConditions(config);
+      fc.setMach(m); fc.setAOA(0); fc.setRollRate(0);
+      AerodynamicForces f = new BarrowmanCalculator().getAerodynamicForces(config, fc, new WarningSet());
+      System.out.printf("%s: Mach %.2f cd thrusting=%s coasting=%s static=%.5f (friction %.5f pressure %.5f base %.5f)%n", name, m, cdAt(t, mach, cd, m, 0.05, burnout - 0.05), cdAt(t, mach, cd, m, burnout + 0.05, apogee), f.getCD(), f.getFrictionCD(), f.getPressureCD(), f.getBaseCD());
+    }
+  }
+
+  /** The drag coefficient at Mach m, interpolated between samples with time in [t0, t1], or "-". */
+  static String cdAt(List<Double> t, List<Double> mach, List<Double> cd, double m, double t0, double t1) {
+    for (int i = 0; i + 1 < t.size(); i++) {
+      double ta = t.get(i), tb = t.get(i + 1);
+      if (ta < t0 || tb > t1) continue;
+      double a = mach.get(i), bm = mach.get(i + 1);
+      if ((a - m) * (bm - m) <= 0 && a != bm) {
+        double f = (m - a) / (bm - a);
+        return String.format(Locale.US, "%.5f", cd.get(i) + f * (cd.get(i + 1) - cd.get(i)));
+      }
+    }
+    return "-";
   }
 }

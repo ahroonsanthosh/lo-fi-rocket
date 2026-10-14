@@ -50,7 +50,7 @@ const orkXml = (name: string): string =>
   );
 
 describe('orkToDesign (plan 0015)', () => {
-  it('R1: components, mount, motor, recovery and reference diameter; CP 0.487227 m, CG 0.387022 m, apogee 168.87 m', () => {
+  it('R1: components, mount, motor, recovery and reference diameter; CP 0.487227 m, CG 0.387022 m, apogee 166.19 m (D-108)', () => {
     const { design, notices } = orkToDesign(ork('r1-three-fin-conical'), library, 'r1');
     expect(design.components.length).toBe(9);
     expect(design.motorMount?.motor?.definition.designation).toBe('D12');
@@ -72,7 +72,7 @@ describe('orkToDesign (plan 0015)', () => {
     expect(
       simulateFlight(designVehicle(rk), designSimulationOptions(rk, 'openrocket-equivalent'))
         .summary.apogee,
-    ).toBeCloseTo(168.866, 1);
+    ).toBeCloseTo(166.187, 1);
     // The imported design is a valid file.
     expect(parseDesign(serializeDesign(design))).toEqual(design);
   });

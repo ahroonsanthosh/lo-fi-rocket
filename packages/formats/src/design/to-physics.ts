@@ -503,9 +503,9 @@ export function designSimulationOptions(
     ...atmosphere,
     aerodynamics: 'niskanen',
     finRollReduction: mode === 'displayed',
-    baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'always',
-    // D-086: OpenRocket takes one motor's area off the base for a whole cluster.
-    ...(mode === 'displayed' ? {} : { baseDragClusterMotors: 'one' as const }),
+    baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'never',
+    // D-108: OpenRocket 24.12's own rail button drag in the comparison mode (DRAG-23).
+    ...(mode === 'displayed' ? {} : { railButtonDragMethod: 'openrocket' as const }),
     baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
     largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,

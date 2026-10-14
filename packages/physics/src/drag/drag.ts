@@ -9,7 +9,11 @@
  */
 import { InvalidInputError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
-import type { Component, TrapezoidFinSetComponent } from '../geometry/components.js';
+import type {
+  Component,
+  RailButtonComponent,
+  TrapezoidFinSetComponent,
+} from '../geometry/components.js';
 import { finPlanform } from '../geometry/fin-planform.js';
 import { noseProfile, transitionProfile, type Profile } from '../geometry/profiles.js';
 import { DEFAULT_PANELS, integrate } from '../geometry/revolution.js';
@@ -27,6 +31,7 @@ import {
 } from '../units/si.js';
 import { baseDragArea, launchLugDrag, railButtonDrag } from './base-parasitic.js';
 import { finPressureDrag } from './fin-drag.js';
+import { openRocketRailButtonDrag } from './openrocket-rail-button.js';
 import { finWaveDrag } from './datcom-fin-wave-drag.js';
 import {
   DATCOM_BASE_GUIDE_END,
@@ -96,15 +101,24 @@ export interface DragInputs {
   };
   /**
    * When the motor's area is removed from the base drag area (DRAG-11):
-   * 'while-thrusting' is Niskanen p. 51 ("the thrusting motors"); 'always'
-   * reproduces OpenRocket 24.12, which keeps it removed after burnout
-   * (observed in the reference time series, D-035). Comparisons only.
+   * 'while-thrusting' is Niskanen p. 51 ("the thrusting motors"); 'never' is OpenRocket 24.12,
+   * which keeps the whole base at all times (D-108, reference/rockets/drag-probe/values.txt);
+   * 'always' also removes it after burnout (D-035's reading of OpenRocket, which D-108 found
+   * wrong; kept for the comparisons that state it).
    */
-  readonly baseDragMotorRule: 'while-thrusting' | 'always';
+  readonly baseDragMotorRule: BaseDragMotorRule;
   readonly referenceDiameter?: Metres;
   /** Body base drag method; defaults to `DEFAULT_BASE_DRAG_METHOD` (D-069). */
   readonly baseDragMethod?: BaseDragMethod;
+  /**
+   * Rail button drag: 'niskanen' (DRAG-12, the default) or 'openrocket', OpenRocket 24.12's as
+   * measured (DRAG-23, D-108), for the OpenRocket-equivalent mode.
+   */
+  readonly railButtonDragMethod?: RailButtonDragMethod;
 }
+
+export type BaseDragMotorRule = 'while-thrusting' | 'always' | 'never';
+export type RailButtonDragMethod = 'niskanen' | 'openrocket';
 
 export interface DragTerm {
   readonly index: number;
@@ -344,6 +358,12 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const geometry: ExternalGeometry = { length: 0, wettedBody: 0, baseRadius: 0, maxRadius: 0 };
   const finSets: { wettedArea: number; thickness: number; meanChord: number }[] = [];
 
+  const openRocketButtons: {
+    index: number;
+    component: RailButtonComponent;
+    position: number;
+    push: (t: DragTerm) => void;
+  }[] = [];
   const statics = staticEntries(input.components);
   // Plan 0070 (D-106): a pod set's parts form their own body, outside the main one; each term is
   // the part's own times the count of pods (Niskanen's methods per part, as OpenRocket applies them:
@@ -517,6 +537,11 @@ export function dragCoefficient(input: DragInputs): DragResult {
         break;
       }
       case 'railButton': {
+        if (input.railButtonDragMethod === 'openrocket') {
+          // DRAG-23 needs the Reynolds number per metre, known once the body's length is.
+          openRocketButtons.push({ index, component: c, position: placed.position, push });
+          break;
+        }
         const r = railButtonDrag(c.outerDiameter, c.totalHeight, input.mach);
         const area = r.area * c.count;
         push({
@@ -545,10 +570,38 @@ export function dragCoefficient(input: DragInputs): DragResult {
       'at least one external component (nose cone, body tube or transition) is needed',
     );
   }
+  // DRAG-23: each button at its own position, on the flow's Reynolds number per metre (the input's
+  // is based on the rocket's length).
+  for (const b of openRocketButtons) {
+    const c = b.component;
+    const r = openRocketRailButtonDrag({
+      outerDiameter: c.outerDiameter,
+      innerDiameter: c.innerDiameter,
+      totalHeight: c.totalHeight,
+      baseHeight: c.baseHeight,
+      flangeHeight: c.flangeHeight,
+      positions: Array.from(
+        { length: c.count },
+        (_, i) => b.position + i * ((c.separation as number | undefined) ?? 0),
+      ),
+      mach: M,
+      reynoldsPerMetre: geometry.length > 0 ? input.reynolds / geometry.length : 0,
+    });
+    b.push({
+      index: b.index,
+      kind: c.kind,
+      source: `rail button, OpenRocket 24.12 (${String(c.count)})`,
+      cdComponent: r.area > 0 ? r.cdA / r.area : 0,
+      area: r.area,
+      cd: r.cdA / aRef,
+    });
+  }
   // Base drag, eq. (3.94), on the base minus the thrusting motor (p. 51).
   const motor = input.motor;
   const removeMotor =
-    motor !== undefined && (motor.thrusting || input.baseDragMotorRule === 'always');
+    motor !== undefined &&
+    input.baseDragMotorRule !== 'never' &&
+    (motor.thrusting || input.baseDragMotorRule === 'always');
   const baseArea = baseDragArea(
     geometry.baseRadius,
     removeMotor ? motor.diameter : undefined,

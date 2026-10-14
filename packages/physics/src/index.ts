@@ -269,10 +269,17 @@ export {
   jointAngle,
   meanAerodynamicChord,
   wettedArea,
+  type BaseDragMotorRule,
   type DragInputs,
   type DragResult,
   type DragTerm,
+  type RailButtonDragMethod,
 } from './drag/drag.js';
+export {
+  openRocketRailButtonCoefficient,
+  openRocketRailButtonDrag,
+  type OpenRocketRailButtonInput,
+} from './drag/openrocket-rail-button.js';
 export {
   aerodynamicForcesAndMoments,
   normalForceAtAngle,

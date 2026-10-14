@@ -9,7 +9,7 @@ import type { WindModel } from '../environment/wind.js';
 import type { ClusterOffset, PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import type { Metres, Newtons, Seconds } from '../units/si.js';
-import type { BaseDragMethod } from '../drag/drag.js';
+import type { BaseDragMethod, BaseDragMotorRule, RailButtonDragMethod } from '../drag/drag.js';
 import type { LargeAngleMethod } from './aerodynamics.js';
 import type { GravityModel } from './gravity.js';
 
@@ -158,11 +158,14 @@ export interface SimulationOptions {
   readonly aerodynamics: 'niskanen' | 'none';
   /** Niskanen roll reduction on fins (displayed) or off (OpenRocket-equivalent, D-016). */
   readonly finRollReduction: boolean;
-  /** Base drag motor area rule (D-035). */
-  readonly baseDragMotorRule: 'while-thrusting' | 'always';
+  /** Base drag motor area rule (D-035, D-108): 'never' in the OpenRocket-equivalent mode. */
+  readonly baseDragMotorRule: BaseDragMotorRule;
+  /** Rail button drag (D-108): Niskanen's (the default) or OpenRocket 24.12's (DRAG-23). */
+  readonly railButtonDragMethod?: RailButtonDragMethod;
   /**
    * How many of a cluster's motors are taken off the base drag area (D-086): 'all', the thrusting
-   * motors of N09 p. 51 (the default), or 'one', as OpenRocket 24.12 does (OpenRocket-equivalent).
+   * motors of N09 p. 51 (the default), or 'one' (D-086's reading of OpenRocket 24.12, which D-108
+   * found wrong: OpenRocket removes none, the comparison mode's 'never' rule).
    */
   readonly baseDragClusterMotors?: 'all' | 'one';
   /** Body base drag method (D-069); defaults to the drag model's default. */

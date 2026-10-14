@@ -954,3 +954,26 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - A file with pod sets now imports and simulates, unless a pod holds a motor.
   - Two pod sets with the same count and distance are one body to the fit check, so pods one behind the other at the same distance are refused there (a gap).
   - The side view and the 3D view still draw pod parts on the axis. That work belongs to the UI and 3D lanes, through issues.
+
+## D-108 (2026-10-14): The comparison mode keeps OpenRocket's whole base and computes rail buttons as OpenRocket does
+
+- **Decision:** in the OpenRocket-equivalent mode:
+  - **Base.** The base drag keeps the whole base, thrusting or coasting (`baseDragMotorRule: 'never'`); the motor's area is not removed. This replaces D-035's `'always'` and D-086's one motor of a cluster in that mode.
+  - **Rail buttons.** Their drag is OpenRocket 24.12's, measured as a black box (DRAG-23, `railButtonDragMethod: 'openrocket'`).
+  - **The displayed mode is unchanged:** the source's base rule (the thrusting motors' area removed, N09 p. 51) and Niskanen's rail pins (DRAG-12).
+- **Why:** plan 0071.
+  - **OpenRocket's base.** OpenRocket 24.12's base term is the whole base, both in its static calculation and in its flight data: identical thrusting and coasting, and identical with motors in the core, the pods or both. D-035's reading, a coasting drag lower than ours by the motor's share, came from other differences that happened to cancel. The largest was our rail button drag, 6 to 10 times OpenRocket's.
+  - **Owner's choice.** The owner chose option (c) of plan 0071: copy OpenRocket's rail button drag in the comparison mode.
+  - **Evidence for the table.** The structure is exact in the probe, and the table reproduces OpenRocket within 0.82 % on 80 buttons held out of it.
+- **Results:**
+  - **Flights.** The comparison mode's flights now agree with OpenRocket within 1.2 % in apogee on R1 to R5 (−0.16 to −0.51 % without wind; before −2.42 to +2.48 %) and 0.41 % in maximum velocity.
+  - **Static drag.** It agrees within 0.4 to 0.7 % on R2 to R5. R1 is 1.2 % above because of its launch lug.
+  - **The one difference left above tolerance:** `staged-hpr`'s maximum velocity (−4.3 %), wholly from OpenRocket's tangent ogive nose drag below Mach 1 (plan 0071 section 6), which is not copied.
+- **Alternatives:**
+  - (a) Keep `'always'` with a corrected explanation: rejected, since it hides two real differences behind each other.
+  - (b) A sourced boundary-layer protuberance model in both modes: not chosen now; it needs a source (Hoerner chapter 8, or the Missile DATCOM protuberance method) and remains the way to improve the displayed mode.
+  - Fitting a closed form to OpenRocket's figures: no form tried was exact (best 3 to 6 %), so the measured table is used.
+- **Consequences:**
+  - The comparison mode's results change, the displayed mode's do not. The golden R1 comparison apogee goes from 168.866 to 166.187 m (OpenRocket 167.045 m).
+  - The displayed mode's rail button drag stays Niskanen's, 6 to 10 times OpenRocket's. Which is closer to reality is open: no measured rail button data is in `reference/` (known limitations).
+  - OpenRocket's nose pressure drag differences are recorded for the validation campaign and the list of OpenRocket issues.

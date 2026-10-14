@@ -84,3 +84,19 @@ With `--positions` (plan 0070 step 3, D-107) it places one pod set by each radiu
 ## Staging probe
 
 `src/StagingProbe.java` (plan 0064, D-096) reports how OpenRocket stages a rocket: each stage's separation event and delay, each motor mount's ignition event and delays, and a flight's events on every branch, with the mass and CG around each separation. Run on OpenRocket's own staged examples it shows "automatic" ignition as launch for the bottom stage and the ejection charge of the stage below for the others. With `--build <motors> <out>` it first builds two staged rockets of our own (`staged-bp`: D12-0 to C6-5 at the charge; `staged-hpr`: H128W to G80T 0.5 s after burnout, separation at burnout). With `--gaps <motors> <out>` it builds two three-stage rockets with a stage that has no motor (`staged-gap-bottom`, `staged-gap-middle`): with the bottom stage empty nothing ignites, and with the middle stage empty the sustainer never lights, so "automatic" means the ejection charge of the stage directly below. `--events <motors> <out>` prints the words the file uses for every ignition and separation event, and `--inactive <motors> <out>` switches a stage off in the configuration (`staged-off-booster`: the sustainer flies alone and lights at launch; `staged-off-middle`: the middle stage's parts leave the flight, the bottom stage keeps its place and the sustainer never lights). `--override <motors> <out>` puts a mass and CG override on staged-bp's booster stage: OpenRocket measures the stage's CG from the stage's front. Output and files in `reference/rockets/staging-probe/`.
+
+With `--motors <motor dir>` (plans 0070 step 4 and 0071) it puts a D12-5 in each pod's tube and flies the rocket with and without the core's motor, and without pods. It prints the mass properties, the flight and the drag coefficient against Mach while thrusting and coasting. Output and files in `reference/rockets/pod-probe/motors.txt` and `pods5.ork` to `pods8.ork`.
+
+## Drag probes
+
+These are plan 0071 (D-108). Output in `reference/rockets/drag-probe/`.
+
+- `src/DragProbe.java`: the drag coefficient of `.ork` files at Mach 0.10 to 0.18, or 0.1 to 0.95 with `--transonic`, split into friction, pressure and base, with the motors in place. It also gives the rail buttons' and lugs' share, found by removing them; `--sustainer` keeps the top stage only. Use it to see that OpenRocket keeps the whole base (`values.txt` parts 1 and 4).
+- `src/PartDrag.java`: each part's drag (fins per fin) at the Mach numbers given (part 4).
+- `src/NoseProbe.java`: nose cone pressure drag against Mach for each shape and fineness ratio (part 5).
+- `src/ProtuberanceProbe.java`: rail button and launch lug drag, as the rocket's drag with the part minus without:
+  - with no argument, one-variable sweeps (`protuberance-sweeps.csv`);
+  - with `--cases <file>`, listed cases (`rail-button-table.csv`, `rail-button-collapse.csv`);
+  - with `--temperature <K> <file>`, at another temperature (`rail-button-temperature.csv`).
+- `reference/digitised/build-openrocket-rail-button-table.py`: builds `packages/physics/src/drag/openrocket-rail-button-table.ts` (DRAG-23) from `rail-button-table.csv`. Run `python3 reference/digitised/build-openrocket-rail-button-table.py` from the repository root.
+
