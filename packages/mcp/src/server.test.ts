@@ -194,11 +194,11 @@ describe('the example rocket built part by part', () => {
       })),
       motor: x.motorMount?.motor,
       overhang: x.motorMount?.overhang,
-      recovery: x.recovery.map(({ name, diameter, dragCoefficient, deploy }) => ({
-        name,
-        diameter,
-        dragCoefficient,
-        deploy,
+      recovery: x.recovery.map((d) => ({
+        name: d.name,
+        diameter: d.kind === 'streamer' ? undefined : d.diameter,
+        dragCoefficient: d.dragCoefficient,
+        deploy: d.deploy,
       })),
       launch: x.launch,
       approximations: x.approximations,
@@ -333,6 +333,34 @@ describe('defaults are never silent (CLAUDE.md 1 rule 3)', () => {
     expect(items).toMatch(/Recovery device \\"Chute\\": drag coefficient not given/);
     const sim = await ok('simulate', { designId });
     expect((get(sim, 'confidence') as { level: string }).level).toBe('medium');
+  });
+
+  it('sets a streamer: its strip in any unit, eq. (C.6)’s C_D, and a descent faster than the parachute’s (plan 0073)', async () => {
+    const designId = (await ok('new_design', { name: 'Example', from: 'example' }))['id'] as string;
+    const chute = await ok('simulate', { designId });
+    const set = await ok('set_recovery', {
+      designId,
+      devices: [
+        {
+          name: 'Strip',
+          streamer: { length: '60 cm', width: '6 cm', surfaceDensity: '80 g/m2' },
+          deploy: { event: 'apogee' },
+        },
+      ],
+    });
+    // 0.034 × (105/105) × (1.6/0.6) = 0.0906667, reported to the tools' precision.
+    expect(JSON.stringify(set['recovery'])).toMatch(/"kind":"streamer"/);
+    expect(JSON.stringify(set['recovery'])).toMatch(/"0\.0906667 \(Niskanen eq\. C\.6\)"/);
+    const strip = await ok('simulate', { designId });
+    const hit = (r: Record<string, unknown>): number =>
+      get(r, 'summary', 'ground_hit_velocity_m_s') as number;
+    expect(hit(strip)).toBeGreaterThan(3 * hit(chute));
+    const neither = await call('set_recovery', {
+      designId,
+      devices: [{ name: 'Nothing', deploy: { event: 'apogee' } }],
+    });
+    expect(neither.ok).toBe(false);
+    expect(neither.text).toMatch(/needs either "diameter" \(a parachute\) or "streamer"/);
   });
 
   it('lists a recorded assumption with every result', async () => {

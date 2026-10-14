@@ -8,7 +8,13 @@
 import { metres, type MotorDefinition, type Seconds } from '@lo-fi-rocket/physics';
 import type { OrkMotorMount, OrkRocket } from '../ork.js';
 import { newDesign } from './example.js';
-import type { DesignComponent, MotorMount, MotorProvenance, RocketDesign } from './model.js';
+import type {
+  DesignComponent,
+  DesignRecoveryDevice,
+  MotorMount,
+  MotorProvenance,
+  RocketDesign,
+} from './model.js';
 
 export interface LibraryMotorRef {
   readonly definition: MotorDefinition;
@@ -67,18 +73,29 @@ export function orkToDesign(
     referenceDiameter: metres(2 * rocket.maxBodyRadius),
     ...(rocket.approximations.length === 0 ? {} : { approximations: rocket.approximations }),
     ...(rocket.asBuilt === undefined ? {} : { asBuilt: rocket.asBuilt }),
-    recovery: rocket.recoveryDevices.map((d, i) => ({
-      id: `ork-recovery-${String(i)}`,
-      name: d.name,
-      diameter: d.diameter,
-      dragCoefficient: d.dragCoefficient,
-      deploy: {
-        event: d.deployEvent,
-        delay: d.deployDelay,
-        ...(d.deployEvent === 'altitude' ? { altitude: d.deployAltitude } : {}),
-      },
-      ...(staged ? { stage: stageOf(d.component) } : {}),
-    })),
+    recovery: rocket.recoveryDevices.map((d, i): DesignRecoveryDevice => {
+      const common = {
+        id: `ork-recovery-${String(i)}`,
+        name: d.name,
+        deploy: {
+          event: d.deployEvent,
+          delay: d.deployDelay,
+          ...(d.deployEvent === 'altitude' ? { altitude: d.deployAltitude } : {}),
+        },
+        ...(staged ? { stage: stageOf(d.component) } : {}),
+      };
+      // Plan 0073 part 2: a streamer keeps its strip, and its C_D only when the file gives one.
+      return d.kind === 'streamer'
+        ? {
+            kind: 'streamer',
+            ...common,
+            length: d.length,
+            width: d.width,
+            surfaceDensity: d.surfaceDensity,
+            ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
+          }
+        : { ...common, diameter: d.diameter, dragCoefficient: d.dragCoefficient };
+    }),
     ...(staged
       ? {
           stages: rocket.stages.map((st) => ({

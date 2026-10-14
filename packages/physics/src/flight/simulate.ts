@@ -79,6 +79,7 @@ import {
   rk4StableStep,
 } from './integrators.js';
 import { quaternionMultiply, quaternionNormalise, type Quaternion } from './quaternion.js';
+import { recoveryApproximations, recoveryDragArea } from './recovery.js';
 import { add, cross, dot, norm, scale, sub, vec3, type Vec3 } from './vector.js';
 import {
   DEFAULT_MINIMUM_STABILITY_MARGIN,
@@ -1233,12 +1234,12 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     // Every caller deploys at the current state: a timed action runs at its step boundary, an event
     // handler after the state has been advanced to the bisected crossing.
     deployment ??= { t: at, v: airspeedAt(at, y) };
-    const area = (Math.PI * (device.diameter as number) ** 2) / 4;
-    ctx.deployedArea.area += device.dragCoefficient * area;
+    const dragArea = recoveryDragArea(device, options.streamerDragMethod);
+    ctx.deployedArea.area += dragArea;
     events.push({
       kind: 'deployment',
       time: seconds(at),
-      detail: `${device.name} deployed (${why}); C_D A = ${(device.dragCoefficient * area).toFixed(4)} m²`,
+      detail: `${device.name} deployed (${why}); C_D A = ${dragArea.toFixed(4)} m²`,
     });
     if (phase !== 'landed') phase = 'descent';
   };
@@ -1291,7 +1292,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       if (deviceStage(i) < k || !activeRecovery.has(d)) return;
       activeRecovery.delete(d);
       if (deployed.has(d)) {
-        ctx.deployedArea.area -= (d.dragCoefficient * Math.PI * (d.diameter as number) ** 2) / 4;
+        ctx.deployedArea.area -= recoveryDragArea(d, options.streamerDragMethod);
       }
     });
     if (phase === 'powered' && !thrustingNow()) phase = 'coast';
@@ -2233,6 +2234,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       })),
     ),
     ...podApproximations(vehicle.components),
+    ...recoveryApproximations(vehicle.recovery),
     ...largeAngleApproximations(vehicle, ctx.largeAngleMethod, used.approximatedFinBeyondStall),
     ...(used.supersonicReverseFlow ? [SUPERSONIC_REVERSE_FLOW_APPROXIMATION] : []),
     ...(stages === undefined

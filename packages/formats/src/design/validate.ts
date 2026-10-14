@@ -14,6 +14,7 @@ import {
   kelvin,
   kilograms,
   kilogramsPerCubicMetre,
+  kilogramsPerSquareMetre,
   metres,
   metresPerSecond,
   newtons,
@@ -642,7 +643,18 @@ function designMassOverride(c: Ctx, path: string, v: unknown): MassOverride {
 
 function recoveryDevice(c: Ctx, path: string, v: unknown): DesignRecoveryDevice {
   const o = c.object(path, v);
-  c.keys(path, o, ['id', 'name', 'diameter', 'dragCoefficient', 'deploy'], ['stage']);
+  const streamer =
+    'kind' in o && c.oneOf(`${path}.kind`, o['kind'], ['parachute', 'streamer']) === 'streamer';
+  if (streamer) {
+    c.keys(
+      path,
+      o,
+      ['kind', 'id', 'name', 'length', 'width', 'surfaceDensity', 'deploy'],
+      ['dragCoefficient', 'stage'],
+    );
+  } else {
+    c.keys(path, o, ['id', 'name', 'diameter', 'dragCoefficient', 'deploy'], ['kind', 'stage']);
+  }
   const d = c.object(`${path}.deploy`, o['deploy']);
   c.keys(`${path}.deploy`, d, ['event', 'delay'], ['altitude']);
   const event = c.oneOf(`${path}.deploy.event`, d['event'], DEPLOY_EVENTS);
@@ -653,11 +665,9 @@ function recoveryDevice(c: Ctx, path: string, v: unknown): DesignRecoveryDevice 
   if (event === 'altitude' && altitude === undefined) {
     c.fail(`${path}.deploy`, 'an altitude deployment needs "altitude"');
   }
-  return {
+  const base = {
     id: c.nonEmptyString(`${path}.id`, o['id']),
     name: c.string(`${path}.name`, o['name']),
-    diameter: metres(c.number(`${path}.diameter`, o['diameter'])),
-    dragCoefficient: c.number(`${path}.dragCoefficient`, o['dragCoefficient']),
     deploy: {
       event,
       delay: seconds(c.number(`${path}.deploy.delay`, d['delay'])),
@@ -666,6 +676,26 @@ function recoveryDevice(c: Ctx, path: string, v: unknown): DesignRecoveryDevice 
     ...('stage' in o && o['stage'] !== undefined
       ? { stage: stageNumber(c, `${path}.stage`, o['stage']) }
       : {}),
+  };
+  if (streamer) {
+    return {
+      kind: 'streamer',
+      ...base,
+      length: metres(c.number(`${path}.length`, o['length'])),
+      width: metres(c.number(`${path}.width`, o['width'])),
+      surfaceDensity: kilogramsPerSquareMetre(
+        c.number(`${path}.surfaceDensity`, o['surfaceDensity']),
+      ),
+      ...('dragCoefficient' in o && o['dragCoefficient'] !== undefined
+        ? { dragCoefficient: c.number(`${path}.dragCoefficient`, o['dragCoefficient']) }
+        : {}),
+    };
+  }
+  return {
+    ...('kind' in o ? { kind: 'parachute' as const } : {}),
+    ...base,
+    diameter: metres(c.number(`${path}.diameter`, o['diameter'])),
+    dragCoefficient: c.number(`${path}.dragCoefficient`, o['dragCoefficient']),
   };
 }
 

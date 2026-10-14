@@ -309,14 +309,25 @@ export type {
   FlightVehicle,
   IntegratorOptions,
   MotorSource,
+  ParachuteDevice,
   RecoveryDevice,
   SeparationEvent,
+  StreamerDevice,
   StageSeparation,
   SimulationOptions,
   StagedMotor,
   VehicleStages,
 } from './flight/vehicle.js';
 export { DEFAULT_MINIMUM_STABILITY_MARGIN } from './flight/vehicle.js';
+export {
+  OPENROCKET_STREAMER_CD_LIMIT,
+  recoveryApproximations,
+  recoveryDragArea,
+  STREAMER_MEASURED_RANGE,
+  streamerDragCoefficient,
+  streamerOutsideMeasured,
+  type StreamerDragMethod,
+} from './flight/recovery.js';
 export {
   AERO_MAX_ANGLE_OF_ATTACK,
   dragCurveAt,

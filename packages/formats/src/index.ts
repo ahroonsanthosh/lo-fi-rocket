@@ -9,12 +9,16 @@
  */
 export { parseEng, type EngMotor, type ThrustPoint } from './eng.js';
 export {
+  OPENROCKET_FINISHES,
+  orkRecoveryDevice,
   parseOrk,
   type OrkDeployEvent,
   type OrkMotorMount,
+  type OrkParachute,
   type OrkPlacedComponent,
   type OrkRecoveryDevice,
   type OrkRocket,
+  type OrkStreamer,
 } from './ork.js';
 export {
   parseRse,
@@ -51,7 +55,9 @@ export {
   type DeployEvent,
   type DesignComponent,
   type DesignPod,
+  type DesignParachute,
   type DesignRecoveryDevice,
+  type DesignStreamer,
   type DesignStage,
   type IgnitionEvent,
   type LaunchConditions,

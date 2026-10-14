@@ -6,6 +6,7 @@
 import {
   kilograms,
   kilogramsPerCubicMetre,
+  kilogramsPerSquareMetre,
   metres,
   seconds,
   type Component,
@@ -216,13 +217,30 @@ export function defaultComponent(
   }
 }
 
-export function defaultRecoveryDevice(id: string, design: RocketDesign): DesignRecoveryDevice {
+export function defaultRecoveryDevice(
+  id: string,
+  design: RocketDesign,
+  kind: 'parachute' | 'streamer' = 'parachute',
+): DesignRecoveryDevice {
+  const label = kind === 'streamer' ? 'Streamer' : 'Parachute';
+  const name =
+    design.recovery.length === 0 ? label : `${label} ${String(design.recovery.length + 1)}`;
+  if (kind === 'streamer') {
+    // Plan 0073: one of the strips Niskanen measured, 4 × 40 cm of 42 µm polyethylene (41 g/m²,
+    // Appendix C Table C.1); its C_D is eq. (C.6)'s.
+    return {
+      kind: 'streamer',
+      id,
+      name,
+      length: metres(0.4),
+      width: metres(0.04),
+      surfaceDensity: kilogramsPerSquareMetre(0.041),
+      deploy: { event: 'apogee', delay: seconds(0) },
+    };
+  }
   return {
     id,
-    name:
-      design.recovery.length === 0
-        ? 'Parachute'
-        : `Parachute ${String(design.recovery.length + 1)}`,
+    name,
     diameter: metres(0.3),
     // Niskanen p. 67: a round parachute's C_D is about 0.8 (DYN-14).
     dragCoefficient: 0.8,

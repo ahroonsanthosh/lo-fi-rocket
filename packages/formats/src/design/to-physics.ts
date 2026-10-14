@@ -27,6 +27,7 @@ import {
   type FlightVehicle,
   type MotorMass,
   type PlacedComponent,
+  type RecoveryDevice,
   type RocketMassProperties,
   type SimulationOptions,
   type StabilityResult,
@@ -439,16 +440,25 @@ export function designVehicle(design: RocketDesign): FlightVehicle {
     ...(design.approximations === undefined ? {} : { approximations: design.approximations }),
     motor: motorSource(m),
     ...(stages === undefined ? {} : { stages }),
-    recovery: design.recovery.map((d) => ({
-      name: d.name,
-      diameter: d.diameter,
-      dragCoefficient: d.dragCoefficient,
-      deploy: {
+    recovery: design.recovery.map((d): RecoveryDevice => {
+      const deploy = {
         event: d.deploy.event,
         delay: d.deploy.delay,
         ...(d.deploy.altitude === undefined ? {} : { altitude: d.deploy.altitude }),
-      },
-    })),
+      };
+      // Plan 0073 part 2: a streamer, its drag by eq. (C.6) unless the user gave its C_D.
+      return d.kind === 'streamer'
+        ? {
+            kind: 'streamer',
+            name: d.name,
+            length: d.length,
+            width: d.width,
+            surfaceDensity: d.surfaceDensity,
+            ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
+            deploy,
+          }
+        : { name: d.name, diameter: d.diameter, dragCoefficient: d.dragCoefficient, deploy };
+    }),
     roughnessHeight: design.finish.roughnessHeight,
     ...(design.referenceDiameter === undefined
       ? {}
@@ -508,6 +518,8 @@ export function designSimulationOptions(
     baseDragMotorRule: mode === 'displayed' ? 'while-thrusting' : 'never',
     // D-108: OpenRocket 24.12's own rail button drag in the comparison mode (DRAG-23).
     ...(mode === 'displayed' ? {} : { railButtonDragMethod: 'openrocket' as const }),
+    // Plan 0073: OpenRocket 24.12 caps a streamer's automatic C_D at 0.4 (FinishProbe).
+    ...(mode === 'displayed' ? {} : { streamerDragMethod: 'openrocket' as const }),
     baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
     largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,

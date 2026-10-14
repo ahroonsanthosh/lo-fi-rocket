@@ -505,14 +505,17 @@ export function createServer(session: Session = new Session()): McpServer {
     {
       title: 'Set the recovery devices',
       description:
-        'Replace the recovery devices (parachutes, streamers): canopy diameter, drag coefficient (left out: 0.8, recorded as "not given") and when it opens: apogee, ejection (the motor’s charge), altitude (descending through it), launch or never, plus a delay. The packed mass is a parachute part (add_part kind parachute). In a staged rocket give each device its stage: it leaves with that stage, and "ejection" is that stage’s motor’s charge.',
+        'Replace the recovery devices. A parachute: its canopy diameter and drag coefficient (left out: 0.8, recorded as "not given"). A streamer: "streamer" with its strip length, width and material surfaceDensity (e.g. "41 g/m2"); its drag coefficient, left out, is Niskanen\'s eq. (C.6). Each device opens at: apogee, ejection (the motor’s charge), altitude (descending through it), launch or never, plus a delay. The packed mass is a parachute part (add_part kind parachute). In a staged rocket give each device its stage: it leaves with that stage, and "ejection" is that stage’s motor’s charge.',
       inputSchema: {
         designId: id,
         devices: z
           .array(
             z.object({
               name: z.string().min(1).max(200),
-              diameter: quantity,
+              diameter: quantity.optional(),
+              streamer: z
+                .object({ length: quantity, width: quantity, surfaceDensity: quantity })
+                .optional(),
               dragCoefficient: z.number().positive().max(10).optional(),
               deploy: z.object({
                 event: z.enum(['apogee', 'ejection', 'altitude', 'launch', 'never']),
@@ -532,7 +535,8 @@ export function createServer(session: Session = new Session()): McpServer {
           designId,
           devices.map((d) => ({
             name: d.name,
-            diameter: d.diameter,
+            ...(d.diameter === undefined ? {} : { diameter: d.diameter }),
+            ...(d.streamer === undefined ? {} : { streamer: d.streamer }),
             ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
             deploy: {
               event: d.deploy.event,

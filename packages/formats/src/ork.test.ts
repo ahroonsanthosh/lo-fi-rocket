@@ -181,7 +181,8 @@ describe('reference rockets: parsed components equal the hand transcription', ()
 
   it('R1 recovery device and motor delay are read as written', () => {
     const r = parseOrk(bytes('r1-three-fin-conical.ork'));
-    expect(r.recoveryDevices[0]?.diameter).toBe(0.3);
+    const chute = r.recoveryDevices[0];
+    expect(chute?.kind === 'streamer' ? undefined : chute?.diameter).toBe(0.3);
     expect(r.recoveryDevices[0]?.deployAltitude).toBe(200);
     expect(r.recoveryDevices[0]?.deployDelay).toBe(0);
     expect(r.recoveryDevices[0]?.component).toBe(8);
@@ -329,11 +330,12 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   };
 
   it('unknown parts inside the rocket stand in as their mass, or are left out; outside, refused', () => {
-    // D-084: no mass in the file: the streamer is left out, listed as major (no descent from it).
+    // D-084: no mass in the file: the tube fin set is left out, listed as major (no lift or drag
+    // from it). (Plan 0073: streamers, the earlier example, are read.)
     const plain = parseOrk(r1, 'r1.ork');
     const without = approximated(
-      edit(r1, '<parachute>', '<streamer><name>S</name></streamer><parachute>'),
-      /Streamer "S": element <streamer>/,
+      edit(r1, '<parachute>', '<tubefinset><name>S</name></tubefinset><parachute>'),
+      /Tube fin set "S": element <tubefinset>/,
       'major',
     );
     expect(without.components).toEqual(plain.components);
@@ -343,12 +345,12 @@ describe('inputs are refused, reported as malformed or approximated, by element 
       edit(
         r1,
         '<parachute>',
-        '<streamer><name>S</name><overridemass>0.02</overridemass><packedlength>0.03</packedlength></streamer><parachute>',
+        '<tubefinset><name>S</name><overridemass>0.02</overridemass><length>0.03</length></tubefinset><parachute>',
       ),
-      /Streamer "S": element <streamer>/,
+      /Tube fin set "S": element <tubefinset>/,
       'major',
     );
-    const standIn = withMass.components.find((c) => c.element === 'streamer');
+    const standIn = withMass.components.find((c) => c.element === 'tubefinset');
     expect(standIn?.component).toMatchObject({ kind: 'massComponent', mass: 0.02, length: 0.03 });
     expect(standIn?.approximations?.[0]?.method).toBe('a 20 g mass at its position, from the file');
     // A pod set is read on a body tube, the only part OpenRocket lets hold one (plan 0070,

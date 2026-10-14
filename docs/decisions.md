@@ -1023,3 +1023,22 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - The MCP part editor now keeps a part's own finish, and its pod set, which it had dropped (plan 0070).
   - The app cannot yet set a finish, for the design or a part (plan 0073 part 1b).
+
+## D-111 (2026-10-14): Streamers, by Niskanen's Appendix C
+
+- **Decision:**
+  - A recovery device is a parachute or a streamer, in the physics and in the design file (schema 5). A streamer is a strip of length l and width w of a material of surface density ρ_m.
+  - Its drag is C_D on the strip area w l. C_D is Niskanen's eq. (C.6) (STREAM-1) unless the user gives one.
+  - The OpenRocket-equivalent mode caps the automatic C_D at 0.4, as OpenRocket 24.12 does; the displayed mode does not.
+  - A streamer whose C_D comes from eq. (C.6) and whose strip lies outside the measured ones is listed (moderate). The measured strips are about 0.2 to 1 m long and 0.02 to 0.09 m wide (Figure C.1, read from the plot) and 10 to 80 g/m² (Table C.1).
+  - **`.ork` reader.** It reads `<streamer>`. Its packed mass, without an override, is the strip area times the material's surface density. `<cd>auto</cd>` means eq. (C.6).
+  - **App and MCP.** The app adds and edits streamers; the 3D view does not draw them yet. The MCP's `set_recovery` takes a `streamer` and surface densities in kg/m², g/m² or oz/yd².
+- **Why:**
+  - **The gap.** The validation campaign found a streamer stood in as "left out: the file gives no mass for it". That was wrong, and the rocket fell ballistically (49 against 23 m/s at the ground). Streamers are the usual recovery of small model rockets.
+  - **The source.** The thesis's Appendix C is the approved source. Its equation reproduces Table C.2's five estimates to their printed digits.
+  - **OpenRocket.** OpenRocket 24.12 implements eq. (C.6) exactly below its 0.4 cap: ten strips, `FinishProbe` part 3. The cap is OpenRocket's own and is not in the thesis. It only binds for strips shorter than about 0.1 m, far outside the measured ones, so the displayed mode follows the thesis and lists such a strip.
+  - **Imperial unit.** The oz/yd² factor is NIST SP 811 B.8 p. 52 (3.390 575 E−02 kg/m²), from the exact ounce and yard.
+- **Results:**
+  - On the ten probe strips the mass, structure mass and CG agree with OpenRocket to 1e-6, and the C_D exactly (or at the cap).
+  - The example rocket on a 0.6 × 0.06 m, 80 g/m² streamer lands at its closed-form terminal speed within 1 %: √(C_D A ratio) = 4.16 times the parachute's.
+- **Consequences:** none for any existing design or golden output: they all use parachutes.

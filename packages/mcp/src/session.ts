@@ -37,6 +37,7 @@ import {
   burnTime,
   kelvin,
   kilograms,
+  kilogramsPerSquareMetre,
   metres,
   metresPerSecond,
   pascals,
@@ -96,7 +97,15 @@ export interface LaunchInput {
 
 export interface RecoveryInput {
   readonly name: string;
-  readonly diameter: QuantityInput;
+  /** A parachute's canopy diameter; give this or `streamer`. */
+  readonly diameter?: QuantityInput;
+  /** Plan 0073: a streamer's strip and material; give this or `diameter`. */
+  readonly streamer?: {
+    readonly length: QuantityInput;
+    readonly width: QuantityInput;
+    readonly surfaceDensity: QuantityInput;
+  };
+  /** Left out: 0.8 for a parachute (listed), eq. (C.6) for a streamer. */
   readonly dragCoefficient?: number;
   readonly deploy: {
     readonly event: DeployEvent;
@@ -533,9 +542,14 @@ export class Session {
     const approximations: Approximation[] = (design.approximations ?? []).filter(
       (a) => !(a.subject.startsWith('Recovery device "') && RECOVERY_WHATS.has(a.what)),
     );
-    const recovery: DesignRecoveryDevice[] = devices.map((d, i) => {
+    const recovery: DesignRecoveryDevice[] = devices.map((d, i): DesignRecoveryDevice => {
       const name = text(`devices[${String(i)}].name`, d.name);
-      if (d.dragCoefficient === undefined) {
+      if ((d.diameter === undefined) === (d.streamer === undefined)) {
+        throw new EditError(
+          `devices[${String(i)}] needs either "diameter" (a parachute) or "streamer" (its length, width and surfaceDensity), not both`,
+        );
+      }
+      if (d.dragCoefficient === undefined && d.streamer === undefined) {
         approximations.push({
           subject: `Recovery device "${name}"`,
           what: 'drag coefficient not given',
@@ -550,27 +564,44 @@ export class Session {
           `devices[${String(i)}].deploy.altitude is needed for the event "altitude"`,
         );
       }
-      return {
+      const deploy = {
+        event: d.deploy.event,
+        delay: seconds(
+          d.deploy.delay === undefined
+            ? 0
+            : toSi(`devices[${String(i)}].deploy.delay`, 'time', d.deploy.delay),
+        ),
+        ...(d.deploy.altitude === undefined
+          ? {}
+          : {
+              altitude: metres(
+                toSi(`devices[${String(i)}].deploy.altitude`, 'length', d.deploy.altitude),
+              ),
+            }),
+      };
+      const common = {
         id: newId(),
         name,
-        diameter: metres(toSi(`devices[${String(i)}].diameter`, 'length', d.diameter)),
-        dragCoefficient: d.dragCoefficient ?? 0.8,
-        deploy: {
-          event: d.deploy.event,
-          delay: seconds(
-            d.deploy.delay === undefined
-              ? 0
-              : toSi(`devices[${String(i)}].deploy.delay`, 'time', d.deploy.delay),
-          ),
-          ...(d.deploy.altitude === undefined
-            ? {}
-            : {
-                altitude: metres(
-                  toSi(`devices[${String(i)}].deploy.altitude`, 'length', d.deploy.altitude),
-                ),
-              }),
-        },
+        deploy,
         ...(d.stage === undefined || d.stage === 0 ? {} : { stage: d.stage }),
+      };
+      if (d.streamer !== undefined) {
+        const at = `devices[${String(i)}].streamer`;
+        return {
+          kind: 'streamer',
+          ...common,
+          length: metres(toSi(`${at}.length`, 'length', d.streamer.length)),
+          width: metres(toSi(`${at}.width`, 'length', d.streamer.width)),
+          surfaceDensity: kilogramsPerSquareMetre(
+            toSi(`${at}.surfaceDensity`, 'surfaceDensity', d.streamer.surfaceDensity),
+          ),
+          ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
+        };
+      }
+      return {
+        ...common,
+        diameter: metres(toSi(`devices[${String(i)}].diameter`, 'length', d.diameter ?? 0)),
+        dragCoefficient: d.dragCoefficient ?? 0.8,
       };
     });
     return this.put(checked({ ...withApproximations(design, approximations), recovery }));

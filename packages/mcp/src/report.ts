@@ -23,6 +23,7 @@ import {
   componentApproximations,
   confidenceOf,
   simulateFlight,
+  streamerDragCoefficient,
   type Approximation,
   type FlightResult,
 } from '@lo-fi-rocket/physics';
@@ -117,8 +118,17 @@ export function designSummary(
         }),
     recovery: design.recovery.map((d) => ({
       name: d.name,
-      diameter_m: d.diameter,
-      drag_coefficient: d.dragCoefficient,
+      // Plan 0073: a streamer's strip, and its C_D when the user gave one (else eq. C.6's).
+      ...(d.kind === 'streamer'
+        ? {
+            kind: 'streamer',
+            length_m: d.length,
+            width_m: d.width,
+            surface_density_kg_m2: d.surfaceDensity,
+            drag_coefficient:
+              d.dragCoefficient ?? `${String(r(streamerDragCoefficient(d)))} (Niskanen eq. C.6)`,
+          }
+        : { diameter_m: d.diameter, drag_coefficient: d.dragCoefficient }),
       deploy: d.deploy,
       ...(d.stage === undefined ? {} : { stage: d.stage }),
     })),

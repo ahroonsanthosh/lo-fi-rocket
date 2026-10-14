@@ -32,6 +32,13 @@ describe('display units (plan 0012, UNIT-5 to UNIT-11 and their inverses)', () =
     expect(unitFor('pressure', 'imperial').toSI(1)).toBeCloseTo(6894.757293168, 8);
     expect(Math.abs(unitFor('pressure', 'imperial').toSI(1) - 6894.757)).toBeLessThan(0.5e-3);
   });
+  it('a streamer’s material (plan 0073): g/m², and oz/yd² = 0.028349523125/0.9144² kg/m² (SP 811 B.8 p. 52 prints 3.390 575 E−02)', () => {
+    expect(unitFor('surfaceDensity', 'metric').toSI(41)).toBeCloseTo(0.041, 15);
+    expect(unitFor('surfaceDensity', 'metric').label).toBe('g/m²');
+    // 0.028349523125/0.83612736 = 0.033905747...
+    expect(unitFor('surfaceDensity', 'imperial').toSI(1)).toBeCloseTo(0.0339057475, 10);
+    expect(Math.abs(unitFor('surfaceDensity', 'imperial').toSI(1) - 0.03390575)).toBeLessThan(5e-9);
+  });
   it('parse rejects blanks, words, NaN and Infinity', () => {
     expect(parseQuantity('', 'mm', 'metric')).toBeUndefined();
     expect(parseQuantity('abc', 'mm', 'metric')).toBeUndefined();

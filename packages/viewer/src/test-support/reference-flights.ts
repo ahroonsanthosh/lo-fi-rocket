@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { motorFromEng, parseEng, parseOrk } from '@lo-fi-rocket/formats';
+import { motorFromEng, orkRecoveryDevice, parseEng, parseOrk } from '@lo-fi-rocket/formats';
 import {
   metres,
   OPENROCKET_REFERENCE_GRAVITY_45N,
@@ -63,12 +63,7 @@ function vehicle(c: ReferenceRocket): FlightVehicle {
       aftEnd: mount.aftEnd,
       ejectionDelay: seconds(c.delay),
     },
-    recovery: rocket.recoveryDevices.map((d) => ({
-      name: d.name,
-      diameter: d.diameter,
-      dragCoefficient: d.dragCoefficient,
-      deploy: { event: d.deployEvent, altitude: d.deployAltitude, delay: d.deployDelay },
-    })),
+    recovery: rocket.recoveryDevices.map(orkRecoveryDevice),
     roughnessHeight: metres(60e-6),
   };
 }

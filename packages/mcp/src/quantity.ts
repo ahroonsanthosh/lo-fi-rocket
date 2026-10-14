@@ -32,6 +32,7 @@ export type Dimension =
   | 'temperature'
   | 'pressure'
   | 'density'
+  | 'surfaceDensity'
   | 'number';
 
 /** The SI unit of each dimension, as the tools report it. */
@@ -44,10 +45,12 @@ export const SI_UNIT: Readonly<Record<Dimension, string>> = {
   temperature: 'K',
   pressure: 'Pa',
   density: 'kg/m³',
+  surfaceDensity: 'kg/m²',
   number: '',
 };
 
 const identity = (x: number): number => x;
+const ouncesPerSquareYard = (x: number): number => ouncesToKilograms(x) / feetToMetres(3) ** 2;
 
 /** Accepted unit symbols per dimension (lower case, spaces removed), each with its conversion. */
 export const UNITS: Readonly<Record<Dimension, Readonly<Record<string, (x: number) => number>>>> = {
@@ -91,6 +94,20 @@ export const UNITS: Readonly<Record<Dimension, Readonly<Record<string, (x: numbe
     'g/cm3': gramsPerCubicCentimetreToKilogramsPerCubicMetre,
     'g/cm^3': gramsPerCubicCentimetreToKilogramsPerCubicMetre,
     'g/cm³': gramsPerCubicCentimetreToKilogramsPerCubicMetre,
+  },
+  // Plan 0073: a streamer's material. 1 g/m² = 10⁻³ kg/m² (UNIT-2); 1 oz/yd² is 1 oz over
+  // (3 ft)², 0.0339057 kg/m² (NIST SP 811 B.8 p. 52 prints 3.390 575 E−02).
+  surfaceDensity: {
+    'kg/m2': identity,
+    'kg/m^2': identity,
+    'kg/m²': identity,
+    'g/m2': gramsToKilograms,
+    'g/m^2': gramsToKilograms,
+    'g/m²': gramsToKilograms,
+    gsm: gramsToKilograms,
+    'oz/yd2': ouncesPerSquareYard,
+    'oz/yd^2': ouncesPerSquareYard,
+    'oz/yd²': ouncesPerSquareYard,
   },
   number: {},
 };
