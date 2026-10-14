@@ -260,7 +260,9 @@ function Summary({
               ? '(landed)'
               : s.endReason === 'max-time'
                 ? '(stopped at the maximum time)'
-                : '(stopped at the model limit, not landed)'
+                : s.endReason === 'no-ignition'
+                  ? '(no motor ignited)'
+                  : '(stopped at the model limit, not landed)'
           }
           stale={stale}
         />

@@ -13,26 +13,35 @@
 import {
   clusterApproximations,
   componentApproximations,
+  podApproximations,
   confidenceOf,
   type Approximation,
   type Confidence,
 } from '../fidelity.js';
 import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
 import { flutterGeometry, flutterVelocity } from '../stability/flutter.js';
-import { dragCoefficient } from '../drag/drag.js';
+import {
+  dragCoefficient,
+  type BaseDragMotorRule,
+  type RailButtonDragMethod,
+} from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
 import { windField, type WindField } from '../environment/wind.js';
 import {
   IntegrationUnstableError,
   InvalidInputError,
   NonFiniteResultError,
+  PhysicsError,
   SimulationStalledError,
+  stepRoundedDown,
 } from '../errors.js';
 import {
   clusterSums,
   combineRocket,
+  combineRocketMotors,
   structuralMassParts,
   type MotorMass,
+  type PlacedComponent,
 } from '../geometry/assembly.js';
 import { validateComponentFit } from '../geometry/fit.js';
 import type { MassProperties } from '../geometry/revolution.js';
@@ -44,9 +53,14 @@ import {
   aerodynamicForcesAndMoments,
   normalForceAtAngle,
   DEFAULT_LARGE_ANGLE_METHOD,
+  SUPERSONIC_REVERSE_FLOW_WARNING,
   type LargeAngleMethod,
 } from './aerodynamics.js';
-import { finLargeAngleAvailability } from '../stability/datcom-large-angle.js';
+import {
+  finLargeAngleApproximation,
+  finLargeAngleAvailability,
+  isLargeAngleApproximationWarning,
+} from '../stability/datcom-large-angle.js';
 import {
   bodyToWorld,
   flightParameters,
@@ -66,13 +80,18 @@ import {
   rk4StableStep,
 } from './integrators.js';
 import { quaternionMultiply, quaternionNormalise, type Quaternion } from './quaternion.js';
+import { recoveryApproximations, recoveryDragArea } from './recovery.js';
 import { add, cross, dot, norm, scale, sub, vec3, type Vec3 } from './vector.js';
 import {
   DEFAULT_MINIMUM_STABILITY_MARGIN,
   type DragCurve,
   type FlightVehicle,
+  type MotorSource,
   type RecoveryDevice,
+  type SeparationEvent,
   type SimulationOptions,
+  type StageSeparation,
+  type VehicleStages,
 } from './vehicle.js';
 
 /** D-047: linear interpolation of an imported C_D table in Mach; outside the table is an error. */
@@ -139,7 +158,10 @@ export type FlightEventKind =
   | 'altitude'
   | 'landing'
   | 'max-time'
-  | 'model-limit';
+  | 'model-limit'
+  // Plan 0064: a staged vehicle's motor ignitions and stage separations.
+  | 'ignition'
+  | 'separation';
 
 export interface FlightEvent {
   readonly kind: FlightEventKind;
@@ -158,16 +180,24 @@ export interface FlightSample {
   readonly altitude: number;
   readonly speed: number;
   readonly airspeed: number;
+  /**
+   * NaN where the rocket's attitude is not modelled, so no flight parameters exist: under a
+   * recovery device (phase 'descent', where only the canopy drag acts, DYN-14), after landing,
+   * and with `aerodynamics: 'none'`. The same holds for `angleOfAttack`, `cd0`, `cp` and
+   * `stabilityCalibers`. NaN marks "not defined here", not a failed calculation (section 8).
+   */
   readonly mach: number;
+  /** Radians; NaN as for `mach`. */
   readonly angleOfAttack: number;
   readonly acceleration: number;
   readonly thrust: number;
   /** Magnitude of the aerodynamic force, N. */
   readonly aerodynamicForce: number;
+  /** Zero-angle drag coefficient on the reference area; NaN as for `mach`. */
   readonly cd0: number;
   readonly mass: number;
   readonly cg: number;
-  /** CP at the current angle of attack; NaN when no aerodynamics. */
+  /** CP at the current angle of attack; NaN as for `mach`. */
   readonly cp: number;
   /** (CP − CG)/d with the CP of the in-flight margin: with the DATCOM model the more forward of its CP and the small-angle model's (D-070). */
   readonly stabilityCalibers: number;
@@ -220,8 +250,12 @@ export interface FlightSummary {
     readonly beyondValidated: boolean;
     readonly largeAngle: boolean;
   };
-  /** 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not continued. */
-  readonly endReason: 'landing' | 'max-time' | 'model-limit';
+  /**
+   * 'model-limit': the flight left the aerodynamic model's angle-of-attack range (D-046) and was not
+   * continued. 'no-ignition': no motor lit at launch or was due to light, so the rocket stayed on the
+   * pad (plan 0064 part 2).
+   */
+  readonly endReason: 'landing' | 'max-time' | 'model-limit' | 'no-ignition';
   /**
    * The smallest stability margin, at the CP for the actual Mach number and
    * angle of attack and the CG of the moment, over every accepted step of
@@ -295,7 +329,9 @@ export interface FlightResult {
   readonly modes: {
     readonly aerodynamics: 'niskanen' | 'none';
     readonly finRollReduction: boolean;
-    readonly baseDragMotorRule: 'while-thrusting' | 'always';
+    readonly baseDragMotorRule: BaseDragMotorRule;
+    /** The rail button drag in effect (D-108). */
+    readonly railButtonDragMethod: RailButtonDragMethod;
     readonly integrator: string;
     readonly degreesOfFreedom: 6 | 3;
     readonly gravitySeaLevel: number;
@@ -358,24 +394,45 @@ export interface StepCheck {
   readonly maxPitchAmplitudeLossPerStep: number;
 }
 
+/**
+ * One motor during a run. A one-stage vehicle has one, ignited at launch; a staged vehicle has one
+ * per entry of its `stages.motors` (plan 0064), ignited by its event.
+ */
+interface MotorRuntime {
+  readonly source: MotorSource;
+  readonly stage: number;
+  /** For events and messages; empty for a one-stage vehicle's motor. */
+  readonly label: string;
+  readonly burn: number;
+  ignitedAt: number | undefined;
+  /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
+  burnedOut: boolean;
+  /** False once the motor's stage has separated. */
+  attached: boolean;
+}
+
+/** The parts still attached (plan 0064): all of them for a one-stage vehicle. */
+interface Configuration {
+  components: readonly PlacedComponent[];
+  /** Index of each attached part in the vehicle's `components`. */
+  indices: ReadonlySet<number>;
+  structure: readonly MassProperties[];
+  rocketLength: number;
+  referenceDiameter: number;
+}
+
 interface Context {
   readonly vehicle: FlightVehicle;
   readonly options: SimulationOptions;
-  readonly structure: readonly MassProperties[];
   readonly atmosphere: (z: Metres) => StandardAtmosphereState;
   readonly railDirection: Vec3;
   readonly railLength: number;
-  readonly rocketLength: number;
-  readonly referenceDiameter: number;
-  readonly burnTime: number;
-  readonly motorDiameter: number | undefined;
-  /** Motors in the cluster (plan 0057); 1 for one motor. */
-  readonly motorCount: number;
+  /** Changed only by a stage separation. */
+  readonly config: Configuration;
+  readonly motors: readonly MotorRuntime[];
   /** The wind for this flight (ENV-1, ENV-3 to ENV-5), built once so every stage reads the same gust. */
   readonly wind: WindField;
   readonly deployedArea: { area: number }; // Σ C_D A of deployed devices (mutable through the run)
-  /** Set by the burnout event so that no integrator stage evaluated at exactly t_burn sees thrust. */
-  readonly motorState: { burnedOut: boolean };
   /** The large-angle method in effect (D-070): the requested one, or 'linear' when a fin set is not covered. */
   readonly largeAngleMethod: LargeAngleMethod;
 }
@@ -399,20 +456,48 @@ function pack(p: Vec3, v: Vec3, q: Quaternion, w: Vec3): number[] {
   return [p.x, p.y, p.z, v.x, v.y, v.z, q.w, q.x, q.y, q.z, w.x, w.y, w.z];
 }
 
-function motorMass(ctx: Context, t: number): MotorMass | undefined {
-  const m = ctx.vehicle.motor;
+/** A motor's mass at time t of the flight; unignited motors are loaded (plan 0064). */
+function motorMass(motor: MotorRuntime, t: number): MotorMass | undefined {
+  const m = motor.source;
   if (m.kind !== 'definition') return undefined;
-  const one = motorMassAt(m.definition, seconds(Math.max(0, t)), m.aftEnd);
+  const since = motor.ignitedAt === undefined ? 0 : Math.max(0, t - motor.ignitedAt);
+  const one = motorMassAt(m.definition, seconds(since), m.aftEnd);
   return m.cluster === undefined ? one : { ...one, cluster: m.cluster };
 }
 
-function thrustNow(ctx: Context, t: number): number {
-  const m = ctx.vehicle.motor;
-  if (m.kind === 'ideal') return t >= 0 && t <= m.burnTime ? m.thrust : 0;
+/** GEO-12: the attached parts and every attached motor (plan 0064); one motor exactly as before. */
+function rocketMass(ctx: Context, t: number): ReturnType<typeof combineRocket> {
+  const masses: MotorMass[] = [];
+  for (const motor of ctx.motors) {
+    if (!motor.attached) continue;
+    const m = motorMass(motor, t);
+    if (m !== undefined) masses.push(m);
+  }
+  return masses.length <= 1
+    ? combineRocket(ctx.config.structure, masses[0])
+    : combineRocketMotors(ctx.config.structure, masses);
+}
+
+/** One motor's thrust at time t of the flight: 0 before its ignition, after its burnout or once separated. */
+function motorThrust(motor: MotorRuntime, t: number): number {
+  if (!motor.attached || motor.burnedOut || motor.ignitedAt === undefined) return 0;
+  const m = motor.source;
+  const since = t - motor.ignitedAt;
+  if (m.kind === 'ideal') return since >= 0 && since <= m.burnTime ? m.thrust : 0;
   // Plan 0057: a cluster's motors ignite together; their offsets are centred (or listed when not),
   // so the thrust is n times one motor's, along the axis.
-  const one = thrustAt(m.definition, seconds(Math.max(0, t)));
+  const one = thrustAt(m.definition, seconds(Math.max(0, since)));
   return m.cluster === undefined ? one : m.cluster.length * one;
+}
+
+/** The motor at the aft end of the attached vehicle: the lowest attached stage's (base drag, D-035). */
+function baseMotor(ctx: Context): MotorRuntime | undefined {
+  let base: MotorRuntime | undefined;
+  for (const motor of ctx.motors) {
+    if (!motor.attached || motor.source.kind !== 'definition') continue;
+    if (base === undefined || motor.stage > base.stage) base = motor;
+  }
+  return base;
 }
 
 function sampleFlight(
@@ -436,7 +521,7 @@ function derive(
   const altitudeAsl = (ctx.options.site.altitude as number) + s.position.z;
   const atm = ctx.atmosphere(metres(altitudeAsl));
   const wind = ctx.wind(s.position.z, Math.max(0, t));
-  const mp = combineRocket(ctx.structure, motorMass(ctx, t));
+  const mp = rocketMass(ctx, t);
   const m: number = mp.mass;
   const g = gravityAt(ctx.options.gravity, metres(altitudeAsl));
   const weight = vec3(0, 0, -m * g);
@@ -444,8 +529,10 @@ function derive(
 
   let forceWorld = weight;
   let momentBody: Vec3 = vec3(0, 0, 0);
-  const thrust =
-    phase === 'descent' || phase === 'landed' || ctx.motorState.burnedOut ? 0 : thrustNow(ctx, t);
+  const gated = phase === 'descent' || phase === 'landed';
+  let thrust = 0;
+  for (const motor of ctx.motors) thrust += gated ? 0 : motorThrust(motor, t);
+  const base = baseMotor(ctx);
   const nose =
     ctx.options.degreesOfFreedom === 3
       ? velocityAlignedNose(s.velocity, ctx.railDirection)
@@ -473,33 +560,46 @@ function derive(
       density: atm.density,
       speedOfSound: atm.speedOfSound,
       kinematicViscosity: atm.kinematicViscosity,
-      referenceLength: metres(ctx.rocketLength),
+      referenceLength: metres(ctx.config.rocketLength),
     });
-    const thrusting = thrust > 0;
+    // D-035: the base drag depends on whether the motor at the aft end is thrusting.
+    const thrusting =
+      ctx.motors.length === 1 ? thrust > 0 : base !== undefined && motorThrust(base, t) > 0;
     if (ctx.options.dragCurve !== undefined) {
       cd0 = dragCurveAt(ctx.options.dragCurve, flight.mach);
     } else {
+      const baseCount =
+        base?.source.kind === 'definition' ? clusterSums(base.source.cluster).count : 1;
       const drag = dragCoefficient({
-        components: ctx.vehicle.components,
+        components: ctx.config.components,
         mach: flight.mach,
         reynolds: flight.reynolds,
         roughnessHeight: ctx.vehicle.roughnessHeight,
-        ...(ctx.motorDiameter === undefined
+        ...(base?.source.kind !== 'definition'
           ? {}
           : {
               motor: {
-                diameter: metres(ctx.motorDiameter),
+                diameter: base.source.definition.diameter,
                 thrusting,
-                ...(ctx.motorCount === 1 || ctx.options.baseDragClusterMotors === 'one'
+                ...(baseCount === 1 || ctx.options.baseDragClusterMotors === 'one'
                   ? {}
-                  : { count: ctx.motorCount }),
+                  : { count: baseCount }),
               },
             }),
         baseDragMotorRule: ctx.options.baseDragMotorRule,
+        ...(ctx.options.railButtonDragMethod === undefined
+          ? {}
+          : { railButtonDragMethod: ctx.options.railButtonDragMethod }),
         ...(ctx.options.baseDragMethod === undefined
           ? {}
           : { baseDragMethod: ctx.options.baseDragMethod }),
-        referenceDiameter: metres(ctx.referenceDiameter),
+        ...(ctx.options.bodyFormFactor === undefined
+          ? {}
+          : { bodyFormFactor: ctx.options.bodyFormFactor }),
+        ...(ctx.options.finFrictionLength === undefined
+          ? {}
+          : { finFrictionLength: ctx.options.finFrictionLength }),
+        referenceDiameter: metres(ctx.config.referenceDiameter),
       });
       cd0 = drag.cd0;
       warnings.push(...drag.warnings);
@@ -511,7 +611,8 @@ function derive(
       if (speed > 0) {
         const dragForce = scale(
           vAir,
-          (((-(flight.dynamicPressure as number) * (Math.PI * ctx.referenceDiameter ** 2)) / 4) *
+          (((-(flight.dynamicPressure as number) * (Math.PI * ctx.config.referenceDiameter ** 2)) /
+            4) *
             cd0) /
             speed,
         );
@@ -523,7 +624,7 @@ function derive(
       const axialSign: -1 | 0 | 1 =
         flight.airspeedBody.x < 0 ? -1 : flight.airspeedBody.x > 0 ? 1 : 0;
       const aero = aerodynamicForcesAndMoments({
-        components: ctx.vehicle.components,
+        components: ctx.config.components,
         mach: flight.mach,
         angleOfAttack: flight.angleOfAttack,
         lateralAirflowAngle: flight.lateralAirflowAngle,
@@ -536,7 +637,7 @@ function derive(
         cd0: dimensionless(cd0),
         options: {
           finRollReduction: ctx.options.finRollReduction,
-          referenceDiameter: metres(ctx.referenceDiameter),
+          referenceDiameter: metres(ctx.config.referenceDiameter),
           largeAngleMethod: ctx.largeAngleMethod,
         },
       });
@@ -546,7 +647,7 @@ function derive(
       aeroForce = norm(aero.forceBody);
       cp = aero.cp;
       // DYN-17: the linearised rates for the step check.
-      const aRef = (Math.PI * ctx.referenceDiameter ** 2) / 4;
+      const aRef = (Math.PI * ctx.config.referenceDiameter ** 2) / 4;
       const qDyn: number = flight.dynamicPressure;
       const stiffness = qDyn * aRef * aero.cnAlpha * ((aero.cp as number) - (mp.cg as number));
       const transverse = Math.hypot(wBody.y, wBody.z);
@@ -688,13 +789,15 @@ interface PendingTimed {
   readonly kind: FlightEventKind;
   readonly detail: string;
   readonly action: () => void;
+  /** The motor whose burnout or charge this is; dropped if its stage separates first (plan 0064). */
+  readonly owner?: MotorRuntime;
 }
 
 /**
  * D-070: the large-angle method in effect for a flight. 'datcom' needs every
- * fin set to be covered by the DATCOM charts (HA-5, HA-6); otherwise the
- * small-angle model and the 90° limit (D-046) apply, with a warning naming
- * the reason.
+ * fin set's cross-section (HA-5); without one the small-angle model and the
+ * 90° limit (D-046) apply, with a warning naming the reason. Single wedges
+ * and high aspect ratios are approximated and listed instead (D-102).
  */
 function effectiveLargeAngleMethod(
   vehicle: FlightVehicle,
@@ -716,6 +819,254 @@ function effectiveLargeAngleMethod(
   return 'datcom';
 }
 
+/**
+ * Plan 0066 (D-102): the fin sets whose large-angle normal force (DATCOM, D-070) is approximated:
+ * a single-wedge section or an aspect ratio above the low-aspect-ratio limit. Listed in the
+ * displayed mode only; the OpenRocket-equivalent mode keeps the small-angle model and its limit.
+ * Plan 0067 (D-103): minor while the flight stays below the stall, where the fin keeps its
+ * validated slope; moderate once it went past the stall of an approximated fin set.
+ */
+function largeAngleApproximations(
+  vehicle: FlightVehicle,
+  method: LargeAngleMethod,
+  beyondStall: boolean,
+): Approximation[] {
+  if (method !== 'datcom') return [];
+  return vehicle.components.flatMap((p, i) => {
+    if (p.component.kind !== 'finSet') return [];
+    const reason = finLargeAngleApproximation(p.component);
+    if (reason === undefined) return [];
+    const name = vehicle.componentNames?.[i];
+    return [
+      {
+        subject: `Fin set${name === undefined || name === '' ? '' : ` "${name}"`}`,
+        what: 'its normal force beyond the stall, and past 90° when the rocket tumbles',
+        method: reason,
+        ...(beyondStall
+          ? {
+              effect:
+                'this flight went past the fins’ stall (tumbling, flying backward or at a steep angle), so its path and landing point depend on the approximated force',
+              impact: 'moderate' as const,
+            }
+          : {
+              effect:
+                'small: this flight stayed below the fins’ stall, where they keep their validated slope',
+              impact: 'minor' as const,
+            }),
+      },
+    ];
+  });
+}
+
+/** Plan 0067 (D-103): tumbling or flying backward at Mach 1 or above, listed when a flight did it. */
+const SUPERSONIC_REVERSE_FLOW_APPROXIMATION: Approximation = {
+  subject: 'The rocket',
+  what: 'the fin normal force while tumbling or flying backward above Mach 1',
+  method:
+    'the small-angle supersonic fin force (Niskanen eq. 3.49) applied to the reversed fin, at the reversed planform’s centre of pressure; no sourced method covers this (the DATCOM supersonic high-angle method is for 0 to 90°)',
+  effect:
+    'the tumbling motion, the path and the landing point are uncertain; the small-angle force over-predicts the fin force near 90°',
+  impact: 'major',
+};
+
+/** Plan 0064 (D-091): what a staged flight does not model exactly, listed with its result (rule 3). */
+export function stagingApproximations(stageCount: number): Approximation[] {
+  if (stageCount < 2) return [];
+  return [
+    {
+      subject: 'Stage separation',
+      what: 'the separation itself',
+      method:
+        'instantaneous: the separated stages leave the vehicle at the separation event, with no separation impulse and no gap in time',
+      effect:
+        'a spring or charge that pushes the stages apart, or a slow separation, is not represented; the upper stage’s flight is otherwise unchanged',
+      impact: 'minor',
+    },
+    {
+      subject: 'Stage separation',
+      what: 'the separated stages’ own flight',
+      method:
+        'not simulated (a version-1 non-goal, D-091): only the vehicle that flies on is followed',
+      effect:
+        'nothing on the upper stage’s flight; the booster’s apogee, descent and landing point are not given',
+      impact: 'minor',
+    },
+    {
+      subject: 'Stage separation',
+      what: 'the airflow between the stages just before and after separation',
+      method:
+        'each configuration is the attached parts alone, with Niskanen’s component aerodynamics',
+      effect: 'interstage interference on drag and stability is not represented; it is short-lived',
+      impact: 'minor',
+    },
+  ];
+}
+
+/** Plan 0064 part 2: a separation event in words, with its delay ("1.5 s after its motor's burnout"). */
+function separationInWords(sep: StageSeparation): string {
+  const altitude = sep.altitude === undefined ? '' : `${(sep.altitude as number).toFixed(1)} m`;
+  const event: Record<SeparationEvent, string> = {
+    'upper-ignition': 'the ignition of the stage above it',
+    ignition: 'its own motor’s ignition',
+    burnout: 'its own motor’s burnout',
+    ejection: 'its own motor’s ejection charge',
+    launch: 'launch',
+    apogee: 'apogee',
+    'altitude-ascending': `climbing through ${altitude} above the pad`,
+    'altitude-descending': `descending through ${altitude} above the pad`,
+    never: 'never',
+  };
+  const delay: number = sep.delay;
+  return delay > 0 ? `${String(delay)} s after ${event[sep.event]}` : `at ${event[sep.event]}`;
+}
+
+/**
+ * Plan 0064 part 2 (rule 3): a motor that was due to ignite and never did, and a stage that was due
+ * to separate and never did, change the flight in kind; each is said with its reason.
+ */
+function stagingWarnings(
+  stages: VehicleStages,
+  motors: readonly MotorRuntime[],
+  separated: ReadonlySet<number>,
+  stageName: (k: number) => string,
+  ended: string,
+): string[] {
+  const out: string[] = [];
+  stages.motors.forEach((m, i) => {
+    const rt = motors[i];
+    if (rt === undefined || rt.ignitedAt !== undefined || m.ignition.event === 'never') return;
+    const of = m.ignition.of === undefined ? undefined : motors[m.ignition.of];
+    let reason: string;
+    if (!rt.attached) reason = `${stageName(m.stage)} separated before it was due`;
+    else if (m.ignition.event === 'launch') {
+      reason = `it was due ${String(m.ignition.delay)} s after launch, but ${ended} first`;
+    } else if (of?.ignitedAt === undefined) {
+      reason = `it is set to ignite at the ${m.ignition.event === 'burnout' ? 'burnout' : 'ejection charge'} of ${of?.label ?? 'another motor'}, which never ignited`;
+    } else if (
+      m.ignition.event === 'ejection' &&
+      (of.source.kind !== 'definition' || of.source.ejectionDelay === undefined)
+    ) {
+      reason = `it is set to ignite at the ejection charge of ${of.label}, which is plugged (it has no ejection charge)`;
+    } else {
+      reason = `it is set to ignite ${m.ignition.delay > 0 ? `${String(m.ignition.delay)} s after` : 'at'} the ${m.ignition.event === 'burnout' ? 'burnout' : 'ejection charge'} of ${of.label}, but ${ended} first`;
+    }
+    out.push(
+      `${rt.label} never ignited: ${reason}. The flight shown is without its thrust${rt.attached ? ', carrying the unburnt motor as dead weight' : ''}; check its ignition event.`,
+    );
+  });
+  stages.separation.forEach((sep, k) => {
+    if (k === 0 || sep.event === 'never' || separated.has(k)) return;
+    out.push(
+      `${stageName(k)} never separated: it is set to separate ${separationInWords(sep)}, which did not happen before ${ended}. The flight shown carries it, with its mass and drag, to the end.`,
+    );
+  });
+  return out;
+}
+
+/** Plan 0064: the stages of a vehicle must describe it consistently; plain messages otherwise. */
+function validateStages(vehicle: FlightVehicle): void {
+  const st = vehicle.stages;
+  if (st === undefined) return;
+  const n = st.separation.length;
+  if (!(n >= 1)) throw new InvalidInputError('number of stages', n, 'must be at least 1');
+  const stageOk = (k: number): boolean => Number.isInteger(k) && k >= 0 && k < n;
+  if (st.componentStage.length !== vehicle.components.length) {
+    throw new InvalidInputError(
+      'stage list of the parts',
+      st.componentStage.length,
+      `must give a stage for each of the ${String(vehicle.components.length)} parts`,
+    );
+  }
+  st.componentStage.forEach((k, i) => {
+    if (!stageOk(k)) {
+      throw new InvalidInputError(
+        `stage of part ${String(i)}`,
+        k,
+        `must be a stage from 0 to ${String(n - 1)}`,
+      );
+    }
+  });
+  if (!st.componentStage.includes(0)) {
+    throw new InvalidInputError('top stage', 0, 'must hold at least one part');
+  }
+  if (st.motors.length === 0) {
+    throw new InvalidInputError('motors of the stages', 0, 'at least one motor is required');
+  }
+  st.motors.forEach((m, i) => {
+    validateMotor(m.motor.definition);
+    if (!stageOk(m.stage)) {
+      throw new InvalidInputError(
+        `stage of motor ${String(i + 1)}`,
+        m.stage,
+        `must be a stage from 0 to ${String(n - 1)}`,
+      );
+    }
+    const delay: number = m.ignition.delay;
+    if (!Number.isFinite(delay) || delay < 0) {
+      throw new InvalidInputError(
+        `ignition delay of motor ${String(i + 1)}`,
+        delay,
+        'must be 0 s or more',
+      );
+    }
+    if (m.ignition.event === 'burnout' || m.ignition.event === 'ejection') {
+      const of = m.ignition.of;
+      if (
+        of === undefined ||
+        !Number.isInteger(of) ||
+        of < 0 ||
+        of >= st.motors.length ||
+        of === i
+      ) {
+        throw new InvalidInputError(
+          `ignition of motor ${String(i + 1)}`,
+          of ?? Number.NaN,
+          `must name another motor (1 to ${String(st.motors.length)}) whose ${m.ignition.event === 'burnout' ? 'burnout' : 'ejection charge'} ignites it`,
+        );
+      }
+    }
+  });
+  st.separation.forEach((sep, k) => {
+    if (k === 0) return;
+    const delay: number = sep.delay;
+    if (!Number.isFinite(delay) || delay < 0) {
+      throw new InvalidInputError(
+        `separation delay of stage ${String(k + 1)}`,
+        delay,
+        'must be 0 s or more',
+      );
+    }
+    if (sep.event === 'altitude-ascending' || sep.event === 'altitude-descending') {
+      const altitude = sep.altitude === undefined ? Number.NaN : (sep.altitude as number);
+      if (!Number.isFinite(altitude) || altitude <= 0) {
+        throw new InvalidInputError(
+          `separation altitude of stage ${String(k + 1)}`,
+          altitude,
+          'must be greater than 0 m above the pad',
+        );
+      }
+    }
+  });
+  if (st.recoveryStage !== undefined) {
+    if (st.recoveryStage.length !== vehicle.recovery.length) {
+      throw new InvalidInputError(
+        'stage list of the recovery devices',
+        st.recoveryStage.length,
+        `must give a stage for each of the ${String(vehicle.recovery.length)} devices`,
+      );
+    }
+    st.recoveryStage.forEach((k, i) => {
+      if (!stageOk(k)) {
+        throw new InvalidInputError(
+          `stage of recovery device ${String(i + 1)}`,
+          k,
+          `must be a stage from 0 to ${String(n - 1)}`,
+        );
+      }
+    });
+  }
+}
+
 /** Run the simulation. */
 export function simulateFlight(vehicle: FlightVehicle, options: SimulationOptions): FlightResult {
   const launch = validateLaunch(options.site, options.rail);
@@ -734,25 +1085,71 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     beyondValidated: false,
     largeAngle: false,
   };
-  if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
+  const used = { supersonicReverseFlow: false, approximatedFinBeyondStall: false };
+  const stages = vehicle.stages;
+  if (stages === undefined) {
+    if (vehicle.motor.kind === 'definition') validateMotor(vehicle.motor.definition);
+  } else {
+    validateStages(vehicle);
+  }
   const maxTime: number = options.maxTime;
   if (!(maxTime > 0))
     throw new InvalidInputError('maximum simulation time', maxTime, 'must be greater than 0 s');
   if (options.dragCurve !== undefined) validateDragCurve(options.dragCurve);
   validateComponentFit(vehicle.components);
-  const structure = structuralMassParts(vehicle.components);
-  const rocketLength = vehicle.components.reduce((s, p) => {
-    const c = p.component;
-    return c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition'
-      ? s + (c.length as number)
-      : s;
-  }, 0);
-  const referenceDiameter: number =
-    vehicle.referenceDiameter ?? maximumBodyDiameter(vehicle.components);
+  const configuration = (indices: ReadonlySet<number>): Configuration => {
+    const components = vehicle.components.filter((_, i) => indices.has(i));
+    return {
+      components,
+      indices,
+      structure: structuralMassParts(components),
+      // Plan 0070: the main body's length; a pod set's parts are outside it.
+      rocketLength: components.reduce((s, p) => {
+        const c = p.component;
+        return p.instances === undefined &&
+          (c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition')
+          ? s + (c.length as number)
+          : s;
+      }, 0),
+      referenceDiameter: vehicle.referenceDiameter ?? maximumBodyDiameter(components),
+    };
+  };
+  const config = configuration(new Set(vehicle.components.map((_, i) => i)));
+  const burnOf = (m: MotorSource): number =>
+    m.kind === 'definition' ? burnTime(m.definition) : m.burnTime;
+  const motors: MotorRuntime[] =
+    stages === undefined
+      ? [
+          {
+            source: vehicle.motor,
+            stage: 0,
+            label: '',
+            burn: burnOf(vehicle.motor),
+            ignitedAt: undefined,
+            burnedOut: false,
+            attached: true,
+          },
+        ]
+      : stages.motors.map((m, i) => ({
+          source: m.motor,
+          stage: m.stage,
+          label: m.name ?? `Motor ${String(i + 1)}`,
+          burn: burnOf(m.motor),
+          ignitedAt: undefined,
+          burnedOut: false,
+          attached: true,
+        }));
+  // The burn that the launch checks refer to: the one motor's, or the longest of those lit at launch.
   const motorBurn =
-    vehicle.motor.kind === 'definition'
-      ? (burnTime(vehicle.motor.definition) as number)
-      : (vehicle.motor.burnTime as number);
+    stages === undefined
+      ? burnOf(vehicle.motor)
+      : stages.motors.reduce(
+          (b, m, i) =>
+            m.ignition.event === 'launch'
+              ? Math.max(b, (motors[i]?.burn ?? 0) + (m.ignition.delay as number))
+              : b,
+          0,
+        );
   // Issue #32, D-075: a device open while the motor still burns would need thrust and canopy drag together;
   // the descent model (DYN-14, Niskanen §4.2.5 pp. 67 to 68) has the canopy drag and gravity only, and the
   // flight would silently stay on the pad. Refused with a plain message instead.
@@ -770,33 +1167,48 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   const ctx: Context = {
     vehicle,
     options,
-    structure,
     atmosphere: atmosphereModel(options.atmosphere),
     railDirection: launch.railDirection,
     railLength: options.rail.length,
-    rocketLength,
-    referenceDiameter,
-    burnTime: motorBurn,
-    motorDiameter:
-      vehicle.motor.kind === 'definition' ? vehicle.motor.definition.diameter : undefined,
-    motorCount: vehicle.motor.kind === 'definition' ? clusterSums(vehicle.motor.cluster).count : 1,
+    config,
+    motors,
     deployedArea: { area: 0 },
-    motorState: { burnedOut: false },
     wind: windField(options.wind, maxTime),
     largeAngleMethod: effectiveLargeAngleMethod(vehicle, options, notes),
   };
+  // Plan 0064: the stage of each recovery device; the devices of a separated stage leave with it.
+  const deviceStage = (i: number): number => stages?.recoveryStage?.[i] ?? 0;
+  const activeRecovery = new Set<RecoveryDevice>(vehicle.recovery);
+  const stageName = (k: number): string => stages?.names?.[k] ?? `stage ${String(k + 1)}`;
 
   // M-4: a device on the ejection charge needs a charge. A plugged motor (no delay) or the ideal motor of the
   // analytical cases has none, so the device can never open; say so before the flight, not only after it.
   const ejectionDevices = vehicle.recovery.filter((d) => d.deploy.event === 'ejection');
   const hasEjectionCharge =
     vehicle.motor.kind === 'definition' && vehicle.motor.ejectionDelay !== undefined;
-  if (!hasEjectionCharge) {
-    for (const d of ejectionDevices) {
-      warnings.add(
-        `"${d.name}" is set to open at the motor's ejection charge, but ${vehicle.motor.kind === 'ideal' ? 'this motor model has no ejection charge' : 'the motor is plugged (it has no ejection delay)'}, so it never opens and the rocket comes down without it. Set it to open at apogee or at an altitude (with an altimeter), or choose a motor with an ejection delay.`,
-      );
+  if (stages === undefined) {
+    if (!hasEjectionCharge) {
+      for (const d of ejectionDevices) {
+        warnings.add(
+          `"${d.name}" is set to open at the motor's ejection charge, but ${vehicle.motor.kind === 'ideal' ? 'this motor model has no ejection charge' : 'the motor is plugged (it has no ejection delay)'}, so it never opens and the rocket comes down without it. Set it to open at apogee or at an altitude (with an altimeter), or choose a motor with an ejection delay.`,
+        );
+      }
     }
+  } else {
+    vehicle.recovery.forEach((d, i) => {
+      if (d.deploy.event !== 'ejection') return;
+      const charged = motors.some(
+        (m) =>
+          m.stage === deviceStage(i) &&
+          m.source.kind === 'definition' &&
+          m.source.ejectionDelay !== undefined,
+      );
+      if (!charged) {
+        warnings.add(
+          `"${d.name}" is set to open at the ejection charge of its stage's motor, but no motor of ${stageName(deviceStage(i))} has an ejection charge, so it never opens and that stage comes down without it. Set it to open at apogee or at an altitude, or give the motor an ejection delay.`,
+        );
+      }
+    });
   }
 
   const events: FlightEvent[] = [];
@@ -829,18 +1241,25 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     // Every caller deploys at the current state: a timed action runs at its step boundary, an event
     // handler after the state has been advanced to the bisected crossing.
     deployment ??= { t: at, v: airspeedAt(at, y) };
-    const area = (Math.PI * (device.diameter as number) ** 2) / 4;
-    ctx.deployedArea.area += device.dragCoefficient * area;
+    const dragArea = recoveryDragArea(device, options.streamerDragMethod);
+    ctx.deployedArea.area += dragArea;
     events.push({
       kind: 'deployment',
       time: seconds(at),
-      detail: `${device.name} deployed (${why}); C_D A = ${(device.dragCoefficient * area).toFixed(4)} m²`,
+      detail: `${device.name} deployed (${why}); C_D A = ${dragArea.toFixed(4)} m²`,
     });
     if (phase !== 'landed') phase = 'descent';
   };
-  const scheduleDeployments = (trigger: RecoveryDevice['deploy']['event'], at: number): void => {
-    for (const device of vehicle.recovery) {
+  const scheduleDeployments = (
+    trigger: RecoveryDevice['deploy']['event'],
+    at: number,
+    stage?: number,
+  ): void => {
+    for (const [i, device] of vehicle.recovery.entries()) {
       if (device.deploy.event !== trigger || deployed.has(device)) continue;
+      if (!activeRecovery.has(device)) continue;
+      // Plan 0064: an ejection charge opens the devices of its own stage only.
+      if (stage !== undefined && stages !== undefined && deviceStage(i) !== stage) continue;
       const delay: number = device.deploy.delay;
       if (delay <= 0) deploy(device, at, `at ${trigger}`);
       else
@@ -855,33 +1274,179 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     }
   };
 
-  events.push({ kind: 'launch', time: seconds(0), detail: 'ignition at t = 0' });
-  scheduleDeployments('launch', 0);
-  timed.push({
-    time: motorBurn,
-    kind: 'burnout',
-    detail: `motor burnout at ${String(motorBurn)} s`,
-    action: () => {
-      ctx.motorState.burnedOut = true;
-      if (phase === 'powered') phase = 'coast';
-    },
-  });
-  if (vehicle.motor.kind === 'definition' && vehicle.motor.ejectionDelay !== undefined) {
-    const tE = motorBurn + (vehicle.motor.ejectionDelay as number);
+  const thrustingNow = (): boolean =>
+    motors.some((m) => m.attached && m.ignitedAt !== undefined && !m.burnedOut);
+  // Plan 0064: the top stage's motor burnout, for the ejection-delay advice of issue #9.
+  let topBurnout: number | undefined;
+  const separated = new Set<number>();
+  /** Separate stage k: it and every stage below it leave the vehicle (plan 0064, D-091). */
+  const separate = (k: number, at: number, why: string): void => {
+    if (stages === undefined || k <= 0 || separated.has(k)) return;
+    for (let j = k; j < stages.separation.length; j++) separated.add(j);
+    const before = rocketMass(ctx, at).mass;
+    for (const m of motors) if (m.stage >= k) m.attached = false;
+    // The burnouts and charges still due of the motors that left are no longer events of this flight.
+    for (let i = timed.length - 1; i >= 0; i--) {
+      const owner = timed[i]?.owner;
+      if (owner !== undefined && !owner.attached) timed.splice(i, 1);
+    }
+    const keep = new Set<number>();
+    stages.componentStage.forEach((st, i) => {
+      if (st < k) keep.add(i);
+    });
+    Object.assign(ctx.config, configuration(keep));
+    vehicle.recovery.forEach((d, i) => {
+      if (deviceStage(i) < k || !activeRecovery.has(d)) return;
+      activeRecovery.delete(d);
+      if (deployed.has(d)) {
+        ctx.deployedArea.area -= recoveryDragArea(d, options.streamerDragMethod);
+      }
+    });
+    if (phase === 'powered' && !thrustingNow()) phase = 'coast';
+    const after = rocketMass(ctx, at).mass;
+    events.push({
+      kind: 'separation',
+      time: seconds(at),
+      detail: `${stageName(k)} separated (${why}); ${(before - after).toFixed(4)} kg left the vehicle, ${after.toFixed(4)} kg flies on`,
+    });
+  };
+  /** Separate stage k after its delay from the event at `at`. */
+  const scheduleSeparation = (k: number, sep: StageSeparation, at: number, why: string): void => {
+    const when = at + (sep.delay as number);
     timed.push({
-      time: tE,
-      kind: 'ejection-charge',
-      detail: `ejection charge at ${tE.toFixed(3)} s`,
+      time: when,
+      kind: 'separation',
+      detail: '',
       action: () => {
-        const st = unpack(y);
-        ejectionCharge = {
-          time: tE,
-          airspeed: norm(sub(st.velocity, ctx.wind(st.position.z, tE))),
-          verticalVelocity: st.velocity.z,
-        };
-        scheduleDeployments('ejection', tE);
+        separate(k, when, (sep.delay as number) > 0 ? `${String(sep.delay)} s after ${why}` : why);
       },
     });
+  };
+  const scheduleSeparations = (
+    event: SeparationEvent,
+    stage: number | undefined,
+    at: number,
+    why: string,
+  ): void => {
+    stages?.separation.forEach((sep, k) => {
+      if (k === 0 || sep.event !== event || (stage !== undefined && k !== stage)) return;
+      scheduleSeparation(k, sep, at, why);
+    });
+  };
+  // Plan 0064 part 2: the stages whose separation altitude has been crossed.
+  const altitudeTriggered = new Set<number>();
+  /** Whether stage k waits for an altitude crossing now: climbing before apogee, descending after. */
+  const altitudeSeparationDue = (sep: StageSeparation, k: number): boolean =>
+    k > 0 &&
+    !separated.has(k) &&
+    !altitudeTriggered.has(k) &&
+    sep.altitude !== undefined &&
+    (sep.event === 'altitude-ascending'
+      ? !apogeeReached
+      : sep.event === 'altitude-descending' && apogeeReached);
+  /** Ignite a motor and schedule its burnout and ejection charge (Niskanen Table 4.2 p. 69). */
+  const ignite = (index: number, at: number, why: string): void => {
+    const m = motors[index];
+    if (m === undefined || !m.attached || m.ignitedAt !== undefined) return;
+    m.ignitedAt = at;
+    if (stages !== undefined) {
+      events.push({ kind: 'ignition', time: seconds(at), detail: `${m.label} ignition (${why})` });
+      if (phase === 'coast') phase = 'powered';
+      // The stage below the igniting one, or its own stage, separates at this ignition when set to.
+      scheduleSeparations('upper-ignition', m.stage + 1, at, `${m.label} ignition`);
+      scheduleSeparations('ignition', m.stage, at, `${m.label} ignition`);
+    }
+    const tB = at + m.burn;
+    if (m.stage === 0) topBurnout = tB;
+    timed.push({
+      owner: m,
+      time: tB,
+      kind: 'burnout',
+      detail:
+        stages === undefined
+          ? `motor burnout at ${String(motorBurn)} s`
+          : `${m.label} burnout at ${tB.toFixed(3)} s`,
+      action: () => {
+        if (!m.attached) return;
+        m.burnedOut = true;
+        if (phase === 'powered' && !thrustingNow()) phase = 'coast';
+        stages?.motors.forEach((other, j) => {
+          if (other.ignition.event === 'burnout' && other.ignition.of === index) {
+            timed.push({
+              time: tB + (other.ignition.delay as number),
+              kind: 'ignition',
+              detail: '',
+              action: () => {
+                ignite(j, tB + (other.ignition.delay as number), `${m.label} burnout`);
+              },
+            });
+          }
+        });
+        scheduleSeparations('burnout', m.stage, tB, `${m.label} burnout`);
+      },
+    });
+    const source = m.source;
+    if (source.kind === 'definition' && source.ejectionDelay !== undefined) {
+      const tE = tB + (source.ejectionDelay as number);
+      timed.push({
+        owner: m,
+        time: tE,
+        kind: 'ejection-charge',
+        detail:
+          stages === undefined
+            ? `ejection charge at ${tE.toFixed(3)} s`
+            : `${m.label} ejection charge at ${tE.toFixed(3)} s`,
+        action: () => {
+          if (!m.attached) return;
+          const st = unpack(y);
+          // With stages, the summary's charge is the top stage's: a lower stage's charge lights or
+          // separates the stage above and is meant to fire while climbing (plan 0064).
+          if (stages === undefined || m.stage === 0) {
+            ejectionCharge = {
+              time: tE,
+              airspeed: norm(sub(st.velocity, ctx.wind(st.position.z, tE))),
+              verticalVelocity: st.velocity.z,
+            };
+          }
+          scheduleDeployments('ejection', tE, m.stage);
+          stages?.motors.forEach((other, j) => {
+            if (other.ignition.event === 'ejection' && other.ignition.of === index) {
+              timed.push({
+                time: tE + (other.ignition.delay as number),
+                kind: 'ignition',
+                detail: '',
+                action: () => {
+                  ignite(j, tE + (other.ignition.delay as number), `${m.label} ejection charge`);
+                },
+              });
+            }
+          });
+          scheduleSeparations('ejection', m.stage, tE, `${m.label} ejection charge`);
+        },
+      });
+    }
+  };
+
+  events.push({ kind: 'launch', time: seconds(0), detail: 'ignition at t = 0' });
+  scheduleDeployments('launch', 0);
+  if (stages === undefined) {
+    ignite(0, 0, 'launch');
+  } else {
+    stages.motors.forEach((m, i) => {
+      if (m.ignition.event !== 'launch') return;
+      const at: number = m.ignition.delay;
+      if (at <= 0) ignite(i, 0, 'launch');
+      else
+        timed.push({
+          time: at,
+          kind: 'ignition',
+          detail: '',
+          action: () => {
+            ignite(i, at, `${String(at)} s after launch`);
+          },
+        });
+    });
+    scheduleSeparations('launch', undefined, 0, 'launch');
   }
 
   const recordInterval =
@@ -933,13 +1498,13 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK
     ) {
       const linear = normalForceAtAngle(
-        vehicle.components,
+        ctx.config.components,
         f.mach,
         f.angleOfAttack,
         f.lateralAirflowAngle,
         {
           finRollReduction: options.finRollReduction,
-          referenceDiameter: metres(ctx.referenceDiameter),
+          referenceDiameter: metres(ctx.config.referenceDiameter),
           largeAngleMethod: 'linear',
         },
       ).cp;
@@ -957,7 +1522,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       Number.isFinite(cp) &&
       (f === undefined || (f.angleOfAttack as number) <= AERO_MAX_ANGLE_OF_ATTACK)
     ) {
-      const calibers = (cp - derived.cg) / referenceDiameter;
+      const calibers = (cp - derived.cg) / ctx.config.referenceDiameter;
       const current = lowest[phase];
       if (current === undefined || calibers < current.calibers) {
         lowest[phase] = {
@@ -976,6 +1541,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       const atm = ctx.atmosphere(metres((options.site.altitude as number) + unpack(y).position.z));
       for (const { index, fin, geometry } of flutterFins) {
         if (fin.shearModulus === undefined || geometry === undefined || !(airspeed > 0)) continue;
+        // Plan 0064: the fins of a separated stage are no longer flying with the vehicle.
+        if (!ctx.config.indices.has(index)) continue;
         const vf = flutterVelocity(geometry, fin.shearModulus, atm.pressure, atm.speedOfSound);
         const ratio = vf / airspeed;
         const current = flutterLowest.get(index);
@@ -998,6 +1565,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       else if (m > 1.2 && m <= 2) regimes.supersonic = true;
       else if (m > 2) regimes.beyondValidated = true;
       if ((derived.flight.angleOfAttack as number) > Math.PI / 3) regimes.largeAngle = true;
+      // Plan 0067 (D-103): which approximated parts of the large-angle model this flight used.
+      for (const w of derived.warnings) {
+        if (w === SUPERSONIC_REVERSE_FLOW_WARNING) used.supersonicReverseFlow = true;
+        else if (isLargeAngleApproximationWarning(w)) used.approximatedFinBeyondStall = true;
+      }
     }
     if (!recordNow) return;
     const s = unpack(y);
@@ -1026,7 +1598,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       mass: derived.mass,
       cg: derived.cg,
       cp: derived.cp,
-      stabilityCalibers: Number.isNaN(cp) ? Number.NaN : (cp - derived.cg) / referenceDiameter,
+      stabilityCalibers: Number.isNaN(cp)
+        ? Number.NaN
+        : (cp - derived.cg) / ctx.config.referenceDiameter,
     });
     for (const w of derived.warnings) notes.add(w);
     lastRecorded = t;
@@ -1070,7 +1644,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   let burnout: { t: number; v: number } | undefined;
   let apogee: { t: number; z: number } | undefined;
   let landing: { t: number; vz: number; speed: number; x: number; y: number } | undefined;
-  let endReason: 'landing' | 'max-time' | 'model-limit' = 'max-time';
+  let endReason: FlightSummary['endReason'] = 'max-time';
   let stopped = false;
   let maxVelocity = 0;
   let maxMach = 0;
@@ -1094,7 +1668,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (nextTimed !== undefined && nextTimed.time <= t + 1e-12) {
       timed.shift();
       nextTimed.action();
-      if (nextTimed.kind !== 'deployment')
+      if (
+        nextTimed.kind !== 'deployment' &&
+        nextTimed.kind !== 'ignition' &&
+        nextTimed.kind !== 'separation'
+      )
         events.push({
           kind: nextTimed.kind,
           time: seconds(nextTimed.time),
@@ -1103,6 +1681,17 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       if (nextTimed.kind === 'burnout') burnout = { t, v: norm(unpack(y).velocity) };
       record(true);
       continue;
+    }
+    // Plan 0064 part 2: on the pad with no motor lit and none due to light, nothing more can happen.
+    if (
+      stages !== undefined &&
+      phase === 'on-rail' &&
+      !motors.some((m) => m.ignitedAt !== undefined) &&
+      !timed.some((x) => x.kind === 'ignition')
+    ) {
+      stopped = true;
+      endReason = 'no-ignition';
+      break;
     }
     if (options.integrator.kind === 'rk4') {
       // D-063: never take an RK4 step outside the stability region of the linearised dynamics.
@@ -1151,10 +1740,9 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       }
       if (check.pitchAmplitudeLoss > RK4_WARN_PITCH_AMPLITUDE_LOSS && !pitchLossWarned) {
         pitchLossWarned = true;
-        const betterStep = (
-          (1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) *
-          0.9
-        ).toPrecision(2);
+        const betterStep = stepRoundedDown(
+          (1.0 / derive(ctx, phase, t, y).derived.rates.pitchNatural) * 0.9,
+        );
         warnings.add(
           `RK4 step check: the time step is coarse for this rocket's pitch oscillation, so the calculation damps the wobble by about ${(check.pitchAmplitudeLoss * 100).toFixed(1)} % per step. Apogee and speeds are not affected; to see the oscillation, use a step below ${betterStep} s or the Dormand–Prince integrator.`,
         );
@@ -1163,7 +1751,20 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         );
       }
     }
-    let attempt = stepOnce(hTry);
+    // Plan 0065: with Dormand–Prince, a trial step so long that its stages leave the models' range
+    // (a canopy opening on a fast rocket after a long smooth coast, a stiff decay) is a rejected
+    // step, shrunk and retried like one whose error estimate is too large. Only when no step down
+    // to the minimum works is the error the flight's.
+    const tryStep = (hh: number): { yNext: number[]; errorNorm: number; error?: PhysicsError } => {
+      if (options.integrator.kind === 'rk4') return stepOnce(hh);
+      try {
+        return stepOnce(hh);
+      } catch (error) {
+        if (error instanceof PhysicsError) return { yNext: y, errorNorm: Infinity, error };
+        throw error;
+      }
+    };
+    let attempt = tryStep(hTry);
     if (options.integrator.kind === 'dormand-prince') {
       const o = {
         relativeTolerance: options.integrator.relativeTolerance,
@@ -1174,9 +1775,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       let tries = 0;
       while (attempt.errorNorm > 1 && hTry > 1e-9 && tries < 40) {
         hTry = nextStepSize(hTry, attempt.errorNorm, o);
-        attempt = stepOnce(hTry);
+        attempt = tryStep(hTry);
         tries++;
       }
+      if (attempt.error !== undefined) throw attempt.error;
       if (attempt.errorNorm > 1) {
         const f = derive(ctx, phase, t, y).derived.flight;
         throw new SimulationStalledError(
@@ -1213,10 +1815,21 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     if (phase !== 'on-rail')
       candidates.push({ kind: 'landing', g: altitudeAbovePad, direction: 'down' });
 
+    // Plan 0064 part 2: separations at an altitude, climbing before apogee and descending after it.
+    stages?.separation.forEach((sep, k) => {
+      if (!altitudeSeparationDue(sep, k)) return;
+      const alt = sep.altitude as number;
+      candidates.push({
+        kind: 'separation',
+        g: (yy) => altitudeAbovePad(yy) - alt,
+        direction: sep.event === 'altitude-ascending' ? 'up' : 'down',
+      });
+    });
     if (apogeeReached) {
       for (const device of vehicle.recovery) {
         if (
           device.deploy.event === 'altitude' &&
+          activeRecovery.has(device) &&
           !deployed.has(device) &&
           device.deploy.altitude !== undefined
         ) {
@@ -1260,20 +1873,21 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     }
     // D-046: the angle-of-attack limit of the aerodynamic model, checked after the other events of the
     // step (apogee and a deployment at apogee take precedence, and a descent is drag-only).
+    // D-070, D-103: the displayed mode's large-angle model continues through 180° at any Mach number;
+    // the 90° limit remains in the OpenRocket-equivalent mode.
     if (
       fired === undefined &&
       (phase === 'powered' || phase === 'coast') &&
-      options.degreesOfFreedom === 6
+      options.degreesOfFreedom === 6 &&
+      ctx.largeAngleMethod === 'linear'
     ) {
       const aoa = (yy: readonly number[]): number => {
         const f = sampleFlight(ctx, phase, t, yy);
         return f === undefined ? 0 : f.angleOfAttack;
       };
-      // D-070: the DATCOM model continues through 180° below Mach 1; the 90° limit remains otherwise.
       const beyond = (yy: readonly number[]): boolean => {
         const f = sampleFlight(ctx, phase, t, yy);
-        if (f === undefined || f.angleOfAttack <= AERO_MAX_ANGLE_OF_ATTACK) return false;
-        return ctx.largeAngleMethod === 'linear' || (f.mach as number) >= 1;
+        return f !== undefined && f.angleOfAttack > AERO_MAX_ANGLE_OF_ATTACK;
       };
       if (beyond(y)) {
         // Already beyond the limit at the start of the step (a rocket falling tail-first from apogee).
@@ -1312,7 +1926,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       switch (fired.kind) {
         case 'rail-exit':
           railExit = { t, v: speed };
-          phase = t < motorBurn ? 'powered' : 'coast';
+          phase =
+            stages === undefined
+              ? t < motorBurn
+                ? 'powered'
+                : 'coast'
+              : thrustingNow()
+                ? 'powered'
+                : 'coast';
           events.push({
             kind: 'rail-exit',
             time: seconds(t),
@@ -1328,11 +1949,13 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
             detail: `apogee ${s.position.z.toFixed(3)} m above the pad`,
           });
           scheduleDeployments('apogee', t);
+          scheduleSeparations('apogee', undefined, t, 'apogee');
           break;
         case 'altitude':
           for (const device of vehicle.recovery) {
             if (
               device.deploy.event === 'altitude' &&
+              activeRecovery.has(device) &&
               !deployed.has(device) &&
               device.deploy.altitude !== undefined &&
               Math.abs(s.position.z - (device.deploy.altitude as number)) < 1e-6
@@ -1378,28 +2001,38 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
           endReason = 'model-limit';
           const f = sampleFlight(ctx, phase, t, y);
           const deg = f === undefined ? Number.NaN : ((f.angleOfAttack as number) * 180) / Math.PI;
-          const supersonic = ctx.largeAngleMethod === 'datcom';
           events.push({
             kind: 'model-limit',
             time: seconds(t),
-            detail: supersonic
-              ? `angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above, beyond the large-angle model (D-070); the flight is not continued`
-              : `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
+            detail: `angle of attack reached ${deg.toFixed(1)}°, the 90° limit of the aerodynamic model; the flight is not continued (D-046)`,
           });
           // Issue #19: the plain message is the design warning for endReason 'model-limit'.
           notes.add(
-            supersonic
-              ? `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}° at Mach 1 or above: the large-angle model (DATCOM, D-070) covers fins beyond 90° only below Mach 1, and the DATCOM supersonic high-angle charts are not implemented. The rocket was flying backwards or tumbling at supersonic speed.`
-              : `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
+            `The flight ended at ${t.toFixed(3)} s because the angle of attack reached ${deg.toFixed(1)}°: the small-angle normal force model (Niskanen chapter 3, Barrowman fins as flat plates) is applied only up to 90° (D-046). The rocket was flying backwards or tumbling; a recovery device deploying at apogee avoids this.`,
           );
           break;
         }
         case 'burnout':
         case 'deployment':
         case 'ejection-charge':
+        case 'separation':
+          // Plan 0064 part 2: a stage set to separate when climbing or descending through an altitude.
+          stages?.separation.forEach((sep, k) => {
+            if (!altitudeSeparationDue(sep, k)) return;
+            if (Math.abs(s.position.z - (sep.altitude as number)) >= 1e-6) return;
+            altitudeTriggered.add(k);
+            scheduleSeparation(
+              k,
+              sep,
+              t,
+              `${sep.event === 'altitude-ascending' ? 'climbing' : 'descending'} through ${String(sep.altitude)} m`,
+            );
+          });
+          break;
         case 'launch':
         case 'liftoff':
         case 'max-time':
+        case 'ignition':
           // timed events act through their own handlers; nothing to do here
           break;
       }
@@ -1416,7 +2049,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       detail: `maximum simulation time ${String(maxTime)} s reached in phase ${phase}`,
     });
   // M-4: the charge was due after the flight ended (a delay longer than the flight), so its devices never opened.
-  if (hasEjectionCharge && !events.some((e) => e.kind === 'ejection-charge')) {
+  if (
+    stages === undefined &&
+    hasEjectionCharge &&
+    !events.some((e) => e.kind === 'ejection-charge')
+  ) {
     const due = motorBurn + (vehicle.motor.ejectionDelay as number);
     const ended =
       endReason === 'landing' ? `landed at ${t.toFixed(2)} s` : `ended at ${t.toFixed(2)} s`;
@@ -1429,7 +2066,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
   }
 
   // Issue #32: a rocket that never left the rail has no rail-exit, burnout or apogee figures (NaN in the summary).
-  if (railExit === undefined) {
+  if (endReason === 'no-ignition') {
+    warnings.add(
+      'No motor is set to ignite at launch, so the rocket never leaves the pad and there is no flight. Set a motor of the bottom stage to ignite at launch.',
+    );
+  } else if (railExit === undefined) {
     warnings.add(
       `The rocket never left the launch rail${phase === 'landed' ? ' (it slid back down)' : ''}: the motor's thrust did not carry it to the end of the rail, so there is no real flight. Use a more powerful motor or a lighter rocket; rail exit, apogee and burnout figures are not available.`,
     );
@@ -1495,7 +2136,8 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ? `the simulation stopped at its time limit, ${t.toFixed(2)} s`
         : `the flight ended at ${t.toFixed(2)} s`;
   for (const d of vehicle.recovery) {
-    if (deployed.has(d)) continue;
+    // Plan 0064: a separated stage's devices left with it; their flight is not simulated.
+    if (deployed.has(d) || !activeRecovery.has(d)) continue;
     const delay: number = d.deploy.delay;
     let reason: string | undefined;
     if (d.deploy.event === 'apogee') {
@@ -1530,6 +2172,16 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         `"${d.name}" never opened: ${reason}. The landing speed and drift shown are for a rocket coming down without it.`,
       );
     }
+  }
+  // Plan 0064: a device on its stage's ejection charge that did not open while still on the vehicle.
+  if (stages !== undefined) {
+    for (const d of vehicle.recovery) {
+      if (d.deploy.event !== 'ejection' || deployed.has(d) || !activeRecovery.has(d)) continue;
+      warnings.add(
+        `"${d.name}" never opened: the ejection charge of its stage's motor did not fire before ${ended}. The landing speed and drift shown are for a rocket coming down without it.`,
+      );
+    }
+    for (const w of stagingWarnings(stages, motors, separated, stageName, ended)) warnings.add(w);
   }
   for (const f of summary.flutter) {
     if (f.ratio === undefined) {
@@ -1566,7 +2218,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
     const toApogee =
       apogee === undefined
         ? ''
-        : `, ${(apogee.t - e.time).toFixed(1)} s before apogee (a delay of about ${(apogee.t - motorBurn).toFixed(1)} s after burnout would fire it near apogee)`;
+        : `, ${(apogee.t - e.time).toFixed(1)} s before apogee (a delay of about ${(apogee.t - (stages === undefined ? motorBurn : (topBurnout ?? motorBurn))).toFixed(1)} s after burnout would fire it near apogee)`;
     warnings.add(
       `The motor's ejection charge fires at ${e.time.toFixed(2)} s while the rocket is still climbing at ${e.airspeed.toFixed(1)} m/s${toApogee}. If the charge deploys the recovery (no altimeter), the parachute opens at that speed and may tear, strip or zipper the airframe; choose a longer delay. If an altimeter deploys the recovery and the charge is only a backup, this still fires the charge early.`,
     );
@@ -1587,7 +2239,18 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
       })),
     ),
-    ...(vehicle.motor.kind === 'definition' ? clusterApproximations(vehicle.motor.cluster) : []),
+    ...podApproximations(vehicle.components),
+    ...recoveryApproximations(vehicle.recovery),
+    ...largeAngleApproximations(vehicle, ctx.largeAngleMethod, used.approximatedFinBeyondStall),
+    ...(used.supersonicReverseFlow ? [SUPERSONIC_REVERSE_FLOW_APPROXIMATION] : []),
+    ...(stages === undefined
+      ? vehicle.motor.kind === 'definition'
+        ? clusterApproximations(vehicle.motor.cluster)
+        : []
+      : [
+          ...stages.motors.flatMap((m) => clusterApproximations(m.motor.cluster)),
+          ...stagingApproximations(stages.separation.length),
+        ]),
   ];
   return {
     samples,
@@ -1603,6 +2266,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       aerodynamics: options.aerodynamics,
       finRollReduction: options.finRollReduction,
       baseDragMotorRule: options.baseDragMotorRule,
+      railButtonDragMethod: options.railButtonDragMethod ?? 'niskanen',
       integrator:
         options.integrator.kind === 'rk4'
           ? `RK4 fixed step ${String(options.integrator.timeStep)} s`

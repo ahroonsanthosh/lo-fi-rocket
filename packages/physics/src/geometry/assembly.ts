@@ -34,12 +34,43 @@ export interface MassOverride {
   readonly cg?: Metres;
 }
 
+/**
+ * Plan 0070 (D-106): a part repeated `count` times, equally spaced around the rocket's axis with
+ * its own axis at `radialOffset` from it: the parts of a pod set (OpenRocket's `<podset>`,
+ * reference/rockets/pod-probe/values.txt). Such a part is outside the main body (not part of its
+ * stacking, continuity or base); its mass, normal force and drag are its own times the count.
+ */
+export interface Instances {
+  readonly count: number;
+  readonly radialOffset: Metres;
+}
+
+/** Whether a placed part is a pod part (plan 0070), outside the main body. */
+export function isPodPart(p: { readonly instances?: Instances }): boolean {
+  return p.instances !== undefined;
+}
+
+/** The main body's parts: every part that is not a pod part (plan 0070). */
+export function mainBodyParts<T extends { readonly instances?: Instances }>(
+  components: readonly T[],
+): T[] {
+  return components.filter((p) => !isPodPart(p));
+}
+
 export interface PlacedComponent {
   readonly component: Component;
   /** x of the component's forward end in the rocket body frame (from the nose tip). */
   readonly position: Metres;
+  /** Plan 0070: the part is repeated around the axis (a pod set's part); absent for one on-axis part. */
+  readonly instances?: Instances;
   /** Optional mass and CG override (D-073). */
   readonly massOverride?: MassOverride;
+  /**
+   * Plan 0073 (D-110): the part's own surface roughness height R_s when it differs from the
+   * design's finish (an OpenRocket file gives each external part its own). Only the skin friction
+   * of a nose cone, body tube, transition or fin set uses it; absent means the design's finish.
+   */
+  readonly roughnessHeight?: Metres;
   /**
    * What this part's entry does not represent exactly, carried with the part so that it travels
    * with it and disappears when the part is replaced (D-083, D-084); listed in every result.
@@ -180,10 +211,39 @@ export function motorMassPart(motor: MotorMass): MassProperties {
 export function structuralMassParts(components: readonly PlacedComponent[]): MassProperties[] {
   return components.map((pc) =>
     placed(
-      overriddenMassProperties(componentMassProperties(pc.component), pc.massOverride),
+      repeated(
+        overriddenMassProperties(componentMassProperties(pc.component), pc.massOverride),
+        pc.instances,
+      ),
       pc.position,
     ),
   );
+}
+
+/**
+ * GEO-12 with plan 0070's instances: n copies of a part (its own override applied to each) at
+ * distance r from the axis, equally spaced. Mass and volume n m, the CG along x unchanged; by the
+ * parallel axis theorem the roll inertia is n (I_rot + m r²) and the pitch inertia
+ * n (I_long + m r²/2): Σ cos²θ_k = n/2 for n ≥ 3 equally spaced, and the mean of the pitch and yaw
+ * inertias for n = 1 or 2 (the axisymmetric model has one transverse inertia; listed).
+ */
+export function repeated(p: MassProperties, instances: Instances | undefined): MassProperties {
+  if (instances === undefined) return p;
+  const n = instances.count;
+  const r: number = instances.radialOffset;
+  if (!(Number.isInteger(n) && n >= 1)) {
+    throw new InvalidInputError('pod count', n, 'must be a whole number, 1 or more');
+  }
+  if (!(r >= 0) || !Number.isFinite(r)) {
+    throw new InvalidInputError('pod radial offset', r, 'must be 0 m or greater');
+  }
+  return {
+    volume: n * p.volume,
+    mass: n * p.mass,
+    cgX: p.cgX,
+    inertiaRotational: n * (p.inertiaRotational + p.mass * r * r),
+    inertiaLongitudinal: n * (p.inertiaLongitudinal + (p.mass * r * r) / 2),
+  };
 }
 
 /** The empty rocket as weighed (D-089): its mass and/or its CG from the nose tip, motor excluded. */
@@ -260,6 +320,17 @@ export function combineRocket(
 ): RocketMassProperties {
   const parts = motor === undefined ? [...structure] : [...structure, motorMassPart(motor)];
   return finishRocket(parts);
+}
+
+/**
+ * Plan 0064: structural parts with several motors (GEO-12), the motors in the order given. With one
+ * motor this is `combineRocket` exactly, part for part and in the same order.
+ */
+export function combineRocketMotors(
+  structure: readonly MassProperties[],
+  motors: readonly MotorMass[],
+): RocketMassProperties {
+  return finishRocket([...structure, ...motors.map(motorMassPart)]);
 }
 
 export function rocketMassProperties(

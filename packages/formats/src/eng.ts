@@ -18,6 +18,7 @@ import {
   type Seconds,
 } from '@lo-fi-rocket/physics';
 import { EngParseError } from './errors.js';
+import { MAX_INPUT_BYTES, requireWithin } from './limits.js';
 
 export interface ThrustPoint {
   readonly time: Seconds;
@@ -58,7 +59,7 @@ function parseNumber(
   text: string,
 ): number {
   // RASP numbers are plain decimals, possibly without a leading zero (".0108").
-  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(text)) {
+  if (!/^[+-]?(\d+(?:\.\d*)?|\.\d+)([eE][+-]?\d+)?$/.test(text)) {
     throw new EngParseError(fileName, line, `${field} must be a number, got "${text}"`);
   }
   const value = Number(text);
@@ -162,6 +163,7 @@ function parseHeader(
  * rule violation, naming the line.
  */
 export function parseEng(text: string, fileName?: string): EngMotor[] {
+  requireWithin(fileName ?? 'The motor file', text.length, MAX_INPUT_BYTES);
   const lines = text.split(/\r?\n/);
   const motors: EngMotor[] = [];
   let comments: string[] = [];

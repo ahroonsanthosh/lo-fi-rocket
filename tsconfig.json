@@ -7,6 +7,8 @@
     "eslint.config.js",
     "vitest.config.ts",
     "packages/*/vitest.config.ts",
-    "packages/app/vite.config.ts"
+    "packages/app/vite.config.ts",
+    "packages/mcp/vite.config.ts",
+    "packages/mcp/vitest.smoke.config.ts"
   ]
 }

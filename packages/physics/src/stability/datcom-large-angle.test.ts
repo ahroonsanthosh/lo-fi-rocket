@@ -157,20 +157,35 @@ describe('HA-4, HA-6 low-aspect-ratio maximum lift (DATCOM section 4.1.3.4 A Met
     expect(Math.abs((a.alphaCLmax * 180) / Math.PI - 34.3)).toBeLessThan(0.5);
     expect(a.notes).toEqual([]);
   });
-  it('a high-aspect-ratio wing is rejected (eq. 4.1.3.4-c) and Δy below the drawn curves is reported', () => {
-    expect(() =>
-      wingAnalysis(
-        {
-          aspectRatio: 5,
-          taperRatio: 0.5,
-          tanLeadingEdge: 0,
-          sweepHeld: false,
-          deltaY: 0,
-          chart: '23a',
-        },
-        0,
-      ),
-    ).toThrow(InvalidInputError);
+  it('a high-aspect-ratio wing and a single wedge are approximated and said (plan 0066), and Δy below the drawn curves is reported', () => {
+    // A = 5 is above the low-aspect-ratio limit of eq. 4.1.3.4-c: the low-aspect-ratio method is
+    // used with its charts held at their ends, and the note says so.
+    const high = wingAnalysis(
+      {
+        aspectRatio: 5,
+        taperRatio: 0.5,
+        tanLeadingEdge: 0,
+        sweepHeld: false,
+        deltaY: 0,
+        chart: '23a',
+      },
+      0,
+    );
+    expect(high.notes.join()).toMatch(/aspect ratio 5\.00 is above the low-aspect-ratio limit/);
+    expect(high.cLmax).toBeGreaterThan(0);
+    // A single wedge (no family) reads the 23b family exactly, with its note.
+    const planform = {
+      aspectRatio: 1.2,
+      taperRatio: 0.5,
+      tanLeadingEdge: 0.4,
+      sweepHeld: false,
+      deltaY: 0.3,
+    };
+    const wedge = wingAnalysis({ ...planform, chart: undefined }, 0.3);
+    const family23b = wingAnalysis({ ...planform, chart: '23b' }, 0.3);
+    expect(wedge.cLmax).toBe(family23b.cLmax);
+    expect(wedge.alphaCLmax).toBe(family23b.alphaCLmax);
+    expect(wedge.notes.join()).toMatch(/single-wedge section, thickest at the trailing edge/);
     const r1 = wingAnalysis(
       {
         aspectRatio: 2.1333,

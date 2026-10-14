@@ -7,6 +7,9 @@ import {
   putCachedMotor,
   searchMotors,
   getThrustCurveMotor,
+  stageMotorMount,
+  type IgnitionEvent,
+  type MotorMount,
   type MotorSelection,
   type MotorSummary,
 } from '@lo-fi-rocket/formats';
@@ -31,6 +34,16 @@ import { useStore } from '../state/store.js';
 import { formatQuantity, parseQuantity } from '../units/display.js';
 import { LinePlot } from './LinePlot.js';
 import { QuantityField } from './QuantityField.js';
+import { StageSelect } from './StagesEditor.js';
+
+/** Plan 0064: when a motor lights, in plain words (OpenRocket's events, D-097). */
+const IGNITION_LABELS: Readonly<Record<IgnitionEvent, string>> = {
+  automatic: 'Automatic: at launch in the bottom stage, else at the charge of the stage below',
+  launch: 'At launch',
+  burnout: 'At the burnout of the stage below',
+  ejection: 'At the ejection charge of the stage below',
+  never: 'Never',
+};
 
 export const MOTOR_SELECTION_ID = 'motor';
 
@@ -46,12 +59,20 @@ export function MotorPanel(): JSX.Element {
   const services = useServices();
   const units = state.units;
   const design = state.design;
-  const mount = design.motorMount;
+  // Plan 0064: a staged design edits one stage's mount at a time.
+  const [stage, setStage] = useState(0);
+  const stageCount = design.stages?.length ?? 1;
+  const staged = stageCount > 1;
+  const shownStage = stage < stageCount ? stage : 0;
+  const mount = staged ? stageMotorMount(design, shownStage) : design.motorMount;
   const tubes = design.components.filter(
-    (c) => c.component.kind === 'innerTube' || c.component.kind === 'bodyTube',
+    (c) =>
+      (c.component.kind === 'innerTube' || c.component.kind === 'bodyTube') &&
+      (!staged || (c.stage ?? 0) === shownStage),
   );
   const mountId = useId();
   const delayId = useId();
+  const ignitionId = useId();
   const [libraryVersion, setLibraryVersion] = useState(0);
   const library = useMemo(() => {
     const stored =
@@ -71,9 +92,11 @@ export function MotorPanel(): JSX.Element {
       : undefined;
   const motor = mount?.motor;
 
-  const setMount = (patch: Partial<NonNullable<typeof mount>>): void => {
+  const setMount = (patch: Partial<MotorMount>): void => {
     const base = mount ?? { componentId: tubes[0]?.id ?? '', overhang: metres(0) };
-    dispatch({ type: 'set-motor-mount', mount: { ...base, ...patch } });
+    const next = { ...base, ...patch };
+    if (staged) dispatch({ type: 'set-stage-motor-mount', stage: shownStage, mount: next });
+    else dispatch({ type: 'set-motor-mount', mount: next });
   };
   const useMotor = (m: LibraryMotor): void => {
     const delay = m.delays === 'plugged' || m.delays === undefined ? undefined : m.delays[0];
@@ -85,11 +108,25 @@ export function MotorPanel(): JSX.Element {
     setMount({ motor: selection });
   };
 
+  const stagePicker = (
+    <StageSelect
+      label="Stage"
+      value={shownStage}
+      onChange={(k) => {
+        setStage(k);
+      }}
+    />
+  );
   if (tubes.length === 0) {
     return (
       <section className="editor" aria-label="Motor">
         <h2>Motor</h2>
-        <p className="muted">Add a body tube or an inner tube first: the motor sits in a tube.</p>
+        {stagePicker}
+        <p className="muted">
+          {staged
+            ? 'This stage has no body tube or inner tube yet: the motor sits in a tube of its stage.'
+            : 'Add a body tube or an inner tube first: the motor sits in a tube.'}
+        </p>
       </section>
     );
   }
@@ -98,11 +135,12 @@ export function MotorPanel(): JSX.Element {
     motor === undefined ? undefined : library.motors.find((m) => sameProvenance(m, motor));
   const delays = libraryMatch?.delays;
   // Also listed in the checks column (docs/ui/redesign.md section 5).
-  const diameterWarning = motorFitMessage(design, units);
+  const diameterWarning = motorFitMessage(design, units, mount);
 
   return (
     <section className="editor" aria-label="Motor">
       <h2>Motor</h2>
+      {stagePicker}
       <div className="field">
         <label htmlFor={mountId}>Motor mount tube</label>
         <div className="field-input">
@@ -179,6 +217,45 @@ export function MotorPanel(): JSX.Element {
             <span className="field-unit">s</span>
           </div>
         </div>
+      )}
+      {mount === undefined || (!staged && mount.ignition === undefined) ? null : (
+        <>
+          <div className="field">
+            <label htmlFor={ignitionId}>Ignition</label>
+            <div className="field-input">
+              <select
+                id={ignitionId}
+                value={mount.ignition?.event ?? 'automatic'}
+                onChange={(e) => {
+                  setMount({
+                    ignition: {
+                      event: e.target.value as IgnitionEvent,
+                      delay: mount.ignition?.delay ?? seconds(0),
+                    },
+                  });
+                }}
+              >
+                {(Object.keys(IGNITION_LABELS) as IgnitionEvent[]).map((ev) => (
+                  <option key={ev} value={ev}>
+                    {IGNITION_LABELS[ev]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <QuantityField
+            label="Ignition delay after that"
+            kind="time"
+            units={units}
+            value={mount.ignition?.delay ?? 0}
+            rule="non-negative"
+            onChange={(si) => {
+              setMount({
+                ignition: { event: mount.ignition?.event ?? 'automatic', delay: seconds(si) },
+              });
+            }}
+          />
+        </>
       )}
       <MotorPicker
         library={library.motors}

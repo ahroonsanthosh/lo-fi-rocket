@@ -197,7 +197,10 @@ function haack(L: number, R: number, kappa: number): Profile {
  * The other shapes are the "non-clipped" adaptation: the profile is a nose
  * cone of base radius |R₂ − R₁| and length L added to the smaller radius,
  * oriented so the radius grows from the narrower end. The "clipped"
- * adaptation is not implemented.
+ * adaptation is not implemented. The aft radius may be 0 (plan 0068): a tail
+ * cone, the nose profile reversed, which is what OpenRocket's flipped nose
+ * cone is (reference/rockets/flipped-nose-probe/values.txt); for it the
+ * clipped and non-clipped adaptations coincide, as for a nose cone.
  */
 export function transitionProfile(
   shape: NoseShape,
@@ -212,7 +215,9 @@ export function transitionProfile(
   const r2: number = aftRadius;
   requirePositive('transition length', L);
   requirePositive('transition fore radius', r1);
-  requirePositive('transition aft radius', r2);
+  if (!(r2 >= 0) || !Number.isFinite(r2)) {
+    throw new InvalidInputError('transition aft radius', r2, 'must be 0 m or greater');
+  }
   if (clipped) {
     throw new NotImplementedError('clipped transition shapes (Niskanen Appendix A.7)');
   }

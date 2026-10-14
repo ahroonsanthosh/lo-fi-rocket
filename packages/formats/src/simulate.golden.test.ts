@@ -23,7 +23,7 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import { parseEng } from './eng.js';
 import { motorFromEng } from './motor-definition.js';
-import { parseOrk } from './ork.js';
+import { orkRecoveryDevice, parseOrk } from './ork.js';
 
 // Each case flies a full 6DOF flight; under a parallel test run R5 takes about 5 s.
 vi.setConfig({ testTimeout: 60_000 });
@@ -54,12 +54,7 @@ function vehicle(c: (typeof ROCKETS)[number]): FlightVehicle {
       aftEnd: mount.aftEnd,
       ejectionDelay: seconds(c.delay),
     },
-    recovery: rocket.recoveryDevices.map((d) => ({
-      name: d.name,
-      diameter: d.diameter,
-      dragCoefficient: d.dragCoefficient,
-      deploy: { event: d.deployEvent, altitude: d.deployAltitude, delay: d.deployDelay },
-    })),
+    recovery: rocket.recoveryDevices.map(orkRecoveryDevice),
     roughnessHeight: metres(60e-6),
   };
 }
@@ -72,6 +67,7 @@ const options = (windX: number): SimulationOptions => ({
   finRollReduction: false,
   baseDragMotorRule: 'always',
   baseDragMethod: 'niskanen',
+  bodyFormFactor: 'niskanen',
   largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(200),

@@ -101,16 +101,82 @@ export function componentApproximations(
       (component.crossSection === 'rounded' || component.crossSection === 'airfoil')
     ) {
       // D-077: no approved source gives the volume of a rounded or airfoil fin; the slab is kept.
-      out.push({
-        subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
-        what: `the volume of ${component.crossSection} fin edges`,
-        method: 'mass taken as a flat slab of the same outline (area × thickness × density)',
-        effect: `the fins weigh slightly more than they are (OpenRocket uses ${component.crossSection === 'rounded' ? '99' : '85'} % of the slab), putting the CG slightly aft: the stability margin shown is a little low, the cautious side`,
-        impact: 'minor',
-      });
+      // Plan 0073: rated by its measured effect. OpenRocket makes airfoil fins 85 % of the slab;
+      // on the validation campaign's rockets the slab was up to 8.5 % of the structure mass and
+      // moved its CG up to 3.4 % aft, so the airfoil case is moderate; the rounded one (99 %) minor.
+      out.push(
+        component.crossSection === 'rounded'
+          ? {
+              subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
+              what: 'the volume of rounded fin edges',
+              method: 'mass taken as a flat slab of the same outline (area × thickness × density)',
+              effect:
+                'the fins weigh about 1 % more than they are (OpenRocket uses 99 % of the slab), putting the CG slightly aft: the stability margin shown is a little low, the cautious side',
+              impact: 'minor',
+            }
+          : {
+              subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
+              what: 'the volume of airfoil fin edges',
+              method: 'mass taken as a flat slab of the same outline (area × thickness × density)',
+              effect:
+                'the fins weigh about 18 % more than OpenRocket’s airfoil (85 % of the slab); with large fins that is up to 8 % of the rocket’s mass, moving the CG aft by up to 3 %: the stability margin shown is low (the cautious side) and the apogee a little low. Enter the fins’ weighed mass as an override if you have it',
+              impact: 'moderate',
+            },
+      );
     }
   }
   return out;
+}
+
+/**
+ * Plan 0070 (D-106): what a pod set's model does not represent, once per pod set (its parts share
+ * a count and a radial offset). Each pod part's mass, normal force and drag are its own times the
+ * count, as OpenRocket's figures show it computes them; the interference between the pods and the
+ * body, which neither model has, and the pods' off-axis effects are what is approximated.
+ */
+export function podApproximations(
+  components: readonly {
+    readonly instances?: { readonly count: number; readonly radialOffset: number };
+  }[],
+): Approximation[] {
+  const sets = new Map<string, { count: number; radialOffset: number }>();
+  for (const { instances } of components) {
+    if (instances === undefined) continue;
+    sets.set(`${String(instances.count)}@${String(instances.radialOffset)}`, instances);
+  }
+  return [...sets.values()].flatMap(({ count, radialOffset }) => {
+    const subject = `Pod set (${String(count)} pod${count === 1 ? '' : 's'} at ${String(Math.round(radialOffset * 1000))} mm)`;
+    const out: Approximation[] = [
+      {
+        subject,
+        what: 'the flow between the pods and the body',
+        method:
+          'each pod part’s normal force, drag and mass on its own, times the number of pods (as OpenRocket computes them); the pods’ fins damp roll about their own pod’s axis, and a pod has no reverse-flow body term',
+        effect:
+          'the interference of pods close to the body is not known from an approved source; the stability margin and drag may differ by a few per cent',
+        impact: 'moderate',
+      },
+    ];
+    if (count === 1) {
+      out.push({
+        subject,
+        what: 'the single pod’s centre of mass off the rocket’s axis',
+        method: 'the pod’s mass on the axis at its position along the rocket',
+        effect: 'the sideways CG offset tilts the flight; it is not simulated',
+        impact: 'moderate',
+      });
+    } else if (count === 2) {
+      out.push({
+        subject,
+        what: 'the different pitch and yaw inertias of two pods',
+        method: 'their mean, the one transverse inertia of the axisymmetric model',
+        effect:
+          'small: the inertia only shapes how the rocket oscillates, not its stability or apogee',
+        impact: 'minor',
+      });
+    }
+    return out;
+  });
 }
 
 /**

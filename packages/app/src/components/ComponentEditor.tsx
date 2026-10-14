@@ -10,6 +10,8 @@ import { useId, type JSX } from 'react';
 import { COMPONENT_LABELS } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
 import { IntegerField, QuantityField, type FieldRule } from './QuantityField.js';
+import { FilletFields, FinishField, hasFinish } from './SurfaceFields.js';
+import { StageSelect } from './StagesEditor.js';
 import { formatQuantity, type QuantityKind } from '../units/display.js';
 
 /** The fin set without a shear modulus (flutter not checked). */
@@ -79,7 +81,8 @@ const FIELDS: Record<Component['kind'], readonly NumField[]> = {
   transition: [
     { key: 'length', label: 'Length', kind: 'mm', rule: 'positive' },
     { key: 'foreRadius', label: 'Fore radius', kind: 'mm', rule: 'positive' },
-    { key: 'aftRadius', label: 'Aft radius', kind: 'mm', rule: 'positive' },
+    // Plan 0068: 0 is a tail cone ending in a point.
+    { key: 'aftRadius', label: 'Aft radius', kind: 'mm', rule: 'non-negative' },
     { key: 'density', label: 'Material density', kind: 'density', rule: 'positive' },
   ],
   bodyTube: [
@@ -120,12 +123,12 @@ const FIELDS: Record<Component['kind'], readonly NumField[]> = {
     { key: 'density', label: 'Material density', kind: 'density', rule: 'positive' },
   ],
   massComponent: [
-    { key: 'mass', label: 'Mass', kind: 'g', rule: 'positive' },
+    { key: 'mass', label: 'Mass', kind: 'g', rule: 'non-negative' },
     { key: 'length', label: 'Length', kind: 'mm', rule: 'positive' },
     { key: 'radius', label: 'Radius', kind: 'mm', rule: 'positive' },
   ],
   parachute: [
-    { key: 'mass', label: 'Packed mass', kind: 'g', rule: 'positive' },
+    { key: 'mass', label: 'Packed mass', kind: 'g', rule: 'non-negative' },
     { key: 'length', label: 'Packed length', kind: 'mm', rule: 'positive' },
     { key: 'radius', label: 'Packed radius', kind: 'mm', rule: 'positive' },
   ],
@@ -208,6 +211,20 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
           dispatch({ type: 'update-component', id: item.id, position: metres(si) });
         }}
       />
+      <StageSelect
+        label="Stage"
+        value={item.stage ?? 0}
+        onChange={(stage) => {
+          dispatch({ type: 'set-component-stage', id: item.id, stage });
+        }}
+      />
+      {item.pod === undefined ? null : (
+        <p className="muted small">
+          Part of a pod set: repeated {item.pod.count} time{item.pod.count === 1 ? '' : 's'} around
+          the rocket, each pod&rsquo;s axis {formatQuantity(item.pod.radialOffset, 'mm', units)}{' '}
+          from the rocket&rsquo;s. Its mass, lift and drag count once per pod.
+        </p>
+      )}
       {shaped === undefined ? null : (
         <>
           <div className="field">
@@ -406,7 +423,9 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
           }}
         />
       ) : null}
+      {c.kind === 'finSet' ? <FilletFields fins={c} onChange={update} /> : null}
       {c.kind === 'noseCone' ? <ShoulderEditor nose={c} onChange={update} units={units} /> : null}
+      {hasFinish(c) ? <FinishField item={item} /> : null}
       <div className="editor-actions">
         <button
           type="button"

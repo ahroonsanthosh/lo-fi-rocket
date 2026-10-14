@@ -12,6 +12,7 @@ import type {
   DragCurve,
   IntegratorOptions,
   Kelvin,
+  KilogramsPerSquareMetre,
   MassOverride,
   Metres,
   MetresPerSecond,
@@ -19,10 +20,11 @@ import type {
   Pascals,
   Radians,
   Seconds,
+  StageSeparation,
 } from '@lo-fi-rocket/physics';
 
 /** Bumped whenever the file layout changes; migrate.ts carries one step per bump. */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 export interface DesignComponent {
   readonly id: string;
@@ -34,6 +36,26 @@ export interface DesignComponent {
   readonly massOverride?: MassOverride;
   /** What this part's entry does not represent exactly, e.g. from an import (D-084). */
   readonly approximations?: readonly Approximation[];
+  /** Plan 0064 (schema 2): the stage the part belongs to, 0 being the top stage; absent means 0. */
+  readonly stage?: number;
+  /**
+   * Plan 0070 (schema 3, D-106): the part belongs to a pod set, repeated `count` times equally
+   * spaced around the axis with its own axis at `radialOffset` from the rocket's. Absent for a part
+   * of the main body or inside it.
+   */
+  readonly pod?: DesignPod;
+  /**
+   * Plan 0073 (schema 4, D-110): the part's own surface roughness height when it differs from the
+   * design's finish, as an OpenRocket file gives each part its own. Only the skin friction of a
+   * nose cone, body tube, transition or fin set uses it. Absent means the design's finish.
+   */
+  readonly roughnessHeight?: Metres;
+}
+
+/** Plan 0070: a pod set's count and the distance of each pod's axis from the rocket's. */
+export interface DesignPod {
+  readonly count: number;
+  readonly radialOffset: Metres;
 }
 
 /** Where a motor's data came from, for display and for refreshing from the source. */
@@ -62,24 +84,67 @@ export interface MotorMount {
    * Absent for one motor on the axis.
    */
   readonly cluster?: readonly ClusterOffset[];
+  /** Plan 0064 (schema 2): when the motor ignites; absent means 'automatic' with no delay. */
+  readonly ignition?: MotorIgnition;
+}
+
+/**
+ * When a motor ignites (plan 0064), as OpenRocket's ignition events
+ * (reference/rockets/staging-probe/values.txt): 'automatic' is launch for a motor in the bottom
+ * stage and otherwise the ejection charge of the motor in the stage directly below; 'burnout' and
+ * 'ejection' are those of the motor in the stage directly below; 'never' leaves it unlit.
+ */
+export type IgnitionEvent = 'automatic' | 'launch' | 'burnout' | 'ejection' | 'never';
+
+export interface MotorIgnition {
+  readonly event: IgnitionEvent;
+  /** After the event. */
+  readonly delay: Seconds;
+}
+
+/** A stage of a multi-stage design (plan 0064, D-091); its parts name it by index. */
+export interface DesignStage {
+  readonly name: string;
+  /** How the stage leaves the vehicle; given for every stage but the top one, which never separates. */
+  readonly separation?: StageSeparation;
 }
 
 export type DeployEvent = 'apogee' | 'ejection' | 'altitude' | 'launch' | 'never';
 
-export interface DesignRecoveryDevice {
+interface DesignRecoveryBase {
   readonly id: string;
   readonly name: string;
-  /** Canopy diameter. */
-  readonly diameter: Metres;
-  /** Referred to the canopy area (Niskanen p. 67 gives 0.8 for a parachute). */
-  readonly dragCoefficient: number;
   readonly deploy: {
     readonly event: DeployEvent;
     /** For 'altitude': deploy when descending through this altitude above the pad. */
     readonly altitude?: Metres;
     readonly delay: Seconds;
   };
+  /** Plan 0064 (schema 2): the stage the device is on (it leaves with it); absent means 0. */
+  readonly stage?: number;
 }
+
+/** A parachute; `kind` is absent in files before schema 5. */
+export interface DesignParachute extends DesignRecoveryBase {
+  readonly kind?: 'parachute';
+  /** Canopy diameter. */
+  readonly diameter: Metres;
+  /** Referred to the canopy area (Niskanen p. 67 gives 0.8 for a parachute). */
+  readonly dragCoefficient: number;
+}
+
+/** Plan 0073 part 2 (schema 5): a streamer, a strip of `length` by `width` (Niskanen Appendix C). */
+export interface DesignStreamer extends DesignRecoveryBase {
+  readonly kind: 'streamer';
+  readonly length: Metres;
+  readonly width: Metres;
+  /** The strip material's mass per area. */
+  readonly surfaceDensity: KilogramsPerSquareMetre;
+  /** Referred to the strip area; absent, Niskanen's eq. (C.6) (STREAM-1). */
+  readonly dragCoefficient?: number;
+}
+
+export type DesignRecoveryDevice = DesignParachute | DesignStreamer;
 
 export interface LaunchSiteSettings {
   /** Pad altitude above mean sea level. */
@@ -169,8 +234,18 @@ export interface RocketDesign {
   readonly name: string;
   readonly components: readonly DesignComponent[];
   readonly motorMount?: MotorMount;
+  /**
+   * Plan 0064 (schema 2): motor mounts beyond `motorMount`, such as one for each further stage;
+   * each motor belongs to the stage of its mount's part.
+   */
+  readonly additionalMotorMounts?: readonly MotorMount[];
+  /** Plan 0064 (schema 2, D-091): the stages, top first; absent for a one-stage rocket. */
+  readonly stages?: readonly DesignStage[];
   readonly recovery: readonly DesignRecoveryDevice[];
-  /** Surface roughness height for the skin friction (DRAG-2, Niskanen Figure 3.10). */
+  /**
+   * Surface roughness height for the skin friction (DRAG-2, Niskanen Figure 3.10), on every part
+   * that does not give its own (`DesignComponent.roughnessHeight`, plan 0073).
+   */
   readonly finish: { readonly roughnessHeight: Metres };
   /** Overrides the maximum body diameter as the stability reference (BAR-9). */
   readonly referenceDiameter?: Metres;

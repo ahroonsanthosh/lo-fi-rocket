@@ -133,4 +133,38 @@ describe('files (plan 0015)', () => {
     const status = screen.getByRole('region', { name: 'Status' });
     expect(within(status).getByText('1.84')).toBeInTheDocument();
   });
+
+  it('imports a RASAero II file (plan 0075) with the bundled D12 and its recorded apogees', async () => {
+    render(
+      <App
+        storage={memory()}
+        motorStore={memory()}
+        transport={noNetwork}
+        initialDesign={{ ...exampleDesign('x'), name: 'Before' }}
+        services={{ runner: synchronousRunner() }}
+      />,
+    );
+    const user = userEvent.setup();
+    // A small rocket written for this test in RASAero II's format.
+    const cdx1 = `<RASAeroDocument><FileVersion>2</FileVersion><RocketDesign>
+<NoseCone><Length>4</Length><Diameter>1</Diameter><Shape>Conical</Shape><Location>0</Location></NoseCone>
+<BodyTube><Length>14</Length><Diameter>1</Diameter><Location>4</Location>
+<Fin><Count>3</Count><Chord>2.5</Chord><Span>1.5</Span><SweepDistance>1</SweepDistance><TipChord>1.5</TipChord>
+<Thickness>0.0625</Thickness><Location>2.5</Location><AirfoilSection>Square</AirfoilSection></Fin></BodyTube>
+<Comments>Altimeter: Peak Altitude = 820 ft</Comments></RocketDesign>
+<SimulationList><Simulation><SustainerEngine>D12  (Estes)</SustainerEngine><SustainerLaunchWt>0.2</SustainerLaunchWt>
+<SustainerCG>11</SustainerCG><MaxAltitude>900</MaxAltitude></Simulation></SimulationList></RASAeroDocument>`;
+    await user.upload(
+      screen.getByLabelText('Import a RASAero II file'),
+      new File([cdx1], 'small.CDX1'),
+    );
+    const warnings = await screen.findByRole('region', { name: 'Warnings' });
+    expect(warnings).toHaveTextContent(
+      /Imported small\.CDX1 \(RASAero II\)\. ?Motor Estes D12 taken/,
+    );
+    // 900 ft = 274.32 m; 820 ft = 249.94 m.
+    expect(warnings).toHaveTextContent('RASAero II predicted an apogee of 274 m (900 ft).');
+    expect(warnings).toHaveTextContent('flown apogee of 250 m (820 ft).');
+    expect(screen.getByRole('textbox', { name: 'Design name' })).toHaveValue('small');
+  });
 });

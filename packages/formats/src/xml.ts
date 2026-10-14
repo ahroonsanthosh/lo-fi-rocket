@@ -60,8 +60,24 @@ function toNodes(raw: unknown): XmlNode[] {
   return nodes;
 }
 
+/**
+ * A document type declaration can define entities that expand to gigabytes ("billion laughs") or
+ * point at outside files. Design and motor files never have one, so any document containing one is
+ * refused before parsing (plan 0061 section 5, D-090). The check is on the raw text, so a
+ * declaration inside a comment is refused as well: the conservative choice.
+ */
+const DOCUMENT_TYPE = /<!(DOCTYPE|ENTITY)/i;
+
 /** Parse a document into its top-level elements; throws XmlSyntaxError when malformed. */
 export function parseXmlRoots(xml: string): XmlNode[] {
+  const declaration = DOCUMENT_TYPE.exec(xml);
+  if (declaration !== null) {
+    const line = xml.slice(0, declaration.index).split('\n').length;
+    throw new XmlSyntaxError(
+      line,
+      `it contains a document type declaration (<!${declaration[1]?.toUpperCase() ?? ''}), which design and motor files never have; it is refused because such declarations can be used to freeze the browser`,
+    );
+  }
   try {
     SyntaxValidator.validate(xml);
   } catch (error) {
@@ -84,4 +100,4 @@ export function parseXmlRoots(xml: string): XmlNode[] {
 }
 
 /** Plain decimal or exponent number, as the simulator files write them ("29.", "5.0E-4", ".0108"). */
-export const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+export const NUMBER = /^[+-]?(\d+(?:\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;

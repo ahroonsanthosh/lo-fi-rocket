@@ -8,6 +8,7 @@
  */
 import { validateDragCurve, type DragCurve } from '@lo-fi-rocket/physics';
 import { FormatError } from '../errors.js';
+import { MAX_INPUT_BYTES, requireWithin } from '../limits.js';
 
 export class DragCurveCsvError extends FormatError {
   readonly line: number;
@@ -17,7 +18,7 @@ export class DragCurveCsvError extends FormatError {
   }
 }
 
-const NUMBER = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+const NUMBER = /^[-+]?(\d+(?:\.\d*)?|\.\d+)([eE][-+]?\d+)?$/;
 
 function split(line: string): string[] {
   return line.split(/[,;\t]/).map((f) => f.trim());
@@ -31,6 +32,7 @@ function normalise(name: string): string {
 }
 
 export function parseDragCurveCsv(text: string, label: string, fileName?: string): DragCurve {
+  requireWithin(fileName ?? 'The drag curve', text.length, MAX_INPUT_BYTES);
   const lines = text.split(/\r?\n/);
   let machCol: number | undefined;
   let cdCol: number | undefined;

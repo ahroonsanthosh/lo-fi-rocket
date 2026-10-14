@@ -25,6 +25,7 @@ import {
   type Seconds,
 } from '@lo-fi-rocket/physics';
 import { RseParseError, RseUnsupportedError } from './errors.js';
+import { MAX_XML_CHARACTERS, requireWithin } from './limits.js';
 import { NUMBER, parseXmlRoots, XmlSyntaxError, type XmlNode } from './xml.js';
 
 /**
@@ -381,6 +382,7 @@ function readEngine(
 
 /** Parse every `<engine>` of an `.rse` document. */
 export function parseRse(text: string, options: RseOptions = {}, fileName?: string): RseMotor[] {
+  requireWithin(fileName ?? 'The motor file', text.length, MAX_XML_CHARACTERS);
   let roots: XmlNode[];
   try {
     roots = parseXmlRoots(text);

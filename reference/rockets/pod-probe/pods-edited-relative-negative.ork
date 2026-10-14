@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='utf-8'?>
+<openrocket version="1.10" creator="OpenRocket 24.12">
+  <rocket>
+    <name>radius-surface</name>
+    <id>e94ac5a6-0abd-40ad-8680-164e748709ac</id>
+    <axialoffset method="absolute">0.0</axialoffset>
+    <position type="absolute">0.0</position>
+    <designtype>original</designtype>
+    <referencetype>maximum</referencetype>
+
+    <subcomponents>
+      <stage>
+        <name>Stage</name>
+        <id>629dc908-8618-473a-b4ba-ac29ce0e8159</id>
+
+        <subcomponents>
+          <nosecone>
+            <name>Nose Cone</name>
+            <id>d42726d5-70c9-4845-822a-2bac2c5af816</id>
+            <finish>normal</finish>
+            <material type="bulk" density="160.0" group="Custom">balsa160</material>
+            <length>0.1</length>
+            <thickness>filled</thickness>
+            <shape>conical</shape>
+            <aftradius>0.025</aftradius>
+            <aftshoulderradius>0.0</aftshoulderradius>
+            <aftshoulderlength>0.0</aftshoulderlength>
+            <aftshoulderthickness>0.0</aftshoulderthickness>
+            <aftshouldercapped>false</aftshouldercapped>
+            <isflipped>false</isflipped>
+          </nosecone>
+
+          <bodytube>
+            <name>Body Tube</name>
+            <id>e6c5a7aa-b54d-4049-a5ce-27b42fd9aa28</id>
+            <finish>normal</finish>
+            <material type="bulk" density="700.0" group="Custom">paper700</material>
+            <length>0.5</length>
+            <thickness>0.001</thickness>
+            <radius>0.025</radius>
+
+            <subcomponents>
+              <podset>
+                <name>Pods</name>
+                <id>de16dd0b-4bc0-44d9-baeb-8967041954c3</id>
+                <instancecount>2</instancecount>
+                <radiusoffset method="relative">-0.1</radiusoffset>
+                <angleoffset method="relative">0.0</angleoffset>
+                <axialoffset method="bottom">0.0</axialoffset>
+                <position type="bottom">0.0</position>
+
+                <subcomponents>
+                  <nosecone>
+                    <name>Pod nose</name>
+                    <id>29ebf368-ee58-4566-94b2-f54da30ba000</id>
+                    <finish>normal</finish>
+                    <material type="bulk" density="160.0" group="Custom">balsa160</material>
+                    <length>0.05</length>
+                    <thickness>filled</thickness>
+                    <shape>conical</shape>
+                    <aftradius>0.0125</aftradius>
+                    <aftshoulderradius>0.0</aftshoulderradius>
+                    <aftshoulderlength>0.0</aftshoulderlength>
+                    <aftshoulderthickness>0.0</aftshoulderthickness>
+                    <aftshouldercapped>false</aftshouldercapped>
+                    <isflipped>false</isflipped>
+                  </nosecone>
+
+                  <bodytube>
+                    <name>Pod tube</name>
+                    <id>be37081b-222a-47bd-ad2b-56777354aa89</id>
+                    <finish>normal</finish>
+                    <material type="bulk" density="700.0" group="Custom">paper700</material>
+                    <length>0.15</length>
+                    <thickness>5.0E-4</thickness>
+                    <radius>0.0125</radius>
+                  </bodytube>
+                </subcomponents>
+              </podset>
+            </subcomponents>
+          </bodytube>
+        </subcomponents>
+      </stage>
+    </subcomponents>
+  </rocket>
+
+  <simulations>
+  </simulations>
+  <photostudio>
+  </photostudio>
+  <docprefs>
+  </docprefs>
+</openrocket>

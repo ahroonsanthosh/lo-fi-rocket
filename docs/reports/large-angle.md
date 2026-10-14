@@ -13,16 +13,16 @@
 
 The largest differences, at 30° and 70°, come from the D chart, which the sample reads to two figures (−1.32 and −0.30 against our −1.28 and −0.29).
 
-## Centre of pressure at angle of attack: Blue Scout (NASA TN D-1958 figure 7, Mach 0.6)
+## Centre of pressure at angle of attack: Blue Scout (NASA TN D-1958 figure 7(b), configuration D, Mach 0.6)
 
-| α   | measured x_cp/l (read from figure 7, fins on) | small-angle model | DATCOM model (fins as square-edged, comparison only) |
-| --- | --------------------------------------------- | ----------------- | ---------------------------------------------------- |
-| 0°  | about 0.75                                    | 0.795             | 0.795                                                |
-| 2°  | about 0.73                                    | 0.770             | 0.774                                                |
-| 4°  | about 0.68                                    | 0.750             | 0.756                                                |
-| 6°  | about 0.62                                    | 0.733             | 0.741                                                |
+| α   | measured x_cp/l (figure 7(b), fins on, protuberances off; PDF page 29) | small-angle model | DATCOM model (fins as square-edged, comparison only) |
+| --- | ---------------------------------------------------------------------- | ----------------- | ---------------------------------------------------- |
+| 0°  | about 0.805                                                            | 0.795             | 0.795                                                |
+| 2°  | about 0.80                                                             | 0.770             | 0.774                                                |
+| 4°  | about 0.79                                                             | 0.750             | 0.756                                                |
+| 6°  | about 0.77                                                             | 0.733             | 0.741                                                |
 
-Both models under-predict how far the CP moves forward with angle of attack on this long, slender body. The DATCOM model moves it slightly less than the small-angle model. The in-flight stability margin therefore uses the more forward of the two CPs (D-070). The measured values are approximate readings of the figure, not a digitised dataset.
+The fins-on Blue Scout's CP moves forward by only about 0.03 body lengths from 0° to 6°. Both models move it further (small-angle 0.062, DATCOM 0.054), which is conservative; the DATCOM model is the closer. The in-flight stability margin uses the more forward of the two CPs (D-070), which stays on the safe side. The measured values are approximate readings of the figure (the average of the ±α points), not a digitised dataset. Corrected in plan 0072 (D-109): this table first quoted figure 7(a), configurations B and C with the fins off (0.75, 0.73, 0.68, 0.62), as fins-on, and so stated the opposite conclusion.
 
 ## Reference rockets, displayed mode, against OpenRocket
 

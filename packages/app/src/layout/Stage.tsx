@@ -104,16 +104,32 @@ export function Stage(props: StageProps): JSX.Element {
   const railMin = design.warningThresholds.minRailExitVelocity;
   const railMinText = formatQuantity(railMin, 'velocity', units);
   const margin = FIGURE_DISPLAY.stabilityMargin;
+  // Plan 0064: a staged rocket's burnout is its top stage's alone (the whole stack's never flies).
+  const top = figures.topStageBurnout;
+  const atBurnout =
+    s === undefined
+      ? undefined
+      : top === undefined
+        ? s.noMotor
+          ? undefined
+          : { margin: s.result.marginBurnout, level: s.burnout.level, where: 'at burnout' }
+        : top.configuration.noMotor
+          ? undefined
+          : {
+              margin: top.configuration.marginSpent,
+              level: top.configuration.spent.level,
+              where: `at ${top.name} burnout, the top stage alone`,
+            };
   const burnout =
-    s === undefined || s.noMotor ? undefined : (
+    s === undefined || atBurnout === undefined ? undefined : (
       <>
-        {formatFixed(s.result.marginBurnout, margin.decimals)} at burnout
-        {s.burnout.level === s.liftoff.level ? null : (
+        {formatFixed(atBurnout.margin, margin.decimals)} {atBurnout.where}
+        {atBurnout.level === s.liftoff.level ? null : (
           <>
             {' '}
             <SeverityTag
-              severity={LEVEL_STATUS[s.burnout.level].severity}
-              label={LEVEL_STATUS[s.burnout.level].label}
+              severity={LEVEL_STATUS[atBurnout.level].severity}
+              label={LEVEL_STATUS[atBurnout.level].label}
             />
           </>
         )}

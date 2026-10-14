@@ -1,0 +1,65 @@
+# PodProbe --positions, --chute and PodLoad output (OpenRocket 24.12; tools/openrocket-harness/src/PodProbe.java and
+# PodLoad.java). Plan 0070 step 3, D-107: where OpenRocket places a pod set read from a file.
+#
+# Part 1, radius methods (pods-radius-*.ork): a pod set of two pods (conical balsa nose 50 x 12.5 mm, 150 mm paper
+# tube of radius 12.5 mm) on a 0.5 m body tube of radius 25 mm after a 0.1 m nose, axial method bottom 0. Each saved,
+# reloaded, and the pod set's and its first part's front x and distance from the axis printed. The value written
+# for each (<radiusoffset method>) is: coaxial 0.0, free 0.01, relative -0.015, surface 0.0.
+#
+# Part 2, axial methods (pods-axial-*.ork): the same set with <radiusoffset method="relative">0.0125 (axis at
+# 25 + 12.5 + 12.5 = 50 mm) and each axial method with offset 0.02 m. The pod is 0.05 + 0.15 = 0.2 m long.
+pods-radius-coaxial: Pods absX0=0.400000000 absR=0.000000000 instances=2
+pods-radius-coaxial: Pod nose absX0=0.400000000 absR=0.000000000 instances=2
+pods-radius-free: Pods absX0=0.400000000 absR=0.010000000 instances=2
+pods-radius-free: Pod nose absX0=0.400000000 absR=0.010000000 instances=2
+pods-radius-relative: Pods absX0=0.400000000 absR=0.022500000 instances=2
+pods-radius-relative: Pod nose absX0=0.400000000 absR=0.022500000 instances=2
+pods-radius-surface: Pods absX0=0.400000000 absR=0.037500000 instances=2
+pods-radius-surface: Pod nose absX0=0.400000000 absR=0.037500000 instances=2
+pods-axial-absolute: Pods absX0=0.020000000 absR=0.050000000 instances=2
+pods-axial-absolute: Pod nose absX0=0.020000000 absR=0.050000000 instances=2
+pods-axial-top: Pods absX0=0.120000000 absR=0.050000000 instances=2
+pods-axial-top: Pod nose absX0=0.120000000 absR=0.050000000 instances=2
+pods-axial-middle: Pods absX0=0.270000000 absR=0.050000000 instances=2
+pods-axial-middle: Pod nose absX0=0.270000000 absR=0.050000000 instances=2
+pods-axial-bottom: Pods absX0=0.420000000 absR=0.050000000 instances=2
+pods-axial-bottom: Pod nose absX0=0.420000000 absR=0.050000000 instances=2
+#
+# Part 3, a pod whose parts differ in radius (pods-mixed-*.ork), axial method bottom 0: order 0 is a conical nose
+# 40 x 15 mm, a conical transition 30 mm from 15 to 10 mm and a 100 mm tube of radius 10 mm (0.17 m); order 1 a
+# 100 mm tube of radius 10 mm then a 40 mm tube of radius 15 mm (0.14 m). Radius written: surface 0.0; relative
+# -0.035 for both orders, so the pod's radius in "relative" is its largest, 15 mm: 25 - 35 + 15 = 5 mm. Then which
+# parts may hold a pod set (OpenRocket's isCompatible).
+pods-mixed-surface-0: absX0=0.430000000 absR=0.040000000
+pods-mixed-surface-1: absX0=0.460000000 absR=0.040000000
+pods-mixed-relative-0: absX0=0.430000000 absR=0.005000000
+pods-mixed-relative-1: absX0=0.460000000 absR=0.005000000
+accepts: AxialStage podset=false
+accepts: NoseCone podset=false
+accepts: Transition podset=false
+accepts: BodyTube podset=true
+accepts: PodSet podset=false
+#
+# Part 4, files edited by hand from pods-radius-surface.ork (bare XML, pods-edited-*.ork) and loaded (PodLoad):
+# surface with the value 0.01, relative -0.1, coaxial 0.01. "surface" and "coaxial" ignore the value; a negative
+# "relative" distance (25 - 100 + 12.5 = -62.5 mm) is the same ring of pods at 62.5 mm.
+pods-edited-surface-nonzero.ork: absX0=0.400000000 absR=0.037500000 n=2
+pods-edited-relative-negative.ork: absX0=0.400000000 absR=0.062500000 n=2
+pods-edited-coaxial-nonzero.ork: absX0=0.400000000 absR=0.000000000 n=2
+#
+# Part 5 (PodProbe --chute, pods4.ork): pods1 with its 0.3 m parachute (10 g, C_D 0.8) moved from the main tube into
+# the pod tube (top + 0.01 m), so one in each of the two pods. The structure mass gains 10 g on pods1 (two
+# parachutes); the descent at landing is 4.623 m/s against pods1's 6.318: with m = structure + spent D12
+# (0.0426 - 0.0211 = 0.0215 kg, reference/motors/Estes_D12.eng), 6.318 * sqrt((0.15097 / 0.14097) / 2) = 4.623 for
+# two parachutes, 6.538 for one. OpenRocket opens one parachute per pod.
+pods4: NoseCone "Nose Cone" instances=1 absX0=0.000000000 absR=0.000000 mass=0.010471976 cgAbs=0.074999989 cp=0.066666667 cna=2.000000000
+pods4: BodyTube "Body Tube" instances=1 absX0=0.100000000 absR=0.000000 mass=0.053878314 cgAbs=0.350000000 cp=0.000000000 cna=0.000000000
+pods4: TrapezoidFinSet "Fins" instances=3 absX0=0.500000000 absR=0.025000 mass=0.032400000 cgAbs=0.561111111 cp=0.541578014 cna=15.450582104
+pods4: InnerTube "Motor tube" instances=1 absX0=0.525000000 absR=0.000000 mass=0.002020437 cgAbs=0.562500000 cp=- cna=-
+pods4: PodSet "Pods" instances=2 absX0=0.400000000 absR=0.075000 mass=0.000000000 cgAbs=0.400000000 cp=0.433333333 cna=1.000000000
+pods4: NoseCone "Pod nose" instances=2 absX0=0.400000000 absR=0.075000 mass=0.001308997 cgAbs=0.437499958 cp=0.433333333 cna=1.000000000
+pods4: BodyTube "Pod tube" instances=2 absX0=0.450000000 absR=0.075000 mass=0.004040874 cgAbs=0.525000000 cp=0.000000000 cna=0.000000000
+pods4: Parachute "Parachute" instances=2 absX0=0.460000000 absR=0.075000 mass=0.010000000 cgAbs=0.485000000 cp=- cna=-
+pods4: rocket worst CP x=0.484231998 CNa=18.450582104 structure m=0.129470467 cg=0.417451132 Ixx=3.408512210e-04 Iyy=3.621417024e-03 Izz=3.621417024e-03 length=0.600000
+pods4: Mach 0.3 CD=0.943524 friction=0.397776 pressure=0.348198 base=0.197550
+pods4: apogee 163.501 m, max v 64.502 m/s, rail exit 19.154 m/s, t_apogee 5.566 s, ground hit 4.623 m/s

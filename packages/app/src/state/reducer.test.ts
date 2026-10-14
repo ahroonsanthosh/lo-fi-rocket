@@ -43,6 +43,37 @@ describe('reducer (plan 0012)', () => {
     expect('motorMount' in s.design).toBe(false);
     expect(s.design.components.some((c) => c.id === 'mount')).toBe(false);
   });
+  it('removes an additional motor mount with its part (plan 0064)', () => {
+    const d = exampleDesign();
+    const mount = d.motorMount;
+    if (mount === undefined) throw new Error('the example has a motor mount');
+    let s = initialState({
+      ...d,
+      motorMount: { ...mount, componentId: 'body' },
+      additionalMotorMounts: [mount],
+    });
+    s = reduce(s, { type: 'remove-component', id: 'mount' });
+    expect(s.design.motorMount?.componentId).toBe('body');
+    expect('additionalMotorMounts' in s.design).toBe(false);
+  });
+  it('a part’s own finish, and one finish for every part (plan 0073)', () => {
+    let s = initialState(exampleDesign());
+    const own = (id: string): number | undefined =>
+      s.design.components.find((c) => c.id === id)?.roughnessHeight;
+    s = reduce(s, { type: 'set-component-finish', id: 'fins', roughnessHeight: metres(20e-6) });
+    expect(own('fins')).toBe(20e-6);
+    expect(s.design.finish.roughnessHeight).toBe(60e-6);
+    // The design's own finish is no override: the part follows the design again.
+    s = reduce(s, { type: 'set-component-finish', id: 'fins', roughnessHeight: metres(60e-6) });
+    expect('roughnessHeight' in (s.design.components.find((c) => c.id === 'fins') ?? {})).toBe(
+      false,
+    );
+    s = reduce(s, { type: 'set-component-finish', id: 'nose', roughnessHeight: metres(500e-6) });
+    s = reduce(s, { type: 'set-finish', roughnessHeight: metres(5e-6), everyPart: true });
+    expect(s.design.finish.roughnessHeight).toBe(5e-6);
+    expect(s.design.components.every((c) => c.roughnessHeight === undefined)).toBe(true);
+    expect(() => validateDesign(JSON.parse(JSON.stringify(s.design)))).not.toThrow();
+  });
   it('moves components and ignores moves past the ends', () => {
     let s = initialState(exampleDesign());
     const first = s.design.components[0]?.id;

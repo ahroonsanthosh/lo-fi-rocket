@@ -1,0 +1,53 @@
+# PodProbe --motors output (OpenRocket 24.12; tools/openrocket-harness/src/PodProbe.java). Plans 0070 step 4 and 0071.
+# pods1's airframe (R1's airframe with two pods, axes 75 mm out) with an Estes D12-5 in each pod's tube (inner
+# radius 12 mm): pods5 also with the core's D12-5, pods6 with the core's mount empty; pods7 the core's D12-5 only;
+# pods8 the same airframe with no pods (built with them, then removed before saving). All motors light at launch.
+# For each: the pod tube's instance positions, structure, motors and launch mass properties (inertias about the CG),
+# the flight with the reference harness's settings and no wind, burnout and apogee times, and the drag coefficient
+# at Mach 0.10 to 0.18 interpolated in the flight data while thrusting and while coasting, with the static value.
+# Findings: the motors' roll inertia counts their offsets (pods5: 3 x 3.0672e-6 + 2 x 0.0426 x 0.075^2 = 4.8845e-4);
+# their pitch inertia does not (3 x 1.89286e-5); the drag coefficient is the same thrusting, coasting and static,
+# and the same whichever motors are in place: OpenRocket removes no motor area from any base (plan 0071).
+pods5: pod tube at [ (0.450000000, 0.075000000, 0.000000000) (0.450000000, -0.075000000, 0.000000000) ]
+pods5: structure m=0.119470467 cg=0.390034409 Ixx=2.263512210e-04 Iyy=3.807647913e-03 Izz=3.807647913e-03
+pods5: motors m=0.127800000 cg=0.565000000 Ixx=4.884516000e-04 Iyy=5.678580000e-05 Izz=5.678580000e-05
+pods5: launch m=0.247270467 cg=0.480464143
+pods5: apogee 349.039 m, max v 132.183 m/s, rail exit 23.965 m/s, t_apogee 6.879 s, ground hit 7.218 m/s
+pods5: burnout 1.6500 s, apogee 6.8792 s
+pods5: Mach 0.10 cd thrusting=0.92270 coasting=0.92270 static=0.92270 (friction 0.40099 pressure 0.33976 base 0.18195)
+pods5: Mach 0.12 cd thrusting=0.92384 coasting=0.92384 static=0.92384 (friction 0.40081 pressure 0.34022 base 0.18281)
+pods5: Mach 0.14 cd thrusting=0.92519 coasting=0.92519 static=0.92519 (friction 0.40060 pressure 0.34076 base 0.18382)
+pods5: Mach 0.16 cd thrusting=0.92674 coasting=0.92674 static=0.92674 (friction 0.40036 pressure 0.34139 base 0.18499)
+pods5: Mach 0.18 cd thrusting=0.92850 coasting=0.92850 static=0.92850 (friction 0.40009 pressure 0.34210 base 0.18632)
+pods6: pod tube at [ (0.450000000, 0.075000000, 0.000000000) (0.450000000, -0.075000000, 0.000000000) ]
+pods6: structure m=0.119470467 cg=0.390034409 Ixx=2.263512210e-04 Iyy=3.807647913e-03 Izz=3.807647913e-03
+pods6: motors m=0.085200000 cg=0.565000000 Ixx=4.853844000e-04 Iyy=3.785720000e-05 Izz=3.785720000e-05
+pods6: launch m=0.204670467 cg=0.462868895
+pods6: apogee 273.319 m, max v 105.369 m/s, rail exit 22.502 m/s, t_apogee 6.379 s, ground hit 6.783 m/s
+pods6: burnout 1.6500 s, apogee 6.4238 s
+pods6: Mach 0.10 cd thrusting=0.92270 coasting=0.92270 static=0.92270 (friction 0.40099 pressure 0.33976 base 0.18195)
+pods6: Mach 0.12 cd thrusting=0.92384 coasting=0.92384 static=0.92384 (friction 0.40081 pressure 0.34022 base 0.18281)
+pods6: Mach 0.14 cd thrusting=0.92519 coasting=0.92519 static=0.92519 (friction 0.40060 pressure 0.34076 base 0.18382)
+pods6: Mach 0.16 cd thrusting=0.92674 coasting=0.92674 static=0.92674 (friction 0.40036 pressure 0.34139 base 0.18499)
+pods6: Mach 0.18 cd thrusting=0.92850 coasting=0.92850 static=0.92850 (friction 0.40009 pressure 0.34210 base 0.18632)
+pods7: pod tube at [ (0.450000000, 0.075000000, 0.000000000) (0.450000000, -0.075000000, 0.000000000) ]
+pods7: structure m=0.119470467 cg=0.390034409 Ixx=2.263512210e-04 Iyy=3.807647913e-03 Izz=3.807647913e-03
+pods7: motors m=0.042600000 cg=0.565000000 Ixx=3.067200000e-06 Iyy=1.892860000e-05 Izz=1.892860000e-05
+pods7: launch m=0.162070467 cg=0.436023874
+pods7: apogee 167.845 m, max v 67.063 m/s, rail exit 19.513 m/s, t_apogee 5.545 s, ground hit 6.318 m/s
+pods7: burnout 1.6500 s, apogee 5.5888 s
+pods7: Mach 0.10 cd thrusting=0.92270 coasting=0.92270 static=0.92270 (friction 0.40099 pressure 0.33976 base 0.18195)
+pods7: Mach 0.12 cd thrusting=0.92384 coasting=0.92384 static=0.92384 (friction 0.40081 pressure 0.34022 base 0.18281)
+pods7: Mach 0.14 cd thrusting=0.92519 coasting=0.92519 static=0.92519 (friction 0.40060 pressure 0.34076 base 0.18382)
+pods7: Mach 0.16 cd thrusting=0.92674 coasting=0.92674 static=0.92674 (friction 0.40036 pressure 0.34139 base 0.18499)
+pods7: Mach 0.18 cd thrusting=0.92850 coasting=0.92850 static=0.92850 (friction 0.40009 pressure 0.34210 base 0.18632)
+pods8: structure m=0.108770726 cg=0.378863919 Ixx=1.648291872e-04 Iyy=3.624895751e-03 Izz=3.624895751e-03
+pods8: motors m=0.042600000 cg=0.565000000 Ixx=3.067200000e-06 Iyy=1.892860000e-05 Izz=1.892860000e-05
+pods8: launch m=0.151370726 cg=0.431247872
+pods8: apogee 189.714 m, max v 73.583 m/s, rail exit 19.955 m/s, t_apogee 5.824 s, ground hit 6.074 m/s
+pods8: burnout 1.6500 s, apogee 5.8676 s
+pods8: Mach 0.10 cd thrusting=0.76580 coasting=0.76580 static=0.76580 (friction 0.32826 pressure 0.31624 base 0.12130)
+pods8: Mach 0.12 cd thrusting=0.76668 coasting=0.76668 static=0.76668 (friction 0.32811 pressure 0.31669 base 0.12187)
+pods8: Mach 0.14 cd thrusting=0.76773 coasting=0.76773 static=0.76773 (friction 0.32794 pressure 0.31723 base 0.12255)
+pods8: Mach 0.16 cd thrusting=0.76893 coasting=0.76893 static=0.76893 (friction 0.32775 pressure 0.31786 base 0.12333)
+pods8: Mach 0.18 cd thrusting=0.77030 coasting=0.77030 static=0.77030 (friction 0.32752 pressure 0.31857 base 0.12421)

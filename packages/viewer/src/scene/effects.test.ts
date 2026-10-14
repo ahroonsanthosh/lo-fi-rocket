@@ -129,7 +129,10 @@ describe.each(REFERENCE_ROCKETS)('effects on the stored flight of $id', (rocket)
     },
     wind: { speed: 5, from: 1.5 * Math.PI },
     format: SI_FORMATTER,
-    recovery: f.vehicle.recovery.map((d) => ({ name: d.name, diameter: d.diameter })),
+    recovery: f.vehicle.recovery.map((d) => ({
+      name: d.name,
+      diameter: d.kind === 'streamer' ? 0 : d.diameter,
+    })),
   });
 
   it('every smoke emission is at a time of positive blended stored thrust', () => {

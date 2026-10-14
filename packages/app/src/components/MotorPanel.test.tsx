@@ -1,11 +1,17 @@
-import { exampleDesign, type KeyValueStore, type Transport } from '@lo-fi-rocket/formats';
+import {
+  BUNDLED_MOTOR_FILES,
+  exampleDesign,
+  type KeyValueStore,
+  type Transport,
+} from '@lo-fi-rocket/formats';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App.js';
 import F39T_RSE from '../../../../reference/motors/AeroTech_F39T.rse?raw';
-import C6_ENG from '../motors/bundled/Estes_C6.eng?raw';
 import type { Storage } from '../state/autosave.js';
+
+const C6_ENG = BUNDLED_MOTOR_FILES.find((m) => m.file === 'Estes_C6.eng')?.text ?? '';
 
 function memory(): Storage & KeyValueStore & { map: Map<string, string> } {
   const map = new Map<string, string>();

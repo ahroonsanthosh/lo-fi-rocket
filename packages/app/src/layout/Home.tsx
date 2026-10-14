@@ -150,7 +150,18 @@ export function Home({ figures, onOpen }: HomeProps): JSX.Element {
   const insideId = useId();
   const partRow = (c: (typeof d.components)[number]): Row => {
     const kind = COMPONENT_LABELS[c.component.kind];
-    return { id: c.id, title: c.name, ...(kind === c.name ? {} : { detail: kind }) };
+    // Plan 0070: a pod set's part is repeated around the rocket.
+    const pods =
+      c.pod === undefined ? '' : `${String(c.pod.count)} pod${c.pod.count === 1 ? '' : 's'}`;
+    const detail =
+      pods === ''
+        ? kind === c.name
+          ? undefined
+          : kind
+        : kind === c.name
+          ? pods
+          : `${kind} (${pods})`;
+    return { id: c.id, title: c.name, ...(detail === undefined ? {} : { detail }) };
   };
   const outside = d.components.filter((c) => OUTSIDE.has(c.component.kind)).map(partRow);
   const inside = d.components.filter((c) => !OUTSIDE.has(c.component.kind)).map(partRow);
@@ -266,6 +277,14 @@ export function Home({ figures, onOpen }: HomeProps): JSX.Element {
             >
               Add parachute
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                dispatch({ type: 'add-recovery', id: newId(), kind: 'streamer' });
+              }}
+            >
+              Add streamer
+            </Button>
           </div>
         ) : (
           <RowList
@@ -273,10 +292,31 @@ export function Home({ figures, onOpen }: HomeProps): JSX.Element {
             rows={d.recovery.map((r) => ({
               id: r.id,
               title: r.name,
-              detail: `deploys at ${r.deploy.event}`,
+              detail: `${r.kind === 'streamer' ? 'streamer, ' : ''}deploys at ${r.deploy.event}`,
             }))}
             onOpen={onOpen}
           />
+        )}
+        {d.recovery.length === 0 ? null : (
+          // Dual deployment needs a second device: a drogue and a main.
+          <div className="editor-actions">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                dispatch({ type: 'add-recovery', id: newId() });
+              }}
+            >
+              Add parachute
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                dispatch({ type: 'add-recovery', id: newId(), kind: 'streamer' });
+              }}
+            >
+              Add streamer
+            </Button>
+          </div>
         )}
         <RowList
           label="Launch"

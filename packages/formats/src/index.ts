@@ -9,12 +9,16 @@
  */
 export { parseEng, type EngMotor, type ThrustPoint } from './eng.js';
 export {
+  OPENROCKET_FINISHES,
+  orkRecoveryDevice,
   parseOrk,
   type OrkDeployEvent,
   type OrkMotorMount,
+  type OrkParachute,
   type OrkPlacedComponent,
   type OrkRecoveryDevice,
   type OrkRocket,
+  type OrkStreamer,
 } from './ork.js';
 export {
   parseRse,
@@ -39,14 +43,27 @@ export {
 } from './errors.js';
 export { XmlSyntaxError } from './xml.js';
 export {
+  InputTooLargeError,
+  MAX_INPUT_BYTES,
+  MAX_UNZIPPED_BYTES,
+  MAX_XML_CHARACTERS,
+  requireWithin,
+} from './limits.js';
+export {
   CURRENT_SCHEMA_VERSION,
   newId,
   type DeployEvent,
   type DesignComponent,
+  type DesignPod,
+  type DesignParachute,
   type DesignRecoveryDevice,
+  type DesignStreamer,
+  type DesignStage,
+  type IgnitionEvent,
   type LaunchConditions,
   type LaunchRailSettings,
   type LaunchSiteSettings,
+  type MotorIgnition,
   type MotorMount,
   type MotorProvenance,
   type MotorSelection,
@@ -67,22 +84,48 @@ export {
 } from './design/migrate.js';
 export { DESIGN_FILE_EXTENSION, parseDesign, serializeDesign } from './design/serialize.js';
 export {
+  stageMotorMount,
+  stageRemovalProblem,
+  withBottomStageRemoved,
+  withComponentStage,
+  withStageAdded,
+  withStageMotorMount,
+  withStages,
+} from './design/stages.js';
+export {
+  decodeDesignLink,
+  DESIGN_LINK_PREFIX,
+  DesignLinkError,
+  encodeDesignLink,
+  isDesignLink,
+  MAX_LINK_CHARACTERS,
+  MAX_LINK_DESIGN_BYTES,
+} from './design/link.js';
+export {
   assessMargin,
   DEFAULT_ROUGHNESS_HEIGHT,
   DESIGN_MACH,
   designFlightWarnings,
+  designIgnitions,
   designMassProperties,
   designMotor,
   designMotorCount,
   designMotorFitProblems,
   designMotorMass,
+  designMotorMounts,
+  designMotors,
   designPlacedComponents,
   designSimulationOptions,
   designStability,
+  designStageCount,
+  designStageStability,
+  designStageName,
   designThrustToWeight,
   designVehicle,
   designWindModel,
+  type DesignMotor,
   type DesignStability,
+  type StageConfigurationStability,
   type DesignWarning,
   type MassCondition,
   type PhysicsMode,
@@ -96,7 +139,15 @@ export {
   exampleDesign,
   newDesign,
 } from './design/example.js';
-export { validateMotorSelection } from './design/validate.js';
+export { COMPONENT_FIELDS, validateMotorSelection } from './design/validate.js';
+export {
+  componentLength,
+  defaultComponent,
+  defaultRecoveryDevice,
+  isExternal,
+  withoutComponent,
+  type ComponentKind,
+} from './design/defaults.js';
 export {
   CsvThrustCurveError,
   parseThrustCurveCsv,
@@ -126,8 +177,16 @@ export {
   type KeyValueStore,
 } from './thrustcurve/cache.js';
 export { DragCurveCsvError, parseDragCurveCsv } from './motors/drag-curve.js';
+export { BUNDLED_MOTOR_FILES } from './motors/bundled.js';
 export { FlightDataCsvError, parseFlightDataCsv } from './motors/flight-data.js';
 export { orkToDesign, type LibraryMotorRef, type OrkImport } from './design/from-ork.js';
+export {
+  Cdx1ParseError,
+  importCdx1,
+  RASAERO_FINISHES,
+  type Cdx1Import,
+  type Cdx1Prediction,
+} from './cdx1.js';
 export type { RecordedFlight } from './design/model.js';
 export {
   DispersionError,

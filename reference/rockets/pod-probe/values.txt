@@ -1,0 +1,52 @@
+# PodProbe output (OpenRocket 24.12; tools/openrocket-harness/src/PodProbe.java). Plan 0070, D-106.
+# R1's airframe (conical balsa nose 0.1 m x 25 mm, 0.5 m paper tube, three plywood fins, a 75 mm motor tube with an
+# Estes D12-5, a 0.3 m parachute of 10 g at apogee), with no pods (pods0), two plain pods (pods1), two pods with three
+# fins each (pods2) and three plain pods (pods3). A pod: conical balsa nose 50 x 12.5 mm and a 150 mm paper tube of
+# radius 12.5 mm, wall 0.5 mm, beside the main tube's aft end, radius offset 37.5 mm (method relative: pod axis at
+# 25 + 37.5 + 12.5 = 75 mm). Pod fins: root 50, tip 30, sweep 20, span 30 mm, 2 mm plywood. Measured as loaded:
+# each component's instances, front x, distance of its first instance from the axis, mass (one instance), CG, CP and
+# C_Na (all instances) at Mach 0.3; the rocket's worst CP, C_Na, structure mass, CG and inertias Ixx (roll), Iyy, Izz
+# about the CG; the drag coefficient at Mach 0.3 (no motor area in the base); and a flight with the reference
+# harness's settings, no wind.
+pods0: NoseCone "Nose Cone" instances=1 absX0=0.000000000 absR=0.000000 mass=0.010471976 cgAbs=0.074999989 cp=0.066666667 cna=2.000000000
+pods0: BodyTube "Body Tube" instances=1 absX0=0.100000000 absR=0.000000 mass=0.053878314 cgAbs=0.350000000 cp=0.000000000 cna=0.000000000
+pods0: TrapezoidFinSet "Fins" instances=3 absX0=0.500000000 absR=0.025000 mass=0.032400000 cgAbs=0.561111111 cp=0.541578014 cna=15.450582104
+pods0: InnerTube "Motor tube" instances=1 absX0=0.525000000 absR=0.000000 mass=0.002020437 cgAbs=0.562500000 cp=- cna=-
+pods0: Parachute "Parachute" instances=1 absX0=0.200000000 absR=0.000000 mass=0.010000000 cgAbs=0.225000000 cp=- cna=-
+pods0: rocket worst CP x=0.487148730 CNa=17.450582104 structure m=0.108770726 cg=0.378863919 Ixx=1.648291872e-04 Iyy=3.624895751e-03 Izz=3.624895751e-03 length=0.600000
+pods0: Mach 0.3 CD=0.781969 friction=0.325631 pressure=0.324638 base=0.131700
+pods0: apogee 189.714 m, max v 73.583 m/s, rail exit 19.955 m/s, t_apogee 5.824 s, ground hit 6.074 m/s
+pods1: NoseCone "Nose Cone" instances=1 absX0=0.000000000 absR=0.000000 mass=0.010471976 cgAbs=0.074999989 cp=0.066666667 cna=2.000000000
+pods1: BodyTube "Body Tube" instances=1 absX0=0.100000000 absR=0.000000 mass=0.053878314 cgAbs=0.350000000 cp=0.000000000 cna=0.000000000
+pods1: TrapezoidFinSet "Fins" instances=3 absX0=0.500000000 absR=0.025000 mass=0.032400000 cgAbs=0.561111111 cp=0.541578014 cna=15.450582104
+pods1: InnerTube "Motor tube" instances=1 absX0=0.525000000 absR=0.000000 mass=0.002020437 cgAbs=0.562500000 cp=- cna=-
+pods1: Parachute "Parachute" instances=1 absX0=0.200000000 absR=0.000000 mass=0.010000000 cgAbs=0.225000000 cp=- cna=-
+pods1: PodSet "Pods" instances=2 absX0=0.400000000 absR=0.075000 mass=0.000000000 cgAbs=0.400000000 cp=0.433333333 cna=1.000000000
+pods1: NoseCone "Pod nose" instances=2 absX0=0.400000000 absR=0.075000 mass=0.001308997 cgAbs=0.437499958 cp=0.433333333 cna=1.000000000
+pods1: BodyTube "Pod tube" instances=2 absX0=0.450000000 absR=0.075000 mass=0.004040874 cgAbs=0.525000000 cp=0.000000000 cna=0.000000000
+pods1: rocket worst CP x=0.484231998 CNa=18.450582104 structure m=0.119470467 cg=0.390034409 Ixx=2.263512210e-04 Iyy=3.807647913e-03 Izz=3.807647913e-03 length=0.600000
+pods1: Mach 0.3 CD=0.943524 friction=0.397776 pressure=0.348198 base=0.197550
+pods1: apogee 167.845 m, max v 67.063 m/s, rail exit 19.513 m/s, t_apogee 5.545 s, ground hit 6.318 m/s
+pods2: NoseCone "Nose Cone" instances=1 absX0=0.000000000 absR=0.000000 mass=0.010471976 cgAbs=0.074999989 cp=0.066666667 cna=2.000000000
+pods2: BodyTube "Body Tube" instances=1 absX0=0.100000000 absR=0.000000 mass=0.053878314 cgAbs=0.350000000 cp=0.000000000 cna=0.000000000
+pods2: TrapezoidFinSet "Fins" instances=3 absX0=0.500000000 absR=0.025000 mass=0.032400000 cgAbs=0.561111111 cp=0.541578014 cna=15.450582104
+pods2: InnerTube "Motor tube" instances=1 absX0=0.525000000 absR=0.000000 mass=0.002020437 cgAbs=0.562500000 cp=- cna=-
+pods2: Parachute "Parachute" instances=1 absX0=0.200000000 absR=0.000000 mass=0.010000000 cgAbs=0.225000000 cp=- cna=-
+pods2: PodSet "Pods" instances=2 absX0=0.400000000 absR=0.075000 mass=0.000000000 cgAbs=0.400000000 cp=0.546542014 cna=5.963901823
+pods2: NoseCone "Pod nose" instances=2 absX0=0.400000000 absR=0.075000 mass=0.001308997 cgAbs=0.437499958 cp=0.433333333 cna=1.000000000
+pods2: BodyTube "Pod tube" instances=2 absX0=0.450000000 absR=0.075000 mass=0.004040874 cgAbs=0.525000000 cp=0.000000000 cna=0.000000000
+pods2: TrapezoidFinSet "Pod fins" instances=6 absX0=0.550000000 absR=0.087500 mass=0.004320000 cgAbs=0.579583333 cp=0.569348404 cna=4.963901823
+pods2: rocket worst CP x=0.502276790 CNa=23.414483926 structure m=0.128110467 cg=0.402817929 Ixx=2.812727651e-04 Iyy=4.101737867e-03 Izz=4.101737867e-03 length=0.600000
+pods2: Mach 0.3 CD=1.118481 friction=0.438244 pressure=0.482686 base=0.197550
+pods2: apogee 150.689 m, max v 61.978 m/s, rail exit 19.206 m/s, t_apogee 5.299 s, ground hit 6.509 m/s
+pods3: NoseCone "Nose Cone" instances=1 absX0=0.000000000 absR=0.000000 mass=0.010471976 cgAbs=0.074999989 cp=0.066666667 cna=2.000000000
+pods3: BodyTube "Body Tube" instances=1 absX0=0.100000000 absR=0.000000 mass=0.053878314 cgAbs=0.350000000 cp=0.000000000 cna=0.000000000
+pods3: TrapezoidFinSet "Fins" instances=3 absX0=0.500000000 absR=0.025000 mass=0.032400000 cgAbs=0.561111111 cp=0.541578014 cna=15.450582104
+pods3: InnerTube "Motor tube" instances=1 absX0=0.525000000 absR=0.000000 mass=0.002020437 cgAbs=0.562500000 cp=- cna=-
+pods3: Parachute "Parachute" instances=1 absX0=0.200000000 absR=0.000000 mass=0.010000000 cgAbs=0.225000000 cp=- cna=-
+pods3: PodSet "Pods" instances=3 absX0=0.400000000 absR=0.075000 mass=0.000000000 cgAbs=0.400000000 cp=0.433333333 cna=1.500000000
+pods3: NoseCone "Pod nose" instances=3 absX0=0.400000000 absR=0.075000 mass=0.001308997 cgAbs=0.437499958 cp=0.433333333 cna=1.500000000
+pods3: BodyTube "Pod tube" instances=3 absX0=0.450000000 absR=0.075000 mass=0.004040874 cgAbs=0.525000000 cp=0.000000000 cna=0.000000000
+pods3: rocket worst CP x=0.482889067 CNa=18.950582104 structure m=0.124820338 cg=0.394901493 Ixx=2.571122378e-04 Iyy=3.934420521e-03 Izz=3.934420521e-03 length=0.600000
+pods3: Mach 0.3 CD=1.024302 friction=0.433849 pressure=0.359978 base=0.230475
+pods3: apogee 158.886 m, max v 64.277 m/s, rail exit 19.305 m/s, t_apogee 5.428 s, ground hit 6.437 m/s

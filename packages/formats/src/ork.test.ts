@@ -181,7 +181,8 @@ describe('reference rockets: parsed components equal the hand transcription', ()
 
   it('R1 recovery device and motor delay are read as written', () => {
     const r = parseOrk(bytes('r1-three-fin-conical.ork'));
-    expect(r.recoveryDevices[0]?.diameter).toBe(0.3);
+    const chute = r.recoveryDevices[0];
+    expect(chute?.kind === 'streamer' ? undefined : chute?.diameter).toBe(0.3);
     expect(r.recoveryDevices[0]?.deployAltitude).toBe(200);
     expect(r.recoveryDevices[0]?.deployDelay).toBe(0);
     expect(r.recoveryDevices[0]?.component).toBe(8);
@@ -329,11 +330,12 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   };
 
   it('unknown parts inside the rocket stand in as their mass, or are left out; outside, refused', () => {
-    // D-084: no mass in the file: the streamer is left out, listed as major (no descent from it).
+    // D-084: no mass in the file: the tube fin set is left out, listed as major (no lift or drag
+    // from it). (Plan 0073: streamers, the earlier example, are read.)
     const plain = parseOrk(r1, 'r1.ork');
     const without = approximated(
-      edit(r1, '<parachute>', '<streamer><name>S</name></streamer><parachute>'),
-      /Streamer "S": element <streamer>/,
+      edit(r1, '<parachute>', '<tubefinset><name>S</name></tubefinset><parachute>'),
+      /Tube fin set "S": element <tubefinset>/,
       'major',
     );
     expect(without.components).toEqual(plain.components);
@@ -343,15 +345,16 @@ describe('inputs are refused, reported as malformed or approximated, by element 
       edit(
         r1,
         '<parachute>',
-        '<streamer><name>S</name><overridemass>0.02</overridemass><packedlength>0.03</packedlength></streamer><parachute>',
+        '<tubefinset><name>S</name><overridemass>0.02</overridemass><length>0.03</length></tubefinset><parachute>',
       ),
-      /Streamer "S": element <streamer>/,
+      /Tube fin set "S": element <tubefinset>/,
       'major',
     );
-    const standIn = withMass.components.find((c) => c.element === 'streamer');
+    const standIn = withMass.components.find((c) => c.element === 'tubefinset');
     expect(standIn?.component).toMatchObject({ kind: 'massComponent', mass: 0.02, length: 0.03 });
     expect(standIn?.approximations?.[0]?.method).toBe('a 20 g mass at its position, from the file');
-    // Parts outside the body (pods, stages) are the next step (plan 0056): still refused by name.
+    // A pod set is read on a body tube, the only part OpenRocket lets hold one (plan 0070,
+    // reference/rockets/pod-probe/positions.txt); anywhere else it is refused by name.
     unsupported(
       edit(r1, '</nosecone>', '</nosecone><podset><name>Pods</name></podset>'),
       /podset "Pods": element <podset>/,
@@ -359,9 +362,17 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   });
 
   it('structure: stages, motors, mounts, version, reference type', () => {
-    unsupported(
+    // Plan 0064: a second stage is read; one with no separation event in the file is listed.
+    const twoStages = parseOrk(
       edit(r1, '</stage>', '</stage><stage><name>Booster</name><subcomponents/></stage>'),
-      /2 stages/,
+      'edited.ork',
+    );
+    expect(twoStages.stages).toEqual([
+      { name: 'Sustainer' },
+      { name: 'Booster', separation: { event: 'upper-ignition', delay: 0 } },
+    ]);
+    expect(twoStages.approximations.map((a) => a.what)).toContain(
+      'its separation event, which the file does not give',
     );
     unsupported(edit(r1, 'version="1.10"', 'version="2.0"'), /format version "2.0"/);
     unsupported(edit(r1, '<referencetype>maximum', '<referencetype>nose'), /reference length/);
@@ -377,22 +388,26 @@ describe('inputs are refused, reported as malformed or approximated, by element 
     );
     expect(none.motorMount).toBeUndefined();
     expect(none.notices.join(' ')).toMatch(/none is marked as the default/);
-    unsupported(
-      edit(
-        r1,
-        '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>0.0',
-        '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>2.0',
-      ),
-      /motor ignition delay/,
-    );
-    unsupported(
+    // Plan 0064: an ignition delay is read, and a second motor mount is a second motor.
+    expect(
+      parseOrk(
+        edit(
+          r1,
+          '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>0.0',
+          '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>2.0',
+        ),
+        'edited.ork',
+      ).motorMount?.ignition,
+    ).toEqual({ event: 'automatic', delay: 2 });
+    const twoMounts = parseOrk(
       edit(
         r1,
         '<subcomponents>\n              <trapezoidfinset>',
         '<subcomponents><innertube><name>Second mount</name><axialoffset method="top">0.0</axialoffset><material type="bulk" density="700.0">p</material><length>0.05</length><outerradius>0.01</outerradius><thickness>0.001</thickness><motormount><overhang>0.0</overhang><motor configid="87104846-a550-42cb-8c9c-36360f4ef57c"><manufacturer>m</manufacturer><designation>d</designation><diameter>0.018</diameter><length>0.07</length><delay>3.0</delay></motor></motormount></innertube><trapezoidfinset>',
       ),
-      /more than one motor mount/,
+      'edited.ork',
     );
+    expect(twoMounts.motorMounts.map((m) => m.designation)).toEqual(['d', 'D12']);
     // Plan 0057: a cluster is n tubes holding the same motor, at OpenRocket's layout offsets.
     const double = parseOrk(
       edit(r1, '<clusterconfiguration>single', '<clusterconfiguration>double'),
@@ -413,7 +428,11 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   });
 
   it('nose cones and transitions', () => {
-    unsupported(edit(r1, '<isflipped>false', '<isflipped>true'), /flipped nose cones/);
+    // A flipped nose cone is a transition from its base radius to a point (plan 0068, D-104).
+    expect(
+      parseOrk(edit(r1, '<isflipped>false', '<isflipped>true'), 'edited.ork').components[0]
+        ?.component,
+    ).toMatchObject({ kind: 'transition', foreRadius: 0.025, aftRadius: 0, length: 0.1 });
     // A capped shoulder adds the cap as a disc (D-078).
     expect(
       parseOrk(
@@ -506,7 +525,7 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   });
 
   it('fins, lugs, buttons, rings, inner tubes', () => {
-    // D-084: cant and fillets are listed as minor and the fins kept as they are otherwise.
+    // D-084: cant is listed as minor and the fins kept as they are otherwise.
     const canted = approximated(
       edit(r1, '<cant>0.0</cant>', '<cant>0.1</cant>'),
       // OpenRocket writes degrees (D-085): 0.1 in the file is 0.1°.
@@ -516,11 +535,10 @@ describe('inputs are refused, reported as malformed or approximated, by element 
     const fins = (r: OrkRocket): OrkPlacedComponent | undefined =>
       r.components.find((c) => c.element === 'trapezoidfinset');
     expect(fins(canted)?.component).toEqual(fins(parseOrk(r1, 'r1.ork'))?.component);
-    approximated(
-      edit(r1, '<filletradius>0.0', '<filletradius>0.003'),
-      /fin fillets of 3 mm radius/,
-      'minor',
-    );
+    // Plan 0073 (GEO-19): fillets are modelled, with their own material; nothing is listed.
+    const filleted = parseOrk(edit(r1, '<filletradius>0.0', '<filletradius>0.003'), 'edited.ork');
+    expect(listed(filleted)).toEqual([]);
+    expect(fins(filleted)?.component).toMatchObject({ fillet: { radius: 0.003 } });
     // An unknown cross-section is flown as square, listed as moderate.
     const wedge = approximated(
       edit(r1, '<crosssection>square', '<crosssection>wedge'),
@@ -840,10 +858,11 @@ describe('motor configurations and fin cross-sections (D-077)', () => {
       const rocket = probe(n);
       const fins = rocket.components.find((c) => c.element === 'trapezoidfinset');
       expect(fins?.component.kind === 'finSet' && fins.component.crossSection).toBe(section);
-      // D-083: the physics lists the slab mass (minor); the import adds nothing of its own.
+      // D-083: the physics lists the slab mass (rounded minor, airfoil moderate, D-112); the
+      // import adds nothing of its own.
       expect(listed(rocket)).toEqual([]);
       expect(componentApproximations(rocket.components).map((a) => a.impact)).toEqual(
-        n === 0 ? [] : ['minor'],
+        n === 0 ? [] : n === 1 ? ['minor'] : ['moderate'],
       );
     }
   });
@@ -1212,12 +1231,12 @@ describe('launch lug instances, rail button screws and transition shoulders (D-0
 });
 
 describe('every unsupported feature is listed at once (D-082)', () => {
-  it('a flipped nose cone and a pod set in the same file are both reported', () => {
+  it('an unknown nose shape and a pod set in the same file are both reported', () => {
     const r1 = strFromU8(
       unzipSync(bytes('r1-three-fin-conical.ork'))['rocket.ork'] ?? new Uint8Array(),
     );
     const edited = r1
-      .replace('<isflipped>false', '<isflipped>true')
+      .replace('<shape>conical</shape>', '<shape>blob</shape>')
       .replace('</nosecone>', '</nosecone><podset><name>Pods</name></podset>');
     let caught: unknown;
     try {
@@ -1228,9 +1247,9 @@ describe('every unsupported feature is listed at once (D-082)', () => {
     expect(caught).toBeInstanceOf(OrkUnsupportedFeaturesError);
     expect(caught).toBeInstanceOf(OrkUnsupportedError);
     const e = caught as OrkUnsupportedFeaturesError;
-    expect(e.problems.map((p) => p.feature)).toEqual(['flipped nose cones', 'element <podset>']);
+    expect(e.problems.map((p) => p.feature)).toEqual(['shape "blob"', 'element <podset>']);
     expect(e.message).toMatch(
-      /2 parts of this design are not supported yet:\n- .*flipped nose cones\n- .*podset "Pods": element <podset>/,
+      /2 parts of this design are not supported yet:\n- .*shape "blob"\n- .*podset "Pods": element <podset>/,
     );
   });
 });

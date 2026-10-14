@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Use Lo-Fi Rocket with Claude</title>
+    <link rel="stylesheet" href="claude.css" />
+  </head>
+  <body>
+    <main>
+      <p><a href="./">← Back to the simulator</a></p>
+      <h1>Use Lo-Fi Rocket with Claude</h1>
+      <p>
+        Give Claude your rocket's specification, a kit's parts list, a photo or an OpenRocket file.
+        Claude builds the design and asks for anything missing. The simulator then computes the
+        stability, the flight, the landing and the Monte Carlo spread with the same sourced physics
+        as this site. Every figure Claude had to estimate is listed with the results, together with
+        a confidence rating.
+      </p>
+
+      <h2>What it costs, and what it can reach</h2>
+      <ul>
+        <li>
+          It runs on your own computer and uses your own Claude plan. Nothing is hosted, and there
+          is no account and no charge from this project.
+        </li>
+        <li>
+          The simulator reads and writes no files and runs no commands. Designs come in as content
+          you give Claude, and leave as a file Claude gives back to you.
+        </li>
+        <li>
+          Its only network use is the ThrustCurve.org motor catalogue, and only when you ask for a
+          motor that is not in the library. It only reads from it.
+        </li>
+      </ul>
+
+      <h2>Claude Desktop</h2>
+      <ol>
+        <li>Download <a href="lo-fi-rocket.mcpb" download>lo-fi-rocket.mcpb</a>, the extension.</li>
+        <li>
+          Open the file with Claude Desktop, or install it from Claude Desktop's settings, under
+          Extensions. Claude Desktop runs it with its own Node.js.
+        </li>
+        <li>
+          Ask, for example: "Model a 38 mm minimum-diameter rocket, 1.2 m long, with an AeroTech
+          H128W, and tell me its stability and apogee."
+        </li>
+      </ol>
+
+      <h2>Claude Code</h2>
+      <ol>
+        <li>You need Node.js 18 or later.</li>
+        <li>
+          Download <a href="lo-fi-rocket-mcp.mjs" download>lo-fi-rocket-mcp.mjs</a>, the server, to
+          a folder you keep.
+        </li>
+        <li>
+          Add it to Claude Code, with the full path to the file:
+          <pre><code>claude mcp add --transport stdio lo-fi-rocket -- node /full/path/to/lo-fi-rocket-mcp.mjs</code></pre>
+        </li>
+      </ol>
+
+      <h2>Check the download</h2>
+      <p>
+        The SHA-256 of each file is in <a href="SHA256SUMS">SHA256SUMS</a>. Compare it with
+        <code>shasum -a 256 lo-fi-rocket-mcp.mjs</code> (macOS, Linux) or
+        <code>Get-FileHash lo-fi-rocket-mcp.mjs</code> (Windows PowerShell).
+      </p>
+
+      <h2>What to expect</h2>
+      <ul>
+        <li>
+          Claude asks for what it needs: dimensions, materials or weights, the motor, the parachute,
+          and the launch site, rail and wind. Values you do not give are marked "not given" until
+          you supply them.
+        </li>
+        <li>
+          If your rocket is built, give its weighed mass and balance point with the motor out. They
+          correct the computed figures.
+        </li>
+        <li>
+          Results are predictions with a stated confidence, not guarantees. Stability, rail exit
+          speed and deployment speed still need your judgement, and your club's or the
+          manufacturer's rules.
+        </li>
+        <li>
+          Designs last only while Claude is connected. Ask Claude for a link to the design: it opens
+          here with one click, and this site keeps it. Claude can also export the design as a file,
+          which this site opens with File &gt; Open.
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

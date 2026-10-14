@@ -28,13 +28,21 @@ export function stabilityProps(
         'Add components to see the centre of gravity, the centre of pressure and the margin.',
     };
   }
+  // Plan 0064: a staged rocket's burnout is its top stage's alone (the whole stack's never flies).
+  const top = figures.topStageBurnout?.configuration;
+  const burnout =
+    top === undefined
+      ? s.noMotor
+        ? undefined
+        : { margin: s.result.marginBurnout, level: s.burnout.level, message: s.burnout.message }
+      : top.noMotor
+        ? undefined
+        : { margin: top.marginSpent, level: top.spent.level, message: top.spent.message };
   return {
     state: 'ready',
     mach: DESIGN_MACH,
     thresholds,
     liftoff: { margin: s.result.marginLiftoff, level: s.liftoff.level, message: s.liftoff.message },
-    burnout: s.noMotor
-      ? undefined
-      : { margin: s.result.marginBurnout, level: s.burnout.level, message: s.burnout.message },
+    burnout,
   };
 }

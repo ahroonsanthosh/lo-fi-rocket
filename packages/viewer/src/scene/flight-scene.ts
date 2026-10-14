@@ -141,6 +141,8 @@ export const EVENT_COLOURS: Readonly<Record<EventMarker['event']['kind'], number
   landing: 0x1b1f24,
   'max-time': 0x5a6470,
   'model-limit': 0xb3261e,
+  ignition: 0xd9534f,
+  separation: 0x5a6470,
 };
 
 /**

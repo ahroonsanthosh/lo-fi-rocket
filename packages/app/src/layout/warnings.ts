@@ -5,7 +5,14 @@
  * first ": " into what happened and why it matters, and nothing is
  * dropped, reworded or rounded again here.
  */
-import { designFlightWarnings, type DesignWarning, type RocketDesign } from '@lo-fi-rocket/formats';
+import {
+  designFlightWarnings,
+  designIgnitions,
+  designMotorMounts,
+  type DesignWarning,
+  type MotorMount,
+  type RocketDesign,
+} from '@lo-fi-rocket/formats';
 import { validateLaunch, type FlightResult } from '@lo-fi-rocket/physics';
 import type { WarningItem, WarningSeverity } from '@lo-fi-rocket/ui';
 import { formatQuantity, type UnitSystem } from '../units/display.js';
@@ -14,6 +21,7 @@ import { formatQuantity, type UnitSystem } from '../units/display.js';
 export const CODE_SEVERITY: Readonly<Record<DesignWarning['code'], WarningSeverity>> = {
   unstable: 'danger',
   'motor-fit': 'danger',
+  ignition: 'danger',
   'rail-exit-velocity': 'danger',
   'deployment-velocity': 'danger',
   'ejection-velocity': 'danger',
@@ -60,9 +68,15 @@ export function launchWarningItems(design: RocketDesign): WarningItem[] {
   return messages.map((m, i) => item(`launch-${String(i)}`, 'danger', m, 'Launch'));
 }
 
-/** The motor is wider than the inside of its mount tube; also shown inline in the motor step. */
-export function motorFitMessage(design: RocketDesign, units: UnitSystem): string | undefined {
-  const mount = design.motorMount;
+/**
+ * The motor is wider than the inside of its mount tube; also shown inline in the motor step. The
+ * mount is the design's first unless given (plan 0064: a stage's).
+ */
+export function motorFitMessage(
+  design: RocketDesign,
+  units: UnitSystem,
+  mount: MotorMount | undefined = design.motorMount,
+): string | undefined {
   const motor = mount?.motor;
   if (mount === undefined || motor === undefined) return undefined;
   const holder = design.components.find((c) => c.id === mount.componentId);
@@ -79,13 +93,23 @@ export function motorFitMessage(design: RocketDesign, units: UnitSystem): string
 
 /**
  * Warnings that hold for the design before any flight: the rail angle, a
- * motor that does not fit, and a rocket with parts but no recovery device
- * (the same words the flight check uses).
+ * motor that does not fit, a motor that can never light (plan 0064), and a
+ * rocket with parts but no recovery device (the same words the flight
+ * check uses).
  */
 export function designWarningItems(design: RocketDesign, units: UnitSystem): WarningItem[] {
   const out = launchWarningItems(design);
-  const fit = motorFitMessage(design, units);
-  if (fit !== undefined) out.push(item('motor-fit', 'caution', fit, 'Motor'));
+  designMotorMounts(design).forEach((mount, i) => {
+    const fit = motorFitMessage(design, units, mount);
+    if (fit !== undefined) {
+      out.push(item(i === 0 ? 'motor-fit' : `motor-fit-${String(i)}`, 'caution', fit, 'Motor'));
+    }
+  });
+  designIgnitions(design).forEach(({ problem }, i) => {
+    if (problem !== undefined) {
+      out.push(item(`ignition-${String(i)}`, CODE_SEVERITY.ignition, problem, 'Motor'));
+    }
+  });
   if (design.components.length > 0 && design.recovery.length === 0) {
     out.push(
       item(
@@ -103,7 +127,8 @@ export function designWarningItems(design: RocketDesign, units: UnitSystem): War
  * The flight's warnings against the thresholds of the design it flew, in
  * the order the formats package gives them. `withoutNoRecovery` leaves
  * out "No recovery device" when the design check already shows it with
- * the same words, so it is not listed twice.
+ * the same words, so it is not listed twice; a motor that can never light
+ * is always the design check's (plan 0064).
  */
 export function flightWarningItems(
   design: RocketDesign,
@@ -112,7 +137,7 @@ export function flightWarningItems(
 ): WarningItem[] {
   return designFlightWarnings(design, result)
     .map((w, i) => ({ w, i }))
-    .filter(({ w }) => !(withoutNoRecovery && w.code === 'no-recovery'))
+    .filter(({ w }) => !(withoutNoRecovery && w.code === 'no-recovery') && w.code !== 'ignition')
     .map(({ w, i }) =>
       item(`flight-${w.code}-${String(i)}`, CODE_SEVERITY[w.code], w.message, 'Flight results'),
     );

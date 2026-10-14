@@ -23,7 +23,7 @@
  * `reference/digitised/datcom-body-charts.json`.
  */
 import { InvalidInputError } from '../errors.js';
-import type { PlacedComponent } from '../geometry/assembly.js';
+import { isPodPart, type PlacedComponent } from '../geometry/assembly.js';
 import { finiteResult } from '../numerics/finite.js';
 
 export interface BodyChartCurve {
@@ -539,8 +539,10 @@ export interface DatcomBodyAssembly {
 export function datcomBodyAssembly(
   components: readonly PlacedComponent[],
 ): DatcomBodyAssembly | undefined {
+  // Plan 0070: the main body only; a pod set's parts are outside it.
   const ordered = components
-    .map((p, index) => ({ component: p.component, position: p.position, index }))
+    .map((p, index) => ({ component: p.component, position: p.position, index, pod: isPodPart(p) }))
+    .filter((p) => !p.pod)
     .filter(
       (p) =>
         p.component.kind === 'noseCone' ||

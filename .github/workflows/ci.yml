@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# Least privilege: the checks only read the repository (D-090).
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,5 +24,8 @@ jobs:
       - run: pnpm format:check
       - run: pnpm test
       - run: pnpm --filter @lo-fi-rocket/app build
+      # The MCP server as users download it: one file and the Claude Desktop extension (plan 0062).
+      - run: pnpm --filter @lo-fi-rocket/mcp build
+      - run: pnpm --filter @lo-fi-rocket/mcp smoke
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm --filter @lo-fi-rocket/app e2e
