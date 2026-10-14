@@ -90,7 +90,10 @@ export interface DragInputs {
   readonly mach: Mach;
   /** Reynolds number based on the rocket length (DYN-8). */
   readonly reynolds: number;
-  /** Surface roughness height R_s (Table 3.2); the same finish on every external surface. */
+  /**
+   * Surface roughness height R_s (Table 3.2): the design's finish, on every external surface
+   * that does not give its own (`PlacedComponent.roughnessHeight`, plan 0073).
+   */
   readonly roughnessHeight: Metres;
   /** The motor in the base, if any, and whether it is thrusting now. */
   readonly motor?: {
@@ -140,6 +143,10 @@ export interface DragResult {
   readonly referenceArea: SquareMetres;
   readonly rocketLength: Metres;
   readonly finenessRatio: number;
+  /**
+   * The skin friction coefficient of the design's finish (`roughnessHeight`) and the friction
+   * drag of every surface, `cd`, each at its own finish (plan 0073).
+   */
   readonly skinFriction: SkinFriction & { readonly compressible: number; readonly cd: number };
   readonly terms: readonly DragTerm[];
   readonly warnings: readonly string[];
@@ -150,6 +157,29 @@ interface ExternalGeometry {
   wettedBody: number;
   baseRadius: number;
   maxRadius: number;
+  /** Plan 0073: the body's wetted area by surface roughness height. */
+  wettedByFinish: Map<number, number>;
+}
+
+/** A fin set's friction surface (eq. 3.85). */
+interface FinSurface {
+  readonly wettedArea: number;
+  readonly thickness: number;
+  readonly meanChord: number;
+}
+
+const emptyGeometry = (): ExternalGeometry => ({
+  length: 0,
+  wettedBody: 0,
+  baseRadius: 0,
+  maxRadius: 0,
+  wettedByFinish: new Map(),
+});
+
+/** C_fc, eqs. (3.78) to (3.84), at a roughness height and on a length L. */
+function compressibleFrictionAt(input: DragInputs, roughness: number, length: number): number {
+  const friction = skinFrictionCoefficient(input.reynolds, metres(roughness), metres(length));
+  return compressibleSkinFriction(friction, input.mach, input.reynolds);
 }
 
 /** Per-component numbers that do not depend on Mach or Reynolds number, computed once per design. */
@@ -279,12 +309,19 @@ export const DEFAULT_BASE_DRAG_METHOD: BaseDragMethod = 'datcom';
 export const DATCOM_BASE_FAIRING_END = 1.5;
 
 function cfcForBase(input: DragInputs, geometry: ExternalGeometry): number {
-  const friction = skinFrictionCoefficient(
-    input.reynolds,
-    input.roughnessHeight,
-    metres(geometry.length),
-  );
-  return compressibleSkinFriction(friction, input.mach, input.reynolds);
+  const finishes = geometry.wettedByFinish;
+  if (finishes.size <= 1 && (finishes.size === 0 || finishes.has(input.roughnessHeight))) {
+    return compressibleFrictionAt(input, input.roughnessHeight, geometry.length);
+  }
+  // Plan 0073: the DATCOM's body friction is C_f S_S (eq. 4.2.3.1-b), so with parts of several
+  // finishes C_f is their wetted-area mean, Σ C_f,i S_i / Σ S_i.
+  let sum = 0;
+  let area = 0;
+  for (const [roughness, wetted] of finishes) {
+    sum += compressibleFrictionAt(input, roughness, geometry.length) * wetted;
+    area += wetted;
+  }
+  return sum / area;
 }
 
 /**
@@ -355,8 +392,17 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const aRef = (Math.PI * d * d) / 4;
   const warnings: string[] = [];
   const terms: DragTerm[] = [];
-  const geometry: ExternalGeometry = { length: 0, wettedBody: 0, baseRadius: 0, maxRadius: 0 };
-  const finSets: { wettedArea: number; thickness: number; meanChord: number }[] = [];
+  const geometry = emptyGeometry();
+  const finSets: FinSurface[] = [];
+  // Plan 0073 (D-110): the friction surfaces by roughness height, every part at its own finish.
+  const surfaces = new Map<number, { body: number; fins: FinSurface[] }>();
+  const surface = (roughness: number): { body: number; fins: FinSurface[] } => {
+    const found = surfaces.get(roughness);
+    if (found !== undefined) return found;
+    const made = { body: 0, fins: [] };
+    surfaces.set(roughness, made);
+    return made;
+  };
 
   const openRocketButtons: {
     index: number;
@@ -377,13 +423,23 @@ export function dragCoefficient(input: DragInputs): DragResult {
     let body = geometry;
     if (placed.instances !== undefined) {
       const key = `${String(n)}@${String(placed.instances.radialOffset)}`;
-      const pod = podBodies.get(key) ?? {
-        count: n,
-        geometry: { length: 0, wettedBody: 0, baseRadius: 0, maxRadius: 0 },
-      };
+      const pod = podBodies.get(key) ?? { count: n, geometry: emptyGeometry() };
       podBodies.set(key, pod);
       body = pod.geometry;
     }
+    const roughness: number = placed.roughnessHeight ?? input.roughnessHeight;
+    if (!(roughness >= 0 && Number.isFinite(roughness))) {
+      throw new InvalidInputError(
+        `surface roughness height of component ${String(index)}`,
+        roughness,
+        'must be 0 m or more (Table 3.2 lists typical values)',
+      );
+    }
+    const wet = (area: number): void => {
+      body.wettedBody += area;
+      body.wettedByFinish.set(roughness, (body.wettedByFinish.get(roughness) ?? 0) + area);
+      surface(roughness).body += n * area;
+    };
     const push = (t: DragTerm): void => {
       terms.push(
         n === 1
@@ -394,7 +450,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
     switch (c.kind) {
       case 'noseCone': {
         body.length += st.length;
-        body.wettedBody += st.wetted;
+        wet(st.wetted);
         body.baseRadius = st.aftRadius;
         body.maxRadius = Math.max(body.maxRadius, st.aftRadius, st.foreRadius);
         const r = noseConePressureDrag(
@@ -417,14 +473,14 @@ export function dragCoefficient(input: DragInputs): DragResult {
       }
       case 'bodyTube': {
         body.length += st.length;
-        body.wettedBody += st.wetted;
+        wet(st.wetted);
         body.baseRadius = st.aftRadius;
         body.maxRadius = Math.max(body.maxRadius, st.aftRadius, st.foreRadius);
         break;
       }
       case 'transition': {
         body.length += st.length;
-        body.wettedBody += st.wetted;
+        wet(st.wetted);
         body.baseRadius = st.aftRadius;
         body.maxRadius = Math.max(body.maxRadius, st.aftRadius, st.foreRadius);
         if (st.aftRadius > st.foreRadius) {
@@ -468,11 +524,13 @@ export function dragCoefficient(input: DragInputs): DragResult {
             'must be square, rounded, airfoil, wedge or double-wedge for the drag model (Niskanen §3.4.4, D-066)',
           );
         }
-        finSets.push({
+        const fin: FinSurface = {
           wettedArea: st.finWetted * n,
           thickness: st.finThickness,
           meanChord: st.finMeanChord,
-        });
+        };
+        finSets.push(fin);
+        surface(roughness).fins.push(fin);
         const r = finPressureDrag(c.crossSection, st.finSweepAngle, input.mach);
         warnings.push(...r.warnings);
         push({
@@ -643,17 +701,33 @@ export function dragCoefficient(input: DragInputs): DragResult {
   );
   const cfc = compressibleSkinFriction(friction, input.mach, input.reynolds);
   const finenessRatio = geometry.length / d;
-  // Plan 0070: the pods' surfaces are friction surfaces like the body's.
-  const podWetted = [...podBodies.values()].reduce(
-    (sum, pod) => sum + pod.count * pod.geometry.wettedBody,
-    0,
-  );
-  const frictionCd = frictionDragCoefficient(cfc, {
-    finenessRatio,
-    wettedBodyArea: geometry.wettedBody + podWetted,
-    finSets,
-    referenceArea: aRef,
-  });
+  let frictionCd: number;
+  if (surfaces.size <= 1 && (surfaces.size === 0 || surfaces.has(input.roughnessHeight))) {
+    // Plan 0070: the pods' surfaces are friction surfaces like the body's.
+    const podWetted = [...podBodies.values()].reduce(
+      (sum, pod) => sum + pod.count * pod.geometry.wettedBody,
+      0,
+    );
+    frictionCd = frictionDragCoefficient(cfc, {
+      finenessRatio,
+      wettedBodyArea: geometry.wettedBody + podWetted,
+      finSets,
+      referenceArea: aRef,
+    });
+  } else {
+    // Plan 0073 (D-110): parts of several finishes. The friction force is the sum of each
+    // surface's (eq. 3.77), each with its own C_fc from eqs. (3.78) to (3.84) at its own R_s and
+    // the rocket's length L (eqs. 3.79, 3.80), and eq. (3.85)'s body and fin factors; with one
+    // finish this is eq. (3.85) itself. OpenRocket 24.12 computes each part's friction at its own
+    // finish (reference/rockets/finish-probe/values.txt).
+    frictionCd = 0;
+    for (const [roughness, s] of surfaces) {
+      frictionCd += frictionDragCoefficient(
+        compressibleFrictionAt(input, roughness, geometry.length),
+        { finenessRatio, wettedBodyArea: s.body, finSets: s.fins, referenceArea: aRef },
+      );
+    }
+  }
 
   if (M >= 0.8 && M <= 1.2) warnings.push(TRANSONIC_DRAG_WARNING);
   else if (M > 1.2) warnings.push(SUPERSONIC_DRAG_WARNING);

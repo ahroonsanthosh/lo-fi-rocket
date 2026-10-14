@@ -992,3 +992,34 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - **TN D-3182.** CP rms is 4.1 % of body length (was 5.7 %), C_Nα −12 % (was −17 %), forebody drag −16.7 % mean (was −21 % against the total). Held-out supersonic CP rms is 3.1 % (was 3.8 %), C_D rms 15.0 % (was 16.4 %).
   - **Blue Scout.** It moves its CP forward by about 0.03 body lengths to 6°. Both models over-predict that (conservative), the DATCOM model less.
 - **Consequences:** no physics change. The supersonic regime warning quotes the new figures. The open measured gaps (drag just above Mach 1, wedge-fin drag) are recorded in the known limitations, with their safety direction.
+
+## D-110 (2026-10-14): Each part's surface finish, read from `.ork` files and summed in the skin friction
+
+- **Decision:**
+  - A part may have its own surface finish, a roughness height, when it differs from the design's (design file schema 4).
+  - With parts of several finishes the skin friction is the sum over the surfaces, each with its own C_fc. Eqs. (3.78) to (3.84) give it at the surface's own R_s, with the rocket's length in eqs. (3.79) and (3.80). Eq. (3.85)'s body and fin factors apply to each surface.
+  - The DATCOM base drag takes the body's wetted-area mean C_f.
+  - A roughness of 0 is a smooth surface (eq. 3.78 alone).
+  - The `.ork` reader reads every nose cone's, body tube's, transition's and fin set's `<finish>`. Each name is mapped to OpenRocket's own roughness height:
+    - rough 500 µm;
+    - rough unfinished 250 µm;
+    - unfinished 150 µm;
+    - regular paint 60 µm;
+    - smooth paint 20 µm;
+    - optimum paint 5 µm;
+    - aircraft sheet-metal 2 µm;
+    - finished/polished 0.5 µm;
+    - mirror 0 µm.
+  - The design's finish is the one most of those parts have; a part with another finish keeps its own.
+  - A part that names no finish has OpenRocket's default, regular paint.
+  - A name the app does not know is flown as regular paint and listed (moderate).
+- **Why:**
+  - **The gap.** The validation campaign found the finish ignored without a listing (rule 3), moving the apogee −13 % to +14 % on the six rockets that had another finish (plan 0073). Two of OpenRocket's own example files mix finishes.
+  - **The thesis.** It gives one roughness for the whole rocket. The friction force is additive over the surfaces (eq. 3.77), so applying its C_f method to each surface at its own finish is the same method, not a new equation. With one finish it is eq. (3.85) exactly, and the code then takes the old path, so every existing result is unchanged to the bit.
+  - **OpenRocket.** OpenRocket 24.12 computes each part's friction at its own finish (`FinishProbe`, `reference/rockets/finish-probe/values.txt`). The roughness heights are its definitions of its own file values, read as the file format, and five of them are Niskanen's Table 3.2 or Figure 3.10 values.
+- **Results:**
+  - Our friction on the 14 probe rockets (nine finishes, mixed, and each part rough in turn) at Mach 0.1 to 1.5 is 1.24 to 1.46 % above OpenRocket's. That is the regular-paint offset within ±0.11 %, and the offset is the friction form factor (campaign item 7).
+  - The reference rockets and golden outputs are unchanged (all regular paint).
+- **Consequences:**
+  - The MCP part editor now keeps a part's own finish, and its pod set, which it had dropped (plan 0070).
+  - The app cannot yet set a finish, for the design or a part (plan 0073 part 1b).

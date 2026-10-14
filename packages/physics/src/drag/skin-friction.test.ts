@@ -32,8 +32,15 @@ describe('DRAG-1, DRAG-2 skin friction coefficient, eqs. (3.78) to (3.81)', () =
     expect(ROUGHNESS_HEIGHTS.regularPaint60um).toBe(60e-6);
     expect(ROUGHNESS_HEIGHTS.averageGlass).toBe(0.1e-6);
   });
-  it('rejects a non-positive roughness or length, or a negative Reynolds number', () => {
-    expect(() => skinFrictionCoefficient(1e6, metres(0), L)).toThrow(InvalidInputError);
+  it('a smooth surface (R_s = 0, plan 0073) is never roughness-limited: R = 10⁹ gives 1/(1.5 ln 10⁹ − 5.6)² = 1.53969·10⁻³', () => {
+    // ln 10⁹ = 20.723266; × 1.5 = 31.084899; − 5.6 = 25.484899; squared 649.48006; inverse 1.539693·10⁻³.
+    const r = skinFrictionCoefficient(1e9, metres(0), L);
+    expect(r.regime).toBe('turbulent');
+    expect(r.reynoldsCritical).toBe(Infinity);
+    expect(r.cf).toBeCloseTo(1.539693e-3, 9);
+  });
+  it('rejects a negative roughness, a non-positive length or a negative Reynolds number', () => {
+    expect(() => skinFrictionCoefficient(1e6, metres(-1e-6), L)).toThrow(InvalidInputError);
     expect(() => skinFrictionCoefficient(1e6, RS, metres(0))).toThrow(InvalidInputError);
     expect(() => skinFrictionCoefficient(-1, RS, L)).toThrow(InvalidInputError);
   });

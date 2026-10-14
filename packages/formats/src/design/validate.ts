@@ -23,6 +23,7 @@ import {
   type Component,
   type IntegratorOptions,
   type MassOverride,
+  type Metres,
   type MotorDefinition,
   type MotorMassRule,
   type NoseShape,
@@ -505,6 +506,13 @@ function motorSelection(c: Ctx, path: string, v: unknown): MotorSelection {
   };
 }
 
+/** Plan 0073: a part's own surface roughness height, 0 m (a smooth surface) or more. */
+function roughness(c: Ctx, path: string, v: unknown): Metres {
+  const r = c.number(path, v);
+  if (!(r >= 0)) c.fail(path, 'must be 0 m or more');
+  return metres(r);
+}
+
 /** Plan 0064: a stage number, an integer from 0; checked against the stage list afterwards. */
 /** Plan 0070: a pod set's count (a whole number, 1 or more) and radial offset (0 m or more). */
 function designPod(c: Ctx, path: string, v: unknown): DesignPod {
@@ -899,7 +907,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       path,
       co,
       ['id', 'name', 'position', 'component'],
-      ['massOverride', 'approximations', 'stage', 'pod'],
+      ['massOverride', 'approximations', 'stage', 'pod', 'roughnessHeight'],
     );
     const id = c.nonEmptyString(`${path}.id`, co['id']);
     if (ids.has(id)) c.fail(`${path}.id`, `duplicate id "${id}"`);
@@ -922,6 +930,9 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
         : {}),
       ...('pod' in co && co['pod'] !== undefined
         ? { pod: designPod(c, `${path}.pod`, co['pod']) }
+        : {}),
+      ...('roughnessHeight' in co && co['roughnessHeight'] !== undefined
+        ? { roughnessHeight: roughness(c, `${path}.roughnessHeight`, co['roughnessHeight']) }
         : {}),
     };
   });

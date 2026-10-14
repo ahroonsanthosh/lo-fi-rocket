@@ -23,7 +23,7 @@ import type {
 } from '@lo-fi-rocket/physics';
 
 /** Bumped whenever the file layout changes; migrate.ts carries one step per bump. */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export interface DesignComponent {
   readonly id: string;
@@ -43,6 +43,12 @@ export interface DesignComponent {
    * of the main body or inside it.
    */
   readonly pod?: DesignPod;
+  /**
+   * Plan 0073 (schema 4, D-110): the part's own surface roughness height when it differs from the
+   * design's finish, as an OpenRocket file gives each part its own. Only the skin friction of a
+   * nose cone, body tube, transition or fin set uses it. Absent means the design's finish.
+   */
+  readonly roughnessHeight?: Metres;
 }
 
 /** Plan 0070: a pod set's count and the distance of each pod's axis from the rocket's. */
@@ -217,7 +223,10 @@ export interface RocketDesign {
   /** Plan 0064 (schema 2, D-091): the stages, top first; absent for a one-stage rocket. */
   readonly stages?: readonly DesignStage[];
   readonly recovery: readonly DesignRecoveryDevice[];
-  /** Surface roughness height for the skin friction (DRAG-2, Niskanen Figure 3.10). */
+  /**
+   * Surface roughness height for the skin friction (DRAG-2, Niskanen Figure 3.10), on every part
+   * that does not give its own (`DesignComponent.roughnessHeight`, plan 0073).
+   */
   readonly finish: { readonly roughnessHeight: Metres };
   /** Overrides the maximum body diameter as the stability reference (BAR-9). */
   readonly referenceDiameter?: Metres;

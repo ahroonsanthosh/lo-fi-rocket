@@ -49,13 +49,16 @@ describe('pod sets in the design file (plan 0070, schema 3)', () => {
     const d = podded();
     const text = serializeDesign(d);
     expect(text).toContain(`"schemaVersion": ${String(CURRENT_SCHEMA_VERSION)}`);
-    expect(CURRENT_SCHEMA_VERSION).toBe(3);
+    expect(CURRENT_SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
     expect(parseDesign(text)).toEqual(d);
   });
 
   it('reads a version-2 file as the same design, with no pods', () => {
     const d = exampleDesign('v2');
-    const v2 = serializeDesign(d).replace('"schemaVersion": 3', '"schemaVersion": 2');
+    const v2 = serializeDesign(d).replace(
+      `"schemaVersion": ${String(CURRENT_SCHEMA_VERSION)}`,
+      '"schemaVersion": 2',
+    );
     expect(parseDesign(v2)).toEqual(d);
   });
 

@@ -56,11 +56,14 @@ export function orkToDesign(
     ...(staged ? { stage: stageOf(i) } : {}),
     // Plan 0070: a pod set's part keeps its count and radial offset.
     ...(c.instances === undefined ? {} : { pod: c.instances }),
+    // Plan 0073 (D-110): a part whose finish is not the design's keeps its own.
+    ...(c.roughnessHeight === undefined ? {} : { roughnessHeight: c.roughnessHeight }),
   }));
   const base = newDesign(id, rocket.name);
   let design: RocketDesign = {
     ...base,
     components,
+    finish: { roughnessHeight: rocket.roughnessHeight },
     referenceDiameter: metres(2 * rocket.maxBodyRadius),
     ...(rocket.approximations.length === 0 ? {} : { approximations: rocket.approximations }),
     ...(rocket.asBuilt === undefined ? {} : { asBuilt: rocket.asBuilt }),

@@ -54,11 +54,14 @@ export function skinFrictionCoefficient(
   if (!(R >= 0) || !Number.isFinite(R)) {
     throw new InvalidInputError('Reynolds number', R, 'must be 0 or greater and finite');
   }
-  if (!(rs > 0) || !Number.isFinite(rs)) {
+  // R_s = 0 is a smooth surface: eq. (3.78) "assumes that the surface is smooth" (p. 43), and the
+  // critical Reynolds number (3.79) is then infinite, so the roughness-limited value never applies
+  // (plan 0073: OpenRocket's "mirror" finish).
+  if (!(rs >= 0) || !Number.isFinite(rs)) {
     throw new InvalidInputError(
       'surface roughness height',
       rs,
-      'must be greater than 0 m (Table 3.2 lists typical values)',
+      'must be 0 m or more (Table 3.2 lists typical values)',
     );
   }
   if (!(L > 0)) throw new InvalidInputError('rocket length', L, 'must be greater than 0 m');

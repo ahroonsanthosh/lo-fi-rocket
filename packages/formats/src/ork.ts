@@ -126,6 +126,11 @@ export interface OrkRocket {
   readonly componentStage: readonly number[];
   readonly recoveryDevices: readonly OrkRecoveryDevice[];
   /**
+   * Plan 0073 (D-110): the surface finish most parts have, as a roughness height; a part with
+   * another finish carries its own (`components[i].roughnessHeight`).
+   */
+  readonly roughnessHeight: Metres;
+  /**
    * Approximations of the design as a whole (D-084), e.g. a stage-level override that is not
    * applied. Approximations of one part are on that part (`components[i].approximations`).
    */
@@ -912,6 +917,29 @@ function subjectOf(el: Element): string {
   return name === undefined || name === '' ? label : `${label} "${name}"`;
 }
 
+/**
+ * Plan 0073: the finish most of the parts have, the first of those in file order on a tie, or
+ * OpenRocket's default when no part has one. Only the design's later edits use the choice: every
+ * part with another finish keeps its own.
+ */
+function commonFinish(components: readonly PlacedComponent[]): number {
+  const counts = new Map<number, number>();
+  for (const c of components) {
+    if (c.roughnessHeight !== undefined) {
+      counts.set(c.roughnessHeight, (counts.get(c.roughnessHeight) ?? 0) + 1);
+    }
+  }
+  let best = OPENROCKET_DEFAULT_FINISH;
+  let most = 0;
+  for (const [roughness, n] of counts) {
+    if (n > most) {
+      best = roughness;
+      most = n;
+    }
+  }
+  return best;
+}
+
 /** Parts whose stand-in loses lift or drag that matters to the flight (D-084). */
 const AERODYNAMIC_PARTS = new Set([
   'trapezoidfinset',
@@ -929,6 +957,30 @@ const EXTERNAL_PARTS = new Set(['nosecone', 'bodytube', 'transition']);
 
 /** OpenRocket 24.12's automatic parachute drag coefficient (D-079, reference/rockets/parts-probe/values.txt). */
 const OPENROCKET_AUTO_PARACHUTE_CD = 0.8;
+
+/**
+ * Plan 0073 (D-110): the roughness height, m, of each surface finish an OpenRocket 24.12 file
+ * names, as OpenRocket defines them (`FinishProbe`, reference/rockets/finish-probe/values.txt).
+ * Rough 500 µm, optimum paint 5 µm and a finished, polished surface 0.5 µm are Niskanen's
+ * Table 3.2 values; regular paint 60 µm is Figure 3.10's; 0 µm is a smooth surface (eq. 3.78).
+ */
+export const OPENROCKET_FINISHES: Readonly<Record<string, number>> = {
+  rough: 500e-6,
+  roughunfinished: 250e-6,
+  unfinished: 150e-6,
+  normal: 60e-6,
+  smooth: 20e-6,
+  optimum: 5e-6,
+  polished: 2e-6,
+  finishpolished: 0.5e-6,
+  mirror: 0,
+};
+
+/** OpenRocket's finish for a part that names none ("normal", regular paint). */
+const OPENROCKET_DEFAULT_FINISH = 60e-6;
+
+/** The parts whose skin friction the drag model computes, and so whose finish matters. */
+const FRICTION_KINDS = new Set<Component['kind']>(['noseCone', 'bodyTube', 'transition', 'finSet']);
 
 /** The configuration OpenRocket opens a file in when none of several is marked default: no motor. */
 const NO_CONFIGURATION = '';
@@ -1134,6 +1186,8 @@ class Reader {
             this.note(el, a);
           })
         : override;
+    // Plan 0073 (D-110): the part's own surface finish, for its skin friction.
+    const roughnessHeight = FRICTION_KINDS.has(component.kind) ? this.readFinish(el) : undefined;
     const approximations = this.pending.get(el.node);
     this.pending.delete(el.node);
     if (!this.placed.has(el.node)) this.placed.set(el.node, this.components.length);
@@ -1144,8 +1198,28 @@ class Reader {
       position: metres(position),
       ...(massOverride === undefined ? {} : { massOverride }),
       ...(approximations === undefined ? {} : { approximations }),
+      ...(roughnessHeight === undefined ? {} : { roughnessHeight: metres(roughnessHeight) }),
     });
     return this.components.length - 1;
+  }
+
+  /**
+   * Plan 0073 (D-110): the roughness height of the part's `<finish>`. A part that names none has
+   * OpenRocket's default finish; a finish this app does not know is listed and taken as that.
+   */
+  private readFinish(el: Element): number {
+    const text = el.optionalText('finish')?.trim().toLowerCase();
+    if (text === undefined) return OPENROCKET_DEFAULT_FINISH;
+    const known = OPENROCKET_FINISHES[text];
+    if (known !== undefined) return known;
+    this.note(el, {
+      what: `the surface finish "${text}", which the app does not know`,
+      method: 'regular paint, 60 µm, OpenRocket’s default finish',
+      effect:
+        'the skin friction of this part, a third or more of the drag of most rockets, may be higher or lower than OpenRocket’s; a rougher finish lowers the apogee',
+      impact: 'moderate',
+    });
+    return OPENROCKET_DEFAULT_FINISH;
   }
 
   /**
@@ -2536,11 +2610,14 @@ class Reader {
     });
     if (components.length === 0) throw rocket.parseError('no stage of the rocket flies');
     const [mount] = mounts;
+    const finish = commonFinish(components);
     return {
       name: rocket.optionalText('name') ?? '',
       formatVersion: version,
       creator: root.attribute('creator'),
-      components,
+      components: components.map(({ roughnessHeight, ...c }) =>
+        roughnessHeight === undefined || roughnessHeight === finish ? c : { ...c, roughnessHeight },
+      ),
       length: metres(
         off.size === 0
           ? this.length
@@ -2562,6 +2639,7 @@ class Reader {
         return n === undefined || !kept(i) ? [] : [n];
       }),
       recoveryDevices: devices,
+      roughnessHeight: metres(finish),
       approximations: this.approximations,
       ...(this.asBuilt === undefined ? {} : { asBuilt: this.asBuilt }),
       notices: this.notices,
