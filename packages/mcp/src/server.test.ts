@@ -631,8 +631,11 @@ describe('the ThrustCurve.org catalogue (recorded answers, no network)', () => {
     };
     const found = await call2('search_thrustcurve', { designation: 'D12', diameter: '24 mm' });
     expect(get(found, 'results')).toHaveLength(1);
-    // The diameter goes to the API in millimetres; only motors with data files are asked for.
-    expect(bodies[0]).toMatchObject({ commonName: 'D12', diameter: 24, hasDataFiles: true });
+    // The diameter goes to the API in millimetres. hasDataFiles is not sent (issue #8: the service
+    // answered it with no matches); motors without a data file are dropped from the answer instead.
+    expect(bodies[0]).toMatchObject({ commonName: 'D12', diameter: 24 });
+    expect(bodies[0]).not.toHaveProperty('hasDataFiles');
+    expect(found['without_data']).toBe(0);
     const added = await call2('add_thrustcurve_motor', { motorId: '5f4294d20002310000000055' });
     expect(added['id']).toBe('thrustcurve:5f4294d20002310000000055');
     expect(added['delays_s']).toEqual([0, 3, 5, 7]);

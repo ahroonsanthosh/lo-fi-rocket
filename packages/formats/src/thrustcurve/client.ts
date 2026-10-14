@@ -222,6 +222,29 @@ export async function searchMotors(
   return { matches: optNum(o, 'matches') ?? results.length, results };
 }
 
+/** `searchMotorsWithData`'s answer: the motors that can be flown, and how many could not. */
+export interface DataSearchResult extends SearchResult {
+  /** Motors the search returned that have no data file on ThrustCurve.org (nothing to fly). */
+  readonly withoutData: number;
+}
+
+/**
+ * A search for motors that can be flown: those with at least one data file.
+ * The API's `hasDataFiles` criterion is not sent: although swagger.json lists
+ * it ("only motors with data files"), the live service answered it with 0
+ * matches whatever the other criteria (issue #8, 2026-10-12). Each result's
+ * own `dataFiles` count gives the same selection whichever way the service
+ * treats the criterion.
+ */
+export async function searchMotorsWithData(
+  transport: Transport,
+  request: Omit<SearchRequest, 'hasDataFiles'>,
+): Promise<DataSearchResult> {
+  const r = await searchMotors(transport, request);
+  const results = r.results.filter((m) => m.dataFiles > 0);
+  return { matches: r.matches, results, withoutData: r.results.length - results.length };
+}
+
 /** Decode the API's Base64 file content to text (UTF-8; RASP and RockSim files are ASCII). */
 function decodeBase64(data: string): string {
   const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));

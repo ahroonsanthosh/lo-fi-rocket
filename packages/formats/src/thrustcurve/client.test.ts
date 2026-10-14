@@ -21,6 +21,7 @@ import {
   downloadMotor,
   fetchMetadata,
   searchMotors,
+  searchMotorsWithData,
   ThrustCurveError,
   type Transport,
 } from './client.js';
@@ -117,6 +118,31 @@ describe('ThrustCurve.org client (plan 0013, swagger 1.0.3)', () => {
     expect(r.results[0]?.length).toBe(0.07);
     expect(r.results[0]?.commonName).toBe('D12');
     expect(r.results[0]?.delays).toBe('0,3,5,7');
+  });
+  it('a search for flyable motors does not send hasDataFiles and keeps motors with a data file (issue #8)', async () => {
+    let body: unknown;
+    const noData = {
+      ...SEARCH_FIXTURE.results[0],
+      motorId: 'nodata',
+      designation: 'X1',
+      dataFiles: 0,
+    };
+    const t = transportOf({
+      'search.json': (b) => {
+        body = b;
+        return { ...SEARCH_FIXTURE, matches: 2, results: [...SEARCH_FIXTURE.results, noData] };
+      },
+    });
+    const r = await searchMotorsWithData(t, { diameter: 24, impulseClass: 'D', maxResults: 50 });
+    // The live service answered hasDataFiles: true with 0 matches on its own, so it is never sent.
+    expect(body).toEqual({ diameter: 24, impulseClass: 'D', maxResults: 50 });
+    expect(r.results.map((m) => m.motorId)).toEqual(['5f4294d20002310000000055']);
+    expect(r.withoutData).toBe(1);
+    expect(r.matches).toBe(2);
+    // No criterion but the result count: still refused.
+    await expect(searchMotorsWithData(t, { maxResults: 5 })).rejects.toThrow(
+      /at least one search criterion/,
+    );
   });
   it('rejects an empty search, a non-OK answer, invalid JSON, an API error and a bad field', async () => {
     const t = transportOf({ 'search.json': () => ({ results: [{ motorId: 1 }] }) });

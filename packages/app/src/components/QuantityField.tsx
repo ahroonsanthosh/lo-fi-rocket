@@ -32,8 +32,13 @@ function ruleMessage(label: string, rule: FieldRule, unitLabel: string): string 
 function showValue(si: number, kind: QuantityKind, units: UnitSystem): string {
   const v = displayValue(si, kind, units);
   const u = unitFor(kind, units);
-  const fixed = v.toFixed(Math.max(u.decimals, 3));
-  return String(Number(fixed));
+  const fixed = Number(v.toFixed(Math.max(u.decimals, 3)));
+  // Issue #14: a small value loses its digits to fixed decimals (a tolerance of 1e-8 read 0). When
+  // rounding moves it by more than 1 %, it is shown to 6 significant digits instead ("1e-8").
+  if (v !== 0 && Math.abs(fixed - v) > 0.01 * Math.abs(v)) {
+    return String(Number(v.toPrecision(6)));
+  }
+  return String(fixed);
 }
 
 /**

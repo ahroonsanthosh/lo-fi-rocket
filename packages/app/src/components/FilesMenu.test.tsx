@@ -96,6 +96,39 @@ describe('files (plan 0015)', () => {
     expect(screen.getByRole('textbox', { name: 'Design name' })).toHaveValue('Beta');
   });
 
+  it('asks before deleting a stored design, and the list updates at once (issue #39)', async () => {
+    const storage = memory();
+    const a = exampleDesign('a');
+    const b = { ...exampleDesign('b'), name: 'Keep me' };
+    storage.setItem('lofi-rocket:design:b', serializeDesign(b));
+    render(
+      <App
+        storage={storage}
+        motorStore={memory()}
+        transport={noNetwork}
+        initialDesign={a}
+        services={{ runner: synchronousRunner() }}
+      />,
+    );
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'File' }));
+    await user.click(screen.getByRole('button', { name: 'Designs' }));
+    const list = screen.getByRole('list', { name: 'Stored designs' });
+    await user.click(within(list).getByRole('button', { name: 'Delete Keep me' }));
+    // Nothing is deleted yet: the row asks.
+    expect(within(list).getByRole('alert')).toHaveTextContent(
+      'Delete “Keep me”? This cannot be undone.',
+    );
+    expect(storage.getItem('lofi-rocket:design:b')).not.toBeNull();
+    await user.click(within(list).getByRole('button', { name: 'Keep Keep me' }));
+    expect(within(list).getByText('Keep me')).toBeInTheDocument();
+    expect(storage.getItem('lofi-rocket:design:b')).not.toBeNull();
+    await user.click(within(list).getByRole('button', { name: 'Delete Keep me' }));
+    await user.click(within(list).getByRole('button', { name: 'Delete Keep me for good' }));
+    expect(storage.getItem('lofi-rocket:design:b')).toBeNull();
+    expect(within(list).queryByText('Keep me')).toBeNull();
+  });
+
   it('exports the design as a RASAero II file (plan 0077) and says what was mapped', async () => {
     const saved: string[] = [];
     render(

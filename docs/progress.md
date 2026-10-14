@@ -161,6 +161,11 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Export.** The app's File menu and the MCP write a design as a RASAero II `.CDX1` file. What RASAero cannot hold is refused with what to change.
   - **Agreement.** R1 to R5 flown in RASAero with our own motor curves: the CP agrees within 1.3 mm. R1 (launch lug) agrees within 3 % between all three programs.
   - **Disagreement.** R2 to R5 (rail buttons) differ by up to 27 % in apogee, mostly from the rail guide drag, where the three programs' models span a factor of about 30. Measured rail button drag would settle it (owner decision 3).
+- The other sessions' work integrated (owner, 2026-10-14):
+  - **#77 (UI).** Merged with main's newer features kept: design links, the stages editor, streamers, pod labels and top-stage burnout. A second recovery device can be added (dual deployment). Thrust to weight and the Mach regime are shown again.
+  - **#79 (3D).** Merged. A stalled frame no longer jumps the replay (`MAX_FRAME_STEP`, D-3D-6); this fixed a timing failure in CI.
+  - **Review issues.** #12, #25, #33 and #34 were closed as already fixed, with the evidence. #29 and #61 were fixed by #79.
+  - **Plan 0078 (D-117).** Fixes #8 (ThrustCurve search found nothing), #10 (the delay reset silently), #14 (small values read 0) and #39 (delete without asking).
 
 ## In progress
 

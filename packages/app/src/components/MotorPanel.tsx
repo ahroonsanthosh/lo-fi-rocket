@@ -6,7 +6,7 @@ import {
   parseRse,
   parseThrustCurveCsv,
   putCachedMotor,
-  searchMotors,
+  searchMotorsWithData,
   getThrustCurveMotor,
   stageMotorMount,
   type IgnitionEvent,
@@ -32,6 +32,7 @@ import {
   storedMotors,
   type LibraryMotor,
 } from '../motors/library.js';
+import { chooseDelay } from '../motors/delay.js';
 import { useServices } from '../state/services.js';
 import { motorFitMessage } from '../layout/warnings.js';
 import { useStore } from '../state/store.js';
@@ -102,13 +103,20 @@ export function MotorPanel(): JSX.Element {
     if (staged) dispatch({ type: 'set-stage-motor-mount', stage: shownStage, mount: next });
     else dispatch({ type: 'set-motor-mount', mount: next });
   };
+  // Issue #10: what happened to the delay when the motor changed, until the user sets it.
+  const [delayNote, setDelayNote] = useState<string | undefined>(undefined);
   const useMotor = (m: LibraryMotor): void => {
-    const delay = m.delays === 'plugged' || m.delays === undefined ? undefined : m.delays[0];
+    const { delay, note } = chooseDelay(
+      `${m.definition.manufacturer} ${m.definition.designation}`,
+      m.delays,
+      mount?.motor?.ejectionDelay,
+    );
     const selection: MotorSelection = {
       definition: m.definition,
       provenance: m.provenance,
       ...(delay === undefined ? {} : { ejectionDelay: delay }),
     };
+    setDelayNote(note);
     setMount({ motor: selection });
   };
 
@@ -194,6 +202,7 @@ export function MotorPanel(): JSX.Element {
               <DelayEntry
                 value={motor.ejectionDelay}
                 onChange={(d) => {
+                  setDelayNote(undefined);
                   setMount({ motor: withDelay(motor, d) });
                 }}
               />
@@ -203,6 +212,7 @@ export function MotorPanel(): JSX.Element {
                 value={motor.ejectionDelay === undefined ? 'plugged' : String(motor.ejectionDelay)}
                 onChange={(e) => {
                   const v = e.target.value;
+                  setDelayNote(undefined);
                   setMount({
                     motor: withDelay(motor, v === 'plugged' ? undefined : seconds(Number(v))),
                   });
@@ -220,6 +230,11 @@ export function MotorPanel(): JSX.Element {
             )}
             <span className="field-unit">s</span>
           </div>
+          {delayNote === undefined ? null : (
+            <p className="field-hint" role="status">
+              {delayNote}
+            </p>
+          )}
         </div>
       )}
       {mount === undefined || (!staged && mount.ignition === undefined) ? null : (
@@ -272,6 +287,23 @@ export function MotorPanel(): JSX.Element {
       />
     </section>
   );
+}
+
+/** Results asked of ThrustCurve.org per search. */
+const SEARCH_LIMIT = 50;
+
+/** The search's outcome in words: what is listed, what was left out and why. */
+export function searchStatus(listed: number, withoutData: number, matches: number): string {
+  const parts = [`${String(listed)} motor${listed === 1 ? '' : 's'} with a thrust curve`];
+  if (withoutData > 0) {
+    parts.push(
+      `${String(withoutData)} more without a thrust curve on ThrustCurve.org ${withoutData === 1 ? 'is' : 'are'} not listed`,
+    );
+  }
+  const status = parts.join('; ');
+  return matches > listed + withoutData
+    ? `${status}. The search matched ${String(matches)}; only the first ${String(SEARCH_LIMIT)} were read, so narrow it down.`
+    : status;
 }
 
 function sameProvenance(m: LibraryMotor, sel: MotorSelection): boolean {
@@ -538,12 +570,16 @@ function ThrustCurveTab({ innerDiameter, onUse, onLibraryChanged }: PickerProps)
         ...(diameter.trim() === '' ? {} : { diameter: Number(diameter) }),
         ...(impulseClass.trim() === '' ? {} : { impulseClass: impulseClass.trim().toUpperCase() }),
         ...(manufacturer.trim() === '' ? {} : { manufacturer: manufacturer.trim() }),
-        hasDataFiles: true,
-        maxResults: 50,
+        maxResults: SEARCH_LIMIT,
       };
-      const r = await searchMotors(services.transport, request);
+      if (Object.keys(request).length === 1) {
+        setStatus('Enter a diameter, an impulse class or a manufacturer to search.');
+        return;
+      }
+      // Issue #8: only motors with a thrust curve can be flown; the others are counted, not listed.
+      const r = await searchMotorsWithData(services.transport, request);
       setResults(r.results);
-      setStatus(`${String(r.matches)} motor${r.matches === 1 ? '' : 's'} found`);
+      setStatus(searchStatus(r.results.length, r.withoutData, r.matches));
     } catch (e) {
       setStatus(errorText(e));
     } finally {
