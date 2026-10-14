@@ -14,9 +14,9 @@ The held-out C_D rms is 7.1 % subsonic (target 7 %), 21.3 % transonic (target 10
 
 4. **Digitise ARCAS (NASA TN D-4013) to 21°** and compare C_N(α) and CP(α) with both normal-force models. This decides the open moderate-angle question of D-070.
 5. **Body-vortex interference on the fins** (approved DATCOM 4.3.1.3 Method 1, figures 4.3.1.3-7 to -15). The DATCOM says it "may become sizable" for missiles.
-6. **Supersonic high-angle fin force** (approved DATCOM 4.1.3.3 C, figures 4.1.3.3-59 to -61). Above Mach 1 a flight still ends at 90°.
+6. **Supersonic high-angle fin force** (approved DATCOM 4.1.3.3 C, figures 4.1.3.3-59 to -63; plan 0067 section 1). Above Mach 1 the displayed mode uses the small-angle fin force to 90° and, since D-103, the same force on the reversed fin beyond 90°, listed as a major approximation.
 7. **Jorgensen's axial force** (approved DATCOM 4.2.3.2), to replace the mirrored axial-drag scaling beyond 90° (D-033).
-8. **High-aspect-ratio and single-wedge fins at large angles.** DATCOM 4.1.3.4 Method 2 needs section maximum-lift data, which flat plates do not have (Hoerner's _Fluid-Dynamic Lift_ would be a new source). For single wedges no chart covers a maximum thickness at the trailing edge.
+8. **High-aspect-ratio and single-wedge fins at large angles.** Approximated and listed since D-102. A sourced method would need section maximum-lift data for flat plates (DATCOM 4.1.3.4 Method 2; Hoerner's _Fluid-Dynamic Lift_ would be a new source), and for single wedges a chart covering a maximum thickness at the trailing edge.
 
 ## Inputs without a source
 

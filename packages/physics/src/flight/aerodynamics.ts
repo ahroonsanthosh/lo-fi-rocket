@@ -10,7 +10,7 @@
  * §3.4.7 p. 53 (axial drag at angle of attack, DRAG-14).
  */
 import { axialDragScaling } from '../drag/drag.js';
-import { InvalidInputError, NotImplementedError } from '../errors.js';
+import { InvalidInputError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
 import type { TrapezoidFinSetComponent } from '../geometry/components.js';
 import { finPlanform, trapezoidOf } from '../geometry/fin-planform.js';
@@ -418,8 +418,8 @@ export const LARGE_ANGLE_TRANSITION_WARNING =
   'flying backwards (angle of attack above 90°) with a transition on the body: the DATCOM substantiates the reverse-flow body method only for bodies of constant cross section (D-070)';
 export const CROSSFLOW_CHART_HELD_WARNING =
   'body fineness ratio or cross-flow Mach number outside DATCOM figure 4.2.1.2-35 (fineness 2 to 28, cross-flow Mach to 9): the end value of the chart was used (D-070)';
-export const SUPERSONIC_LARGE_ANGLE_ERROR =
-  'fin normal force beyond 90° angle of attack at Mach 1 or above: the DATCOM supersonic high-angle charts (section 4.1.3.3 C) are not implemented';
+export const SUPERSONIC_REVERSE_FLOW_WARNING =
+  'tumbling or flying backward (angle of attack above 90°) at Mach 1 or above: the fin force is the small-angle supersonic force (Niskanen eq. 3.49) applied to the reversed fin, with no sourced method behind it; the DATCOM supersonic high-angle method (section 4.1.3.3 C) is not implemented and covers 0 to 90° only (D-103)';
 
 /**
  * AERO-1, AERO-2 with the large-angle model of D-070 (HA-1 to HA-10). Body:
@@ -433,7 +433,9 @@ export const SUPERSONIC_LARGE_ANGLE_ERROR =
  * Mach 1: the fin set's slope (and its body carry-over) times the DATCOM wing
  * normal-force shape C′_N/C_Nα (HA-7, HA-9), the panel CP from HA-8; beyond
  * 90° the reversed wing (HA-10). Fins at Mach 1 and above keep Niskanen's
- * eq. (3.49) and are applied up to 90° only.
+ * eq. (3.49), linear in α up to 90°; beyond 90° the same force on the reversed
+ * fin, α′ = 180° − α at the mirrored CP of the reversed planform (plan 0067,
+ * D-103: an approximation, listed in the flight result).
  */
 function normalForceLargeAngle(
   components: readonly PlacedComponent[],
@@ -554,10 +556,32 @@ function normalForceLargeAngle(
         let shape: number;
         let finCp: number;
         let carryCp = t.carryOver.cpX;
-        if (M >= 1) {
-          if (reverse) throw new NotImplementedError(SUPERSONIC_LARGE_ANGLE_ERROR);
+        if (M >= 1 && !reverse) {
           shape = aPrime;
           finCp = forwardCp;
+        } else if (M >= 1) {
+          // Plan 0067 (D-103): the HA-10 reverse-flow idea applied to the supersonic force: the
+          // forward slope (continuous at 90°) times α′, at the reversed planform's CP mirrored along
+          // the root chord. No sourced method covers this regime; the result lists it.
+          const reversed = reversedFin(c);
+          const r = finSetTerm(
+            reversed,
+            squareMetres(aRef),
+            mach,
+            lateralAirflowAngle,
+            options.finRollReduction,
+            aPrime,
+            transonic,
+            supersonic,
+          );
+          const rCarry = r.carryOver.cnAlpha;
+          const rFinSlope = r.cnAlpha - rCarry;
+          const reversedCp =
+            rCarry > 0 ? (r.cnAlpha * r.cpX - rCarry * r.carryOver.cpX) / rFinSlope : r.cpX;
+          warnings.push(SUPERSONIC_REVERSE_FLOW_WARNING);
+          shape = aPrime;
+          finCp = cr - reversedCp;
+          carryCp = cr - t.carryOver.cpX;
         } else if (!reverse) {
           const la = finLargeAngle(c, M, aPrime, false, forwardCp / cr);
           warnings.push(...la.warnings);

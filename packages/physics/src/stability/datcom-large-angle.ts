@@ -671,8 +671,19 @@ export function finLargeAngleAvailability(
 const WEDGE_SECTION_NOTE =
   'a single-wedge section, thickest at the trailing edge, lies outside DATCOM figures 4.1.3.4-23a and -23b; the 23b family (thickest at 35 to 50 %), the nearer, was used';
 
+const HIGH_ASPECT_RATIO_NOTE_TAIL =
+  'the low-aspect-ratio method was used, its charts held at their ends (the high-aspect-ratio method needs section maximum-lift data a flat fin does not have)';
+
 function highAspectRatioNote(aspectRatio: number, limit: number): string {
-  return `the exposed fin pair's aspect ratio ${aspectRatio.toFixed(2)} is above the low-aspect-ratio limit 4/((C₁ + 1) cos Λ_LE) = ${limit.toFixed(2)} of DATCOM eq. 4.1.3.4-c; the low-aspect-ratio method was used, its charts held at their ends (the high-aspect-ratio method needs section maximum-lift data a flat fin does not have)`;
+  return `the exposed fin pair's aspect ratio ${aspectRatio.toFixed(2)} is above the low-aspect-ratio limit 4/((C₁ + 1) cos Λ_LE) = ${limit.toFixed(2)} of DATCOM eq. 4.1.3.4-c; ${HIGH_ASPECT_RATIO_NOTE_TAIL}`;
+}
+
+/**
+ * Plan 0067: whether a flight warning is a D-102 approximation note. finLargeAngle gives these as
+ * warnings only beyond the stall, so a flight with one used the approximated part of the model.
+ */
+export function isLargeAngleApproximationWarning(warning: string): boolean {
+  return warning.includes(WEDGE_SECTION_NOTE) || warning.includes(HIGH_ASPECT_RATIO_NOTE_TAIL);
 }
 
 /**
