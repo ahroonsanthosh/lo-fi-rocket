@@ -126,6 +126,8 @@ export function MotorPanel(): JSX.Element {
       value={shownStage}
       onChange={(k) => {
         setStage(k);
+        // The delay note belongs to the stage whose motor changed.
+        setDelayNote(undefined);
       }}
     />
   );

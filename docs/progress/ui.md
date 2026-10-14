@@ -4,6 +4,12 @@ Updated by the ui session after every pull request. See "Parallel sessions" in C
 
 ## Done
 
+- 2026-10-14, integrated by the physics session at the owner's request (#77 merged, then #109):
+  - **Main merged in.** Its newer features were kept in the simplified layout: design links, the stages editor (on Stability and mass), streamers, pod counts and the top stage's burnout.
+  - **Restored and fixed.**
+    - A second recovery device can be added.
+    - Thrust to weight is on the Motor page, and the Mach regime on the flight results.
+    - Review issues #8, #10, #14 and #39 are fixed (plan 0078, D-117).
 - 2026-10-13, branch `claude/gallant-clarke-oi4jv3` (second pull request): the console simplified on the owner's review (`docs/ui/simplify.md`, D-UI-11 to D-UI-14).
   - `packages/ui`: flat neutral palette with one blue accent that follows the system theme, still WCAG 2.2 AA; `AppShell` is now top bar, stage, warnings and task panel; `Gauge`, `Meter`, `Dock`, `StepGuide` and the console mockups removed.
   - `packages/app`: the stage shows the rocket on its side and three numbers (stability, apogee, rail exit velocity) with their status in words; the task panel is one list ("Your rocket") whose rows open pages with a back button; warnings appear only when there are any, and the top bar says "All clear" or how many; Settings holds the theme and the glossary; after a flight the stage shows the 3D replay.
