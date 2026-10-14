@@ -5,7 +5,7 @@
  * limits, which are what the code gives), and a canopy opening on a fast rocket after a long
  * smooth coast, where the adaptive step must shrink instead of failing.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { rocketMassProperties } from '../geometry/assembly.js';
 import { R1_COMPONENTS } from '../geometry/reference-rockets.js';
 import {
@@ -24,6 +24,10 @@ import { simulateFlight } from './simulate.js';
 import type { FlightVehicle, SimulationOptions } from './vehicle.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import { kilograms } from '../units/si.js';
+
+// Several tests fly a whole 6-DOF flight to the ground at a tight tolerance: 2 to 4 s each here,
+// and over the default 5 s on a loaded CI runner (PR #99, two different tests on two runs).
+vi.setConfig({ testTimeout: 60_000 });
 
 describe('near-zero rates (plan 0065)', () => {
   it('rotate by a subnormal angular velocity: the axis is still the unit ω̂, the angle |ω|Δt', () => {
@@ -327,7 +331,5 @@ describe('sample fields without a modelled attitude (section 8)', () => {
         expect(fields.every((x) => Number.isFinite(x))).toBe(true);
       }
     }
-    // A whole 6-DOF flight to the ground at a tight tolerance: about 3 s here, over the default
-    // 5 s on a loaded CI runner (PR #99).
-  }, 60_000);
+  });
 });
