@@ -26,7 +26,7 @@ export const MANIFEST = {
   description:
     'Model and simulate model and high-power rockets: Claude builds the design, the engine computes every number with sourced physics.',
   long_description:
-    'A local rocket design and flight simulator. Claude builds designs from your specifications, files (OpenRocket .ork, RASP .eng, RockSim .rse) and the ThrustCurve.org catalogue, then reports stability, flight, landing and Monte Carlo dispersion with every approximation and a confidence rating. Runs on your computer; it reads and writes no files and contacts only ThrustCurve.org.',
+    'A local rocket design and flight simulator. Paste a specification, a parts list or a file (OpenRocket .ork, RASAero II .CDX1, RASP .eng, RockSim .rse) and Claude builds and flies it in one step, using the ThrustCurve.org catalogue for motors it does not have, then reports stability, flight, landing and Monte Carlo dispersion with every approximation and a confidence rating. Runs on your computer; it reads and writes no files and contacts only ThrustCurve.org.',
   author: {
     name: 'Lo-Fi Rocket contributors',
     url: 'https://github.com/ahroonsanthosh/lo-fi-rocket',

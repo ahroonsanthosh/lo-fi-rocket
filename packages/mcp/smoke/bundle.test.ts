@@ -46,7 +46,7 @@ async function talk(
 describe('the built server', () => {
   it('runs with node alone, lists its tools and flies the example', async () => {
     const out = await talk(process.execPath, [BUNDLE]);
-    expect(out.tools).toHaveLength(24);
+    expect(out.tools).toHaveLength(25);
     expect(typeof out.apogee).toBe('number');
   });
 
@@ -82,6 +82,6 @@ describe('the Claude Desktop extension', () => {
     expect(manifest.server.mcp_config.command).toBe('node');
     const args = manifest.server.mcp_config.args.map((a) => a.replace('${__dirname}', dir));
     const out = await talk(process.execPath, args);
-    expect(out.tools).toHaveLength(24);
+    expect(out.tools).toHaveLength(25);
   });
 });

@@ -52,10 +52,18 @@ The numbers below come from the tests and reports named beside them. They are th
 - **Fin flutter.** The check uses NACA TN 4197, an empirical criterion with a shaded safe/unsafe band. A flutter-speed ratio near 1 is uncertain either way, and fibreglass has no sourced shear modulus.
 - **Warning thresholds.** The stability, rail-exit, thrust-to-weight and deployment-speed limits are rules of thumb. They are editable, and they are not guarantees.
 
+- **Multi-stage, clustered and podded rockets.** They fly, with their approximations listed:
+  - a stage separates instantly, with no separation impulse, and leaves with everything below it (D-091);
+  - a cluster's motors ignite together (D-086);
+  - pods are counted one by one, with no interference between them and the body (D-106).
+
+  A motor in a pod is not supported yet.
+
+- **RASAero II `.CDX1` files.** They import and export (D-114, D-116). What RASAero cannot hold is refused or listed.
+
 **Do not rely on these for v1.0:**
 
-- multi-stage or clustered motors (not implemented);
-- RASAero `.CDX1` files (not implemented);
+- the flight path and landing of a separated booster (not simulated);
 - combustion modelling of liquid engines (only imported thrust and mass profiles).
 
 ## Licence and sources

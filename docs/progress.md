@@ -166,6 +166,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **#79 (3D).** Merged. A stalled frame no longer jumps the replay (`MAX_FRAME_STEP`, D-3D-6); this fixed a timing failure in CI.
   - **Review issues.** #12, #25, #33 and #34 were closed as already fixed, with the evidence. #29 and #61 were fixed by #79.
   - **Plan 0078 (D-117).** Fixes #8 (ThrustCurve search found nothing), #10 (the delay reset silently), #14 (small values read 0) and #39 (delete without asking).
+- The MCP server builds and flies a pasted design in one call (plan 0079, D-118):
+  - **`build_and_fly`** takes the parts, the motor by name ("D12-5", "G80-7T"), the recovery and the launch in one call. A motor the library lacks is looked up on ThrustCurve.org.
+  - **`import_design`** reads RASAero `.CDX1` too, and can fly the file in the same call.
+  - **No questions first.** The instructions no longer ask for every value before flying; what was left out is listed with the result.
 
 ## In progress
 
