@@ -1,0 +1,131 @@
+# OpenRocket 24.12 drag, measured as a black box (plan 0071, D-108). Probes in tools/openrocket-harness/src:
+# DragProbe.java, PartDrag.java, NoseProbe.java, ProtuberanceProbe.java. Static figures use OpenRocket's
+# FlightConditions defaults: 293.15 K, 101325 Pa, density 1.20410573 kg/m3, kinematic viscosity
+# 1.52562878e-5 m2/s, speed of sound 343.4189 m/s, zero angle of attack and roll rate.
+#
+# Part 1 (DragProbe): the reference rockets as loaded, with their motors in place. Drag coefficient and its
+# friction, pressure and base parts at Mach 0.10, 0.14 and 0.18; then the rail buttons' or launch lug's share,
+# found by removing them and computing again. The base term is 0.12 + 0.13 M^2 on the WHOLE base (0.1213 at
+# Mach 0.1 on R1, R3, R4 and R5, whose base is the reference area): OpenRocket removes no motor area.
+r1-three-fin-conical.ork: Mach 0.10 static cd=0.77335 friction=0.32826 pressure=0.32379 base=0.12130 hasMotors=true
+r1-three-fin-conical.ork: Mach 0.14 static cd=0.77516 friction=0.32794 pressure=0.32467 base=0.12255 hasMotors=true
+r1-three-fin-conical.ork: Mach 0.18 static cd=0.77767 friction=0.32752 pressure=0.32594 base=0.12421 hasMotors=true
+r1-three-fin-conical.ork: launch lug outerR=0.00300 innerR=0.00250 length=0.05000 instances=1 x=0.35000
+r1-three-fin-conical.ork: Mach 0.10 cd with rail buttons and lugs=0.77335 without=0.76580 their drag=0.00755
+r2-ogive-boattail.ork: Mach 0.10 static cd=0.55291 friction=0.34317 pressure=0.15582 base=0.05391 hasMotors=true
+r2-ogive-boattail.ork: Mach 0.14 static cd=0.55551 friction=0.34284 pressure=0.15820 base=0.05447 hasMotors=true
+r2-ogive-boattail.ork: Mach 0.18 static cd=0.55809 friction=0.34241 pressure=0.16048 base=0.05521 hasMotors=true
+r2-ogive-boattail.ork: rail buttons outerD=0.01000 innerD=0.00600 height=0.01000 base=0.00200 flange=0.00200 instances=2 x=0.45000
+r2-ogive-boattail.ork: Mach 0.10 cd with rail buttons and lugs=0.55291 without=0.54133 their drag=0.01158
+r3-minimum-diameter-24.ork: Mach 0.10 static cd=0.87769 friction=0.53732 pressure=0.21907 base=0.12130 hasMotors=true
+r3-minimum-diameter-24.ork: Mach 0.14 static cd=0.88399 friction=0.53680 pressure=0.22464 base=0.12255 hasMotors=true
+r3-minimum-diameter-24.ork: Mach 0.18 static cd=0.88985 friction=0.53611 pressure=0.22952 base=0.12421 hasMotors=true
+r3-minimum-diameter-24.ork: rail buttons outerD=0.00800 innerD=0.00400 height=0.00800 base=0.00150 flange=0.00150 instances=2 x=0.30000
+r3-minimum-diameter-24.ork: Mach 0.10 cd with rail buttons and lugs=0.87769 without=0.84200 their drag=0.03569
+r4-scratch-38mm.ork: Mach 0.10 static cd=0.67378 friction=0.35993 pressure=0.19255 base=0.12130 hasMotors=true
+r4-scratch-38mm.ork: Mach 0.14 static cd=0.67620 friction=0.35958 pressure=0.19407 base=0.12255 hasMotors=true
+r4-scratch-38mm.ork: Mach 0.18 static cd=0.67910 friction=0.35912 pressure=0.19576 base=0.12421 hasMotors=true
+r4-scratch-38mm.ork: rail buttons outerD=0.01000 innerD=0.00600 height=0.01000 base=0.00200 flange=0.00200 instances=2 x=0.60000
+r4-scratch-38mm.ork: Mach 0.10 cd with rail buttons and lugs=0.67378 without=0.66894 their drag=0.00484
+r5-transonic-min-dia-29.ork: Mach 0.10 static cd=0.70781 friction=0.46617 pressure=0.12034 base=0.12130 hasMotors=true
+r5-transonic-min-dia-29.ork: Mach 0.14 static cd=0.71141 friction=0.46572 pressure=0.12314 base=0.12255 hasMotors=true
+r5-transonic-min-dia-29.ork: Mach 0.18 static cd=0.71513 friction=0.46512 pressure=0.12579 base=0.12421 hasMotors=true
+r5-transonic-min-dia-29.ork: rail buttons outerD=0.00800 innerD=0.00400 height=0.00800 base=0.00150 flange=0.00150 instances=2 x=0.38000
+r5-transonic-min-dia-29.ork: Mach 0.10 cd with rail buttons and lugs=0.70781 without=0.69231 their drag=0.01549
+#
+# Part 2: OpenRocket's flight data use the same drag coefficient. In reference/rockets/timeseries (wind 0), the
+# drag coefficient at Mach 0.10, 0.14 and 0.18 is the same thrusting and coasting and equals Part 1's static
+# value to 0.0004 (R1: 0.77334 against 0.77335 at Mach 0.1; R3 0.87798 / 0.87705 against 0.87769), and the drag
+# force is 0.5 rho V^2 A_ref C_D with ISA density within 0.04 % at every sample checked, thrusting and coasting.
+# With pods (reference/rockets/pod-probe/motors.txt) the drag coefficient is also the same with the motors in
+# the core, in the pods or both.
+#
+# Part 3 (ProtuberanceProbe): rail button drag. Files beside this one:
+# - protuberance-sweeps.csv: one variable at a time from a 10 x 10 mm button (inner 6 mm, base and flange 2 mm),
+#   two buttons 0.1 m apart, front 0.35 m behind a 0.1 m ogive nose on a 25 mm tube, Mach 0.3; and launch lugs.
+#   Columns: x is from the body tube's front (add noseLength for the nose tip); deltaCd is the drag coefficient
+#   with the parts minus without, on refArea.
+# - rail-button-collapse.csv: the same eta = H / (0.37 x Re_x^-0.2) at eight positions, Mach 0.3 and 1.5:
+#   the coefficient agrees within 0.05 %.
+# - rail-button-table.csv: single buttons (outer 12, inner 6 mm, no base or flange) over Mach 0.01 to 5 and eta
+#   0.1 to 100 (tag "table"), and 80 random buttons kept out of the table (tag "check").
+# - rail-button-temperature.csv: one button at 263.15, 293.15 and 313.15 K, with OpenRocket's viscosity.
+# Findings: per button C_D A = K (OD (base + flange) + ID (height - base - flange)), exactly linear in each; K
+# depends on Mach and eta only; nothing depends on the rocket's length, the body radius, the fins or the other
+# buttons; each button counts at its own position. Below a total height of about 4 mm OpenRocket's figure stops
+# falling (its minimum height), so the table uses heights of 6 mm or more.
+# Launch lugs: OpenRocket's lug drag does not depend on position; it is linear in the lug's length (a term
+# proportional to length plus a constant), so it is not the stagnation-pressure lug of Niskanen eq. (3.95):
+# R1's lug is 0.00755 in OpenRocket against 0.01227 by eq. (3.95) at Mach 0.1.
+#
+# Part 4 (DragProbe --transonic, PartDrag): reference/rockets/staging-probe/staged-hpr.ork, whole and sustainer
+# alone (the booster stage removed), Mach 0.1 to 0.95; then the sustainer's parts at Mach 0.1, 0.5 and 0.85
+# (fin figures are per fin; the rocket has three).
+staged-hpr.ork: Mach 0.10 static cd=0.85629 friction=0.41041 pressure=0.32459 base=0.12130 hasMotors=true
+staged-hpr.ork: Mach 0.30 static cd=0.87355 friction=0.40712 pressure=0.33473 base=0.13170 hasMotors=true
+staged-hpr.ork: Mach 0.50 static cd=0.90831 friction=0.40055 pressure=0.35526 base=0.15250 hasMotors=true
+staged-hpr.ork: Mach 0.60 static cd=0.93240 friction=0.39603 pressure=0.36958 base=0.16680 hasMotors=true
+staged-hpr.ork: Mach 0.70 static cd=0.96109 friction=0.39069 pressure=0.38670 base=0.18370 hasMotors=true
+staged-hpr.ork: Mach 0.75 static cd=0.97718 friction=0.38771 pressure=0.39635 base=0.19313 hasMotors=true
+staged-hpr.ork: Mach 0.80 static cd=0.99446 friction=0.38452 pressure=0.40674 base=0.20320 hasMotors=true
+staged-hpr.ork: Mach 0.85 static cd=1.01295 friction=0.38113 pressure=0.41789 base=0.21393 hasMotors=true
+staged-hpr.ork: Mach 0.90 static cd=1.03265 friction=0.37754 pressure=0.42981 base=0.22530 hasMotors=true
+staged-hpr.ork: Mach 0.95 static cd=1.04734 friction=0.36749 pressure=0.44253 base=0.23732 hasMotors=true
+staged-hpr.ork: Mach 0.10 cd with rail buttons and lugs=0.85629 without=0.85629 their drag=0.00000
+staged-hpr.ork[sustainer]: Mach 0.10 static cd=0.58093 friction=0.29616 pressure=0.16347 base=0.12130 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.30 static cd=0.59403 friction=0.29379 pressure=0.16854 base=0.13170 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.50 static cd=0.62035 friction=0.28905 pressure=0.17881 base=0.15250 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.60 static cd=0.63855 friction=0.28578 pressure=0.18596 base=0.16680 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.70 static cd=0.66016 friction=0.28193 pressure=0.19453 base=0.18370 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.75 static cd=0.67226 friction=0.27978 pressure=0.19935 base=0.19313 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.80 static cd=0.68523 friction=0.27748 pressure=0.20455 base=0.20320 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.85 static cd=0.69908 friction=0.27504 pressure=0.21012 base=0.21393 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.90 static cd=0.71383 friction=0.27244 pressure=0.21608 base=0.22530 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.95 static cd=0.72496 friction=0.26519 pressure=0.22244 base=0.23732 hasMotors=true
+staged-hpr.ork[sustainer]: Mach 0.10 cd with rail buttons and lugs=0.58093 without=0.58093 their drag=0.00000
+PART M=0.10 AxialStage "Sustainer" cd=0.00000 friction=0.00000 pressure=0.00000 base=0.00000
+PART M=0.10 TrapezoidFinSet "Sustainer fins" cd=0.07058 friction=0.01688 pressure=0.05371 base=0.00000
+PART M=0.10 NoseCone "Nose Cone" cd=0.02997 friction=0.02762 pressure=0.00235 base=0.00000
+PART M=0.10 BodyTube "Sustainer body" cd=0.33921 friction=0.21791 pressure=0.00000 base=0.12130
+PART M=0.10 Rocket "staged-hpr" cd=0.58093 friction=0.29616 pressure=0.16347 base=0.12130
+PART M=0.50 AxialStage "Sustainer" cd=0.00000 friction=0.00000 pressure=0.00000 base=0.00000
+PART M=0.50 TrapezoidFinSet "Sustainer fins" cd=0.07529 friction=0.01647 pressure=0.05882 base=0.00000
+PART M=0.50 NoseCone "Nose Cone" cd=0.02931 friction=0.02695 pressure=0.00235 base=0.00000
+PART M=0.50 BodyTube "Sustainer body" cd=0.36517 friction=0.21267 pressure=0.00000 base=0.15250
+PART M=0.50 Rocket "staged-hpr" cd=0.62035 friction=0.28905 pressure=0.17881 base=0.15250
+PART M=0.85 AxialStage "Sustainer" cd=0.00000 friction=0.00000 pressure=0.00000 base=0.00000
+PART M=0.85 TrapezoidFinSet "Sustainer fins" cd=0.08493 friction=0.01568 pressure=0.06926 base=0.00000
+PART M=0.85 NoseCone "Nose Cone" cd=0.02800 friction=0.02565 pressure=0.00235 base=0.00000
+PART M=0.85 BodyTube "Sustainer body" cd=0.41629 friction=0.20237 pressure=0.00000 base=0.21393
+PART M=0.85 Rocket "staged-hpr" cd=0.69908 friction=0.27504 pressure=0.21012 base=0.21393
+#
+# Part 5 (NoseProbe): nose cone pressure drag (on the reference area, which is the nose base here) against Mach,
+# for each shape and fineness ratio f = L / d, a 25 mm nose on a 0.5 m tube. "Mach:value" pairs.
+NOSE Conical k=0.00 f=1.0 0.05:0.16000 0.10:0.16001 0.30:0.16117 0.50:0.17208 0.60:0.18780 0.70:0.21625 0.80:0.26356 0.85:0.29664 0.90:0.33743 0.95:0.38718 0.98:0.42320 1.00:0.44721 1.05:0.51356 1.10:0.57873 1.20:0.67774 1.30:0.68918 1.50:0.62000 2.00:0.54910 3.00:0.49906
+NOSE Conical k=0.00 f=2.0 0.05:0.04706 0.10:0.04706 0.30:0.04712 0.50:0.04894 0.60:0.05343 0.70:0.06496 0.80:0.09087 0.85:0.11283 0.90:0.14354 0.95:0.18567 0.98:0.21979 1.00:0.24254 1.05:0.29667 1.10:0.32073 1.20:0.30729 1.30:0.26951 1.50:0.23199 2.00:0.19354 3.00:0.16640
+NOSE Conical k=0.00 f=3.0 0.05:0.02162 0.10:0.02162 0.30:0.02162 0.50:0.02184 0.60:0.02281 0.70:0.02666 0.80:0.03925 0.85:0.05273 0.90:0.07479 0.95:0.10989 0.98:0.14260 1.00:0.16440 1.05:0.21741 1.10:0.23427 1.20:0.20024 1.30:0.15571 1.50:0.13028 2.00:0.10421 3.00:0.08582
+NOSE Conical k=0.00 f=5.0 0.05:0.00792 0.10:0.00792 0.30:0.00792 0.50:0.00792 0.60:0.00796 0.70:0.00835 0.80:0.01114 0.85:0.01591 0.90:0.02676 0.95:0.05033 0.98:0.07983 1.00:0.09950 1.05:0.15307 1.10:0.16752 1.20:0.12577 1.30:0.08068 1.50:0.06529 2.00:0.04952 3.00:0.03838
+NOSE Ogive k=1.00 f=1.0 0.05:0.00400 0.10:0.00400 0.30:0.00400 0.50:0.00400 0.60:0.00400 0.70:0.00400 0.80:0.00400 0.85:0.00400 0.90:0.00400 0.95:0.00400 0.98:0.00400 1.00:0.00400 1.05:0.06084 1.10:0.07762 1.20:0.04001 1.30:0.00244 1.50:0.00182 2.00:0.00119 3.00:0.00074
+NOSE Ogive k=1.00 f=2.0 0.05:0.00235 0.10:0.00235 0.30:0.00235 0.50:0.00235 0.60:0.00235 0.70:0.00235 0.80:0.00235 0.85:0.00235 0.90:0.00235 0.95:0.00235 0.98:0.00235 1.00:0.00235 1.05:0.05927 1.10:0.07616 1.20:0.03878 1.30:0.00143 1.50:0.00106 2.00:0.00069 3.00:0.00043
+NOSE Ogive k=1.00 f=3.0 0.05:0.00162 0.10:0.00162 0.30:0.00162 0.50:0.00162 0.60:0.00162 0.70:0.00162 0.80:0.00162 0.85:0.00162 0.90:0.00162 0.95:0.00162 0.98:0.00162 1.00:0.00162 1.05:0.05858 1.10:0.07551 1.20:0.03824 1.30:0.00098 1.50:0.00073 2.00:0.00047 3.00:0.00029
+NOSE Ogive k=1.00 f=5.0 0.05:0.00099 0.10:0.00099 0.30:0.00099 0.50:0.00099 0.60:0.00099 0.70:0.00099 0.80:0.00099 0.85:0.00099 0.90:0.00099 0.95:0.00099 0.98:0.00099 1.00:0.00099 1.05:0.05798 1.10:0.07495 1.20:0.03777 1.30:0.00060 1.50:0.00044 2.00:0.00029 3.00:0.00018
+NOSE Ogive k=0.50 f=1.0 0.05:0.06988 0.10:0.06988 0.30:0.06998 0.50:0.07226 0.60:0.07722 0.70:0.08891 0.80:0.11331 0.85:0.13305 0.90:0.15981 0.95:0.19550 0.98:0.22361 1.00:0.24236 1.05:0.28829 1.10:0.31421 1.20:0.32041 1.30:0.29630 1.50:0.25881 2.00:0.22039 3.00:0.19327
+NOSE Ogive k=0.50 f=2.0 0.05:0.02098 0.10:0.02098 0.30:0.02098 0.50:0.02110 0.60:0.02172 0.70:0.02434 0.80:0.03346 0.85:0.04362 0.90:0.06069 0.95:0.08853 0.98:0.11508 1.00:0.13279 1.05:0.17626 1.10:0.18996 1.20:0.16169 1.30:0.12508 1.50:0.10454 2.00:0.08349 3.00:0.06863
+NOSE Ogive k=0.50 f=3.0 0.05:0.00968 0.10:0.00968 0.30:0.00968 0.50:0.00968 0.60:0.00974 0.70:0.01023 0.80:0.01327 0.85:0.01804 0.90:0.02822 0.95:0.04907 0.98:0.07374 1.00:0.09018 1.05:0.13396 1.10:0.14595 1.20:0.11226 1.30:0.07511 1.50:0.06116 2.00:0.04686 3.00:0.03677
+NOSE Ogive k=0.50 f=5.0 0.05:0.00355 0.10:0.00355 0.30:0.00355 0.50:0.00355 0.60:0.00355 0.70:0.00357 0.80:0.00389 0.85:0.00489 0.90:0.00836 0.95:0.01972 0.98:0.04067 1.00:0.05464 1.05:0.09921 1.10:0.11107 1.20:0.07630 1.30:0.04053 1.50:0.03208 2.00:0.02342 3.00:0.01730
+NOSE Ellipsoid k=0.00 f=1.0 0.05:0.00041 0.10:0.00180 0.30:0.01879 0.50:0.05590 0.60:0.08249 0.70:0.11464 0.80:0.15246 0.85:0.17352 0.90:0.19604 0.95:0.22003 0.98:0.23531 1.00:0.24550 1.05:0.27245 1.10:0.30089 1.20:0.36232 1.30:0.41620 1.50:0.44244 2.00:0.47379 3.00:0.48571
+NOSE Ellipsoid k=0.00 f=2.0 0.05:0.00001 0.10:0.00007 0.30:0.00223 0.50:0.01126 0.60:0.02006 0.70:0.03269 0.80:0.04992 0.85:0.06049 0.90:0.07250 0.95:0.08605 0.98:0.09516 1.00:0.10124 1.05:0.11816 1.10:0.13693 1.20:0.18041 1.30:0.22005 1.50:0.23499 2.00:0.25015 3.00:0.25552
+NOSE Ellipsoid k=0.00 f=3.0 0.05:0.00000 0.10:0.00001 0.30:0.00048 0.50:0.00353 0.60:0.00723 0.70:0.01325 0.80:0.02238 0.85:0.02839 0.90:0.03554 0.95:0.04395 0.98:0.04983 1.00:0.05376 1.05:0.06511 1.10:0.07816 1.20:0.11000 1.30:0.14000 1.50:0.15000 2.00:0.15900 3.00:0.16200
+NOSE Ellipsoid k=0.00 f=5.0 0.05:0.00000 0.10:0.00000 0.30:0.00005 0.50:0.00067 0.60:0.00167 0.70:0.00364 0.80:0.00712 0.85:0.00966 0.90:0.01288 0.95:0.01690 0.98:0.01989 1.00:0.02188 1.05:0.02797 1.10:0.03535 1.20:0.05477 1.30:0.07402 1.50:0.07967 2.00:0.08395 3.00:0.08523
+NOSE Power series k=0.50 f=1.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.12177 0.98:0.18870 1.00:0.23333 1.05:0.25881 1.10:0.25972 1.20:0.31091 1.30:0.32239 1.50:0.33206 2.00:0.33184 3.00:0.34137
+NOSE Power series k=0.50 f=2.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.03436 0.98:0.07060 1.00:0.09476 1.05:0.11006 1.10:0.10914 1.20:0.14156 1.30:0.14679 1.50:0.14912 2.00:0.14226 3.00:0.14394
+NOSE Power series k=0.50 f=3.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.01400 0.98:0.03560 1.00:0.05000 1.05:0.06000 1.10:0.05900 1.20:0.08100 1.30:0.08400 1.50:0.08450 2.00:0.07800 3.00:0.07800
+NOSE Power series k=0.50 f=5.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.00395 0.98:0.01376 1.00:0.02031 1.05:0.02552 1.10:0.02479 1.20:0.03688 1.30:0.03825 1.50:0.03795 2.00:0.03344 3.00:0.03289
+NOSE Parabolic series k=0.75 f=1.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.15607 0.98:0.23159 1.00:0.28193 1.05:0.33076 1.10:0.34976 1.20:0.35567 1.30:0.34733 1.50:0.33661 2.00:0.33626 3.00:0.33626
+NOSE Parabolic series k=0.75 f=2.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.05092 0.98:0.09711 1.00:0.12790 1.05:0.16236 1.10:0.17493 1.20:0.17519 1.30:0.16519 1.50:0.15220 2.00:0.14729 3.00:0.14729
+NOSE Parabolic series k=0.75 f=3.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.02300 0.98:0.05300 1.00:0.07300 1.05:0.09800 1.10:0.10700 1.20:0.10600 1.30:0.09750 1.50:0.08667 2.00:0.08200 3.00:0.08200
+NOSE Parabolic series k=0.75 f=5.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.00750 0.98:0.02287 1.00:0.03312 1.05:0.04811 1.10:0.05352 1.20:0.05221 1.30:0.04637 1.50:0.03919 2.00:0.03592 3.00:0.03592
+NOSE Haack series k=0.00 f=1.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.10291 0.98:0.14404 1.00:0.17146 1.05:0.24779 1.10:0.28290 1.20:0.31091 1.30:0.32948 1.50:0.35395 2.00:0.35843 3.00:0.35214
+NOSE Haack series k=0.00 f=2.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.02632 0.98:0.04542 1.00:0.05815 1.05:0.10273 1.10:0.12498 1.20:0.14156 1.30:0.15220 1.50:0.16499 2.00:0.16075 3.00:0.15121
+NOSE Haack series k=0.00 f=3.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.01000 0.98:0.02020 1.00:0.02700 1.05:0.05500 1.10:0.07000 1.20:0.08100 1.30:0.08800 1.50:0.09600 2.00:0.09100 3.00:0.08300
+NOSE Haack series k=0.00 f=5.0 0.05:0.00000 0.10:0.00000 0.30:0.00000 0.50:0.00000 0.60:0.00000 0.70:0.00000 0.80:0.00000 0.85:0.00000 0.90:0.00000 0.95:0.00256 0.98:0.00652 1.00:0.00916 1.05:0.02280 1.10:0.03092 1.20:0.03688 1.30:0.04066 1.50:0.04475 2.00:0.04081 3.00:0.03564

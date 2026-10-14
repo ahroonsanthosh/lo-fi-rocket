@@ -129,6 +129,14 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - Flipped nose cones (plan 0068, D-104): an `.ork` tail cone (a flipped nose cone) is read as a transition to a point, which OpenRocket shows is exact for all six shapes; the physics accepts an aft radius of 0, and so does the app. Probe files and values in `reference/rockets/flipped-nose-probe/`. Found on the way: the boat-tail drag combination in the displayed mode (D-104, open).
 - The boat-tail drag combination checked (plan 0069, D-105): keeping Niskanen's eq. (3.88) on eq. (3.94) beside the DATCOM base, because the alternative doubled the error against the ARCAS wind-tunnel boat-tail data while moving R2 by only 0.66 %. Two limitation lines that named the wrong side as safe for altitude limits are corrected.
 - Pod sets, the physics (plan 0070 steps 1 and 2, D-106, GEO-18): parts repeated around the axis, counted once per pod in the mass, inertias, normal force, drag and damping, with their approximations listed. Against the new OpenRocket pod probe: mass, CG and C_Nα exact, CP within R1's 0.016 %, drag within 0.65 %, apogee +1.1 to +1.7 %.
+- The comparison mode's base and rail button drag (plan 0071, D-108, DRAG-23, owner's option (c)):
+  - **OpenRocket's base.** OpenRocket 24.12 never removes the motor's area from the base, measured statically and in its flight data. D-035's `'always'` rule had been offsetting our rail button drag, which is 6 to 10 times OpenRocket's.
+  - **New comparison mode.** It keeps the whole base and computes rail buttons from a table of OpenRocket's measured coefficients: per button K(Mach, η = height / boundary-layer thickness) times the frontal area, within 0.82 % of OpenRocket on 80 held-out buttons.
+  - **Results.** R1 to R5 apogees are now within 0.16 to 0.51 % of OpenRocket (before −2.42 to +2.48 %), maximum velocity within 0.26 %, and static drag within 0.4 to 0.7 % (R1 1.2 %, its lug).
+  - **Remaining differences:**
+    - OpenRocket's nose pressure drag below Mach 1 (tangent ogives flat to Mach 1 and near zero supersonic; other shapes zero to Mach 0.9), which is not copied;
+    - our skin friction, 1.4 % higher;
+    - the launch lug.
 - Pod sets in files (plan 0070 step 3, D-107): the design file's `pod` group (schema 3, with its migration), the `.ork` reader's pod sets on body tubes, placed as OpenRocket places them (every radius and axial method probed exactly; a parachute in a pod is one per pod), and the app's part list and editor naming pod parts. A motor in a pod is still refused (step 4). Issues opened for the UI and 3D lanes to draw pods off the axis.
 
 ## In progress
@@ -137,6 +145,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
+- Validation campaign (owner, 2026-10-14):
+  - **What runs.** Exhaustive comparison against OpenRocket on many generated designs, against the measured NACA/NASA data by regime, and against RASAero II if it can be run here or from its published predictions. Background agents are running all three.
+  - **Output.** A differences report with the reasoning for each difference, and a list of OpenRocket issues for its developers.
+  - **Next comparison items:** skin friction (1.4 %) and the nose pressure drag question.
 - Plan 0070 step 4: motors in pods, as clusters at the pods' offsets (D-086); then booster sets (step 5). Then plan 0061 step 4 (the modelling benchmark). The MCP server's design tools do not yet set a pod group.
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).

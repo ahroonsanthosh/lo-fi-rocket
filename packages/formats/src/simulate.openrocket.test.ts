@@ -1,7 +1,7 @@
 /**
  * Phase 2 acceptance (CLAUDE.md 7.4 and 10): flights of the reference
  * rockets built from the .ork and .eng files, in OpenRocket-equivalent
- * modes (no fin roll reduction, OpenRocket's base-drag rule and gravity),
+ * modes (no fin roll reduction, OpenRocket's base-drag rule, rail button drag and gravity),
  * against reference/rockets/values.csv: apogee within 5 %, maximum
  * velocity within 3 %. The tighter bounds are the observed agreement.
  */
@@ -181,7 +181,8 @@ const options = (windX: number): SimulationOptions => ({
   gravity: { seaLevel: OPENROCKET_REFERENCE_GRAVITY_45N, altitudeDependence: 'inverse-square' },
   aerodynamics: 'niskanen',
   finRollReduction: false,
-  baseDragMotorRule: 'always',
+  baseDragMotorRule: 'never',
+  railButtonDragMethod: 'openrocket',
   baseDragMethod: 'niskanen',
   largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
@@ -204,10 +205,12 @@ describe('reference flights against OpenRocket (apogee 5 %, maximum velocity 3 %
         expect(s.endReason).toBe('landing');
         expect(rel(s.apogee, expected.apogee), 'apogee').toBeLessThan(0.05);
         expect(rel(s.maxVelocity, expected.maxVelocity), 'max velocity').toBeLessThan(0.03);
-        // Observed agreement, recorded in docs/reports/phase-2-acceptance.md (not tuning targets):
-        expect(rel(s.apogee, expected.apogee), 'apogee (observed)').toBeLessThan(0.03);
+        // Observed agreement since D-108 (OpenRocket's full base and its own rail button drag,
+        // plan 0071): apogee within 1.2 %, maximum velocity within 0.41 %, time to apogee within
+        // 0.9 %. Regression guards, not tuning targets:
+        expect(rel(s.apogee, expected.apogee), 'apogee (observed)').toBeLessThan(0.015);
         expect(rel(s.maxVelocity, expected.maxVelocity), 'max velocity (observed)').toBeLessThan(
-          0.01,
+          0.005,
         );
         expect(rel(s.railExitVelocity, expected.railExit), 'rail exit').toBeLessThan(0.003);
         expect(rel(s.timeToApogee, expected.timeToApogee), 'time to apogee').toBeLessThan(0.025);
@@ -230,6 +233,7 @@ const displayed = (windX: number, largeAngleMethod: 'datcom' | 'linear'): Simula
   ...options(windX),
   finRollReduction: true,
   baseDragMotorRule: 'while-thrusting',
+  railButtonDragMethod: 'niskanen',
   baseDragMethod: 'datcom',
   largeAngleMethod,
 });

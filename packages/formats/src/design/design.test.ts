@@ -232,7 +232,7 @@ describe('physics adapter on the example (R1 with the D12)', () => {
   it('thrust to weight: 16.839 N·s / 1.65 s = 10.205 N over 0.190904 × 9.80665 = 1.87213 N gives 5.451', () => {
     expect(designThrustToWeight(d)).toBeCloseTo(5.451, 3);
   });
-  it('the displayed flight gives 172.94 m with the DATCOM base drag (167.33 m with Niskanen base drag before D-069) and the OpenRocket-equivalent 168.87 m', () => {
+  it('the displayed flight gives 172.94 m with the DATCOM base drag (167.33 m with Niskanen base drag before D-069) and the OpenRocket-equivalent 166.19 m (168.87 m before D-108; OpenRocket 167.045 m)', () => {
     const rk: RocketDesign = {
       ...d,
       simulation: {
@@ -250,7 +250,10 @@ describe('physics adapter on the example (R1 with the D12)', () => {
       designVehicle(rk),
       designSimulationOptions(rk, 'openrocket-equivalent'),
     );
-    expect(or.summary.apogee).toBeCloseTo(168.866, 2);
+    // D-108: OpenRocket's full base (no motor area removed) and its own rail button drag.
+    expect(or.summary.apogee).toBeCloseTo(166.187, 2);
+    expect(or.modes.baseDragMotorRule).toBe('never');
+    expect(or.modes.railButtonDragMethod).toBe('openrocket');
     expect(designFlightWarnings(rk, shown)).toEqual([]);
     // Three full flights: the same allowance as the other full-flight tests.
   }, 30000);

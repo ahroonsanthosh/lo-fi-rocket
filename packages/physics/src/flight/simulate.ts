@@ -20,7 +20,11 @@ import {
 } from '../fidelity.js';
 import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
 import { flutterGeometry, flutterVelocity } from '../stability/flutter.js';
-import { dragCoefficient } from '../drag/drag.js';
+import {
+  dragCoefficient,
+  type BaseDragMotorRule,
+  type RailButtonDragMethod,
+} from '../drag/drag.js';
 import { validateLaunch } from '../environment/launch.js';
 import { windField, type WindField } from '../environment/wind.js';
 import {
@@ -323,7 +327,9 @@ export interface FlightResult {
   readonly modes: {
     readonly aerodynamics: 'niskanen' | 'none';
     readonly finRollReduction: boolean;
-    readonly baseDragMotorRule: 'while-thrusting' | 'always';
+    readonly baseDragMotorRule: BaseDragMotorRule;
+    /** The rail button drag in effect (D-108). */
+    readonly railButtonDragMethod: RailButtonDragMethod;
     readonly integrator: string;
     readonly degreesOfFreedom: 6 | 3;
     readonly gravitySeaLevel: number;
@@ -579,6 +585,9 @@ function derive(
               },
             }),
         baseDragMotorRule: ctx.options.baseDragMotorRule,
+        ...(ctx.options.railButtonDragMethod === undefined
+          ? {}
+          : { railButtonDragMethod: ctx.options.railButtonDragMethod }),
         ...(ctx.options.baseDragMethod === undefined
           ? {}
           : { baseDragMethod: ctx.options.baseDragMethod }),
@@ -2249,6 +2258,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       aerodynamics: options.aerodynamics,
       finRollReduction: options.finRollReduction,
       baseDragMotorRule: options.baseDragMotorRule,
+      railButtonDragMethod: options.railButtonDragMethod ?? 'niskanen',
       integrator:
         options.integrator.kind === 'rk4'
           ? `RK4 fixed step ${String(options.integrator.timeStep)} s`

@@ -86,6 +86,30 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
     expect(or.cd0).toBeCloseTo(dragCoefficient(base).cd0, 12);
     expect(or.terms.find((t) => t.kind === 'base')?.source).toContain('always');
   });
+  it("OpenRocket's rule (D-108) keeps the whole base, thrusting or not: the motor changes nothing", () => {
+    // reference/rockets/drag-probe/values.txt: OpenRocket's base term is 0.12 + 0.13 M² on the whole
+    // base with the motor in place, and its flight data the same thrusting and coasting.
+    // By hand: the full base adds 0.028406 to the thrusting 0.757450 (the test above): 0.785856.
+    const none = dragCoefficient({
+      components: base.components,
+      mach: base.mach,
+      reynolds: base.reynolds,
+      roughnessHeight: base.roughnessHeight,
+      baseDragMotorRule: 'never',
+      baseDragMethod: 'niskanen',
+    });
+    expect(none.cd0).toBeCloseTo(0.785856, 5);
+    for (const thrusting of [true, false]) {
+      const r = dragCoefficient({
+        ...base,
+        motor: { diameter: metres(0.024), thrusting },
+        baseDragMotorRule: 'never',
+        baseDragMethod: 'niskanen',
+      });
+      expect(r.cd0).toBe(none.cd0);
+      expect(r.terms.find((t) => t.kind === 'base')?.source).toContain('base (full)');
+    }
+  });
   it('R2 (ogive, boat tail, rail buttons) at Mach 0.5 includes every term and no warning; at Mach 0.9 it warns about the transonic regime and the boat tail', () => {
     const r = dragCoefficient({
       components: R2_COMPONENTS,
