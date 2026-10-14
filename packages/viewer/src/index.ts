@@ -9,9 +9,10 @@
  */
 export {
   buildRocketObject,
+  railButtonGeometry,
+  tubeOutline,
   buttonGeometry,
   finGeometry,
-  PART_COLOURS,
   PROFILE_SAMPLES,
   REVOLUTION_SEGMENTS,
   revolveOutline,
@@ -24,6 +25,7 @@ export {
   type ModelPart,
   type OutlinePoint,
   type RevolvedPart,
+  type RocketLook,
   type RocketObject,
 } from './geometry/rocket-model.js';
 export {
@@ -104,7 +106,7 @@ export {
   IMAGERY_SOURCES,
   localToPixel,
   lonLatOfPixel,
-  mapExtents,
+  mapLevels,
   metresPerPixel,
   pixelToLocal,
   terrainDeviation,
@@ -117,4 +119,47 @@ export {
   type LonLat,
   type TileRange,
 } from './map/tiles.js';
-export { buildMapTerrain, mapTerrainGeometry, rangeBounds } from './scene/map-terrain.js';
+export {
+  buildMapTerrain,
+  curvatureDrop,
+  EARTH_MEAN_RADIUS,
+  mapTerrainGeometry,
+  rangeBounds,
+} from './scene/map-terrain.js';
+export {
+  PAINT_SCHEME_IDS,
+  PAINT_SCHEMES,
+  type Finish,
+  type FinishKind,
+  type PaintScheme,
+  type PaintSchemeId,
+} from './geometry/finish.js';
+export {
+  buildMotors,
+  caseOutline,
+  motorNozzles,
+  motorStyle,
+  nozzleOutline,
+  type MotorInputs,
+  type MotorNozzle,
+  type MotorStyle,
+} from './geometry/motor-model.js';
+export { chordAt, finSectionGeometry, sectionHalfThickness } from './geometry/fin-section.js';
+export {
+  launchGuide,
+  railProfile,
+  RAIL_1010,
+  RAIL_1515,
+  type LaunchGuide,
+} from './scene/launcher.js';
+export {
+  SKY_HAZE,
+  SKY_SUN_ELEVATION,
+  SKY_SUN_U,
+  SKY_YAW,
+  skyDirection,
+  skyUv,
+  SUN_AZIMUTH,
+  SUN_DIRECTION,
+} from './scene/sky.js';
+export { placeTrees, TREE_VARIANTS, type TreeVariant } from './scene/trees.js';

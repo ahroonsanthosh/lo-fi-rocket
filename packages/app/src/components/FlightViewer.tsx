@@ -6,18 +6,29 @@
  * picker that replays a run. Every number shown is a stored simulator
  * value converted at this display boundary; nothing is computed here.
  */
-import { perturbDesign, type DispersionResult, type RocketDesign } from '@lo-fi-rocket/formats';
+import {
+  designMotor,
+  perturbDesign,
+  type DispersionResult,
+  type RocketDesign,
+} from '@lo-fi-rocket/formats';
 import type { FlightResult } from '@lo-fi-rocket/physics';
 import {
   buildLandingObjects,
   CAMERA_MODES,
   EVENT_LABELS,
+  eventMarkers,
+  readoutsNearest,
   FlightScene,
   REPLAY_SPEEDS,
   ReplayController,
   type CameraMode,
   type Formatter,
+  type MotorInputs,
+  type PaintSchemeId,
   type Readouts,
+  PAINT_SCHEME_IDS,
+  PAINT_SCHEMES,
 } from '@lo-fi-rocket/viewer';
 import {
   loadMapScenery,
@@ -50,7 +61,7 @@ type MapState =
 
 // Inline styles: the app's stylesheet belongs to the ui lane.
 const STAGE: CSSProperties = { position: 'relative' };
-const CANVAS: CSSProperties = { height: 'clamp(440px, 62vh, 720px)', background: '#c9dcec' };
+const CANVAS: CSSProperties = { height: 'clamp(440px, 62vh, 720px)', background: '#979cab' };
 const HUD: CSSProperties = {
   position: 'absolute',
   top: 8,
@@ -62,6 +73,17 @@ const HUD: CSSProperties = {
   color: '#fff',
   font: '12px/1.45 system-ui, sans-serif',
   fontVariantNumeric: 'tabular-nums',
+  pointerEvents: 'none',
+};
+const PREPARING: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  zIndex: 1,
+  display: 'grid',
+  placeItems: 'center',
+  color: '#fff',
+  font: '14px system-ui, sans-serif',
+  background: 'rgba(15, 20, 28, 0.35)',
   pointerEvents: 'none',
 };
 const ATTRIBUTION: CSSProperties = {
@@ -104,6 +126,44 @@ const CAMERA_LABELS: Readonly<Record<CameraMode, string>> = {
   orbit: 'Free orbit',
 };
 
+const PAINT_KEY = 'lofi-viewer-paint-v1';
+
+/** The paint scheme picked earlier in this browser (the design stores no colours). */
+function loadPaint(): PaintSchemeId {
+  try {
+    const store = (globalThis as { localStorage?: Storage }).localStorage;
+    const v = store === undefined ? null : store.getItem(PAINT_KEY);
+    return PAINT_SCHEME_IDS.find((id) => id === v) ?? 'classic';
+  } catch {
+    return 'classic';
+  }
+}
+
+function savePaint(id: PaintSchemeId): void {
+  try {
+    (globalThis as { localStorage?: Storage }).localStorage?.setItem(PAINT_KEY, id);
+  } catch {
+    // Storage blocked: the choice lasts for this page only.
+  }
+}
+
+/** The design's motors for the 3D model (D-3D-4): none without a motor. */
+function motorInputs(design: RocketDesign): { motor?: MotorInputs } {
+  const m = designMotor(design);
+  if (m === undefined) return {};
+  const def = m.selection.definition;
+  const cluster = design.motorMount?.cluster;
+  return {
+    motor: {
+      diameter: def.diameter,
+      length: def.length,
+      aftEnd: m.aftEnd,
+      offsets: cluster === undefined ? [{ y: 0, z: 0 }] : cluster.map((o) => ({ y: o.y, z: o.z })),
+      manufacturer: def.manufacturer,
+    },
+  };
+}
+
 function appFormatter(units: UnitSystem): Formatter {
   return {
     format: (si, kind) =>
@@ -139,6 +199,10 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
   const [time, setTime] = useState(0);
   const [readouts, setReadouts] = useState<Readouts | undefined>(undefined);
   const [webgl, setWebgl] = useState<string | undefined>(undefined);
+  const [sceneryNote, setSceneryNote] = useState<string | undefined>(undefined);
+  const [preparing, setPreparing] = useState(true);
+  const [paint, setPaint] = useState<PaintSchemeId>(() => loadPaint());
+  const paintId = useId();
   const [selectedRun, setSelectedRun] = useState<number | undefined>(undefined);
   const scrubberId = useId();
   const speedId = useId();
@@ -154,79 +218,101 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
     return { label: 'This flight', design: props.design, result: props.result };
   }, [replay, props.design, props.result, props.dispersion]);
 
+  // The event list and the readouts are the stored result's, independent of the 3D scene.
+  const markers = useMemo(() => eventMarkers(shown.result), [shown.result]);
+
   // A different result: reset the clock.
   useEffect(() => {
     const last = shown.result.samples[shown.result.samples.length - 1];
     controllerRef.current = new ReplayController(last?.time ?? 0, speed);
     setTime(0);
     setPlaying(false);
+    setReadouts(readoutsNearest(shown.result, 0));
     // speed is intentionally not a dependency: changing it must not reset the clock.
   }, [shown.result]);
 
   // Build the scene and mount the renderer; rebuilt when the result, the design or the units change.
+  // The build waits one task (#61), so the flight's figures paint before the 3D scene is made.
   useEffect(() => {
-    const container = containerRef.current;
-    const design = shown.design;
-    const wind = design.launch.wind.profile?.[0] ?? design.launch.wind;
-    const scene = new FlightScene({
-      result: shown.result,
-      components: design.components.map((c) => ({
-        component: c.component,
-        position: c.position,
-        name: c.name,
-      })),
-      rail: design.launch.rail,
-      wind: { speed: wind.speed, from: wind.from },
-      format: appFormatter(props.units),
-      recovery: design.recovery.map((r) => ({ name: r.name, diameter: r.diameter })),
-      extraGroundPoints:
-        props.dispersion === undefined
-          ? []
-          : props.dispersion.result.runs
-              .filter((r) => r.landingEast !== undefined && r.landingNorth !== undefined)
-              .map((r) => ({ east: r.landingEast ?? 0, north: r.landingNorth ?? 0 })),
-    });
-    sceneRef.current = scene;
-    scene.setTime(controllerRef.current.current.time);
-    setReadouts(scene.readouts());
-    if (props.dispersion !== undefined) {
-      scene.setLandingObjects(
-        buildLandingObjects(props.dispersion.result, scene.markerRadius, selectedRun).group,
-      );
-    }
+    setReadouts(readoutsNearest(shown.result, controllerRef.current.current.time));
+    setPreparing(true);
     let handle: ViewerHandle | undefined;
-    if (container !== null) {
-      try {
-        handle = mountViewer(container, scene, {
-          initialCamera: camera,
-          onFrame: (dt) => {
-            const c = controllerRef.current;
-            const before = c.current;
-            const state = c.advance(dt);
-            if (state !== before) {
+    const timer = setTimeout(() => {
+      build();
+    }, 0);
+    const build = (): void => {
+      const container = containerRef.current;
+      const design = shown.design;
+      const wind = design.launch.wind.profile?.[0] ?? design.launch.wind;
+      const scene = new FlightScene({
+        result: shown.result,
+        components: design.components.map((c) => ({
+          component: c.component,
+          position: c.position,
+          name: c.name,
+        })),
+        rail: design.launch.rail,
+        wind: { speed: wind.speed, from: wind.from },
+        format: appFormatter(props.units),
+        recovery: design.recovery.map((r) => ({ name: r.name, diameter: r.diameter })),
+        ...motorInputs(design),
+        scheme: paint,
+        extraGroundPoints:
+          props.dispersion === undefined
+            ? []
+            : props.dispersion.result.runs
+                .filter((r) => r.landingEast !== undefined && r.landingNorth !== undefined)
+                .map((r) => ({ east: r.landingEast ?? 0, north: r.landingNorth ?? 0 })),
+      });
+      sceneRef.current = scene;
+      scene.setTime(controllerRef.current.current.time);
+      setReadouts(scene.readouts());
+      if (props.dispersion !== undefined) {
+        scene.setLandingObjects(
+          buildLandingObjects(props.dispersion.result, scene.markerRadius, selectedRun).group,
+        );
+      }
+      if (container !== null) {
+        try {
+          handle = mountViewer(container, scene, {
+            initialCamera: camera,
+            onFrame: (dt) => {
+              const c = controllerRef.current;
+              const before = c.current;
+              const state = c.advance(dt);
+              if (state === before) return false;
               scene.setTime(state.time);
               setTime(state.time);
               if (!state.playing) setPlaying(false);
               setReadouts((r) => (r?.index === scene.stepIndex ? r : scene.readouts()));
-            }
-          },
-        });
-        handleRef.current = handle;
-        setWebgl(undefined);
-        setSceneVersion((v) => v + 1);
-      } catch (error) {
-        setWebgl(
-          `The 3D view could not start (${error instanceof Error ? error.message : String(error)}). The readouts below still show the stored values.`,
-        );
+              return true;
+            },
+            onAssetsError: (message) => {
+              setSceneryNote(message);
+            },
+            onAssetsReady: () => {
+              setSceneryNote(undefined);
+            },
+          });
+          handleRef.current = handle;
+          setWebgl(undefined);
+          setSceneVersion((v) => v + 1);
+        } catch (error) {
+          setWebgl(
+            `The 3D view could not start (${error instanceof Error ? error.message : String(error)}). The readouts below still show the stored values.`,
+          );
+        }
       }
-    }
+      setPreparing(false);
+    };
     return () => {
+      clearTimeout(timer);
       handle?.dispose();
       handleRef.current = undefined;
       sceneRef.current = undefined;
     };
     // camera and selectedRun are applied by their own effects below.
-  }, [shown, props.units, props.dispersion]);
+  }, [shown, props.units, props.dispersion, paint]);
 
   useEffect(() => {
     handleRef.current?.setCamera(camera);
@@ -245,7 +331,7 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
     loadMapScenery(scene, site, siteChoice.source, abort.signal).then(
       (map) => {
         if (abort.signal.aborted) return;
-        scene.setTerrain(map.terrain, map.visibility);
+        scene.setTerrain(map.terrain, map.visibility, map.radius);
         handleRef.current?.render();
         setMapState({ kind: 'ready', map });
       },
@@ -274,10 +360,10 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
   const seek = (t: number): void => {
     const c = controllerRef.current;
     c.seek(t);
+    setReadouts(readoutsNearest(shown.result, c.current.time));
     const scene = sceneRef.current;
     if (scene !== undefined) {
       scene.setTime(c.current.time);
-      setReadouts(scene.readouts());
       handleRef.current?.render();
     }
     setTime(c.current.time);
@@ -338,8 +424,14 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         smoothness only.
       </p>
       {webgl === undefined ? null : <p className="warning viewer-unavailable">{webgl}</p>}
+      {sceneryNote === undefined ? null : <p className="muted small">{sceneryNote}</p>}
       <div style={STAGE}>
         <div className="viewer-canvas" ref={containerRef} data-shown={shown.label} style={CANVAS} />
+        {preparing && webgl === undefined ? (
+          <div className="viewer-preparing" style={PREPARING} role="status">
+            Preparing the 3D view…
+          </div>
+        ) : null}
         {r === undefined || webgl !== undefined ? null : (
           <div className="viewer-hud" style={HUD} aria-hidden="true">
             <div>Altitude: {formatQuantity(r.sample.altitude, 'm', u)}</div>
@@ -429,6 +521,22 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
             </option>
           ))}
         </select>
+        <label htmlFor={paintId}>Paint</label>
+        <select
+          id={paintId}
+          value={paint}
+          onChange={(e) => {
+            const next = PAINT_SCHEME_IDS.find((id) => id === e.target.value) ?? 'classic';
+            setPaint(next);
+            savePaint(next);
+          }}
+        >
+          {PAINT_SCHEME_IDS.map((id) => (
+            <option key={id} value={id}>
+              {PAINT_SCHEMES[id].label}
+            </option>
+          ))}
+        </select>
       </div>
       {r === undefined ? null : (
         <dl className="figures viewer-readouts" aria-label="Replay readouts">
@@ -474,7 +582,7 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
         </dl>
       )}
       <ul className="viewer-events" aria-label="Replay events">
-        {sceneRef.current?.markers.map((m) => (
+        {markers.map((m) => (
           <li key={`${m.event.kind}-${String(m.event.time)}`}>
             <button
               type="button"

@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+  <body style="margin: 0; background: transparent">
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./three/build/three.module.js",
+          "three/addons/": "./three/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+      const W = 1024,
+        H = 1024;
+      // Run by render_billboards.py (see its docstring).
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        preserveDrawingBuffer: true,
+      });
+      renderer.setPixelRatio(1);
+      renderer.setSize(W, H);
+      renderer.setClearColor(0x000000, 0);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      document.body.appendChild(renderer.domElement);
+
+      const NORMAL_VS = `
+varying vec2 vUv; varying vec3 vN;
+void main() { vUv = uv; vN = normalize(normalMatrix * normal); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+      const NORMAL_FS = `
+uniform sampler2D map; uniform bool hasMap; varying vec2 vUv; varying vec3 vN;
+void main() {
+  float a = hasMap ? texture2D(map, vUv).a : 1.0;
+  if (a < 0.5) discard;
+  vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
+  gl_FragColor = vec4(n * 0.5 + 0.5, 1.0);
+}`;
+
+      window.renderTree = async (path, yawDeg) => {
+        const gltf = await new GLTFLoader().loadAsync(path);
+        const root = gltf.scene;
+        root.rotation.y = (yawDeg * Math.PI) / 180;
+        root.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        const centre = box.getCenter(new THREE.Vector3());
+        // Square frame around the whole tree; the caller crops to the outline.
+        const halfH = (Math.max(size.x, size.y, size.z) / 2) * 1.02;
+        const halfW = halfH;
+        const cam = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.01, 1000);
+        cam.position.set(centre.x, centre.y, centre.z + Math.max(size.x, size.z) * 2 + 10);
+        cam.lookAt(centre);
+        const scene = new THREE.Scene();
+        scene.add(root);
+        // Pass 1: colour under a sky-from-above hemisphere light only, so the crown darkens inside
+        // and underneath (baked ambient occlusion) but no sun direction is baked in.
+        const originals = new Map();
+        root.traverse((o) => {
+          if (o.isMesh) originals.set(o, o.material);
+        });
+        for (const [o, m] of originals) {
+          const mats = Array.isArray(m) ? m : [m];
+          o.material = mats.map(
+            (mm) =>
+              new THREE.MeshLambertMaterial({
+                map: mm.map ?? null,
+                color: mm.color ?? new THREE.Color(1, 1, 1),
+                alphaTest: 0.5,
+                side: THREE.DoubleSide,
+                transparent: false,
+              }),
+          );
+          if (!Array.isArray(m)) o.material = o.material[0];
+        }
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x303020, 2.2);
+        scene.add(hemi);
+        renderer.toneMapping = THREE.NoToneMapping;
+        renderer.render(scene, cam);
+        const colour = renderer.domElement.toDataURL('image/png');
+        // Pass 2: view-space normals (camera looks along −z: x right, y up, z towards the viewer).
+        for (const [o, m] of originals) {
+          const mats = Array.isArray(m) ? m : [m];
+          const nm = mats.map(
+            (mm) =>
+              new THREE.ShaderMaterial({
+                uniforms: { map: { value: mm.map ?? null }, hasMap: { value: !!mm.map } },
+                vertexShader: NORMAL_VS,
+                fragmentShader: NORMAL_FS,
+                side: THREE.DoubleSide,
+              }),
+          );
+          o.material = Array.isArray(m) ? nm : nm[0];
+        }
+        scene.remove(hemi);
+        renderer.render(scene, cam);
+        const normal = renderer.domElement.toDataURL('image/png');
+        return {
+          colour,
+          normal,
+          meta: {
+            height: size.y,
+            width: Math.max(size.x, size.z),
+            metresPerPixel: (2 * halfH) / H,
+            bottom: box.min.y,
+            centreY: centre.y,
+          },
+        };
+      };
+
+      // Jobs from the query string ("name:path:yaw,..."); each result is posted back to the server.
+      const jobs = (new URLSearchParams(location.search).get('jobs') ?? '')
+        .split(',')
+        .filter(Boolean);
+      for (const job of jobs) {
+        const [name, path, yaw] = job.split(':');
+        const r = await window.renderTree(path, Number(yaw));
+        await fetch('/save', { method: 'POST', body: JSON.stringify({ name, ...r }) });
+      }
+      await fetch('/save', { method: 'POST', body: JSON.stringify({ done: true }) });
+    </script>
+  </body>
+</html>

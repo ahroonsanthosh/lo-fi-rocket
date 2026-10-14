@@ -7,7 +7,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { REFERENCE_ROCKETS, referenceFlight } from '../test-support/reference-flights.js';
 import { horizontalExtent, verticalExtent } from './flight-scene.js';
-import { mapTerrainGeometry } from './map-terrain.js';
+import { curvatureDrop, mapTerrainGeometry } from './map-terrain.js';
 import { sceneryLayout, terrainGeometry, terrainHeight } from './scenery.js';
 
 describe('sceneryLayout by hand', () => {
@@ -113,22 +113,33 @@ describe('terrainGeometry', () => {
   });
 });
 
-describe('mapTerrainGeometry', () => {
-  it('draws z = groundZ + (elevation − elevation at the pad), so the pad sits on the drawn ground', () => {
+describe('mapTerrainGeometry and curvatureDrop', () => {
+  it('curvatureDrop by hand: r² / 2R with R = 6 371 km', () => {
+    // 10 km: 1e8 / 1.2742e7 = 7.8481 m; 120 km: 1.44e10 / 1.2742e7 = 1130.1 m.
+    expect(curvatureDrop(10_000)).toBeCloseTo(7.8481, 4);
+    expect(curvatureDrop(120_000)).toBeCloseTo(1130.12, 2);
+    expect(curvatureDrop(0)).toBe(0);
+  });
+  it('draws z = groundZ + (elevation − elevation at the pad) − drop, so the pad sits on the drawn ground', () => {
     const height = (x: number, y: number): number => 2400 + 0.05 * x + 0.1 * y;
-    const g = mapTerrainGeometry(height, 1000, -0.3, 10);
+    const g = mapTerrainGeometry(height, 10_000, -0.3, 8, 1.5);
     const pos = g.getAttribute('position');
-    // 11 × 11 vertices from −1000 to 1000 m (graded towards the centre); the centre one (index 60) is the pad.
-    expect(pos.count).toBe(121);
-    expect(pos.getX(60)).toBe(0);
-    expect(pos.getY(60)).toBe(0);
-    expect(pos.getZ(60)).toBeCloseTo(-0.3, 6);
-    // Vertex 0 at (−1000, −1000): −0.3 + (−50 − 100) = −150.3
-    expect(pos.getZ(0)).toBeCloseTo(-150.3, 3);
-    // Vertex 1: u = −0.8 → x = −1000 × 0.8^1.7 = −684.4 m.
-    expect(pos.getX(1)).toBeCloseTo(-1000 * 0.8 ** 1.7, 3);
-    // Front faces up.
+    // Ring 0 is the pad: every vertex at (0, 0, groundZ).
+    for (let j = 0; j <= 8; j++) {
+      expect(Math.abs(pos.getX(j))).toBe(0);
+      expect(pos.getZ(j)).toBeCloseTo(-0.3, 6);
+    }
+    // Every vertex: groundZ + 0.05 x + 0.1 y − r²/2R.
+    for (let v = 0; v < pos.count; v++) {
+      const x = pos.getX(v);
+      const y = pos.getY(v);
+      const expected = -0.3 + 0.05 * x + 0.1 * y - curvatureDrop(Math.hypot(x, y));
+      expect(Math.abs(pos.getZ(v) - expected)).toBeLessThan(1e-3 * Math.max(1, Math.abs(expected)));
+    }
+    // The last ring is at the radius.
+    expect(Math.hypot(pos.getX(pos.count - 1), pos.getY(pos.count - 1))).toBeCloseTo(10_000, 0);
+    // Front faces up near the pad.
     const n = g.getAttribute('normal');
-    expect(n.getZ(60)).toBeGreaterThan(0.99);
+    expect(n.getZ(9 * 2)).toBeGreaterThan(0.99);
   });
 });

@@ -31,12 +31,10 @@ import {
   GridHelper,
   Group,
   HemisphereLight,
-  InstancedMesh,
   Line,
   LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   PerspectiveCamera,
   Quaternion as ThreeQuaternion,
   Scene,
@@ -45,12 +43,16 @@ import {
   Vector3,
   type Material,
   type Object3D,
+  type Texture,
 } from 'three';
 import {
   bracket,
   buildCanopy,
   deployedCanopies,
   displayThrust,
+  groundCloud,
+  GROUND_CLOUD_PUFFS,
+  type GroundCloudOptions,
   displayVelocity,
   ExhaustFlame,
   inflation,
@@ -65,23 +67,22 @@ import {
   type SmokeEmission,
   type SmokeOptions,
 } from './effects.js';
-import {
-  buildPad,
-  buildSkyDome,
-  buildTrees,
-  grassTexture,
-  sceneryLayout,
-  SKY_HORIZON,
-  SUN_DIRECTION,
-  terrainGeometry,
-  type SceneryLayout,
-} from './scenery.js';
+import { GroundMaterial, type GroundTextures } from './ground.js';
+import { sceneryLayout, terrainGeometry, type SceneryLayout } from './scenery.js';
+import { SKY_HAZE, SkyDome, SUN_DIRECTION } from './sky.js';
+import { TreeBillboards, type TreeAtlas } from './trees.js';
+import type { PaintSchemeId } from '../geometry/finish.js';
+import { motorNozzles, type MotorInputs, type MotorNozzle } from '../geometry/motor-model.js';
 import {
   buildRocketObject,
   rocketModelParts,
+  type ButtonPart,
   type ModelPart,
+  type RevolvedPart,
+  type RocketLook,
   type RocketObject,
 } from '../geometry/rocket-model.js';
+import { buildLauncher, launchGuide } from './launcher.js';
 import { displayPose, nearestStep } from '../replay/clock.js';
 
 import {
@@ -116,7 +117,26 @@ export interface SceneInputs {
   readonly extraGroundPoints?: readonly { readonly east: number; readonly north: number }[];
   /** The design's recovery devices, so a deployed canopy is drawn at its own diameter. */
   readonly recovery?: readonly RecoveryInputs[];
+  /** The design's motors (case, nozzle, flames), from `designMotor`; none for a rocket without a motor. */
+  readonly motor?: MotorInputs;
+  /** The paint scheme picked in the viewer (the design stores no colours). */
+  readonly scheme?: PaintSchemeId;
 }
+
+/** The photographic scenery (plan 3d-0002), loaded by the DOM side and applied when ready. */
+export interface SceneryAssets {
+  /** The visible sky, sRGB (sky.ts). */
+  readonly sky: Texture;
+  readonly ground: GroundTextures;
+  readonly trees: TreeAtlas;
+}
+
+/** Gap from the nozzle at rest to the blast deflector, and the deflector's height above the ground, metres (drawing choices). */
+export const PAD_GAP = 0.02;
+export const PAD_HEIGHT = 0.12;
+
+/** Trees drawn around the field (a drawing budget). */
+export const TREE_COUNT = 2200;
 
 export type LabelKind = 'scale' | 'compass' | 'event' | 'wind' | 'pad';
 
@@ -295,21 +315,33 @@ export class FlightScene {
   readonly groundZ: number;
   readonly layout: SceneryLayout;
   readonly rocketLength: number;
+  /** The rocket's lowest point at rest (z), metres. */
+  readonly restBottomZ: number;
+  private readonly baseFar: number;
   private readonly flown: Line;
   private readonly track: Line;
   private readonly drop: Line;
-  private readonly sky: Mesh;
+  private readonly sky: SkyDome;
   private readonly fog: FogExp2;
   private readonly sun: DirectionalLight;
+  private readonly hemisphere: HemisphereLight;
+  private readonly groundMaterial: GroundMaterial;
+  private readonly trees: TreeBillboards;
   private readonly terrain = new Group();
   private readonly proceduralTerrain: Group;
   private readonly flameHolder = new Group();
-  private readonly flame: ExhaustFlame;
+  private readonly flames: readonly ExhaustFlame[];
+  private readonly nozzles: readonly MotorNozzle[];
+  private readonly leads: Group;
+  private readonly fallenLeads: Group;
+  private readonly liftoffTime: number;
   private readonly thrustMax: number;
   private readonly wind: Vec3;
   private readonly emissions: readonly SmokeEmission[];
   private readonly smokeOptions: SmokeOptions;
   private readonly smoke: SmokeTrail;
+  private readonly groundCloudOptions: GroundCloudOptions | undefined;
+  private readonly cords: readonly Line[];
   private readonly canopyStates: readonly CanopyState[];
   private readonly canopies: readonly Group[];
   private readonly times: readonly number[];
@@ -325,7 +357,11 @@ export class FlightScene {
     this.camera.up.set(0, 0, 1);
 
     // Rocket model: the body group hangs from the rocket group by the stored CG offset.
-    this.model = buildRocketObject(rocketModelParts(inputs.components));
+    const look: RocketLook = {
+      ...(inputs.motor === undefined ? {} : { motor: inputs.motor }),
+      ...(inputs.scheme === undefined ? {} : { scheme: inputs.scheme }),
+    };
+    this.model = buildRocketObject(rocketModelParts(inputs.components), look);
     this.rocket = new Group();
     this.rocket.name = 'rocket';
     this.rocket.add(this.model.group);
@@ -333,29 +369,36 @@ export class FlightScene {
     const L = Math.max(0.05, this.model.extent.length);
     this.rocketLength = L;
 
-    // The drawn ground (D-3D-1): the stored z = 0 is the CG at rest, so the ground is drawn at
-    // the rocket's lowest point at rest, less a small clearance for the blast plate.
+    // The drawn ground (D-3D-1, D-3D-4): the stored z = 0 is the CG at rest, so the ground is
+    // drawn below the rocket's lowest point at rest (the nozzle): a 2 cm gap to the blast
+    // deflector, and the launcher's base 12 cm above the ground.
     const first = inputs.result.samples[0];
     if (first === undefined) throw new Error('FlightScene: the result has no stored steps');
     this.place(first.position, first.orientation, first.cg);
     const rest = new Box3().setFromObject(this.model.group);
-    this.groundZ = (Number.isFinite(rest.min.z) ? Math.min(0, rest.min.z) : 0) - 0.02 * L;
+    this.restBottomZ = Number.isFinite(rest.min.z) ? Math.min(0, rest.min.z) : 0;
+    this.groundZ = this.restBottomZ - PAD_GAP - PAD_HEIGHT;
 
     const horizontal = horizontalExtent(inputs.result, inputs.extraGroundPoints);
     this.extents = { horizontal, vertical: verticalExtent(inputs.result) };
     this.layout = sceneryLayout(this.extents, this.groundZ);
-    this.camera.far = Math.max(50_000, 2.5 * this.layout.outerRadius);
+    this.baseFar = Math.max(50_000, 2.5 * this.layout.outerRadius);
+    this.camera.far = this.baseFar;
     this.camera.updateProjectionMatrix();
 
-    // Sky, fog and light.
-    this.sky = buildSkyDome(0.45 * this.camera.far);
-    this.scene.add(this.sky);
-    const horizonColour = new Color().setHex(SKY_HORIZON, SRGBColorSpace);
-    this.scene.background = horizonColour;
-    this.fog = new FogExp2(horizonColour, 2 / this.layout.outerRadius);
+    // Sky, fog and light (plan 3d-0002): the photographic sky arrives with the assets; the haze
+    // is its horizon colour, so the distant ground fades into the photograph's horizon.
+    this.sky = new SkyDome(0.45 * this.camera.far);
+    this.scene.add(this.sky.mesh);
+    const haze = new Color().setHex(SKY_HAZE, SRGBColorSpace);
+    this.scene.background = haze;
+    this.fog = new FogExp2(haze, 2 / this.layout.outerRadius);
     this.scene.fog = this.fog;
-    this.scene.add(new HemisphereLight(0xcfe2ff, 0x5b5140, 1.1));
-    this.sun = new DirectionalLight(0xfff1dc, 2.8);
+    // Ambient light until the sky's image-based lighting is ready (the renderer sets it).
+    this.hemisphere = new HemisphereLight(0xcfe2ff, 0x5b5140, 1.1);
+    this.scene.add(this.hemisphere);
+    // The sun stands where the photograph's sun is (sky.ts).
+    this.sun = new DirectionalLight(0xfff4e5, 3.0);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     const sc = this.sun.shadow.camera;
@@ -373,6 +416,11 @@ export class FlightScene {
     // Terrain: illustrative and flat over the flight (D-3D-1); a map may replace it (D-3D-2).
     this.terrain.name = 'terrain';
     this.scene.add(this.terrain);
+    this.groundMaterial = new GroundMaterial(Math.max(1, 1.2 * L));
+    this.trees = new TreeBillboards(this.layout, TREE_COUNT, {
+      direction: SUN_DIRECTION.clone(),
+      colour: this.sun.color.clone().multiplyScalar(this.sun.intensity / Math.PI),
+    });
     this.proceduralTerrain = this.buildProceduralTerrain(this.layout);
     this.terrain.add(this.proceduralTerrain);
 
@@ -388,7 +436,7 @@ export class FlightScene {
     grid.position.z = this.groundZ + 0.002 * L;
     for (const m of materialsOf(grid)) {
       m.transparent = true;
-      m.opacity = 0.22;
+      m.opacity = 0.14;
       m.depthWrite = false;
       if (m instanceof LineBasicMaterial) m.fog = false;
     }
@@ -411,8 +459,8 @@ export class FlightScene {
     labels.push({ kind: 'compass', text: 'E', position: { x: this.gridHalfSize, y: 0, z: gz } });
     labels.push({ kind: 'pad', text: 'Pad', position: { x: 0, y: 0, z: gz } });
 
-    // Launch pad: the rail along the stored rail direction and length, beside the rocket on the
-    // side of its rail buttons (body +z, D-071), and a blast plate on the ground.
+    // Launcher (plan 3d-0002): a rod through the lug or a rail under the buttons, along the stored
+    // rail direction and length, on the side of the guides (body +z, D-071), with the igniter leads.
     const d = railDirection(inputs.rail.angleFromVertical, inputs.rail.azimuth);
     const railDir = new Vector3(d.x, d.y, d.z).normalize();
     const side = new Vector3(0, 0, 1).applyQuaternion(this.rocket.quaternion);
@@ -420,16 +468,40 @@ export class FlightScene {
     if (side.lengthSq() < 1e-12) side.set(0, -1, 0);
     side.normalize();
     const bodyRadius = bodyRadiusOf(this.model.parts);
-    this.scene.add(
-      buildPad({
-        groundZ: this.groundZ,
-        railDirection: railDir,
-        railSide: side,
-        railOffset: bodyRadius + 0.004,
-        railLength: inputs.rail.length,
-        rocketLength: L,
-      }),
+    const lugPart = this.model.parts.find(
+      (p): p is RevolvedPart => p.kind === 'revolved' && p.component === 'launchLug',
     );
+    const buttonPart = this.model.parts.find((p): p is ButtonPart => p.kind === 'button');
+    const guide = launchGuide(
+      bodyRadius,
+      lugPart?.bore === undefined || lugPart.offset === undefined
+        ? undefined
+        : { bore: lugPart.bore, offset: lugPart.offset.distance },
+      buttonPart === undefined
+        ? undefined
+        : { outerDiameter: buttonPart.outerDiameter, baseHeight: buttonPart.baseHeight ?? 0 },
+    );
+    this.nozzles = inputs.motor === undefined ? [] : motorNozzles(inputs.motor);
+    const nozzlesAtRest = this.nozzles.map((n) =>
+      this.model.group.localToWorld(new Vector3(n.x, n.y, n.z)),
+    );
+    const launcher = buildLauncher({
+      groundZ: this.groundZ,
+      direction: railDir,
+      side,
+      guide,
+      railLength: inputs.rail.length,
+      rocketLength: L,
+      nozzles: nozzlesAtRest,
+      deflectorZ: this.restBottomZ - PAD_GAP,
+    });
+    this.scene.add(launcher.group);
+    this.leads = launcher.leads;
+    this.fallenLeads = launcher.fallenLeads;
+    const liftoff = inputs.result.events.find(
+      (e) => e.kind === 'liftoff' || e.kind === 'rail-exit',
+    );
+    this.liftoffTime = liftoff?.time ?? 0;
 
     // Flight path through every stored position, and the part flown so far (not fogged: data).
     const positions = inputs.result.samples.map((s) => s.position);
@@ -462,8 +534,16 @@ export class FlightScene {
 
     // Effects (illustrative, D-3D-1).
     this.thrustMax = maxThrust(inputs.result);
-    this.flame = new ExhaustFlame(this.model.extent.length, aftRadiusOf(this.model.parts));
-    this.flameHolder.add(this.flame.group);
+    // One flame per nozzle (a cluster's too); without a motor, one at the aft end.
+    this.flames =
+      this.nozzles.length > 0
+        ? this.nozzles.map((n) => {
+            const f = new ExhaustFlame(n.x, n.radius);
+            f.group.position.set(n.x, n.y, n.z);
+            return f;
+          })
+        : [new ExhaustFlame(this.model.extent.length, aftRadiusOf(this.model.parts))];
+    for (const f of this.flames) this.flameHolder.add(f.group);
     this.rocket.add(this.flameHolder);
     this.wind = windVelocity(inputs.wind);
     this.emissions = smokeEmissions(inputs.result, this.model.extent.length);
@@ -475,7 +555,23 @@ export class FlightScene {
       fade: 22,
       jitter: 0.5,
     };
-    this.smoke = new SmokeTrail(SMOKE_MAX_PUFFS);
+    this.smoke = new SmokeTrail(SMOKE_MAX_PUFFS + GROUND_CLOUD_PUFFS, {
+      direction: SUN_DIRECTION.clone(),
+      colour: this.sun.color.clone().multiplyScalar(this.sun.intensity / Math.PI),
+    });
+    // The cloud the exhaust raises at the pad, from ignition to leaving the rail.
+    const railExit = inputs.result.events.find((e) => e.kind === 'rail-exit');
+    this.groundCloudOptions =
+      this.thrustMax > 0
+        ? {
+            groundZ: this.groundZ,
+            start: 0,
+            end: (railExit?.time ?? 0.3) + 0.2,
+            reach: Math.max(1.5, 4 * L),
+            size: Math.max(0.6, 2.2 * L),
+            fade: 6,
+          }
+        : undefined;
     this.scene.add(this.smoke.points);
     this.canopyStates = deployedCanopies(inputs.result, inputs.recovery ?? []);
     const colours: readonly [number, number][] = [
@@ -489,6 +585,21 @@ export class FlightScene {
       g.visible = false;
       this.scene.add(g);
       return g;
+    });
+    // Shock cords from each canopy's confluence to the rocket (updated as it moves).
+    this.cords = this.canopyStates.map(() => {
+      const cord = lineThrough(
+        [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        0xd9c27a,
+        'shock-cord',
+      );
+      (cord.material as LineBasicMaterial).fog = true;
+      cord.visible = false;
+      this.scene.add(cord);
+      return cord;
     });
 
     // Event markers at their stored steps; events at the same step share one label.
@@ -551,20 +662,40 @@ export class FlightScene {
   private buildProceduralTerrain(layout: SceneryLayout): Group {
     const g = new Group();
     g.name = 'procedural-terrain';
-    const ground = new Mesh(
-      terrainGeometry(layout),
-      // Lambert: the ground is fully diffuse, and it covers most pixels, so the cheap model matters.
-      new MeshLambertMaterial({ vertexColors: true, map: grassTexture() }),
-    );
+    // Lambert: the ground is fully diffuse and covers most pixels, so the cheap model matters.
+    const ground = new Mesh(terrainGeometry(layout), this.groundMaterial.material);
     ground.name = 'ground';
     ground.receiveShadow = true;
-    g.add(ground, buildTrees(layout));
+    g.add(ground, this.trees.mesh);
     return g;
   }
 
-  /** Shroud line length for a canopy (drawing choice: 1.5 rocket lengths plus the diameter). */
+  /**
+   * Apply the photographic scenery (plan 3d-0002): the sky photograph, the
+   * ground textures and the tree billboards. Drawing only.
+   */
+  applyAssets(assets: SceneryAssets): void {
+    this.sky.setPhoto(assets.sky);
+    this.groundMaterial.setTextures(assets.ground);
+    this.trees.setAtlas(assets.trees);
+  }
+
+  /**
+   * Called by the renderer once the sky's image-based lighting is in place:
+   * the stand-in hemisphere light is dimmed to a small fill.
+   */
+  useImageLighting(): void {
+    this.hemisphere.intensity = 0.25;
+  }
+
+  /** Trees drawn now (for tests and the low-detail mode). */
+  get treeCount(): number {
+    return this.trees.instanceCount;
+  }
+
+  /** Shroud line length for a canopy (drawing choice: 1.2 canopy diameters, a common rigging). */
   private lineLength(c: CanopyState): number {
-    return 1.5 * this.rocketLength + c.diameter;
+    return 1.2 * c.diameter;
   }
 
   /**
@@ -572,15 +703,19 @@ export class FlightScene {
    * restore it with `undefined`. `visibility` is the distance at which the
    * fog hides the ground, metres.
    */
-  setTerrain(terrain: Object3D | undefined, visibility?: number): void {
+  setTerrain(terrain: Object3D | undefined, visibility?: number, radius?: number): void {
     this.terrain.clear();
     if (terrain === undefined) {
       this.terrain.add(this.proceduralTerrain);
       this.fog.density = 2 / this.layout.outerRadius;
+      this.camera.far = this.baseFar;
     } else {
       this.terrain.add(terrain);
       this.fog.density = 2 / Math.max(1, visibility ?? this.layout.outerRadius);
+      // The real terrain reaches the horizon (D-3D-5): the far plane goes past it.
+      this.camera.far = Math.max(this.baseFar, 1.5 * (radius ?? 0));
     }
+    this.camera.updateProjectionMatrix();
   }
 
   /**
@@ -589,26 +724,22 @@ export class FlightScene {
    */
   setLowDetail(low: boolean): void {
     this.sun.castShadow = !low;
-    this.proceduralTerrain.traverse((o) => {
-      if (o instanceof InstancedMesh) {
-        const all = (o.userData['placed'] as number | undefined) ?? o.count;
-        o.userData['placed'] = all;
-        o.count = low ? Math.ceil(all / 4) : all;
-      }
-    });
+    this.trees.setLowDetail(low);
   }
 
-  /** The sky's material, for the image-based lighting the renderer derives from it. */
+  /** The sky's material, for the image-based lighting the renderer derives from it before the photograph loads. */
   get skyMaterial(): Material {
-    return materialsOf(this.sky)[0] ?? new MeshBasicMaterial();
+    return this.sky.material;
   }
 
   /** Per-frame and per-viewport preparation: the sky follows the camera; smoke sizes in pixels. */
   prepareRender(camera: PerspectiveCamera, viewportHeight: number): void {
-    this.sky.position.copy(camera.position);
-    this.sky.updateMatrixWorld(true);
+    this.sky.mesh.position.copy(camera.position);
+    this.sky.mesh.updateMatrixWorld(true);
     const f = Math.tan((camera.fov * Math.PI) / 180 / 2);
     this.smoke.setProjectionScale(viewportHeight / (2 * f));
+    camera.updateMatrixWorld();
+    this.smoke.setCamera(camera);
     // Event markers keep about MARKER_PIXELS on screen at any distance, never above their
     // drawn radius, so they neither vanish on a long flight nor hide the rocket close up.
     const metresPerPixel = (2 * f) / Math.max(1, viewportHeight);
@@ -623,7 +754,7 @@ export class FlightScene {
 
   /** Whether the exhaust flame is shown at the current replay time. */
   get flameVisible(): boolean {
-    return this.flame.visible;
+    return this.flames.some((f) => f.visible);
   }
 
   /** The canopies drawn (names, diameters, deployment times). */
@@ -695,8 +826,16 @@ export class FlightScene {
     this.track.geometry.setDrawRange(0, this.currentIndex + 1);
     const t = this.currentTime;
     const samples = this.result.samples;
-    this.flame.setThrust(this.thrustMax > 0 ? displayThrust(samples, t) / this.thrustMax : 0, t);
-    this.smoke.update(smokePuffs(this.emissions, this.wind, t, this.smokeOptions));
+    const fraction = this.thrustMax > 0 ? displayThrust(samples, t) / this.thrustMax : 0;
+    for (const f of this.flames) f.setThrust(fraction, t);
+    const onPad = t < this.liftoffTime;
+    this.leads.visible = onPad;
+    this.fallenLeads.visible = !onPad;
+    const cloud =
+      this.groundCloudOptions === undefined
+        ? []
+        : groundCloud(this.wind, t, this.groundCloudOptions);
+    this.smoke.update([...cloud, ...smokePuffs(this.emissions, this.wind, t, this.smokeOptions)]);
     // Drop line from the rocket to the drawn ground.
     const dp = this.drop.geometry.getAttribute('position');
     dp.setXYZ(0, position.x, position.y, position.z);
@@ -717,14 +856,35 @@ export class FlightScene {
       const s = inflation(t - c.deployedAt);
       g.visible = s > 0 && bracket(samples, t).a.phase !== 'landed';
       if (!g.visible) return;
-      const lift = this.lineLength(c) + (g.userData['rimY'] as number);
+      // The confluence hangs a shock cord's length (1.5 rocket lengths) above the rocket; the
+      // canopy a line length above that.
+      const cordLength = 1.5 * this.rocketLength;
+      const lift = cordLength + this.lineLength(c);
       // Several canopies side by side.
       const offset = (i - (this.canopies.length - 1) / 2) * 0.6 * c.diameter;
       g.position.set(position.x, position.y, position.z).addScaledVector(up, lift);
       g.position.x += offset;
       g.quaternion.copy(along);
+      // Breathing: a full canopy pulses slightly (drawing only).
+      const breathe = 1 + 0.025 * Math.sin((2 * Math.PI * t) / 1.4 + i);
       const dome = g.getObjectByName('canopy-dome');
-      dome?.scale.set(s, 0.5 + 0.5 * s, s);
+      dome?.scale.set(s * breathe, 0.5 + 0.5 * s, s * breathe);
+      const cord = this.cords[i];
+      if (cord !== undefined) {
+        const cp = cord.geometry.getAttribute('position');
+        cp.setXYZ(0, position.x, position.y, position.z);
+        const conf = new Vector3(position.x, position.y, position.z).addScaledVector(
+          up,
+          cordLength,
+        );
+        conf.x += offset;
+        cp.setXYZ(1, conf.x, conf.y, conf.z);
+        cp.needsUpdate = true;
+        cord.geometry.computeBoundingSphere();
+      }
+    });
+    this.cords.forEach((cord, i) => {
+      cord.visible = this.canopies[i]?.visible ?? false;
     });
     // The sun's shadow box follows the rocket.
     this.sun.target.position.set(position.x, position.y, position.z);

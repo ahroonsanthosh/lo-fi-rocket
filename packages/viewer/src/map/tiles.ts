@@ -238,9 +238,22 @@ export const ELEVATION_SOURCE = {
     'Elevation: Terrain Tiles (Mapzen / AWS Open Data; SRTM, USGS 3DEP, GMTED2010, ETOPO1 and others)',
 } as const;
 
-/** Map extents for a flight (drawing choices): the outer square and the sharper inner square. */
-export function mapExtents(flatRadius: number): { readonly outer: number; readonly inner: number } {
+/**
+ * Map levels for a flight (drawing choices, D-3D-5), half-sizes in metres:
+ * the sharpest imagery over the flight (`inner`, at least 400 m), a middle
+ * level four times wider, the `outer` level (at least 8 km), and the
+ * horizon ring's radius (`far`, 120 km, beyond which the haze hides the
+ * ground). `nearElevation` is the half-size of the fine elevation grid.
+ */
+export function mapLevels(flatRadius: number): {
+  readonly inner: number;
+  readonly mid: number;
+  readonly outer: number;
+  readonly far: number;
+  readonly nearElevation: number;
+} {
+  const inner = Math.max(400, 1.6 * flatRadius);
   const outer = Math.min(40_000, Math.max(8_000, 4 * flatRadius));
-  const inner = Math.min(outer, Math.max(400, 1.6 * flatRadius));
-  return { outer, inner };
+  const mid = Math.min(outer, 4 * inner);
+  return { inner, mid, outer, far: 120_000, nearElevation: outer };
 }

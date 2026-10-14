@@ -11,7 +11,7 @@ import {
   ElevationGrid,
   localToPixel,
   lonLatOfPixel,
-  mapExtents,
+  mapLevels,
   metresPerPixel,
   pixelToLocal,
   terrainDeviation,
@@ -106,10 +106,23 @@ describe('tile ranges', () => {
       ),
     );
   });
-  it('map extents: at least 8 km and 400 m, at most 40 km', () => {
-    expect(mapExtents(250)).toEqual({ outer: 8000, inner: 400 });
-    expect(mapExtents(3000)).toEqual({ outer: 12_000, inner: 4800 });
-    expect(mapExtents(20_000).outer).toBe(40_000);
+  it('map levels by hand: inner max(400, 1.6 r), mid min(outer, 4 inner), outer max(8 km, 4 r) up to 40 km, far 120 km', () => {
+    expect(mapLevels(250)).toEqual({
+      inner: 400,
+      mid: 1600,
+      outer: 8000,
+      far: 120_000,
+      nearElevation: 8000,
+    });
+    // r = 3000: inner 4800, outer 12 000, mid min(12 000, 19 200) = 12 000.
+    expect(mapLevels(3000)).toEqual({
+      inner: 4800,
+      mid: 12_000,
+      outer: 12_000,
+      far: 120_000,
+      nearElevation: 12_000,
+    });
+    expect(mapLevels(20_000).outer).toBe(40_000);
   });
 });
 
