@@ -644,3 +644,26 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Why:** The owner chose "Yes, drop the spent stage (Recommended)" on 2026-10-13, option (b) of the open question in `docs/progress.md`. Carrying the spent stage to apogee (option a) would show the apogee far low; OpenRocket separates the stage.
 - **Alternatives:** Option (a), the stack as one body to apogee (kept only as the first step of the implementation, never as the result); simulating the booster's descent too (a later step: it needs a second flight path in the results).
 - **Consequences:** Plan 0055 step 3 part 2 implements staging; until it is merged, multi-stage `.ork` files remain refused with that reason. The separation approximations (instantaneous separation, no separation impulse, no stage interference) will be listed with the results (rule 3).
+
+## D-092 (2026-10-14): The local MCP server records every value Claude did not give
+
+- **Decision:** `packages/mcp` (plan 0062) is a local MCP server on the official SDK (`@modelcontextprotocol/sdk` 1.31.0 and `zod` 4.6.5, both pinned exactly and more than two weeks old when adopted). Its tools build, check and fly designs in memory, with no file, command or network access.
+  - A part field Claude does not give takes the app's editing default (`defaultComponent`, moved from the app to `packages/formats` unchanged) and is recorded on the part as an approximation "… not given". The impact is major for outline fields of the nose, transitions, body tubes and fins, minor for lugs and rail buttons, and moderate otherwise. Giving the field clears it.
+  - A position not given is listed (moderate), except for outline parts, which stack aft of the outline. Fins go flush with the aft end.
+  - A fin set's or rail buttons' body radius, and a launch lug's offset, are worked out from the body tube at the part's position. They are listed only when no body tube is there.
+  - An optional field given as `null` is left out: that is how a solid nose cone is said.
+  - A missing ejection delay is listed (moderate, treated as plugged), and so is a missing motor overhang (minor, 0) and a missing parachute drag coefficient (moderate, 0.8, Niskanen p. 67).
+  - Launch settings not given are reported with every result and review, not listed as approximations. The app does not list them either, and they are conditions of the day, not the design.
+  - Quantities may be strings with units, converted by the physics package's sourced functions. UNIT-12 (the SI prefixes centi, milli, hecto and kilo; g/cm³) and UNIT-13 (km/h) were added from the SI Brochure, Tables 7 and 8 (pp. 138 and 140).
+  - The tool field table is checked against `COMPONENT_FIELDS`, which `validate.ts` now exports and uses itself.
+  - The bundled motor files moved from the app into `packages/formats` as text, byte-identical to `reference/motors` (test).
+- **Why:** Plan 0061 route A (D-090). CLAUDE.md 1 rule 3 says nothing is defaulted unless it appears in the list. A design built by an assistant from a partial specification is exactly where silent defaults would hide, so every one is made visible to Claude (the review's "must" items) and to the user (the confidence rating). Converting units in the server removes Claude's arithmetic from the chain.
+- **Alternatives:**
+  - Require every field (rejected: Claude would then invent the missing values itself, invisibly).
+  - Hand-written JSON schemas per kind in the tool definitions (rejected for now: several thousand tokens of every user's context on each request; the `about` tool gives the same reference once).
+  - Implementing the MCP protocol by hand (rejected: the official SDK is the reference implementation and handles version negotiation).
+- **Consequences:**
+  - The example rocket built part by part through the tools reproduces `exampleDesign()` and its flight bit for bit (test).
+  - Imported `.ork` files fly as the formats package flies them (test).
+  - Distribution (a single bundled file and a Claude Desktop `.mcpb`) and ThrustCurve search follow in plan 0062's next pull requests.
+  - CodeQL found that the readers' number pattern `\d+\.?\d*` backtracks quadratically on long digit runs (a 50 000-digit field took 5.4 s), reachable now from the server's inputs. Every copy (the `.eng`, CSV, `.rse`/`.ork`, unit and display readers) became the equivalent `\d+(?:\.\d*)?`, which runs in linear time (0.3 ms); a test keeps it so.

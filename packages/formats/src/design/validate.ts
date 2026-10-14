@@ -148,6 +148,72 @@ const MASS_RULES: readonly MotorMassRule[] = [
 const SOURCE_FORMATS = ['RASP', 'RockSim', 'custom'] as const;
 const FIN_SECTIONS = ['square', 'rounded', 'airfoil', 'wedge', 'double-wedge'] as const;
 
+/**
+ * The fields each component kind accepts in a design file, required and optional (the `kind` key
+ * included). The validator below checks against this table, and the MCP server builds its tool
+ * schemas from it (plan 0062), so the two cannot drift apart.
+ */
+export const COMPONENT_FIELDS = {
+  noseCone: {
+    required: ['kind', 'shape', 'length', 'baseRadius', 'density'],
+    optional: ['shapeParameter', 'wallThickness', 'aftShoulder'],
+  },
+  transition: {
+    required: ['kind', 'shape', 'length', 'foreRadius', 'aftRadius', 'density'],
+    optional: ['shapeParameter', 'wallThickness'],
+  },
+  bodyTube: {
+    required: ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
+    optional: ['radialOffset'],
+  },
+  innerTube: {
+    required: ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
+    optional: ['radialOffset'],
+  },
+  launchLug: {
+    required: ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
+    optional: ['radialOffset'],
+  },
+  centeringRing: {
+    required: ['kind', 'length', 'outerRadius', 'innerRadius', 'density'],
+    optional: [],
+  },
+  bulkhead: { required: ['kind', 'length', 'outerRadius', 'innerRadius', 'density'], optional: [] },
+  massComponent: { required: ['kind', 'mass', 'length', 'radius'], optional: [] },
+  parachute: { required: ['kind', 'mass', 'length', 'radius'], optional: [] },
+  finSet: {
+    required: [
+      'kind',
+      'count',
+      'rootChord',
+      'tipChord',
+      'sweep',
+      'span',
+      'thickness',
+      'density',
+      'bodyRadius',
+    ],
+    optional: ['crossSection', 'shearModulus', 'tab', 'shape'],
+  },
+  railButton: {
+    required: [
+      'kind',
+      'count',
+      'outerDiameter',
+      'innerDiameter',
+      'totalHeight',
+      'baseHeight',
+      'flangeHeight',
+      'density',
+      'bodyRadius',
+    ],
+    optional: ['separation'],
+  },
+} as const satisfies Record<
+  Component['kind'],
+  { readonly required: readonly string[]; readonly optional: readonly string[] }
+>;
+
 function component(c: Ctx, path: string, v: unknown): Component {
   const o = c.object(path, v);
   const kind = c.oneOf(`${path}.kind`, o['kind'], COMPONENT_KINDS);
@@ -156,12 +222,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
     k in o && o[k] !== undefined ? f(o[k]) : undefined;
   switch (kind) {
     case 'noseCone': {
-      c.keys(
-        path,
-        o,
-        ['kind', 'shape', 'length', 'baseRadius', 'density'],
-        ['shapeParameter', 'wallThickness', 'aftShoulder'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.noseCone.required, COMPONENT_FIELDS.noseCone.optional);
       const shapeParameter = opt('shapeParameter', (x) => c.number(`${path}.shapeParameter`, x));
       const wallThickness = opt('wallThickness', (x) =>
         metres(c.number(`${path}.wallThickness`, x)),
@@ -187,12 +248,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
       };
     }
     case 'transition': {
-      c.keys(
-        path,
-        o,
-        ['kind', 'shape', 'length', 'foreRadius', 'aftRadius', 'density'],
-        ['shapeParameter', 'wallThickness'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.transition.required, COMPONENT_FIELDS.transition.optional);
       const shapeParameter = opt('shapeParameter', (x) => c.number(`${path}.shapeParameter`, x));
       const wallThickness = opt('wallThickness', (x) =>
         metres(c.number(`${path}.wallThickness`, x)),
@@ -211,12 +267,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
     case 'bodyTube':
     case 'innerTube':
     case 'launchLug': {
-      c.keys(
-        path,
-        o,
-        ['kind', 'length', 'outerRadius', 'wallThickness', 'density'],
-        ['radialOffset'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS[kind].required, COMPONENT_FIELDS[kind].optional);
       const radialOffset = opt('radialOffset', (x) => metres(c.number(`${path}.radialOffset`, x)));
       return {
         kind,
@@ -229,7 +280,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
     }
     case 'centeringRing':
     case 'bulkhead':
-      c.keys(path, o, ['kind', 'length', 'outerRadius', 'innerRadius', 'density']);
+      c.keys(path, o, COMPONENT_FIELDS[kind].required, COMPONENT_FIELDS[kind].optional);
       return {
         kind,
         length: metres(m('length')),
@@ -239,7 +290,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
       };
     case 'massComponent':
     case 'parachute':
-      c.keys(path, o, ['kind', 'mass', 'length', 'radius']);
+      c.keys(path, o, COMPONENT_FIELDS[kind].required, COMPONENT_FIELDS[kind].optional);
       return {
         kind,
         mass: kilograms(m('mass')),
@@ -247,22 +298,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
         radius: metres(m('radius')),
       };
     case 'finSet': {
-      c.keys(
-        path,
-        o,
-        [
-          'kind',
-          'count',
-          'rootChord',
-          'tipChord',
-          'sweep',
-          'span',
-          'thickness',
-          'density',
-          'bodyRadius',
-        ],
-        ['crossSection', 'shearModulus', 'tab', 'shape'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.finSet.required, COMPONENT_FIELDS.finSet.optional);
       const crossSection = opt('crossSection', (x) =>
         c.oneOf(`${path}.crossSection`, x, FIN_SECTIONS),
       );
@@ -323,22 +359,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
       };
     }
     case 'railButton': {
-      c.keys(
-        path,
-        o,
-        [
-          'kind',
-          'count',
-          'outerDiameter',
-          'innerDiameter',
-          'totalHeight',
-          'baseHeight',
-          'flangeHeight',
-          'density',
-          'bodyRadius',
-        ],
-        ['separation'],
-      );
+      c.keys(path, o, COMPONENT_FIELDS.railButton.required, COMPONENT_FIELDS.railButton.optional);
       const separation = opt('separation', (x) => metres(c.number(`${path}.separation`, x)));
       return {
         kind,

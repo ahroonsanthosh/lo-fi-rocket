@@ -45,7 +45,7 @@ export interface CustomMotorMetadata {
   readonly propellantMass: Kilograms;
 }
 
-const NUMBER = /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/;
+const NUMBER = /^[-+]?(\d+(?:\.\d*)?|\.\d+)([eE][-+]?\d+)?$/;
 
 export function parseThrustCurveCsv(
   text: string,

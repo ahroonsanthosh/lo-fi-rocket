@@ -100,4 +100,4 @@ export function parseXmlRoots(xml: string): XmlNode[] {
 }
 
 /** Plain decimal or exponent number, as the simulator files write them ("29.", "5.0E-4", ".0108"). */
-export const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+export const NUMBER = /^[+-]?(\d+(?:\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;

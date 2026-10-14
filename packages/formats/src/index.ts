@@ -103,7 +103,14 @@ export {
   exampleDesign,
   newDesign,
 } from './design/example.js';
-export { validateMotorSelection } from './design/validate.js';
+export { COMPONENT_FIELDS, validateMotorSelection } from './design/validate.js';
+export {
+  componentLength,
+  defaultComponent,
+  defaultRecoveryDevice,
+  isExternal,
+  type ComponentKind,
+} from './design/defaults.js';
 export {
   CsvThrustCurveError,
   parseThrustCurveCsv,
@@ -133,6 +140,7 @@ export {
   type KeyValueStore,
 } from './thrustcurve/cache.js';
 export { DragCurveCsvError, parseDragCurveCsv } from './motors/drag-curve.js';
+export { BUNDLED_MOTOR_FILES } from './motors/bundled.js';
 export { FlightDataCsvError, parseFlightDataCsv } from './motors/flight-data.js';
 export { orkToDesign, type LibraryMotorRef, type OrkImport } from './design/from-ork.js';
 export type { RecordedFlight } from './design/model.js';

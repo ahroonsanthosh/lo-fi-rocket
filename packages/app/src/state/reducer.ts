@@ -4,27 +4,20 @@
  * leaves a design that validates. New-component defaults are editing
  * conveniences derived from the current design, not physics.
  */
+import type { AsBuilt, Component, DragCurve, Metres } from '@lo-fi-rocket/physics';
 import {
-  kilograms,
-  kilogramsPerCubicMetre,
-  metres,
-  seconds,
-  type AsBuilt,
-  type Component,
-  type DragCurve,
-  type Metres,
-} from '@lo-fi-rocket/physics';
-import type {
-  DesignComponent,
-  DispersionSettingsRecord,
-  DesignRecoveryDevice,
-  LaunchConditions,
-  MotorMount,
-  RecordedFlight,
-  RocketDesign,
-  SimulationSettings,
-  StabilityThresholds,
-  WarningThresholds,
+  defaultComponent,
+  defaultRecoveryDevice,
+  type DesignComponent,
+  type DispersionSettingsRecord,
+  type DesignRecoveryDevice,
+  type LaunchConditions,
+  type MotorMount,
+  type RecordedFlight,
+  type RocketDesign,
+  type SimulationSettings,
+  type StabilityThresholds,
+  type WarningThresholds,
 } from '@lo-fi-rocket/formats';
 import type { UnitSystem } from '../units/display.js';
 
@@ -85,220 +78,6 @@ export const COMPONENT_LABELS: Record<ComponentKind, string> = {
   launchLug: 'Launch lug',
   railButton: 'Rail buttons',
 };
-
-/** External parts set the body outline; everything else sits inside or on it. */
-export function isExternal(kind: ComponentKind): boolean {
-  return kind === 'noseCone' || kind === 'bodyTube' || kind === 'transition';
-}
-
-function componentLength(c: Component): number {
-  switch (c.kind) {
-    case 'finSet':
-      return c.rootChord;
-    case 'railButton':
-      return 0;
-    case 'noseCone':
-    case 'transition':
-    case 'bodyTube':
-    case 'innerTube':
-    case 'launchLug':
-    case 'centeringRing':
-    case 'bulkhead':
-    case 'massComponent':
-    case 'parachute':
-      return c.length;
-  }
-}
-
-/** The aft end of the outline, and the radius there. */
-function tail(components: readonly DesignComponent[]): { x: number; radius: number } {
-  let x = 0;
-  let radius = 0.025;
-  for (const d of components) {
-    if (!isExternal(d.component.kind)) continue;
-    const end: number = d.position + componentLength(d.component);
-    if (end >= x) {
-      x = end;
-      const c = d.component;
-      if (c.kind === 'noseCone') radius = c.baseRadius;
-      else if (c.kind === 'transition') radius = c.aftRadius;
-      else if (c.kind === 'bodyTube') radius = c.outerRadius;
-    }
-  }
-  return { x, radius };
-}
-
-/** Editing defaults for a new component, sized from the current outline. */
-export function defaultComponent(
-  kind: ComponentKind,
-  design: RocketDesign,
-): Omit<DesignComponent, 'id'> {
-  const t = tail(design.components);
-  const r = t.radius;
-  const m = metres;
-  const paper = kilogramsPerCubicMetre(700);
-  switch (kind) {
-    case 'noseCone':
-      return {
-        name: 'Nose cone',
-        position: m(0),
-        component: {
-          kind,
-          shape: 'ogive',
-          shapeParameter: 1,
-          length: m(3 * r),
-          baseRadius: m(r),
-          wallThickness: m(0.002),
-          density: kilogramsPerCubicMetre(1050),
-        },
-      };
-    case 'bodyTube':
-      return {
-        name: 'Body tube',
-        position: m(t.x),
-        component: {
-          kind,
-          length: m(10 * r),
-          outerRadius: m(r),
-          wallThickness: m(0.001),
-          density: paper,
-        },
-      };
-    case 'transition':
-      return {
-        name: 'Transition',
-        position: m(t.x),
-        component: {
-          kind,
-          shape: 'conical',
-          length: m(2 * r),
-          foreRadius: m(r),
-          aftRadius: m(0.8 * r),
-          wallThickness: m(0.002),
-          density: kilogramsPerCubicMetre(1050),
-        },
-      };
-    case 'finSet':
-      return {
-        name: 'Fin set',
-        position: m(Math.max(0, t.x - 4 * r)),
-        component: {
-          kind,
-          count: 3,
-          rootChord: m(4 * r),
-          tipChord: m(2 * r),
-          sweep: m(2 * r),
-          span: m(3 * r),
-          thickness: m(0.003),
-          density: kilogramsPerCubicMetre(600),
-          bodyRadius: m(r),
-          crossSection: 'square',
-        },
-      };
-    case 'innerTube':
-      return {
-        name: 'Motor mount tube',
-        position: m(Math.max(0, t.x - 0.075)),
-        component: {
-          kind,
-          length: m(0.075),
-          outerRadius: m(0.0125),
-          wallThickness: m(0.0005),
-          density: paper,
-        },
-      };
-    case 'centeringRing':
-      return {
-        name: 'Centering ring',
-        position: m(Math.max(0, t.x - 0.01)),
-        component: {
-          kind,
-          length: m(0.005),
-          outerRadius: m(Math.max(0.001, r - 0.001)),
-          innerRadius: m(0.0125),
-          density: paper,
-        },
-      };
-    case 'bulkhead':
-      return {
-        name: 'Bulkhead',
-        position: m(t.x / 2),
-        component: {
-          kind,
-          length: m(0.005),
-          outerRadius: m(Math.max(0.001, r - 0.001)),
-          innerRadius: m(0),
-          density: kilogramsPerCubicMetre(600),
-        },
-      };
-    case 'massComponent':
-      return {
-        name: 'Mass component',
-        position: m(t.x / 4),
-        component: {
-          kind,
-          mass: kilograms(0.02),
-          length: m(0.02),
-          radius: m(Math.max(0.001, r - 0.005)),
-        },
-      };
-    case 'parachute':
-      return {
-        name: 'Parachute (packed)',
-        position: m(t.x / 3),
-        component: {
-          kind,
-          mass: kilograms(0.01),
-          length: m(0.05),
-          radius: m(Math.max(0.001, r - 0.005)),
-        },
-      };
-    case 'launchLug':
-      return {
-        name: 'Launch lug',
-        position: m(t.x / 2),
-        component: {
-          kind,
-          length: m(0.05),
-          outerRadius: m(0.003),
-          wallThickness: m(0.0005),
-          density: paper,
-          radialOffset: m(r + 0.003),
-        },
-      };
-    case 'railButton':
-      return {
-        name: 'Rail buttons',
-        position: m(t.x / 2),
-        component: {
-          kind,
-          count: 2,
-          separation: m(t.x / 3),
-          outerDiameter: m(0.01),
-          innerDiameter: m(0.006),
-          totalHeight: m(0.01),
-          baseHeight: m(0.002),
-          flangeHeight: m(0.002),
-          density: kilogramsPerCubicMetre(1050),
-          bodyRadius: m(r),
-        },
-      };
-  }
-}
-
-export function defaultRecoveryDevice(id: string, design: RocketDesign): DesignRecoveryDevice {
-  return {
-    id,
-    name:
-      design.recovery.length === 0
-        ? 'Parachute'
-        : `Parachute ${String(design.recovery.length + 1)}`,
-    diameter: metres(0.3),
-    // Niskanen p. 67: a round parachute's C_D is about 0.8 (DYN-14).
-    dragCoefficient: 0.8,
-    deploy: { event: 'apogee', delay: seconds(0) },
-  };
-}
 
 function withDesign(state: AppState, design: RocketDesign): AppState {
   return { ...state, design, revision: state.revision + 1 };

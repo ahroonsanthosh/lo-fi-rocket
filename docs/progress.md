@@ -101,6 +101,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - As-built mass and CG (plan 0060, D-089): the weighed mass and balance point of the empty rocket (GEO-17), in the design file, the app (airframe view, "As built") and the Monte Carlo mass variation; OpenRocket's stage mass and CG overrides import as it, matching its structure mass and CG to 1e-6 in all seven probe cases.
 - Claude integration (plan 0061): the owner chose the local route (an MCP server for Claude Code and Claude Desktop on the user's own plan, nothing hosted), deferred the licence, and approved dropping the spent stage at separation (D-091, CLAUDE.md non-goal changed).
   - Step 1, security hardening (D-090): size limits on every reader and in the app, a streaming zip-bomb guard (stops at about 16 MiB whatever the archive claims), stored simulations cut from `.ork` XML, DOCTYPE and ENTITY refused, a Content-Security-Policy in the built site checked by a unit test (every host listed) and by every end-to-end test (no violations), the launch-site privacy note, read-only CI permissions and CodeQL. Dependency review waits for the owner to switch on the dependency graph (open question).
+  - Step 2, the local MCP server (plan 0062, D-092), first pull request: `packages/mcp` with 19 tools (design, parts, motor library and files, recovery, launch, as-built, assumptions, review, stability, simulate), unit strings (UNIT-12 and UNIT-13 added), every value not given recorded as an approximation; the example rocket built through the tools matches the engine bit for bit. The app's part defaults and bundled motors moved into `packages/formats`.
 
 ## In progress
 
@@ -108,7 +109,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0061 step 2: `packages/mcp`, the local MCP server (stdio for Claude Code, `.mcpb` for Claude Desktop) with the tool surface and the review checklist. Then plan 0055 step 3 part 2 with staging (D-091).
+- Plan 0062 pull requests 2 and 3: ThrustCurve search and download and `monte_carlo` in the MCP server; then the single-file bundle, the Claude Desktop `.mcpb`, the deploy workflow and the connection page. Then plan 0055 step 3 part 2 with staging (D-091).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
