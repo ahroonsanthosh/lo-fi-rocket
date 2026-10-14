@@ -180,6 +180,13 @@ export { DragCurveCsvError, parseDragCurveCsv } from './motors/drag-curve.js';
 export { BUNDLED_MOTOR_FILES } from './motors/bundled.js';
 export { FlightDataCsvError, parseFlightDataCsv } from './motors/flight-data.js';
 export { orkToDesign, type LibraryMotorRef, type OrkImport } from './design/from-ork.js';
+export {
+  Cdx1ParseError,
+  importCdx1,
+  RASAERO_FINISHES,
+  type Cdx1Import,
+  type Cdx1Prediction,
+} from './cdx1.js';
 export type { RecordedFlight } from './design/model.js';
 export {
   DispersionError,

@@ -246,6 +246,13 @@ All files were fetched from the ThrustCurve.org API `POST /api/v1/download.json`
 
 Downloaded 2026-10-11. Eight motors, C to H, 18 mm to 38 mm. The 38 mm H123W was added because the reference scratch-build rocket uses a 38 mm mount. The G80T file has three certification-sourced versions on ThrustCurve (the pre-2006 116 N·s motor, a 2007 NAR S&T digitisation with a non-standard header, and the current formulation); the current one was taken, and its header designation reads `G80NBT`.
 
+### 22. RASAero II Users Manual and RASAero II 1.0.2.0 (Rogers and Cooper)
+
+- **Citation:** Rogers, Charles E.; Cooper, David. _RASAero II Users Manual_ (154 pp., PDF dated 2019-05-19) and RASAero II 1.0.2.0 (freeware), Rogers Aeroscience, https://www.rasaero.com.
+- **Files:** not in `reference/docs/`: both are copyrighted and not redistributed. The manual is at `https://www.rasaero.com/dloads/RASAero II Users Manual.pdf` (SHA-256 `f43769678ddef8bbffb48f0bd1c6dbcd1e4a50f8659d6db8e968e9d20b4e6709`). `reference/rasaero/fetch-examples.sh` downloads the installer (SHA-256 `932e6ad7ad20d89f96594d0324dddc2a30a63324ddbb0c043dbce9a0bb56bef6`) and extracts its example designs and `rasp.eng` locally.
+- **Downloaded:** 2026-10-14
+- **Used for:** the meaning of the `.CDX1` fields (inches, pounds, feet, °F, mph; fin location from the tube's aft end, p. 13; two rail guides, p. 19; staging delays, p. 103; the Run Test output, pp. 89 to 92) and as a black-box comparison (D-114). Not a source of equations: nothing of RASAero's methods is reproduced, and no constant is tuned to its results (CLAUDE.md 6.7).
+
 ### RockSim `.rse` versions
 
 Fetched 2026-10-12 from the same endpoint with `format: "RockSim"`. ThrustCurve holds no RockSim file for the H123W. `_download-meta-rse.json` holds the raw API metadata. Observed in all seven files (plan 0007): masses in grams (`initWt`, `propWt` equal to the RASP header values × 1000), a `<data>` column `m` running from `propWt` to 0 (propellant remaining, proportional to the impulse delivered so far, to 0.02 g) and a constant `cg` within 0.5 mm of half the length.

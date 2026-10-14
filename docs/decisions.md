@@ -1072,3 +1072,34 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Against the 17 probe cases, the fin set mass is within 1e-7 and its CG within 1e-9 m. For elliptical fins it is the fillet's own mass, because OpenRocket's elliptical plate is a polygon 0.18 % short of the ellipse (D-087).
   - The fillet's cross-section polar moment agrees with a numerical integral to 8 digits.
 - **Consequences:** none for existing designs, which have no fillets.
+
+## D-114 (2026-10-14): RASAero II as a black-box comparison, and the `.CDX1` importer
+
+- **Decision:**
+  - **The owner's instruction overrides CLAUDE.md 6.7 in one point.** RASAero II is run as an automated reference simulator. Section 6.7 forbade it because RASAero "is Windows-only and cannot be run headlessly". On 2026-10-14 the owner asked for "extensive and exhaustive testing against our source, rasaero and openrocket", then: "you will find a way to compare to rasaero yourself".
+  - **How.** RASAero II 1.0.2.0 runs under Wine 9.0 and wine-mono 8.1.0 on a virtual display, driven by our own script (`reference/rasaero/`). Its re-runs of its 24 example designs give the apogees its authors saved on Windows within 0.0008 %.
+  - **What stays from section 6.7.**
+    - Nothing of RASAero's methods is reproduced or reverse-engineered, and no constant is tuned to its results.
+    - Its program and files are not committed: a script downloads them with a pinned SHA-256.
+  - **The `.CDX1` importer** (section 6.7 item 3, plan 0075) reads RASAero's design files:
+    - **Geometry.** Nose, body tube, fin can, boat tail and boosters, by the manual's definitions.
+    - **Masses.** The file's lift-off weight and CG are reproduced exactly: per stage, as the stack's for a booster (confirmed by RASAero's own flight output).
+    - **Staging and site.** The staging delays, recovery, launch site and motor (matched in the library).
+    - **Approximations,** listed (rule 3):
+      - hexagonal fins as a double wedge;
+      - the rail guides' place;
+      - nominal part masses scaled to the file's;
+      - a blunt nose tip as pointed;
+      - the nozzle exit diameter not used;
+      - a nested stage's overlap.
+- **Why:** the owner's instruction; a black box in the container is the only way to compare without the authors' cooperation.
+- **Results** (`docs/reports/rasaero-comparison.md`):
+  - **The trajectory.** Our simulator flown on RASAero's own drag curve matches RASAero's apogee within 1.4 % below Mach 0.95. The trajectory, mass, motor and atmosphere handling agree.
+  - **The drag.** At Mach 0.3 our displayed C_D is 9 to 41 % below RASAero's on 21 of the 23 single-stage designs, and 4 and 10 % above on the other two (IonDrive, Full Metal Jacket 2).
+  - **Against the 21 flights with measured apogees.** Our displayed apogee is +18.9 % mean below Mach 0.95 and +29.0 % above; every flight was lower than predicted. RASAero's is +0.4 % and +3.9 %.
+  - **Term by term.** The body friction and base agree. The difference is the fin friction's Reynolds length (Niskanen eq. 3.85 against DATCOM eq. 4.1.5.1-a), fin-body interference (ignored by Niskanen p. 41), the body form factor, and the rail guides (3 times ours).
+- **Not decided here (CLAUDE.md 11 (a) and (b)):** the drag model changes. Two have a source in `reference/` but conflict with Niskanen by more than a test tolerance; two need a source not in `reference/` (Hoerner chapter 8). They are put to the owner in the report's section 7, with the measured effect of each. Nothing in the model was changed.
+- **Consequences:**
+  - The app imports `.CDX1` files (File menu, "Import RASAero"), and shows RASAero's predicted apogee and the flown one when the file gives them.
+  - `known-limitations.md` records the apogee over-prediction against flights.
+  - `openrocket-issues.md` item 6 records the same finding for OpenRocket, from our OpenRocket-equivalent mode.
