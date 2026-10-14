@@ -10,6 +10,7 @@ import { useId, type JSX } from 'react';
 import { COMPONENT_LABELS } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
 import { IntegerField, QuantityField, type FieldRule } from './QuantityField.js';
+import { FilletFields, FinishField, hasFinish } from './SurfaceFields.js';
 import { StageSelect } from './StagesEditor.js';
 import { formatQuantity, type QuantityKind } from '../units/display.js';
 
@@ -422,7 +423,9 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
           }}
         />
       ) : null}
+      {c.kind === 'finSet' ? <FilletFields fins={c} onChange={update} /> : null}
       {c.kind === 'noseCone' ? <ShoulderEditor nose={c} onChange={update} units={units} /> : null}
+      {hasFinish(c) ? <FinishField item={item} /> : null}
       <div className="editor-actions">
         <button
           type="button"
