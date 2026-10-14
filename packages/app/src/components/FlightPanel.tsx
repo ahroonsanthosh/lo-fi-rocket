@@ -6,6 +6,7 @@ import { resultToCsv } from '../simulation/csv-export.js';
 import { useServices } from '../state/services.js';
 import { useStore } from '../state/store.js';
 import { formatQuantity, unitFor, type UnitSystem } from '../units/display.js';
+import { machStatus } from '../layout/stability.js';
 import { ComparisonPanel } from './ComparisonPanel.js';
 import { DispersionPanel } from './DispersionPanel.js';
 import type { DispersionState } from './FlightViewer.js';
@@ -194,6 +195,7 @@ function Summary({
           value={s.maxMach}
           decimals={fd.maxMach.decimals}
           unit={fd.maxMach.unit}
+          status={machStatus(s.maxMach)}
           stale={stale}
         />
         <ResultCard

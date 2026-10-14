@@ -46,3 +46,22 @@ export function stabilityProps(
     burnout,
   };
 }
+
+/**
+ * The Mach regimes of the model's accuracy, the same boundaries the
+ * flight warnings use (designFlightWarnings in packages/formats: transonic
+ * above 0.8, supersonic above 1.2, validated to 2.0; CLAUDE.md 6.3,
+ * D-055, D-056). Only for display: the warnings themselves come from
+ * formats.
+ */
+export const MACH_TRANSONIC = 0.8;
+export const MACH_SUPERSONIC = 1.2;
+export const MACH_VALIDATED = 2;
+
+/** The regime of the maximum Mach number, in words, as the model-limit warnings name it. */
+export function machStatus(mach: number): { severity: Severity; label: string } {
+  if (mach > MACH_VALIDATED) return { severity: 'limitation', label: 'Beyond the validated range' };
+  if (mach > MACH_SUPERSONIC) return { severity: 'limitation', label: 'Supersonic' };
+  if (mach > MACH_TRANSONIC) return { severity: 'limitation', label: 'Transonic' };
+  return { severity: 'info', label: 'Subsonic' };
+}

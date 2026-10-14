@@ -83,6 +83,8 @@ describe('FlightPanel (plan 0014)', () => {
     expect(dd('Apogee')).toBe('172.41 m');
     expect(dd('Maximum velocity')).toBe('62.9 m/s');
     expect(dd('Rail exit velocity')).toMatch(/^18\.5 m\/s at 0\.29\d s$/);
+    // The maximum Mach number's regime in words (CLAUDE.md 6.3): 62.9 m/s is about Mach 0.18.
+    expect(dd('Maximum Mach')).toMatch(/Subsonic/);
     // Nothing is wrong with the example's flight: the top bar says so and no list is shown.
     expect(screen.getByText('All clear')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Warnings' })).not.toBeInTheDocument();
@@ -181,6 +183,10 @@ describe('FlightPanel (plan 0014)', () => {
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const warnings = await screen.findByRole('region', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/transonic|supersonic/);
+    const results = screen.getByRole('region', { name: 'Flight' });
+    expect(resultText(results, 'Maximum Mach')).toMatch(
+      /Transonic|Supersonic|Beyond the validated range/,
+    );
     // Issue #19: plain language, no document paths in the warnings.
     expect(warnings).not.toHaveTextContent(/held-out-validation/);
   });

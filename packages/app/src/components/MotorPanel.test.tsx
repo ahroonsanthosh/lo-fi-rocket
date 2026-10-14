@@ -1,5 +1,6 @@
 import {
   BUNDLED_MOTOR_FILES,
+  designThrustToWeight,
   exampleDesign,
   type KeyValueStore,
   type Transport,
@@ -113,6 +114,11 @@ describe('MotorPanel (plan 0013)', () => {
     const panel = screen.getByRole('region', { name: 'Motor' });
     expect(within(panel).getByText('16.84 N·s')).toBeInTheDocument();
     expect(within(panel).getByText('10.2 N')).toBeInTheDocument();
+    // The whole rocket's thrust to weight at liftoff, against the 5 to 1 rule of thumb (CLAUDE.md 9).
+    const twr = designThrustToWeight(exampleDesign('m'));
+    if (twr === undefined) throw new Error('the example has a motor');
+    expect(within(panel).getByText(new RegExp(`^${twr.toFixed(1)} to 1`))).toBeInTheDocument();
+    expect(within(panel).getByText('At least 5 to 1')).toBeInTheDocument();
     expect(within(panel).getByLabelText('Ejection delay after burnout')).toHaveValue('5');
     const lib = within(panel).getByRole('list', { name: 'Motor library' });
     // Only motors fitting the 24 mm mount (inner diameter 24 mm): C6 18, D12 24, F39T 24
