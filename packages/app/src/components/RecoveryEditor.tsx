@@ -3,6 +3,7 @@ import type { DeployEvent, DesignRecoveryDevice } from '@lo-fi-rocket/formats';
 import { useId, type JSX } from 'react';
 import { useStore } from '../state/store.js';
 import { QuantityField } from './QuantityField.js';
+import { StageSelect } from './StagesEditor.js';
 
 const EVENTS: readonly { value: DeployEvent; label: string }[] = [
   { value: 'apogee', label: 'At apogee' },
@@ -36,6 +37,18 @@ export function RecoveryEditor({ device }: { readonly device: DesignRecoveryDevi
           />
         </div>
       </div>
+      <StageSelect
+        label="Stage it is on (it leaves with that stage)"
+        value={device.stage ?? 0}
+        onChange={(stage) => {
+          const next: { -readonly [K in keyof DesignRecoveryDevice]: DesignRecoveryDevice[K] } = {
+            ...device,
+            stage,
+          };
+          if (stage === 0) delete next.stage;
+          set(next);
+        }}
+      />
       <QuantityField
         label="Canopy diameter"
         kind="mm"

@@ -10,6 +10,7 @@ import { useId, type JSX } from 'react';
 import { COMPONENT_LABELS } from '../state/reducer.js';
 import { useStore } from '../state/store.js';
 import { IntegerField, QuantityField, type FieldRule } from './QuantityField.js';
+import { StageSelect } from './StagesEditor.js';
 import { formatQuantity, type QuantityKind } from '../units/display.js';
 
 /** The fin set without a shear modulus (flutter not checked). */
@@ -206,6 +207,13 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
         rule="non-negative"
         onChange={(si) => {
           dispatch({ type: 'update-component', id: item.id, position: metres(si) });
+        }}
+      />
+      <StageSelect
+        label="Stage"
+        value={item.stage ?? 0}
+        onChange={(stage) => {
+          dispatch({ type: 'set-component-stage', id: item.id, stage });
         }}
       />
       {shaped === undefined ? null : (

@@ -13,6 +13,14 @@ import {
 } from '@lo-fi-rocket/physics';
 import { describe, expect, it } from 'vitest';
 import { withoutComponent } from './defaults.js';
+import {
+  stageMotorMount,
+  stageRemovalProblem,
+  withBottomStageRemoved,
+  withComponentStage,
+  withStageAdded,
+  withStageMotorMount,
+} from './stages.js';
 import { ESTES_D12, exampleDesign } from './example.js';
 import type { DesignComponent, RocketDesign } from './model.js';
 import { parseDesign, serializeDesign } from './serialize.js';
@@ -21,6 +29,8 @@ import {
   designIgnitions,
   designMassProperties,
   designSimulationOptions,
+  designStability,
+  designStageStability,
   designThrustToWeight,
   designVehicle,
 } from './to-physics.js';
@@ -262,5 +272,81 @@ describe('ignition events', () => {
 
   it('leave a plain one-stage rocket on the unstaged path', () => {
     expect(designVehicle(exampleDesign()).stages).toBeUndefined();
+  });
+});
+
+describe('each configuration’s stability', () => {
+  it('the sustainer alone has exactly the one-stage example’s CP, CGs and margins', () => {
+    const [stack, sustainer] = designStageStability(twoStage());
+    const alone = designStability(exampleDesign()).result;
+    expect(sustainer?.stage).toBe(0);
+    expect(sustainer?.centreOfPressure.cp).toBe(alone.centreOfPressure.cp);
+    expect(sustainer?.cgLoaded).toBe(alone.cgLiftoff);
+    expect(sustainer?.cgSpent).toBe(alone.cgBurnout);
+    expect(sustainer?.marginLoaded).toBe(alone.marginLiftoff);
+    expect(sustainer?.marginSpent).toBe(alone.marginBurnout);
+    // The whole stack: loaded is the liftoff CG; spent takes the booster's 21.1 g of propellant out
+    // at the booster motor's mid-length, 0.9 − 0.035 = 0.865 m, the sustainer's motor still loaded.
+    const d = twoStage();
+    const liftoff = designMassProperties(d, 'liftoff');
+    expect(stack?.stage).toBe(1);
+    expect(stack?.cgLoaded).toBeCloseTo(liftoff.cg, 12);
+    expect(stack?.cgSpent).toBeCloseTo(
+      (liftoff.mass * liftoff.cg - 0.0211 * 0.865) / (liftoff.mass - 0.0211),
+      10,
+    );
+    // The booster's fins move the stack's CP aft of the sustainer's.
+    expect(stack?.centreOfPressure.cp).toBeGreaterThan(sustainer?.centreOfPressure.cp ?? Infinity);
+  });
+
+  it('a one-stage design has one configuration, designStability’s', () => {
+    const r1 = exampleDesign();
+    const [only, ...none] = designStageStability(r1);
+    expect(none).toEqual([]);
+    expect(only?.marginLoaded).toBe(designStability(r1).result.marginLiftoff);
+    expect(only?.marginSpent).toBe(designStability(r1).result.marginBurnout);
+  });
+});
+
+describe('editing the stages', () => {
+  it('adds a booster below a one-stage rocket, and removes it again once it is empty', () => {
+    const r1 = exampleDesign();
+    const two = withStageAdded(r1);
+    expect(two.stages).toEqual([
+      { name: 'Sustainer' },
+      { name: 'Booster', separation: { event: 'upper-ignition', delay: 0 } },
+    ]);
+    expect(withStageAdded(two).stages?.[2]?.name).toBe('Booster 2');
+    expect(parseDesign(serializeDesign(two))).toEqual(two);
+    // Back to one stage: no stage fields at all, the file as before.
+    expect(serializeDesign(withBottomStageRemoved(two))).toBe(serializeDesign(r1));
+  });
+
+  it('refuses to remove a stage that still holds parts, saying what is in it', () => {
+    const d = twoStage();
+    expect(stageRemovalProblem(d)).toBe(
+      'Booster still holds 3 parts: remove them or move them to another stage first.',
+    );
+    expect(() => withBottomStageRemoved(d)).toThrow(/Booster still holds 3 parts/);
+    let moved = d;
+    for (const id of ['b-body', 'b-fins', 'b-mount']) moved = withComponentStage(moved, id, 0);
+    expect(moved.components.every((c) => c.stage === undefined)).toBe(true);
+    expect(stageRemovalProblem(moved)).toBeUndefined();
+  });
+
+  it('sets each stage’s motor mount, keeping the other stage’s', () => {
+    const d = twoStage();
+    expect(stageMotorMount(d, 1)?.componentId).toBe('b-mount');
+    expect(stageMotorMount(d, 0)?.componentId).toBe('mount');
+    const boosterMount = stageMotorMount(d, 1);
+    if (boosterMount === undefined) throw new Error('the two-stage design has a booster mount');
+    const plugged = withStageMotorMount(d, 1, { ...boosterMount, overhang: metres(0.01) });
+    expect(plugged.motorMount).toEqual(d.motorMount);
+    expect(plugged.additionalMotorMounts?.[0]?.overhang).toBe(0.01);
+    const none = withStageMotorMount(d, 0, undefined);
+    // The booster's mount becomes the first.
+    expect(none.motorMount?.componentId).toBe('b-mount');
+    expect(none.additionalMotorMounts).toBeUndefined();
+    expect(parseDesign(serializeDesign(none))).toEqual(none);
   });
 });

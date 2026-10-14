@@ -117,6 +117,11 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   The probe's staged rockets fly within tolerance of OpenRocket: apogee +2.78 % and +1.17 %, maximum velocity +2.21 % and −1.89 %, staging times within 1 ms.
 
 - Multi-stage part 3a (D-099): Claude builds staged rockets through the MCP server. The new `set_stages` tool names the stages; parts and parachutes take a stage; `set_motor` gives each stage its motor and ignition, with the resolved ignition shown; `review_design` flags a motor that can never light. A two-stage rocket built through the tools flies exactly as the engine flies it.
+- Multi-stage part 3b (D-100): stages are edited in the app.
+  - The airframe view has a Stages section: names, separations, adding and removing stages.
+  - Parts and parachutes have a stage choice, and the motor view a stage selector with each stage's ignition.
+  - The stability details list each configuration's margin as its bottom stage lights and at its burnout.
+  - For a staged rocket, the burnout gauge shows the top stage alone.
 
 ## In progress
 
@@ -124,7 +129,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0064 part 3b (stage editing in the app, and each stage configuration's stability). Then plan 0061 step 4 (the modelling benchmark).
+- Plan 0061 step 4 (the modelling benchmark); task list items "physics never refuses" and the random-design robustness tests. Then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 

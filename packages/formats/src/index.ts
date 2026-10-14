@@ -77,6 +77,15 @@ export {
 } from './design/migrate.js';
 export { DESIGN_FILE_EXTENSION, parseDesign, serializeDesign } from './design/serialize.js';
 export {
+  stageMotorMount,
+  stageRemovalProblem,
+  withBottomStageRemoved,
+  withComponentStage,
+  withStageAdded,
+  withStageMotorMount,
+  withStages,
+} from './design/stages.js';
+export {
   decodeDesignLink,
   DESIGN_LINK_PREFIX,
   DesignLinkError,
@@ -102,12 +111,14 @@ export {
   designSimulationOptions,
   designStability,
   designStageCount,
+  designStageStability,
   designStageName,
   designThrustToWeight,
   designVehicle,
   designWindModel,
   type DesignMotor,
   type DesignStability,
+  type StageConfigurationStability,
   type DesignWarning,
   type MassCondition,
   type PhysicsMode,

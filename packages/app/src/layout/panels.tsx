@@ -54,6 +54,7 @@ export function railExitStatus(
 export function Telemetry(props: TelemetryProps): JSX.Element {
   const { figures, thresholds, warningThresholds, units, flight, stale } = props;
   const s = figures.stability;
+  const top = figures.topStageBurnout;
   const { min, max } = gaugeRange(thresholds);
   const margin = FIGURE_DISPLAY.stabilityMargin;
   const ticks = [
@@ -94,16 +95,32 @@ export function Telemetry(props: TelemetryProps): JSX.Element {
           : { status: LEVEL_STATUS[s.liftoff.level] })}
         {...(s?.noMotor === true ? { detail: 'no motor selected' } : {})}
       />
-      <Meter
-        label="Stability at burnout"
-        value={s === undefined || s.noMotor ? undefined : s.result.marginBurnout}
-        decimals={margin.decimals}
-        unit={margin.unit}
-        scale={{ min, max }}
-        ticks={ticks}
-        emptyText={s?.noMotor === true ? 'choose a motor' : missing}
-        {...(s === undefined || s.noMotor ? {} : { status: LEVEL_STATUS[s.burnout.level] })}
-      />
+      {top === undefined ? (
+        <Meter
+          label="Stability at burnout"
+          value={s === undefined || s.noMotor ? undefined : s.result.marginBurnout}
+          decimals={margin.decimals}
+          unit={margin.unit}
+          scale={{ min, max }}
+          ticks={ticks}
+          emptyText={s?.noMotor === true ? 'choose a motor' : missing}
+          {...(s === undefined || s.noMotor ? {} : { status: LEVEL_STATUS[s.burnout.level] })}
+        />
+      ) : (
+        <Meter
+          label={`Stability at ${top.name} burnout`}
+          value={top.configuration.noMotor ? undefined : top.configuration.marginSpent}
+          decimals={margin.decimals}
+          unit={margin.unit}
+          scale={{ min, max }}
+          ticks={ticks}
+          emptyText="choose its motor"
+          {...(top.configuration.noMotor
+            ? {}
+            : { status: LEVEL_STATUS[top.configuration.spent.level] })}
+          detail="the top stage alone, after separation"
+        />
+      )}
       <Meter
         label={<Term k="apogee">Apogee</Term>}
         value={summary === undefined ? undefined : m.fromSI(summary.apogee)}
