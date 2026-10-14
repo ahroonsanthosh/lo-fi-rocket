@@ -44,7 +44,8 @@ function tail(components: readonly DesignComponent[]): { x: number; radius: numb
   let x = 0;
   let radius = 0.025;
   for (const d of components) {
-    if (!isExternal(d.component.kind)) continue;
+    // Plan 0070: a pod set's parts are not the main body's outline.
+    if (!isExternal(d.component.kind) || d.pod !== undefined) continue;
     const end: number = d.position + componentLength(d.component);
     if (end >= x) {
       x = end;

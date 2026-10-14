@@ -217,6 +217,13 @@ export function ComponentEditor({ item }: { readonly item: DesignComponent }): J
           dispatch({ type: 'set-component-stage', id: item.id, stage });
         }}
       />
+      {item.pod === undefined ? null : (
+        <p className="muted small">
+          Part of a pod set: repeated {item.pod.count} time{item.pod.count === 1 ? '' : 's'} around
+          the rocket, each pod&rsquo;s axis {formatQuantity(item.pod.radialOffset, 'mm', units)}{' '}
+          from the rocket&rsquo;s. Its mass, lift and drag count once per pod.
+        </p>
+      )}
       {shaped === undefined ? null : (
         <>
           <div className="field">

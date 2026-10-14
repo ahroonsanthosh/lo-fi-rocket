@@ -50,6 +50,7 @@ export {
   newId,
   type DeployEvent,
   type DesignComponent,
+  type DesignPod,
   type DesignRecoveryDevice,
   type DesignStage,
   type IgnitionEvent,

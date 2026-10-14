@@ -49,9 +49,23 @@ Steps 1 and 2 went into one pull request: the drag and the flight needed the sam
    - Tests against the probe's drag breakdown and apogees (CLAUDE.md 7.4: apogee within 5 %, maximum velocity within 3 %).
 3. **Design model and reader.**
    - A design part's `pod` group (count, radial offset), a design schema version with a migration.
-   - The reader's `<podset>` read anywhere.
+   - The reader's `<podset>` read wherever OpenRocket allows one: on a body tube, the only part that accepts it (section 4).
    - The app lists pod parts. Drawing them in the side view is the UI lane's, through an issue.
 4. **Motors in pods.** A pod's motor tube carries its motor as a cluster at the pod's offsets (D-086 already models motor clusters off the axis).
 5. **Booster sets.** A `<parallelstage>` is a pod set that separates. It becomes a stage of its own with its separation event (D-097), igniting with the core, its parts dropped at separation.
 
 Each step lists what it does not model, as rule 3 requires.
+
+## 4. Step 3: where OpenRocket places a pod set (second probe)
+
+`PodProbe --positions`, `PodProbe --chute` and `PodLoad` (`reference/rockets/pod-probe/positions.txt`) save, reload and place pod sets read from files:
+
+- **Which parts hold one.** Only a body tube accepts a pod set; a stage, a nose cone, a transition and a pod set do not. A pod's own tube can hold one (pods inside a pod), which the reader leaves out and lists.
+- **Front.** By the axial method, as for any child of the tube, with the pod's length the sum of its stacked parts' lengths (0.2 m: absolute, top, middle and bottom with 0.02 m give 0.02, 0.12, 0.27 and 0.42 m).
+- **Distance from the axis**, R the tube's radius, r_pod the pod's largest body radius:
+  - "coaxial" 0 and "surface" R + r_pod, whatever value is written;
+  - "free" the value;
+  - "relative" R + value + r_pod. With mixed radii (15 mm and 10 mm, in either order) r_pod is the largest. A negative result is the same ring turned half a turn: −62.5 mm places the pods at 62.5 mm.
+- **Recovery.** With pods1's parachute moved into the pods, the mass gains one parachute and the descent is 4.623 m/s, which is two parachutes' (one would give 6.538). So a recovery device in a pod is one per pod.
+
+Tests (`packages/formats/src/ork.pods.test.ts`): every probe file's front and distance to 1e-12; pods1 to pods3 from their files against OpenRocket's mass, CG, C_Nα and CP; the parachute file; a nested pod set listed; a motor in a pod refused.

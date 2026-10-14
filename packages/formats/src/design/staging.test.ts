@@ -22,7 +22,7 @@ import {
   withStageMotorMount,
 } from './stages.js';
 import { ESTES_D12, exampleDesign } from './example.js';
-import type { DesignComponent, RocketDesign } from './model.js';
+import { CURRENT_SCHEMA_VERSION, type DesignComponent, type RocketDesign } from './model.js';
 import { parseDesign, serializeDesign } from './serialize.js';
 import {
   designFlightWarnings,
@@ -101,7 +101,10 @@ function twoStage(): RocketDesign {
 describe('schema 2', () => {
   it('reads a version-1 file as the same one-stage design', () => {
     const design = exampleDesign();
-    const v1 = serializeDesign(design).replace('"schemaVersion": 2', '"schemaVersion": 1');
+    const v1 = serializeDesign(design).replace(
+      `"schemaVersion": ${String(CURRENT_SCHEMA_VERSION)}`,
+      '"schemaVersion": 1',
+    );
     expect(v1).toContain('"schemaVersion": 1');
     expect(parseDesign(v1)).toEqual(design);
   });

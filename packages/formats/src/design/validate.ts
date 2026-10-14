@@ -37,6 +37,7 @@ import {
   type DispersionSettingsRecord,
   type RecordedFlight,
   type DesignComponent,
+  type DesignPod,
   type DesignRecoveryDevice,
   type DesignStage,
   type IgnitionEvent,
@@ -505,6 +506,17 @@ function motorSelection(c: Ctx, path: string, v: unknown): MotorSelection {
 }
 
 /** Plan 0064: a stage number, an integer from 0; checked against the stage list afterwards. */
+/** Plan 0070: a pod set's count (a whole number, 1 or more) and radial offset (0 m or more). */
+function designPod(c: Ctx, path: string, v: unknown): DesignPod {
+  const o = c.object(path, v);
+  c.keys(path, o, ['count', 'radialOffset'], []);
+  const count = c.integer(`${path}.count`, o['count']);
+  if (count < 1) c.fail(`${path}.count`, 'must be 1 or more pods');
+  const radialOffset = c.number(`${path}.radialOffset`, o['radialOffset']);
+  if (!(radialOffset >= 0)) c.fail(`${path}.radialOffset`, 'must be 0 m or more');
+  return { count, radialOffset: metres(radialOffset) };
+}
+
 function stageNumber(c: Ctx, path: string, v: unknown): number {
   const k = c.integer(path, v);
   if (k < 0) c.fail(path, 'must be 0 (the top stage) or more');
@@ -887,7 +899,7 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
       path,
       co,
       ['id', 'name', 'position', 'component'],
-      ['massOverride', 'approximations', 'stage'],
+      ['massOverride', 'approximations', 'stage', 'pod'],
     );
     const id = c.nonEmptyString(`${path}.id`, co['id']);
     if (ids.has(id)) c.fail(`${path}.id`, `duplicate id "${id}"`);
@@ -907,6 +919,9 @@ export function validateDesign(value: unknown, fileName?: string): RocketDesign 
         : {}),
       ...('stage' in co && co['stage'] !== undefined
         ? { stage: stageNumber(c, `${path}.stage`, co['stage']) }
+        : {}),
+      ...('pod' in co && co['pod'] !== undefined
+        ? { pod: designPod(c, `${path}.pod`, co['pod']) }
         : {}),
     };
   });

@@ -28,6 +28,9 @@
  * reference harness's settings and no wind.
  *   javac -d out -cp lib/OpenRocket-24.12.jar src/ReferenceHarness.java src/PodProbe.java
  *   java -Djava.awt.headless=true -cp out:lib/OpenRocket-24.12.jar PodProbe <motor dir>
+ * Plan 0070 step 3: "PodProbe --positions" places one pod set by each radius and axial method,
+ * and a pod whose parts differ in radius, and prints where OpenRocket puts it; "PodProbe --chute
+ * <motor dir>" flies pods1 with its parachute in the pods (pods4).
  */
 import info.openrocket.core.aerodynamics.AerodynamicForces;
 import info.openrocket.core.aerodynamics.BarrowmanCalculator;
@@ -58,6 +61,15 @@ public final class PodProbe {
   public static void main(String[] a) throws Exception {
     Locale.setDefault(Locale.US);
     OpenRocketCore.initialize();
+    if (a.length > 1 && a[0].equals("--chute")) {
+      motorDir = new File(a[1]);
+      run(4, 2, false, true);
+      return;
+    }
+    if (a.length > 0 && a[0].equals("--positions")) {
+      positions();
+      return;
+    }
     motorDir = new File(a[0]);
     run(0, 0, false);
     run(1, 2, false);
@@ -65,7 +77,117 @@ public final class PodProbe {
     run(3, 3, false);
   }
 
-  static void run(int c, int pods, boolean podFins) throws Exception {
+  /**
+   * With --positions: one pod set (two pods: conical nose 50 x 12.5 mm, 150 mm tube) on a 0.5 m
+   * body tube of radius 25 mm after a 0.1 m nose, saved and reloaded for each radius method with
+   * offset 0.01 m (axial: bottom, 0) and each axial method with offset 0.02 m (radius: relative,
+   * 0.0375 m). Prints the pod set's and its first part's front x and distance from the axis.
+   */
+  static void positions() throws Exception {
+    info.openrocket.core.rocketcomponent.position.RadiusMethod[] radii = {
+      info.openrocket.core.rocketcomponent.position.RadiusMethod.COAXIAL,
+      info.openrocket.core.rocketcomponent.position.RadiusMethod.FREE,
+      info.openrocket.core.rocketcomponent.position.RadiusMethod.RELATIVE,
+      info.openrocket.core.rocketcomponent.position.RadiusMethod.SURFACE,
+    };
+    for (info.openrocket.core.rocketcomponent.position.RadiusMethod rm : radii) place("radius-" + rm.name().toLowerCase(Locale.US), rm, 0.01, AxialMethod.BOTTOM, 0.0);
+    AxialMethod[] axials = { AxialMethod.ABSOLUTE, AxialMethod.TOP, AxialMethod.MIDDLE, AxialMethod.BOTTOM };
+    for (AxialMethod am : axials) place("axial-" + am.name().toLowerCase(Locale.US), info.openrocket.core.rocketcomponent.position.RadiusMethod.RELATIVE, 0.0375, am, 0.02);
+    mixed();
+    Class<?>[] holders = { AxialStage.class, NoseCone.class, Transition.class, BodyTube.class, PodSet.class };
+    RocketComponent[] made = { new AxialStage(), new NoseCone(), new Transition(), new BodyTube(), new PodSet() };
+    for (int i = 0; i < made.length; i++) {
+      System.out.printf("accepts: %s podset=%b%n", holders[i].getSimpleName(), made[i].isCompatible(PodSet.class));
+    }
+  }
+
+  /**
+   * A pod whose parts differ in radius: a conical nose 40 x 15 mm, a conical transition 30 mm from
+   * 15 to 10 mm and a tube 100 mm of radius 10 mm, on the 25 mm body, for the surface and relative
+   * (0.005 m) radius methods. Prints the pod set's distance from the axis.
+   */
+  static void mixed() throws Exception {
+    info.openrocket.core.rocketcomponent.position.RadiusMethod[] radii = {
+      info.openrocket.core.rocketcomponent.position.RadiusMethod.SURFACE,
+      info.openrocket.core.rocketcomponent.position.RadiusMethod.RELATIVE,
+    };
+    for (info.openrocket.core.rocketcomponent.position.RadiusMethod rm : radii) {
+      for (int order = 0; order < 2; order++) {
+        Rocket r = new Rocket();
+        AxialStage st = new AxialStage(); r.addChild(st);
+        NoseCone nose = new NoseCone(Transition.Shape.CONICAL, 0.100, 0.025);
+        nose.setFilled(true); nose.setMaterial(bulk("balsa160", 160));
+        st.addChild(nose);
+        BodyTube bt = new BodyTube(0.5, 0.025, 0.001); bt.setMaterial(bulk("paper700", 700));
+        st.addChild(bt);
+        PodSet ps = new PodSet(); ps.setName("Pods");
+        bt.addChild(ps);
+        ps.setInstanceCount(2);
+        if (order == 0) {
+          NoseCone pn = new NoseCone(Transition.Shape.CONICAL, 0.04, 0.015);
+          pn.setFilled(true); pn.setMaterial(bulk("balsa160", 160));
+          ps.addChild(pn);
+          Transition tr = new Transition(); tr.setLength(0.03); tr.setForeRadius(0.015); tr.setAftRadius(0.010);
+          tr.setFilled(true); tr.setMaterial(bulk("balsa160", 160));
+          ps.addChild(tr);
+          BodyTube pt = new BodyTube(0.10, 0.010, 0.0005); pt.setMaterial(bulk("paper700", 700));
+          ps.addChild(pt);
+        } else {
+          // the same radii, tube first: a tube 100 mm of radius 10 mm then a 40 mm tube of 15 mm
+          BodyTube a = new BodyTube(0.10, 0.010, 0.0005); a.setMaterial(bulk("paper700", 700));
+          ps.addChild(a);
+          BodyTube b = new BodyTube(0.04, 0.015, 0.0005); b.setMaterial(bulk("paper700", 700));
+          ps.addChild(b);
+        }
+        ps.setRadius(rm, 0.005);
+        String name = "mixed-" + rm.name().toLowerCase(Locale.US) + "-" + order;
+        File file = new File("pods-" + name + ".ork");
+        new GeneralRocketSaver().save(file, OpenRocketDocumentFactory.createDocumentFromRocket(r));
+        Rocket loaded = new GeneralRocketLoader(file).load().getRocket();
+        for (RocketComponent k : loaded) {
+          if (k instanceof PodSet) {
+            Coordinate[] abs = k.toAbsolute(Coordinate.NUL);
+            System.out.printf("pods-%s: absX0=%.9f absR=%.9f%n", name, abs[0].x, Math.hypot(abs[0].y, abs[0].z));
+          }
+        }
+      }
+    }
+  }
+
+  static void place(String name, info.openrocket.core.rocketcomponent.position.RadiusMethod rm, double radius, AxialMethod am, double axial) throws Exception {
+    Rocket r = new Rocket(); r.setName(name);
+    AxialStage st = new AxialStage(); r.addChild(st);
+    NoseCone nose = new NoseCone(Transition.Shape.CONICAL, 0.100, 0.025);
+    nose.setFilled(true); nose.setMaterial(bulk("balsa160", 160));
+    st.addChild(nose);
+    BodyTube bt = new BodyTube(0.5, 0.025, 0.001); bt.setMaterial(bulk("paper700", 700));
+    st.addChild(bt);
+    bt.setAxialMethod(AxialMethod.AFTER); bt.setAxialOffset(0.0);
+    PodSet ps = new PodSet(); ps.setName("Pods");
+    bt.addChild(ps);
+    ps.setInstanceCount(2);
+    ps.setRadius(rm, radius);
+    ps.setAxialMethod(am); ps.setAxialOffset(axial);
+    NoseCone pn = new NoseCone(Transition.Shape.CONICAL, 0.05, 0.0125);
+    pn.setName("Pod nose"); pn.setFilled(true); pn.setMaterial(bulk("balsa160", 160));
+    ps.addChild(pn);
+    BodyTube pt = new BodyTube(0.15, 0.0125, 0.0005); pt.setName("Pod tube"); pt.setMaterial(bulk("paper700", 700));
+    ps.addChild(pt);
+    pt.setAxialMethod(AxialMethod.AFTER); pt.setAxialOffset(0.0);
+    File file = new File("pods-" + name + ".ork");
+    new GeneralRocketSaver().save(file, OpenRocketDocumentFactory.createDocumentFromRocket(r));
+    Rocket loaded = new GeneralRocketLoader(file).load().getRocket();
+    for (RocketComponent k : loaded) {
+      if (k instanceof PodSet || "Pod nose".equals(k.getName())) {
+        Coordinate[] abs = k.toAbsolute(Coordinate.NUL);
+        System.out.printf("pods-%s: %s absX0=%.9f absR=%.9f instances=%d%n", name, k.getName(), abs[0].x, Math.hypot(abs[0].y, abs[0].z), abs.length);
+      }
+    }
+  }
+
+  static void run(int c, int pods, boolean podFins) throws Exception { run(c, pods, podFins, false); }
+
+  static void run(int c, int pods, boolean podFins, boolean chuteInPods) throws Exception {
     String name = "pods" + c;
     Rocket r = new Rocket(); r.setName(name);
     AxialStage st = new AxialStage(); r.addChild(st);
@@ -88,8 +210,10 @@ public final class PodProbe {
     Parachute chute = new Parachute(); chute.setName("Parachute"); chute.setDiameter(0.3);
     chute.setCD(0.8); chute.setMassOverridden(true); chute.setOverrideMass(0.01);
     chute.setLength(0.05); chute.setRadiusAutomatic(false); chute.setRadius(0.02);
-    bt.addChild(chute);
-    chute.setAxialMethod(AxialMethod.TOP); chute.setAxialOffset(0.1);
+    if (!chuteInPods) {
+      bt.addChild(chute);
+      chute.setAxialMethod(AxialMethod.TOP); chute.setAxialOffset(0.1);
+    }
     FlightConfigurationId id = new FlightConfigurationId("5c1a2b3c-4d5e-4f60-8a7b-0000000000a" + c);
     Motor motor = ReferenceHarness.loadMotor(motorDir, "Estes_D12.eng", "D12");
     MotorConfiguration mc = new MotorConfiguration(mt, id);
@@ -110,6 +234,10 @@ public final class PodProbe {
       BodyTube pt = new BodyTube(0.15, 0.0125, 0.0005); pt.setName("Pod tube"); pt.setMaterial(bulk("paper700", 700));
       ps.addChild(pt);
       pt.setAxialMethod(AxialMethod.AFTER); pt.setAxialOffset(0.0);
+      if (chuteInPods) {
+        pt.addChild(chute);
+        chute.setAxialMethod(AxialMethod.TOP); chute.setAxialOffset(0.01);
+      }
       if (podFins) {
         TrapezoidFinSet pf = new TrapezoidFinSet(3, 0.05, 0.03, 0.02, 0.03);
         pf.setName("Pod fins"); pf.setThickness(0.002); pf.setMaterial(bulk("ply600", 600));

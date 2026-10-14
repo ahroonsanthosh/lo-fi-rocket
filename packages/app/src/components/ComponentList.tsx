@@ -79,7 +79,13 @@ export function ComponentList(): JSX.Element {
               }}
             >
               <span className="item-name">{c.name}</span>
-              <span className="item-kind">{COMPONENT_LABELS[c.component.kind]}</span>
+              <span className="item-kind">
+                {COMPONENT_LABELS[c.component.kind]}
+                {/* Plan 0070: a pod set's part is repeated around the rocket. */}
+                {c.pod === undefined
+                  ? ''
+                  : ` (${String(c.pod.count)} pod${c.pod.count === 1 ? '' : 's'})`}
+              </span>
             </li>
           ))}
         </ul>

@@ -924,6 +924,9 @@ const AERODYNAMIC_PARTS = new Set([
   'parallelstage',
 ]);
 
+/** The parts stacked along a stage or a pod set. */
+const EXTERNAL_PARTS = new Set(['nosecone', 'bodytube', 'transition']);
+
 /** OpenRocket 24.12's automatic parachute drag coefficient (D-079, reference/rockets/parts-probe/values.txt). */
 const OPENROCKET_AUTO_PARACHUTE_CD = 0.8;
 
@@ -1241,6 +1244,8 @@ class Reader {
       mount.finish([]);
       return;
     }
+    // Plan 0070 step 4 models motors in pods; until then a pod's motor is refused, not dropped.
+    if (this.inPod) throw mount.unsupported('a motor in a pod set');
     const ignition = this.readIgnition(el, mount);
     const overhang = mount.number('overhang');
     const motor = mount.wrap(chosen);
@@ -1308,6 +1313,9 @@ class Reader {
             case 'engineblock':
               this.readEngineBlock(el, parent);
               break;
+            case 'podset':
+              this.readPodSet(el, parent);
+              break;
             default:
               throw el.unsupported(`element <${node.name}>`);
           }
@@ -1319,6 +1327,129 @@ class Reader {
           },
         },
       );
+    }
+  }
+
+  /** Plan 0070: whether a pod set's parts are being read. */
+  private inPod = false;
+
+  /**
+   * Plan 0070 step 3 (D-107): a pod set on a body tube, the only part OpenRocket lets hold one
+   * (reference/rockets/pod-probe/positions.txt). Its parts are stacked from its front, as in a
+   * stage, and each is repeated `<instancecount>` times around the axis (D-106). As OpenRocket
+   * places them (positions.txt, all exact):
+   * - its front is read like any child's, its length the sum of its parts' lengths;
+   * - the distance of each pod's axis from the rocket's, from `<radiusoffset method>`:
+   *   "coaxial" 0 and "surface" R + r_pod, both whatever the value; "free" |v|; "relative"
+   *   |R + v + r_pod|; where R is the holding tube's radius and r_pod the largest radius of the
+   *   pod's own body parts (a negative distance is the same ring of pods turned half a turn);
+   * - a recovery device inside a pod is one per pod (the probe's descent with two pod parachutes).
+   * What the model leaves out of pods is listed by the simulation (podApproximations, D-106).
+   */
+  private readPodSet(el: Element, parent: Parent): void {
+    if (this.inPod) throw el.unsupported('a pod set inside a pod');
+    const count = el.integer('instancecount');
+    if (count < 1) throw el.parseError(`<instancecount> must be 1 or more, got ${String(count)}`);
+    const sub = el.optionalChild('subcomponents');
+    const parts = sub === undefined ? [] : sub.node.children.map((node) => sub.wrap(node));
+    // The pod's length, from its parts read through separate wrappers (their own reading follows).
+    const length = parts.reduce(
+      (sum, part) =>
+        EXTERNAL_PARTS.has(part.node.name)
+          ? sum + new Element(part.node, part.path, part.file).number('length')
+          : sum,
+      0,
+    );
+    const front = axialPosition(el, parent, length);
+    const first = this.components.length;
+    const devices = this.recoveryDevices.length;
+    const largest = this.maxBodyRadius;
+    this.inPod = true;
+    try {
+      let x = front;
+      for (const part of parts) {
+        this.attempt(() => {
+          x = this.readExternal(part, x, 'a pod set');
+        });
+      }
+    } finally {
+      this.inPod = false;
+      // A pod is not the main body: its radius is not the rocket's reference (D-106).
+      this.maxBodyRadius = largest;
+    }
+    const podRadius = Math.max(
+      0,
+      ...this.components
+        .slice(first)
+        .map(({ component: c }) =>
+          c.kind === 'noseCone'
+            ? (c.baseRadius as number)
+            : c.kind === 'bodyTube'
+              ? (c.outerRadius as number)
+              : c.kind === 'transition'
+                ? Math.max(c.foreRadius, c.aftRadius)
+                : 0,
+        ),
+    );
+    const offset = el.one('radiusoffset');
+    const method = offset.attributes['method'] ?? '';
+    if (!NUMBER.test(offset.text)) {
+      throw el.parseError(`<radiusoffset> is not a number: "${offset.text}"`);
+    }
+    const v = Number(offset.text);
+    const distances: Readonly<Record<string, number>> = {
+      coaxial: 0,
+      surface: parent.radius + podRadius,
+      free: Math.abs(v),
+      relative: Math.abs(parent.radius + v + podRadius),
+    };
+    const radialOffset = distances[method];
+    if (radialOffset === undefined) throw el.unsupported(`radius offset method "${method}"`);
+    const instances = { count, radialOffset: metres(radialOffset) };
+    for (let i = first; i < this.components.length; i++) {
+      const c = this.components[i];
+      if (c !== undefined) this.components[i] = { ...c, instances };
+    }
+    // One parachute or streamer per pod, each deployed as the file says.
+    const own = this.recoveryDevices.splice(devices);
+    for (const d of own) {
+      for (let k = 1; k <= count; k++) {
+        this.recoveryDevices.push(
+          count === 1 ? d : { ...d, name: `${d.name} (pod ${String(k)} of ${String(count)})` },
+        );
+      }
+    }
+    // A setting of the pod set the reader does not know is listed on its first part.
+    if (this.components.length > first) this.placed.set(el.node, first);
+    this.finishPart(el, [...IGNORED_COMMON, 'angleoffset']);
+  }
+
+  /**
+   * An external part (nose cone, body tube or transition) stacked at `x`, in a stage or (`where`)
+   * a pod set; returns its aft end.
+   */
+  private readExternal(el: Element, x: number, where?: string): number {
+    const offset = el.optional('axialoffset');
+    if (
+      offset !== undefined &&
+      (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
+    ) {
+      throw el.unsupported(
+        'external components positioned other than stacked after the previous one',
+      );
+    }
+    el.optional('position');
+    switch (el.node.name) {
+      case 'nosecone':
+        return this.readNoseCone(el, x);
+      case 'bodytube':
+        return this.readBodyTube(el, x);
+      case 'transition':
+        return this.readTransition(el, x);
+      default:
+        throw el.unsupported(
+          `element <${el.node.name}>${where === undefined ? '' : ` in ${where}`}`,
+        );
     }
   }
 
@@ -1815,30 +1946,7 @@ class Reader {
     let x = front;
     for (const node of sub.node.children) {
       this.attempt(() => {
-        const el = sub.wrap(node);
-        const offset = el.optional('axialoffset');
-        if (
-          offset !== undefined &&
-          (offset.attributes['method'] !== 'after' || Number(offset.text) !== 0)
-        ) {
-          throw el.unsupported(
-            'external components positioned other than stacked after the previous one',
-          );
-        }
-        el.optional('position');
-        switch (node.name) {
-          case 'nosecone':
-            x = this.readNoseCone(el, x);
-            break;
-          case 'bodytube':
-            x = this.readBodyTube(el, x);
-            break;
-          case 'transition':
-            x = this.readTransition(el, x);
-            break;
-          default:
-            throw el.unsupported(`element <${node.name}>`);
-        }
+        x = this.readExternal(sub.wrap(node), x);
       });
     }
     this.readStageOverride(stage, first, front, only);
