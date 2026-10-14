@@ -177,6 +177,7 @@ function finSection(r: Reader, written: string, subject: string): FinCrossSectio
     case 'Rounded':
       return 'rounded';
     case 'NACA':
+    case 'Subsonic NACA':
     case 'Biconvex':
       return 'airfoil';
     case 'Double Wedge':

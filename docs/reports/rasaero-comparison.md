@@ -105,6 +105,7 @@ Three models disagree by a factor of about 30:
 | Niskanen's rail pin (our displayed mode, DRAG-12) | about 0.87 at Mach 0.3          | p. 52: a launch lug with length = diameter           |
 | RASAero II (from its Run Test output)             | about 2.6                       | not published; "particularly accurate" (manual p. 4) |
 
+- **RASAero's own rule.** Its authors state it in their published ARCAS comparison (_RASAero II Comparisons with ARCAS CP and CD Data_, rasaero.com, slide notes): "Typically a rail guide will have 5 times the drag of a typical rocket body". On the guide's own frontal area that is a C_D of about 2.5, which matches the 2.6 read from its Run Test output. It is an author's rule of thumb, not one of our approved sources.
 - **What decides it.** No measured rail guide drag is in `reference/`.
 - **The size of the term.** On these designs RASAero's rail guides and shoes are 9 to 40 % of its total drag (Raven: 0.283 of 1.039; Proteus 6, with 1.5 in guides: 0.234 of 0.589 at Mach 0.6).
 - **What it takes.** A sourced model needs Hoerner chapter 8 or wind tunnel data.
@@ -162,3 +163,30 @@ The missing fin friction and interference are the same as ours. This is recorded
 - **The examples are RASAero's own showcase.** Its authors chose them, and their measured altitudes are of mixed quality (barometric, GPS, accelerometer). They are the only flight data available with full designs. They are independent of our model: nothing was fitted to them.
 - **Our side of the import is approximate.** The import's approximations (section 5) apply to our side only.
 - **Three designs have no measured apogee:** CancerDescending, IonDrive and Proteus 6.
+
+## 9. The reference rockets R1 to R5 in three simulators (plan 0077)
+
+Each rocket was written as a `.CDX1` file (the new exporter), flown in RASAero II with our own motor files, and read back by our importer. Our simulator therefore flies RASAero's exact inputs: its nearest finish class (30.5 µm against the original 60 µm), the same lift-off weight and CG, the same thrust curve. OpenRocket's figures are its runs of the original files. The data are in `rasaero-reference-rockets.md`.
+
+| Rocket                              | Apogee: RASAero | Ours (displayed, RASAero's inputs) | OpenRocket | C_D at Mach 0.3: RASAero | Ours  | CP: RASAero − ours |
+| ----------------------------------- | --------------- | ---------------------------------- | ---------- | ------------------------ | ----- | ------------------ |
+| R1 (launch lug)                     | 172.0 m         | 176.7 m                            | 167.0 m    | 0.725                    | 0.694 | −0.7 mm            |
+| R2 (rail buttons)                   | 670.1 m         | 849.2 m                            | 820.8 m    | 0.762                    | 0.548 | −1.3 mm            |
+| R3 (rail buttons, minimum diameter) | 608.1 m         | 831.8 m                            | 832.9 m    | 1.461                    | 0.941 | −0.6 mm            |
+| R4 (rail buttons)                   | 625.9 m         | 728.9 m                            | 692.7 m    | 0.859                    | 0.624 | −1.0 mm            |
+| R5 (rail buttons, minimum diameter) | 1152.5 m        | 1641.1 m                           | 1560.5 m   | 1.063                    | 0.716 | −1.0 mm            |
+
+- **The CP agrees within 1.3 mm** on every rocket (0.2 % of the length).
+- **R1 agrees within 3 %** between all three. It has a launch lug, not rail buttons.
+- **R2 to R5 split on the rail buttons.** RASAero's apogee is 10 to 27 % below OpenRocket's, and its C_D is 1.4 to 1.6 times ours. Its two guides at a C_D of about 2.6 on their frontal area (section 4.4), against Niskanen's 0.87, explain most of the gap.
+
+  | Rocket | Two guides' frontal area / A_ref | Their extra C_D at 2.6 − 0.87 | Gap in C_D | Share explained |
+  | ------ | -------------------------------- | ----------------------------- | ---------- | --------------- |
+  | R2     | 0.087                            | 0.151                         | 0.214      | 71 %            |
+  | R3     | 0.253                            | 0.437                         | 0.520      | 84 %            |
+  | R4     | 0.058                            | 0.101                         | 0.235      | 43 %            |
+  | R5     | 0.159                            | 0.275                         | 0.347      | 79 %            |
+
+  The rest is the fin terms of section 4. On a minimum-diameter rocket, two 8 mm guides have a quarter of the body's frontal area. The rail guide model then decides a quarter of the apogee, and the three programs' models span a factor of about 30.
+
+- **What would settle it:** measured drag of rail buttons on a body (section 7, decision 3). Until then, our displayed mode sits between OpenRocket and RASAero. The 21 flights (sections 1 to 4) suggest that real rockets carry more drag than ours.
