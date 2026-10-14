@@ -113,6 +113,7 @@ describe('tool list', () => {
         'set_launch',
         'set_motor',
         'set_recovery',
+        'set_stages',
         'simulate',
         'stability',
         'update_part',
@@ -346,6 +347,101 @@ describe('defaults are never silent (CLAUDE.md 1 rule 3)', () => {
     const sim = await ok('simulate', { designId });
     expect((get(sim, 'confidence') as { level: string }).level).toBe('low');
     expect(JSON.stringify(get(sim, 'approximations'))).toMatch(/balsa estimated from the photo/);
+  });
+});
+
+describe('a two-stage rocket built through the tools (plan 0064)', () => {
+  it('flies as the engine flies the exported design, the booster lit at launch', async () => {
+    const designId = (await ok('new_design', { name: 'Two stage', from: 'example' }))[
+      'id'
+    ] as string;
+    await ok('set_stages', {
+      designId,
+      stages: [
+        { name: 'Sustainer' },
+        { name: 'Booster', separation: { event: 'upper-ignition', delay: '0 s' } },
+      ],
+    });
+    const body = await ok('add_part', {
+      designId,
+      kind: 'bodyTube',
+      name: 'Booster body',
+      stage: 1,
+      fields: { length: '300 mm', outerRadius: '25 mm', wallThickness: '1 mm', density: 700 },
+    });
+    // Stacked aft of the outline: the sustainer ends at 0.6 m.
+    expect(get(body, 'part', 'position')).toBeCloseTo(0.6, 12);
+    expect(get(body, 'part', 'stage')).toBe(1);
+    const tube = await ok('add_part', {
+      designId,
+      kind: 'innerTube',
+      name: 'Booster motor tube',
+      stage: 1,
+      position: { relativeTo: body['part_id'], method: 'bottom' },
+      fields: { length: '75 mm', outerRadius: '12.5 mm', wallThickness: '0.5 mm', density: 700 },
+    });
+    await ok('add_part', {
+      designId,
+      kind: 'finSet',
+      name: 'Booster fins',
+      stage: 1,
+      position: { relativeTo: body['part_id'], method: 'bottom' },
+      fields: {
+        count: 3,
+        rootChord: '100 mm',
+        tipChord: '50 mm',
+        sweep: '50 mm',
+        span: '80 mm',
+        thickness: '3 mm',
+        density: 600,
+        crossSection: 'square',
+      },
+    });
+    // A change to a booster part keeps its stage.
+    const renamed = await ok('update_part', {
+      designId,
+      partId: tube['part_id'],
+      name: 'Booster mount',
+    });
+    expect(get(renamed, 'part', 'stage')).toBe(1);
+    const set = await ok('set_motor', {
+      designId,
+      mountPartId: tube['part_id'],
+      motorId: 'Estes_D12.eng',
+      overhang: 0,
+      ejectionDelay: 0,
+    });
+    // The sustainer's D12-5 stays; the booster's D12-0 joins it.
+    expect((get(set, 'motors') as unknown[]).length).toBe(2);
+    expect(get(set, 'motors', '1', 'ignition_resolved')).toEqual({ event: 'launch', delay: 0 });
+    expect(get(set, 'motors', '0', 'ignition_resolved')).toEqual({
+      event: 'ejection',
+      of: 1,
+      delay: 0,
+    });
+    const review = await ok('review_design', { designId });
+    expect(JSON.stringify(review)).not.toMatch(/never ignites/);
+
+    const exported: RocketDesign = parseDesign((await call('export_design', { designId })).text);
+    expect(exported.stages?.map((st) => st.name)).toEqual(['Sustainer', 'Booster']);
+    const flight = simulateFlight(designVehicle(exported), designSimulationOptions(exported));
+    const sim = await ok('simulate', { designId, samples: 50 });
+    expect(get(sim, 'summary', 'apogee_m')).toBe(r(flight.summary.apogee));
+    expect(flight.events.filter((e) => e.kind === 'separation')).toHaveLength(1);
+
+    // One stage again is refused while booster parts remain, with the reason.
+    const back = await call('set_stages', { designId, stages: [{ name: 'Sustainer' }] });
+    expect(back.ok).toBe(false);
+    expect(back.text).toMatch(/stage 1 given, but the design lists no stages/);
+    // The top stage never separates.
+    const top = await call('set_stages', {
+      designId,
+      stages: [
+        { name: 'S', separation: { event: 'apogee' } },
+        { name: 'B', separation: { event: 'burnout' } },
+      ],
+    });
+    expect(top.text).toMatch(/the top stage \(stages\[0\]\) never separates/);
   });
 });
 

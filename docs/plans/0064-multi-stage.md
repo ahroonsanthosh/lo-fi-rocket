@@ -82,7 +82,14 @@ Part 2 is two pull requests: 2a (the engine's further events and the design file
 ## 4. App and the MCP server (part 3)
 
 - **App.** Each part's stage is shown and editable. The motor view lists one motor mount per stage with its ignition event, and the launch view shows each stage's separation.
-- **MCP server.** `add_part` takes a stage, and `set_motor` a mount per stage with its ignition. `about` explains staging.
+- **MCP server (part 3a, D-099).**
+  - A new tool, `set_stages`, names the stages, top first, with each lower stage's separation; a delay left out is 0 s, recorded as "not given".
+  - `add_part`, `update_part` and `set_recovery` take a stage; `update_part` keeps a part's stage unless it is moved.
+  - `set_motor` puts a motor in its mount part's stage, replacing that stage's motor (`add: true` adds one beside it, an air start), with an optional ignition.
+  - `get_design` and `set_motor` list every motor with its stage and its ignition as given and as resolved.
+  - `review_design` makes a motor that can never light a "must".
+  - The instructions sent at connection explain staging.
+  - Test: a two-stage rocket built through the tools flies exactly as the engine flies the exported design.
 
 ## 5. Order
 
