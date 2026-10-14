@@ -49,7 +49,10 @@ import {
   DEFAULT_LARGE_ANGLE_METHOD,
   type LargeAngleMethod,
 } from './aerodynamics.js';
-import { finLargeAngleAvailability } from '../stability/datcom-large-angle.js';
+import {
+  finLargeAngleApproximation,
+  finLargeAngleAvailability,
+} from '../stability/datcom-large-angle.js';
 import {
   bodyToWorld,
   flightParameters,
@@ -764,9 +767,9 @@ interface PendingTimed {
 
 /**
  * D-070: the large-angle method in effect for a flight. 'datcom' needs every
- * fin set to be covered by the DATCOM charts (HA-5, HA-6); otherwise the
- * small-angle model and the 90° limit (D-046) apply, with a warning naming
- * the reason.
+ * fin set's cross-section (HA-5); without one the small-angle model and the
+ * 90° limit (D-046) apply, with a warning naming the reason. Single wedges
+ * and high aspect ratios are approximated and listed instead (D-102).
  */
 function effectiveLargeAngleMethod(
   vehicle: FlightVehicle,
@@ -786,6 +789,34 @@ function effectiveLargeAngleMethod(
     }
   }
   return 'datcom';
+}
+
+/**
+ * Plan 0066 (D-102): the fin sets whose large-angle normal force (DATCOM, D-070) is approximated:
+ * a single-wedge section or an aspect ratio above the low-aspect-ratio limit. Listed in the
+ * displayed mode only; the OpenRocket-equivalent mode keeps the small-angle model and its limit.
+ */
+function largeAngleApproximations(
+  vehicle: FlightVehicle,
+  method: LargeAngleMethod,
+): Approximation[] {
+  if (method !== 'datcom') return [];
+  return vehicle.components.flatMap((p, i) => {
+    if (p.component.kind !== 'finSet') return [];
+    const reason = finLargeAngleApproximation(p.component);
+    if (reason === undefined) return [];
+    const name = vehicle.componentNames?.[i];
+    return [
+      {
+        subject: `Fin set${name === undefined || name === '' ? '' : ` "${name}"`}`,
+        what: 'its normal force beyond the stall, and past 90° when the rocket tumbles',
+        method: reason,
+        effect:
+          'small while the rocket flies nose-first at small angles, where the fin keeps its validated slope; past the stall, and when the rocket tumbles or flies backward, its path and landing point are approximate',
+        impact: 'minor',
+      },
+    ];
+  });
 }
 
 /** Plan 0064 (D-091): what a staged flight does not model exactly, listed with its result (rule 3). */
@@ -2155,6 +2186,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
       })),
     ),
+    ...largeAngleApproximations(vehicle, ctx.largeAngleMethod),
     ...(stages === undefined
       ? vehicle.motor.kind === 'definition'
         ? clusterApproximations(vehicle.motor.cluster)

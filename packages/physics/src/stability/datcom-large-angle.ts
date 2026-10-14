@@ -481,26 +481,22 @@ const ANALYSIS_CACHE = new WeakMap<WingPlanform, { chartMach: number; analysis: 
 function computeWingAnalysis(planform: WingPlanform, chartMach: number): WingAnalysis {
   if (!(chartMach >= 0 && chartMach <= FIN_CHART_MAX_MACH))
     throw new InvalidInputError('chart Mach number', chartMach, 'must be between 0 and 0.6');
-  const { aspectRatio: A, taperRatio: lambda, tanLeadingEdge: tan, deltaY, chart } = planform;
-  if (chart === undefined)
-    throw new InvalidInputError(
-      'fin cross-section',
-      'wedge',
-      'is not covered by DATCOM figures 4.1.3.4-23a/b',
-    );
+  const { aspectRatio: A, taperRatio: lambda, tanLeadingEdge: tan, deltaY } = planform;
   const notes: string[] = [];
+  // Plan 0066 (D-102): a single wedge leads with its sharp edge and is thickest at the trailing
+  // edge, outside both families; the 23b family (thickest at 35 to 50 %), the nearer, is used.
+  const chart = planform.chart ?? '23b';
+  if (planform.chart === undefined) notes.push(WEDGE_SECTION_NOTE);
   if (planform.sweepHeld)
     notes.push(
       'the leading edge in this flow direction is swept forward, which the DATCOM charts do not cover; it was evaluated as unswept',
     );
   const { c1, c2 } = taperRatioFactors(lambda);
   const cos = 1 / Math.sqrt(1 + tan * tan);
-  if (!(A * (c1 + 1) * cos < 4))
-    throw new InvalidInputError(
-      'fin aspect ratio',
-      A,
-      `must be below 4/((C₁ + 1) cos Λ_LE) = ${(4 / ((c1 + 1) * cos)).toFixed(3)} for the low-aspect-ratio method (DATCOM eq. 4.1.3.4-c)`,
-    );
+  // Plan 0066 (D-102): above the low-aspect-ratio limit the high-aspect-ratio method needs section
+  // maximum-lift data a flat fin does not have; the low-aspect-ratio method is used, its charts
+  // held at their ends.
+  if (!(A * (c1 + 1) * cos < 4)) notes.push(highAspectRatioNote(A, 4 / ((c1 + 1) * cos)));
   const beta = Math.sqrt(1 - chartMach * chartMach);
   const x = (c1 + 1) * (A / beta) * cos;
   const xs = (c2 + 1) * A * tan;
@@ -659,29 +655,45 @@ export function wingLiftCurveSlope(shaped: TrapezoidFinSetComponent, mach: numbe
   return (2 * Math.PI * A) / (2 + Math.sqrt(4 + beta2 * A * A * (1 + tanMid * tanMid)));
 }
 
-/** Whether the DATCOM large-angle model covers a fin set (D-070), and why not. */
+/**
+ * Whether the DATCOM large-angle model can evaluate a fin set (D-070), and why not: it needs the
+ * cross-section. Since plan 0066 (D-102) single wedges and high aspect ratios are evaluated with
+ * a listed approximation (finLargeAngleApproximation) instead of being refused.
+ */
 export function finLargeAngleAvailability(
   fin: TrapezoidFinSetComponent,
 ): { available: true } | { available: false; reason: string } {
   if (fin.crossSection === undefined)
     return { available: false, reason: 'the fin cross-section is not set' };
-  if (fin.crossSection === 'wedge')
-    return {
-      available: false,
-      reason:
-        'a single-wedge section has its maximum thickness at the trailing edge, which DATCOM figures 4.1.3.4-23a and -23b do not cover',
-    };
+  return { available: true };
+}
+
+const WEDGE_SECTION_NOTE =
+  'a single-wedge section, thickest at the trailing edge, lies outside DATCOM figures 4.1.3.4-23a and -23b; the 23b family (thickest at 35 to 50 %), the nearer, was used';
+
+function highAspectRatioNote(aspectRatio: number, limit: number): string {
+  return `the exposed fin pair's aspect ratio ${aspectRatio.toFixed(2)} is above the low-aspect-ratio limit 4/((C₁ + 1) cos Λ_LE) = ${limit.toFixed(2)} of DATCOM eq. 4.1.3.4-c; the low-aspect-ratio method was used, its charts held at their ends (the high-aspect-ratio method needs section maximum-lift data a flat fin does not have)`;
+}
+
+/**
+ * Plan 0066 (D-102): what the large-angle fin model approximates for this fin set, if anything:
+ * a single-wedge section (the nearer chart family) or an aspect ratio above the low-aspect-ratio
+ * method's limit (that method beyond its range). Undefined when the DATCOM covers it.
+ */
+export function finLargeAngleApproximation(fin: TrapezoidFinSetComponent): string | undefined {
+  if (fin.crossSection === undefined) return undefined;
+  const reasons: string[] = [];
+  if (fin.crossSection === 'wedge') reasons.push(WEDGE_SECTION_NOTE);
   for (const reverse of [false, true]) {
     const p = wingPlanform(fin, reverse);
     const { c1 } = taperRatioFactors(p.taperRatio);
     const cos = 1 / Math.sqrt(1 + p.tanLeadingEdge ** 2);
-    if (!(p.aspectRatio * (c1 + 1) * cos < 4))
-      return {
-        available: false,
-        reason: `the exposed fin pair has aspect ratio ${p.aspectRatio.toFixed(2)}, above the low-aspect-ratio limit 4/((C₁ + 1) cos Λ_LE) = ${(4 / ((c1 + 1) * cos)).toFixed(2)} of DATCOM eq. 4.1.3.4-c (the high-aspect-ratio method needs section maximum-lift data)`,
-      };
+    if (!(p.aspectRatio * (c1 + 1) * cos < 4)) {
+      reasons.push(highAspectRatioNote(p.aspectRatio, 4 / ((c1 + 1) * cos)));
+      break;
+    }
   }
-  return { available: true };
+  return reasons.length === 0 ? undefined : reasons.join('; ');
 }
 
 /**

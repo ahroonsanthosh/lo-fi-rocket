@@ -441,7 +441,7 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   1. **Body potential term.** Below 90° each nose and transition keeps its validated zero-angle slope times sin 2α cos(α/2)/2. The DATCOM says "the lift-curve slope at zero angle of attack is used for the potential-flow term", and the per-component slopes sum to Jorgensen's 2S_b/S at CP ℓ_B − V_B/S_b. Beyond 90°, eq. 4.2.1.2-c and eq. 4.2.2.2-c are used as printed.
   2. **Viscous term.** η c_dc replaces Niskanen's K = 1.1 on the same planform areas and centroids.
   3. **Interference.** The fin set's linear slope (interference, roll, carry-over) multiplies the DATCOM wing's normal-force shape.
-  4. **Δy.** Computed from the section shape by the DATCOM's own definition (p. 4.1.3.2-19). The position of maximum thickness selects figure 23a or 23b. Single wedges (maximum thickness at the trailing edge) are not covered: such a rocket keeps the small-angle model and the 90° limit, with a warning naming the reason.
+  4. **Δy.** Computed from the section shape by the DATCOM's own definition (p. 4.1.3.2-19). The position of maximum thickness selects figure 23a or 23b. Single wedges (maximum thickness at the trailing edge) are not covered: such a rocket keeps the small-angle model and the 90° limit, with a warning naming the reason. (Superseded by D-102: a single wedge reads the 23b family, listed as an approximation.)
   5. **Fin charts above Mach 0.6.** From Mach 0.6 to 1 the fin charts are read at Mach 0.6 with the actual C_Nα. This is the DATCOM's transonic guidance (4.1.3.3 B), and a warning is given beyond the stall.
   6. **Values below the drawn range.** ΔC_Naa and the figure 23(a)/24b increments below tan α/tan α_CLmax = 0.2 are held at the 0.2 curve. They multiply sin²α or sin α there.
   7. **Step 5 of 4.1.4.3.** Read as linear in α.
@@ -464,7 +464,7 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - **Wind-tunnel data at higher angles.** The ARCAS reports (TN D-4013) go to 21° and could be digitised for a direct check.
 - **Consequences:**
   - Ballistic and late-ejection flights in still air now run to the ground in the displayed mode. Warnings explain the unverified range above 60° and any chart limits that were reached.
-  - Flights of rockets with single-wedge fins, or that tumble above Mach 1, still end at 90° with an explanation.
+  - Flights that tumble above Mach 1 still end at 90° with an explanation. (Single-wedge and high-aspect-ratio fins also did until D-102.)
   - The body-vortex term of 4.3.1.3, the supersonic high-angle charts and Jorgensen's axial force (4.2.3.2, in place of the mirrored axial-drag scaling of D-033) are future work.
 
 ## D-071 (2026-10-12): The 3D viewer draws the simulator's stored output in the flight frame itself; its few drawing conventions, recorded here
@@ -839,3 +839,26 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Resetting the step after each event (helps at deployments only).
 - **Consequences:**
   - 300 random designs fly. 79 of them end at the model limit (unstable or tumbling designs past 90°, D-046): the large-angle flight after that is the next gap (task 5).
+
+## D-102 (2026-10-14): Wedge and high-aspect-ratio fins fly past 90° with a listed approximation
+
+- **Decision:** In the displayed mode the large-angle model (D-070) no longer refuses two kinds of fin set.
+  - **A single wedge** (thickest at the trailing edge, outside both DATCOM maximum-lift families) reads the 23b family, whose maximum thickness (35 to 50 % of the chord) is the nearer. Δy is the wedge's own. In reverse flow the wedge leads with its square base and reads 23a exactly, as before.
+  - **A high aspect ratio** (A ≥ 4/((C₁ + 1) cos Λ_LE), eq. 4.1.3.4-c) uses the low-aspect-ratio method beyond its range, every chart held at its drawn end with a note, as for any design (D-070 item 9).
+  - **Listed.** The result's approximations name the fin set, what is approximated (its normal force beyond the stall, and past 90° when the rocket tumbles), the reason and the effect, impact minor. The chart notes become warnings beyond the stall.
+  - **The OpenRocket-equivalent mode** is unchanged: small-angle model, 90° limit, nothing listed.
+- **Why:**
+  - Rule 3 (D-083): a sensible design must be simulated. The refusal ended the flight at 90°, so a wedge-finned or high-aspect-ratio rocket had no descent, landing point or landing speed. These fin sets caused all 79 model-limit endings among 300 random designs (plan 0065).
+  - There is no approved method for either case. The DATCOM has no family for a trailing-edge maximum, and its high-aspect-ratio method needs section maximum-lift data that a flat fin does not have. These readings are the nearest documented ones.
+- **Evidence** (plan 0066 section 4):
+  - **Random designs:** all 300 now land (291) or reach the time limit (9).
+  - **Below the stall:** of 125 affected designs that reached apogee in both models, 118 agree with the small-angle model within 0.5 %. The 7 that differ (−11 % to +17 %) are unstable, overstable or fly at large angles on the climb, where the two approved models already differ (D-070).
+  - **The wedge's stand-in:** 23a and 23b give the same α_CLmax and C_Lmax within 0.4 % for typical fins, and 8 % apart (23b lower) for a strongly swept one.
+  - **Reference designs:** no reference design has such fins, so the golden outputs and the OpenRocket comparisons are unchanged.
+- **Alternatives:**
+  - Keep the small-angle model and the 90° stop (a refusal, against rule 3).
+  - Use the small-angle model past 90° for these fin sets (the thesis scales its normal force only to 90°, Niskanen §3.4.7, so that would be an undocumented extension too).
+  - Read 23a for a wedge (thickest at the leading edge, the farther family).
+- **Consequences:**
+  - Only flights that tumble above Mach 1 still end at the model limit in the displayed mode (D-070: the supersonic high-angle charts are not implemented).
+  - Rockets with such fins now fly the DATCOM model at every angle, like every other rocket in the displayed mode. Their reported in-flight margin is still the more forward CP of the two models (D-070).
