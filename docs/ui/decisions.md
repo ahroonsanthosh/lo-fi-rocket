@@ -51,3 +51,19 @@ The flight samples store NaN where a value does not exist in that phase (the Mac
 ## D-UI-10 (2026-10-13): D-UI-1 ends with this prompt
 
 D-UI-1 kept every existing file under `packages/` unchanged while the design was prepared. This prompt is the "apply" prompt that D-UI-1 deferred to, so the ui lane now edits `packages/app` and `packages/ui`. No file in `packages/physics`, `packages/formats` or `packages/viewer`, and no `FlightViewer*` file, is changed.
+
+## D-UI-11 (2026-10-13): Simplify after the owner's review of the console
+
+The owner reviewed the console (D-UI-6 to D-UI-8, PR #52) as very cluttered and asked for something far simpler, cleaner and easier to understand, "simple and brutally effective" like Tesla's interfaces, with usability first. Plan UI-0002 (`docs/ui/simplify.md`) replaces the console layout. The rules of `redesign.md` on warnings (section 5), terms (section 4), accessibility (section 7) and display (section 8) are unchanged; no number the app shows changes, and nothing in `packages/physics`, `packages/formats`, `packages/viewer` or any `FlightViewer*` file is touched. The UI library loses `Gauge`, `Meter`, `Dock`, `StepGuide` and the `StatusItem` of `AppShell`, and the console mockups (`packages/ui/mockups`, `tools/ui-walkthrough/mockups.js`) are removed with them.
+
+## D-UI-12 (2026-10-13): A flat neutral palette that follows the system theme
+
+The indigo console palette of D-UI-6, its glow, rings and bezel are replaced by near-white and near-black surfaces, one blue accent, and status colours used only for status, always with an icon and a word. The theme follows the system setting (`prefers-color-scheme`) unless the user picks Light or Dark in Settings; the stored choice is per browser. Every token pair passes the WCAG 2.2 AA test of D-UI-2 in both themes (30 pairs per theme). Radii are 6, 10 and 16 px; Lato stays bundled (D-UI-6).
+
+## D-UI-13 (2026-10-13): Three numbers on the stage; one list with pages in the task panel
+
+The stage shows the rocket on its side with the CG and CP, and three numbers that decide whether a flight is safe and worth flying: stability margin at liftoff (with the burnout margin under it), apogee, and rail exit velocity against the editable minimum. Each has its status in words. One sentence from the physics explains the stability margin. Every other figure is one tap away in the task panel, whose home page ("Your rocket") is a single list: the outside parts, the parts inside the airframe, "Add a part", the motor, recovery, launch, stability and mass, and the flight. Opening a row shows its page with a "Your rocket" back button; selecting a part in the side view opens the same page. A new design offers only the next missing core part (body tube, then nose cone, then fins). The "Simulate the flight" row is an accent bar only when a motor is chosen. This replaces the checklist, the dock, the dial tiles, the telemetry bars and the overview tables of D-UI-7 and D-UI-8. Choices made for the 3D lane's unchanged tests: the Flight row is on the home page, the units switch is in the top bar, and after a simulation the stage shows the 3D replay while the panel shows the results and "Run dispersion".
+
+## D-UI-14 (2026-10-13): Warnings only when there are any; "All clear" otherwise
+
+When the design has no warning, the top bar says "All clear" once, in small type, and the task panel shows no warning area. When it has any, every warning is shown in full at the top of the task panel on every page, and the top bar says how many, in the colour of the most severe, linking to them. Warnings stay never dismissible and never only in a closed panel (redesign section 5); this only removes the empty "No warnings" panel.

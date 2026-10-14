@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-12. Plan UI-0001; decisions D-UI-1 to D-UI-5 in `docs/ui/decisions.md`.
 **Inputs:** the usability review (`docs/ui/review.md`), CLAUDE.md sections 8 and 9, the owner's brief for this prompt.
-**Status:** applied to `packages/app` on 2026-10-13 in the look of the owner's reference image, an instrument console (section 12, D-UI-6 to D-UI-10). The sections below remain the rules; section 12 says where each part landed and what was adapted.
+**Status:** applied to `packages/app` on 2026-10-13, first as an instrument console (section 12, D-UI-6 to D-UI-10), then simplified on the owner's review (`simplify.md`, D-UI-11 to D-UI-14). Sections 1, 4, 5, 7 and 8 remain the rules; where this plan and `simplify.md` differ on layout, `simplify.md` holds.
 
 ## 1. Principles
 
@@ -159,35 +159,36 @@ The glossary already has entries for the minimum in-flight margin and the fin fl
 
 - Spacing: a 4 px grid, `--lfr-space-1` to `--lfr-space-7` = 4, 8, 12, 16, 24, 32, 48 px.
 - Type scale (size / line height, px): caption 12/16, small 13/18, body 15/22, heading 17/24, title 20/28, key figure 28/34. Numbers use tabular figures.
-- Radius 4 px for controls, 8 px for panels and cards. Controls at least 32 px tall; every target at least 24 × 24 px (SC 2.5.8).
+- Radius 6 px for controls, 10 px for panels and cards, 16 px for dialogs (D-UI-12). Buttons 40 px tall, list rows at least 52 px; every target at least 24 × 24 px (SC 2.5.8).
 
 ### Colour tokens
 
-Defined once in `packages/ui/src/tokens/tokens.ts` and as CSS variables in `tokens.css` (light by default, dark from the system setting or `data-theme="dark"`; the app sets dark unless the user chose light, D-UI-6). A test checks the two files agree. The dark values were refitted on 2026-10-13 to colours sampled from the owner's reference image; a `neutralIndicator` (#6b7192 light, #8b91b3 dark) marks finished checklist steps.
+Defined once in `packages/ui/src/tokens/tokens.ts` and as CSS variables in `tokens.css` (light by default; dark from the system setting or `data-theme="dark"`; the app follows the system unless the user picks a theme in Settings, D-UI-12). A test checks the two files agree. The values were replaced on 2026-10-13 by a flat neutral palette with one blue accent (D-UI-12); `neutralIndicator` marks quiet states.
 
 | Token                        | Light                       | Dark                        | Use                                   |
 | ---------------------------- | --------------------------- | --------------------------- | ------------------------------------- |
-| bg / surface / surfaceSunken | #eef0f7 / #ffffff / #f3f4fa | #12152b / #181b38 / #0e1124 | page, panels, insets                  |
-| text / textMuted             | #161a33 / #535978           | #f3f4fb / #9fa3c7           | text, labels and units                |
-| borderSubtle / borderControl | #dde0ee / #7a809f           | #272b52 / #6d72a3           | dividers (decorative) / control edges |
-| accent, focus                | #1f5fd1                     | #4b97ff, #8ab8ff            | links, selection, focus ring          |
-| safe text / bg / indicator   | #166232 / #e7f4eb / #1b7f3b | #7be3a4 / #11291f / #3fd47f | OK, typical range                     |
-| caution                      | #6f4400 / #fff3d3 / #a86400 | #ffcb6b / #2c2414 / #f7a128 | Caution                               |
-| danger                       | #9c1f18 / #fdeceb / #c62a22 | #ff9d9d / #341823 / #ff5d5d | Danger                                |
-| info                         | #1a4b93 / #e8f0fb / #1f5fd1 | #a9c9ff / #152349 / #4b97ff | Note                                  |
-| limit                        | #55358f / #f2edfa / #6b47ad | #cdb8ff / #251e47 / #ad8bff | Model limit                           |
-| cgMarker / cpMarker          | #1b4f9c / #c62a22           | #4b97ff / #ff6b6b           | side view markers                     |
+| bg / surface / surfaceSunken | #f4f4f4 / #ffffff / #f0f0f1 | #111214 / #1a1b1e / #0b0b0d | page, panels, insets                  |
+| text / textMuted             | #171a20 / #5c5e62           | #f2f2f3 / #a3a4a8           | text, labels and units                |
+| borderSubtle / borderControl | #e3e3e4 / #8a8b8f           | #2a2b2f / #6e7076           | dividers (decorative) / control edges |
+| accent / onAccent / focus    | #3456d1 / #ffffff / #3456d1 | #6b8ff2 / #0b0d14 / #8fabff | links, selection, focus ring          |
+| safe text / bg / indicator   | #14612f / #e8f5ec / #1b7f3b | #7ddc9f / #11251a / #3fcf7c | OK, typical range                     |
+| caution                      | #6f4400 / #fff4d6 / #a86400 | #ffcf73 / #2b2213 / #f2a23a | Caution                               |
+| danger                       | #9c1f18 / #fdeceb / #c62a22 | #ff9e9a / #2f1717 / #ff645c | Danger                                |
+| info                         | #22409f / #ebeffc / #3456d1 | #a9c0ff / #161f38 / #6b8ff2 | Note                                  |
+| limit                        | #55358f / #f2edfa / #6b47ad | #cdb8ff / #221c35 / #ad8bff | Model limit                           |
+| neutralIndicator             | #8a8b8f                     | #7c7e84                     | quiet states                          |
+| cgMarker / cpMarker          | #3456d1 / #c62a22           | #6b8ff2 / #ff6b6b           | side view markers                     |
 
-Colour for meaning is always paired with an icon of its own shape and a word (`SeverityTag`, `WarningBanner`, `StabilityIndicator`, `StepGuide`); the stability zones are labelled with their threshold numbers and the current zone is outlined and pointed at, so they read in grey scale.
+Colour for meaning is always paired with an icon of its own shape and a word (`SeverityTag`, `WarningBanner`, `StabilityIndicator`); the stability zones are labelled with their threshold numbers and the current zone is outlined and pointed at, so they read in grey scale.
 
 ![After: results in the dark theme](mockups/after-results-dark.png)
 
 ### Accessibility (WCAG 2.2 AA)
 
-- **Contrast:** 27 token pairs per theme are tested: text at least 4.5:1 (SC 1.4.3), indicators, focus ring and control edges at least 3:1 (SC 1.4.11). The test implements the WCAG relative-luminance and contrast-ratio definitions and is itself checked against black on white (21:1) and #767676 on white (4.54:1).
-- **Keyboard:** everything is reachable with Tab in reading order (header, status bar, navigation, main, checks), with a "Skip to the main view" link first. Tabs use arrow keys, Home and End; dialogs trap focus, close with Escape when dismissible and return focus; tooltips open on focus and close with Escape; collapsible panels are buttons with `aria-expanded`. File pickers are real buttons (`FileButton`), so no focus stop is invisible. The side view keeps the parts list as its keyboard equivalent.
+- **Contrast:** 30 token pairs per theme are tested: text at least 4.5:1 (SC 1.4.3), indicators, focus ring and control edges at least 3:1 (SC 1.4.11). The test implements the WCAG relative-luminance and contrast-ratio definitions and is itself checked against black on white (21:1) and #767676 on white (4.54:1).
+- **Keyboard:** everything is reachable with Tab in reading order (top bar, stage, warnings, task panel); the lists of the home page are listboxes moved through with the arrow keys and opened with Enter or Space, with a "Skip to the main view" link first. Tabs use arrow keys, Home and End; dialogs trap focus, close with Escape when dismissible and return focus; tooltips open on focus and close with Escape; collapsible panels are buttons with `aria-expanded`. File pickers are real buttons (`FileButton`), so no focus stop is invisible. The side view keeps the parts list as its keyboard equivalent.
 - **Focus:** a 2 px focus ring with a 2 px offset on every interactive element (SC 2.4.7, 2.4.11), in the accent colour, 3:1 against both surfaces.
-- **Names and announcements:** landmarks with names (banner, Status region, Design steps navigation, main, Checks and warnings); field errors are `role="alert"` and describe their field; the warning list is a polite live region; result values that are missing are spoken as "not available".
+- **Names and announcements:** landmarks with names (banner, the Rocket stage with its Status region, Checks and warnings, main); field errors are `role="alert"` and describe their field; the warning list is a polite live region; result values that are missing are spoken as "not available".
 - **Tests:** axe-core runs on every component in jsdom (contrast off there, because jsdom does not lay out; the token test covers it) and on the whole shell with the landmark rule on.
 
 ## 8. Display formatting rules (one place)
@@ -238,6 +239,8 @@ The after images are screenshots of `packages/ui/mockups/`, a page built only fr
 | labels with technical terms          | `Term`                                                                 |
 
 ## 12. Applied as an instrument console (2026-10-13)
+
+> **Superseded** the same day by `simplify.md` after the owner's review called the console cluttered. Kept as the record of what was tried.
 
 The owner asked for the app to look like their reference image, a spacecraft "Vehicle overview" console: clean, new, refined, adapted where needed. The plan above was applied in that look.
 

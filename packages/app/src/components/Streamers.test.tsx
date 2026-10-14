@@ -29,9 +29,6 @@ describe('streamers in the app (plan 0073)', () => {
   it('adds a streamer, shows its strip and eq. (C.6)’s drag coefficient, and takes a measured one', async () => {
     render(<App storage={memory()} motorStore={memory()} initialDesign={exampleDesign('s')} />);
     await userEvent.click(screen.getByRole('button', { name: 'Add streamer' }));
-    const list = screen.getByRole('listbox', { name: 'Recovery devices' });
-    const option = within(list).getByRole('option', { name: /Streamer 2/ });
-    expect(option.textContent).toContain('streamer, deploys at apogee');
     const editor = screen.getByRole('region', { name: 'Recovery device editor' });
     expect(within(editor).getByRole('heading', { name: 'Streamer' })).toBeTruthy();
     // The default strip, 4 × 40 cm of 41 g/m² polyethylene (Niskanen Table C.1):
@@ -45,5 +42,10 @@ describe('streamers in the app (plan 0073)', () => {
     await userEvent.click(auto);
     const field = within(editor).getByLabelText(/Drag coefficient \(strip area\)/);
     expect((field as HTMLInputElement).value).toBe('0.075');
+    // Back on "Your rocket", the list says which device is a streamer.
+    await userEvent.click(screen.getByRole('button', { name: 'Your rocket' }));
+    const list = screen.getByRole('listbox', { name: 'Recovery devices' });
+    const option = within(list).getByRole('option', { name: /Streamer 2/ });
+    expect(option.textContent).toContain('streamer, deploys at apogee');
   });
 });

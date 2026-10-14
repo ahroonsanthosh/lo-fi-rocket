@@ -3,7 +3,7 @@ import type { JSX } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { axePageViolations } from '../test/axe-page.js';
-import { AppShell, StatusItem } from './AppShell.js';
+import { AppShell } from './AppShell.js';
 import { Button } from './Button.js';
 
 function Shell(): JSX.Element {
@@ -15,15 +15,19 @@ function Shell(): JSX.Element {
           <Button>File</Button>
         </>
       }
-      statusBar={<StatusItem label="Apogee">167.33 m</StatusItem>}
-      navigation={<Button>Fins</Button>}
-      main={
-        <>
-          <h2>Fins</h2>
-          <Button>Add fins</Button>
-        </>
+      stage={
+        <section aria-label="Status">
+          <p>Apogee 167.33 m</p>
+          <Button>Glossary: apogee</Button>
+        </section>
       }
       checks={<h2>Warnings</h2>}
+      main={
+        <>
+          <h2>Your rocket</h2>
+          <Button>Fins</Button>
+        </>
+      }
     />
   );
 }
@@ -32,9 +36,8 @@ describe('AppShell', () => {
   it('provides the page landmarks with names', () => {
     render(<Shell />);
     expect(screen.getByRole('banner')).toHaveTextContent('Lo-Fi Rocket');
-    expect(screen.getByRole('region', { name: 'Status' })).toHaveTextContent('Apogee167.33 m');
-    expect(screen.getByRole('navigation', { name: 'Design steps' })).toBeInTheDocument();
-    expect(screen.getByRole('main')).toHaveTextContent('Fins');
+    expect(screen.getByRole('region', { name: 'Rocket' })).toHaveTextContent('Apogee 167.33 m');
+    expect(screen.getByRole('main')).toHaveTextContent('Your rocket');
     expect(screen.getByRole('complementary', { name: 'Checks and warnings' })).toBeInTheDocument();
   });
 
@@ -48,15 +51,15 @@ describe('AppShell', () => {
     expect(screen.getByRole('main')).toHaveAttribute('tabindex', '-1');
   });
 
-  it('Tab order follows the reading order: header, status, navigation, main, checks', async () => {
+  it('Tab order follows the reading order: header, stage, warnings, task panel', async () => {
     render(<Shell />);
     await userEvent.tab();
     await userEvent.tab();
     expect(screen.getByRole('button', { name: 'File' })).toHaveFocus();
     await userEvent.tab();
-    expect(screen.getByRole('button', { name: 'Fins' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Glossary: apogee' })).toHaveFocus();
     await userEvent.tab();
-    expect(screen.getByRole('button', { name: 'Add fins' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Fins' })).toHaveFocus();
   });
 
   it('has no axe violations as a whole page, landmark rules included', async () => {

@@ -155,8 +155,9 @@ describe('files (plan 0015)', () => {
     expect(await screen.findByRole('region', { name: 'Warnings' })).toHaveTextContent(
       /Imported r1\.ork \(OpenRocket 1\.\d+\)\. ?Motor Estes D12 taken from the library/,
     );
-    const stability = screen.getByRole('region', { name: 'Stability' });
-    expect(within(stability).getByText('1.84')).toBeInTheDocument();
+    // The imported rocket's stability is one of the three numbers on the stage.
+    const status = screen.getByRole('region', { name: 'Status' });
+    expect(within(status).getByText('1.84')).toBeInTheDocument();
   });
 
   it('imports a RASAero II file (plan 0075) with the bundled D12 and its recorded apogees', async () => {

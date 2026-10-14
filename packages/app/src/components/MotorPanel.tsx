@@ -1,4 +1,5 @@
 import {
+  designThrustToWeight,
   motorFromEng,
   motorFromRse,
   parseEng,
@@ -12,14 +13,17 @@ import {
   type MotorMount,
   type MotorSelection,
   type MotorSummary,
+  type RocketDesign,
 } from '@lo-fi-rocket/formats';
 import {
   kilograms,
   metres,
+  PhysicsError,
   seconds,
   type MotorDefinition,
   type Seconds,
 } from '@lo-fi-rocket/physics';
+import { FIGURE_DISPLAY, SeverityTag, Term } from '@lo-fi-rocket/ui';
 import { useId, useMemo, useState, type JSX } from 'react';
 import {
   bundledMotors,
@@ -306,6 +310,16 @@ function DelayEntry({
   );
 }
 
+/** Thrust to weight at liftoff, or undefined for a design the physics rejects (shown elsewhere). */
+function thrustToWeight(design: RocketDesign): number | undefined {
+  try {
+    return designThrustToWeight(design);
+  } catch (error) {
+    if (error instanceof PhysicsError) return undefined;
+    throw error;
+  }
+}
+
 function SelectedMotor({
   motor,
   count,
@@ -318,6 +332,9 @@ function SelectedMotor({
 }): JSX.Element {
   const def = motor.definition;
   const f = motorFigures(def);
+  const { state } = useStore();
+  const twr = thrustToWeight(state.design);
+  const twrMin = state.design.warningThresholds.minThrustToWeight;
   return (
     <div className="motor-summary">
       <p className="banner-main">
@@ -361,6 +378,25 @@ function SelectedMotor({
         <div>
           <dt>Mass rule</dt>
           <dd>{def.massRule}</dd>
+        </div>
+        <div>
+          <dt>
+            <Term k="thrustToWeight">Thrust to weight</Term> (the whole rocket at liftoff)
+          </dt>
+          <dd>
+            {twr === undefined ? (
+              'cannot compute'
+            ) : (
+              <>
+                {twr.toFixed(FIGURE_DISPLAY.thrustToWeight.decimals)} to 1{' '}
+                <SeverityTag
+                  {...(twr < twrMin
+                    ? { severity: 'caution', label: `Below ${String(twrMin)} to 1` }
+                    : { severity: 'safe', label: `At least ${String(twrMin)} to 1` })}
+                />
+              </>
+            )}
+          </dd>
         </div>
       </dl>
       <LinePlot

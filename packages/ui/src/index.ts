@@ -6,23 +6,9 @@
  *
  * Styles: import '@lo-fi-rocket/ui/tokens.css' and '@lo-fi-rocket/ui/styles.css' once.
  */
-export {
-  AppShell,
-  StatusItem,
-  type AppShellProps,
-  type StatusItemProps,
-} from './components/AppShell.js';
+export { AppShell, type AppShellProps } from './components/AppShell.js';
 export { Button, type ButtonProps, type ButtonVariant } from './components/Button.js';
 export { Dialog, type DialogProps } from './components/Dialog.js';
-export { Dock, type DockItem, type DockProps } from './components/Dock.js';
-export {
-  arcPath,
-  Gauge,
-  gaugePosition,
-  type GaugePosition,
-  type GaugeProps,
-  type GaugeZone,
-} from './components/Gauge.js';
 export {
   Field,
   SelectField,
@@ -35,7 +21,6 @@ export {
 } from './components/Field.js';
 export { FileButton, type FileButtonProps } from './components/FileButton.js';
 export { Icon, type IconName } from './components/Icon.js';
-export { Meter, type MeterProps, type MeterTick } from './components/Meter.js';
 export { NumberInput, type NumberInputProps, type NumberRule } from './components/NumberInput.js';
 export { Panel, type PanelProps } from './components/Panel.js';
 export { ResultCard, ResultGrid, type ResultCardProps } from './components/ResultCard.js';
@@ -55,12 +40,6 @@ export {
   type StabilityPoint,
   type StabilityThresholds,
 } from './components/StabilityIndicator.js';
-export {
-  StepGuide,
-  type Step,
-  type StepGuideProps,
-  type StepStatus,
-} from './components/StepGuide.js';
 export { Tabs, type TabItem, type TabsProps } from './components/Tabs.js';
 export {
   Term,

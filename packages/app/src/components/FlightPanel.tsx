@@ -1,11 +1,12 @@
 import type { RocketDesign } from '@lo-fi-rocket/formats';
 import type { FlightResult, StabilityPoint } from '@lo-fi-rocket/physics';
 import { Button, FIGURE_DISPLAY, ResultCard, ResultGrid } from '@lo-fi-rocket/ui';
-import { useEffect, useRef, useState, type JSX, type ReactNode } from 'react';
+import { useState, type JSX, type ReactNode } from 'react';
 import { resultToCsv } from '../simulation/csv-export.js';
 import { useServices } from '../state/services.js';
 import { useStore } from '../state/store.js';
 import { formatQuantity, unitFor, type UnitSystem } from '../units/display.js';
+import { machStatus } from '../layout/stability.js';
 import { ComparisonPanel } from './ComparisonPanel.js';
 import { DispersionPanel } from './DispersionPanel.js';
 import type { DispersionState } from './FlightViewer.js';
@@ -85,17 +86,6 @@ export function FlightPanel({
   };
 
   const stale = flight !== undefined && flight.design !== design;
-  // A new flight brings its results into view, below the 3D replay it also opens.
-  const resultsRef = useRef<HTMLDivElement>(null);
-  const shown = useRef(flight);
-  useEffect(() => {
-    const el = resultsRef.current;
-    // jsdom has no scrollIntoView; every browser the app runs in does.
-    if (flight !== undefined && flight !== shown.current && el !== null && 'scrollIntoView' in el) {
-      el.scrollIntoView({ block: 'start' });
-    }
-    shown.current = flight;
-  }, [flight]);
   const noMotor = design.motorMount?.motor === undefined;
 
   return (
@@ -142,9 +132,7 @@ export function FlightPanel({
               again to update.
             </p>
           ) : null}
-          <div ref={resultsRef} className="results-anchor">
-            <Summary flight={flight} units={units} stale={stale} />
-          </div>
+          <Summary flight={flight} units={units} stale={stale} />
         </>
       )}
       {flight === undefined ? null : (
@@ -207,6 +195,7 @@ function Summary({
           value={s.maxMach}
           decimals={fd.maxMach.decimals}
           unit={fd.maxMach.unit}
+          status={machStatus(s.maxMach)}
           stale={stale}
         />
         <ResultCard
