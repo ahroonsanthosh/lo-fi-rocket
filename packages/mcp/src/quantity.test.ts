@@ -54,6 +54,9 @@ describe('toSi on hostile input (CodeQL js/polynomial-redos)', () => {
     const start = performance.now();
     expect(() => toSi('x', 'length', `.9${' '.repeat(50_000)}x`)).toThrow(QuantityError);
     expect(() => toSi('x', 'length', `${'9'.repeat(50_000)}x`)).toThrow(QuantityError);
+    // 50 001 nines is beyond float64: refused as not finite, quickly.
+    expect(() => toSi('x', 'length', `9${'9'.repeat(50_000)}\n`)).toThrow(/finite/);
+    expect(() => toSi('x', 'length', `9${'9'.repeat(50_000)}\nx`)).toThrow(QuantityError);
     expect(performance.now() - start).toBeLessThan(500);
   });
 });

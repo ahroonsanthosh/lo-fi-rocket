@@ -103,9 +103,9 @@ export class QuantityError extends Error {
   }
 }
 
-// Unambiguous, so it runs in linear time on any input (no polynomial backtracking, CodeQL
-// js/polynomial-redos); the unit is everything after the number, trimmed.
-const NUMBER = /^([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)(.*)$/;
+// The number at the start of the text. Unambiguous and not anchored at the end, so it cannot
+// backtrack once it has matched (CodeQL js/polynomial-redos); the unit is the rest of the text.
+const LEADING_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/;
 
 /** The SI value of `value` for `field`, or a QuantityError naming the field and the accepted units. */
 export function toSi(field: string, dimension: Dimension, value: number | string): number {
@@ -119,20 +119,19 @@ export function toSi(field: string, dimension: Dimension, value: number | string
     if (!Number.isFinite(value)) throw new QuantityError(field, `must be a finite number`);
     return value;
   }
-  const m = NUMBER.exec(value.trim());
+  const text = value.trim();
+  const m = LEADING_NUMBER.exec(text);
   if (m === null) throw new QuantityError(field, `"${value}" is not ${accepted()}`);
-  const x = Number(m[1]);
-  const unit = (m[2] ?? '').replace(/\s+/g, '').toLowerCase();
+  const x = Number(m[0]);
+  const written = text.slice(m[0].length).trim();
+  const unit = written.replace(/\s+/g, '').toLowerCase();
   if (unit === '') {
     if (!Number.isFinite(x)) throw new QuantityError(field, `must be a finite number`);
     return x;
   }
   const convert = UNITS[dimension][unit];
   if (convert === undefined) {
-    throw new QuantityError(
-      field,
-      `unit "${(m[2] ?? '').trim()}" is not accepted; give ${accepted()}`,
-    );
+    throw new QuantityError(field, `unit "${written}" is not accepted; give ${accepted()}`);
   }
   return convert(x);
 }
