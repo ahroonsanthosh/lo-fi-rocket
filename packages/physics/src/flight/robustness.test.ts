@@ -327,5 +327,7 @@ describe('sample fields without a modelled attitude (section 8)', () => {
         expect(fields.every((x) => Number.isFinite(x))).toBe(true);
       }
     }
-  });
+    // A whole 6-DOF flight to the ground at a tight tolerance: about 3 s here, over the default
+    // 5 s on a loaded CI runner (PR #99).
+  }, 60_000);
 });
