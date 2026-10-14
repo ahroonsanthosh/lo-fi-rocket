@@ -112,6 +112,12 @@ export interface TrapezoidFinSetComponent {
    */
   readonly tab?: FinTab;
   /**
+   * Plan 0073 (GEO-19): a fillet along each side of each fin's root, of radius `radius` and its
+   * own material. Mass only: it adds no aerodynamic force, as in OpenRocket 24.12
+   * (reference/rockets/fillet-probe/values.txt: the drag and CP are unchanged).
+   */
+  readonly fillet?: FinFillet;
+  /**
    * Effective shear modulus G_E of the fin, Pa (NACA TN 4197 eq. 12: the
    * material's G for a solid fin). Used only for the flutter speed (plan
    * 0031); when absent, flutter is not evaluated and the flight says so.
@@ -123,6 +129,11 @@ export interface FinTab {
   readonly height: Metres;
   readonly length: Metres;
   readonly foreOffset: Metres;
+}
+
+export interface FinFillet {
+  readonly radius: Metres;
+  readonly density: KilogramsPerCubicMetre;
 }
 
 /** Rail buttons: base cylinder, shaft and flange stacked radially on the body surface. */
@@ -333,7 +344,7 @@ function finSetMassProperties(c: TrapezoidFinSetComponent): MassProperties {
   }
   if (c.shape !== undefined) {
     const fin = shapedFinMassProperties(c);
-    return c.tab === undefined ? fin : combineFinTab(fin, c.tab, c);
+    return withFillet(c.tab === undefined ? fin : combineFinTab(fin, c.tab, c), c);
   }
   const {
     rootChord: cr,
@@ -375,7 +386,86 @@ function finSetMassProperties(c: TrapezoidFinSetComponent): MassProperties {
     inertiaRotational,
     inertiaLongitudinal,
   };
-  return c.tab === undefined ? fin : combineFinTab(fin, c.tab, c);
+  return withFillet(c.tab === undefined ? fin : combineFinTab(fin, c.tab, c), c);
+}
+
+/**
+ * GEO-19 (plan 0073): the cross-section of one fillet, in a plane across the rocket's axis. The
+ * fin is the plane through the axis (its thickness is not subtracted, as OpenRocket 24.12
+ * measures it, reference/rockets/fillet-probe/values.txt), the body a circle of radius R about
+ * the axis O, and the fillet the region between them and an arc of radius r tangent to both, with
+ * centre C = (r, y_c), y_c = √((R + r)² − r²). By plane geometry (definitions) it is the triangle
+ * O A C, A = (0, y_c), less the body's sector of angle φ = asin(r/(R + r)) and the arc's sector
+ * of angle θ = acos(r/(R + r)) about C:
+ *   A = ½ r y_c − ½ R² φ − ½ r² θ;
+ *   J = ∫∫ρ² dA about the axis = (r y_c/12)(2 y_c² + (R + r)²) − R⁴ φ/4
+ *       − [r⁴ θ/4 + 2 (½ r² θ) d (C·u) + (R + r)² (½ r² θ)],
+ * the triangle's polar moment about its vertex O, the body sector's, and the arc sector's moved
+ * from C (its centroid at d = 2 r sin(θ/2)/(3 θ/2) along the bisector u of CA and CO).
+ */
+export function filletCrossSection(
+  bodyRadius: number,
+  radius: number,
+): { readonly area: number; readonly polarMoment: number } {
+  requireNonNegative('body radius at the fins', bodyRadius);
+  requireNonNegative('fin fillet radius', radius);
+  const R = bodyRadius;
+  const r = radius;
+  if (r === 0) return { area: 0, polarMoment: 0 };
+  const yc = Math.sqrt(R * R + 2 * R * r);
+  const phi = Math.asin(r / (R + r));
+  const theta = Math.acos(r / (R + r));
+  const sector = 0.5 * r * r * theta;
+  // u: the unit bisector of the directions from C to A, (−1, 0), and from C to O, −C/|C|.
+  const bx = -1 - r / (R + r);
+  const by = -yc / (R + r);
+  const bl = Math.hypot(bx, by);
+  const d = theta === 0 ? 0 : (2 * r * Math.sin(theta / 2)) / (1.5 * theta);
+  const cDotU = (r * bx + yc * by) / bl;
+  const area = 0.5 * r * yc - 0.5 * R * R * phi - sector;
+  const polarMoment =
+    ((r * yc) / 12) * (2 * yc * yc + (R + r) ** 2) -
+    (R ** 4 * phi) / 4 -
+    ((r ** 4 * theta) / 4 + 2 * sector * d * cDotU + (R + r) ** 2 * sector);
+  return {
+    area: finiteResult('fin fillet cross-section', area),
+    polarMoment: finiteResult('fin fillet polar moment', polarMoment),
+  };
+}
+
+/**
+ * GEO-19: n fins' fillets, two per fin, each the cross-section of `filletCrossSection` along the
+ * root chord c_r from the root leading edge: m = 2 n ρ_f A c_r, x̄ = c_r/2,
+ * I_x = 2 n ρ_f c_r J, I_y about its CG = 2 n ρ_f (A c_r³/12 + ½ c_r J), the ½ from the fins'
+ * spacing round the body as in GEO-10. Combined with the fins by GEO-12.
+ */
+function withFillet(fin: MassProperties, c: TrapezoidFinSetComponent): MassProperties {
+  const f = c.fillet;
+  if (f === undefined || f.radius === 0) return fin;
+  requirePositive('fin fillet density', f.density);
+  const { area, polarMoment } = filletCrossSection(c.bodyRadius, f.radius);
+  const k = 2 * c.count * (f.density as number);
+  const cr: number = c.rootChord;
+  const filletMass = k * area * cr;
+  const filletX = cr / 2;
+  const mass = fin.mass + filletMass;
+  const cgX = (fin.mass * fin.cgX + filletMass * filletX) / mass;
+  return {
+    volume: fin.volume + 2 * c.count * area * cr,
+    mass: finiteResult('fin set mass with fillets', mass),
+    cgX: finiteResult('fin set CG with fillets', cgX),
+    inertiaRotational: finiteResult(
+      'fin set rotational inertia with fillets',
+      fin.inertiaRotational + k * cr * polarMoment,
+    ),
+    inertiaLongitudinal: finiteResult(
+      'fin set longitudinal inertia with fillets',
+      fin.inertiaLongitudinal +
+        fin.mass * (fin.cgX - cgX) ** 2 +
+        k * ((area * cr ** 3) / 12 + 0.5 * cr * polarMoment) +
+        filletMass * (filletX - cgX) ** 2,
+    ),
+  };
 }
 
 /**

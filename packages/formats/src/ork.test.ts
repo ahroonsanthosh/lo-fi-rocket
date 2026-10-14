@@ -525,7 +525,7 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   });
 
   it('fins, lugs, buttons, rings, inner tubes', () => {
-    // D-084: cant and fillets are listed as minor and the fins kept as they are otherwise.
+    // D-084: cant is listed as minor and the fins kept as they are otherwise.
     const canted = approximated(
       edit(r1, '<cant>0.0</cant>', '<cant>0.1</cant>'),
       // OpenRocket writes degrees (D-085): 0.1 in the file is 0.1°.
@@ -535,11 +535,10 @@ describe('inputs are refused, reported as malformed or approximated, by element 
     const fins = (r: OrkRocket): OrkPlacedComponent | undefined =>
       r.components.find((c) => c.element === 'trapezoidfinset');
     expect(fins(canted)?.component).toEqual(fins(parseOrk(r1, 'r1.ork'))?.component);
-    approximated(
-      edit(r1, '<filletradius>0.0', '<filletradius>0.003'),
-      /fin fillets of 3 mm radius/,
-      'minor',
-    );
+    // Plan 0073 (GEO-19): fillets are modelled, with their own material; nothing is listed.
+    const filleted = parseOrk(edit(r1, '<filletradius>0.0', '<filletradius>0.003'), 'edited.ork');
+    expect(listed(filleted)).toEqual([]);
+    expect(fins(filleted)?.component).toMatchObject({ fillet: { radius: 0.003 } });
     // An unknown cross-section is flown as square, listed as moderate.
     const wedge = approximated(
       edit(r1, '<crosssection>square', '<crosssection>wedge'),

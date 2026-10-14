@@ -101,13 +101,30 @@ The work is split into one pull request per item, in the order above.
   - Test: R2 with its buttons 0.40 m apart. The second would be 50 mm past the boat tail; the set is moved 60 mm forward and the stability is computed.
 - **Airfoil fin mass.** It is rated moderate by its measured effect; rounded fins stay minor.
 
-### Part 3b: fillets (next)
+### Part 3b: fillets (D-113, GEO-19)
 
-`FilletProbe` (`reference/rockets/fillet-probe/values.txt`) shows OpenRocket's fillet volume is exact plane geometry, to 7 digits.
+`FilletProbe` (`reference/rockets/fillet-probe/values.txt`, 17 cases) shows that OpenRocket's fillet volume is exact plane geometry, to 7 digits.
 
 - **Cross-section.** Per side, the region between the fin's plane (taken through the axis, whatever the fin thickness), the body circle of radius R and an arc of radius r tangent to both:
-  - A = ½ r y_c − ½ r² acos(r/(R + r)) − ½ R² asin(r/(R + r)), with y_c = √((R + r)² − r²).
-- **Volume.** A × the root chord × 2 sides × n fins, for every planform.
-- **Centroid.** At the middle of the root chord.
+  - A = ½ r y_c − ½ R² φ − ½ r² θ, with y_c = √(R² + 2Rr), φ = asin(r/(R + r)), θ = acos(r/(R + r)).
+- **Volume and centroid.** A × the root chord × 2 sides × n fins, for every planform; the centroid at the middle of the root chord.
+- **Aerodynamics.** OpenRocket's drag and CP are unchanged by fillets.
 
-The plan is to add it as GEO-19 on the fin set, with the fillet's own material, and to read it from `.ork` files instead of listing it.
+**What changed.**
+
+- **Physics.** GEO-19 adds the fillets' mass, CG and inertias to the fin set (the inertias from the exact polar moment of the cross-section). They add no aerodynamic force.
+- **Design file schema 6.** A fin set's optional `fillet: {radius, density}`.
+- **`.ork` reader.** It reads the fillet radius and material instead of listing the fillets. A missing material is OpenRocket's default cardboard, listed.
+- **MCP.** A fin set's `fillet` field.
+- **App.** No fillet field yet; a fillet survives the app's edits.
+
+**Tests.**
+
+- **Physics.**
+  - The cross-section by hand.
+  - Its polar moment against a numerical integral.
+  - OpenRocket's mass and CG for the probe's case.
+  - The flat-wall limit r²(1 − π/4) as a property.
+- **Formats.**
+  - All 17 probe cases: mass within 1e-7 and CG within 1e-9 m. Elliptical fins are compared by the fillet alone, because OpenRocket's elliptical plate is a polygon, D-087.
+  - The design file round trip.
