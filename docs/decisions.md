@@ -760,3 +760,31 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Stage editing in the app and the MCP server is part 3.
   - The `.ork` stages import with the OpenRocket comparison is part 2b.
   - The per-configuration stability of a staged rocket (the sustainer alone at its ignition and burnout) is not yet shown; the in-flight margin check covers the flight.
+
+## D-098 (2026-10-14): Staged `.ork` files: how each stage is read
+
+- **Decision:** The `.ork` reader reads every stage (plan 0064 part 2b). Each rule follows OpenRocket 24.12 as measured by `StagingProbe` (reference/rockets/staging-probe/values.txt, parts 1 to 6).
+  - **Positions.** Each stage's external parts stack from the end of the stage above. A stage positioned any other way is refused by name.
+  - **Motor mounts.** Every mount with a motor is read, in file order; the design's `motorMount` is the first, the rest are `additionalMotorMounts`. Each motor's ignition comes from the configuration's `<ignitionconfiguration>`, else the mount's own elements.
+  - **Separations.** Each stage's separation comes from its `<separationconfiguration>`, else its own elements.
+  - **Event words.** These are the file's own (part 4): `ejectioncharge` is the ejection charge; `upperignition`, `altitudeascending` and `altitudedescending` are the upper stage's ignition and the two altitude events.
+  - **Unknown or missing events** are read as automatic ignition, or separation at the upper stage's ignition, and listed as major.
+  - **Altitudes at or below the pad.** A separation altitude at or below the pad is exactly launch (climbing) or never (descending).
+  - **Stage overrides.** A one-stage file keeps D-089 (the design's as-built mass and CG). In a staged file a stage override scales and moves that stage's parts alone (GEO-17), so they leave with it at separation. Its CG is measured from the stage's front (part 6: 0.380318 m, as OpenRocket).
+  - **Stages switched off** in the configuration used (part 5) are left out of the flight, with a notice.
+    - Off at the top or the bottom of the stack, they leave the stage list: the sustainer with its booster off flies alone and lights at launch, as in OpenRocket.
+    - Off between stages that fly, the stage stays as an empty stage, so the stage above waits for its charge and never lights, as in OpenRocket. The stages below move up to close the gap, since the model needs one continuous body (Niskanen eq. 3.29). That is listed as major: OpenRocket keeps the gap, with its CG further aft and extra drag.
+  - **One-stage files import unchanged.** No stage fields are written, and an ignition is written only when it is not automatic at once.
+- **Why:** Rule 3 and the owner's goal (any file): the reader refused every staged file, every ignition delay and every second motor mount. OpenRocket's behaviour is defined only by its program, so each rule was measured, not read from its source (CLAUDE.md 3).
+- **Results:** The probe's two staged rockets, imported and flown in the OpenRocket-equivalent mode, are within CLAUDE.md 7.4's tolerances. Separation and ignition times agree within 1 ms.
+
+  | Rocket       | Apogee                                  | Max velocity                              |
+  | ------------ | --------------------------------------- | ----------------------------------------- |
+  | `staged-bp`  | 450.509 m against 438.304 m (+2.78 %)   | 99.349 m/s against 97.202 m/s (+2.21 %)   |
+  | `staged-hpr` | 1139.892 m against 1126.746 m (+1.17 %) | 298.803 m/s against 304.574 m/s (−1.89 %) |
+
+- **Alternatives:**
+  - Keeping the gap of a switched-off middle stage (the engine refuses a body with a gap, plainly; closing it and listing it simulates the design).
+  - Applying a staged file's stage override to the whole design (the booster's mass would stay with the sustainer after separation).
+- **Consequences:**
+  - OpenRocket's "Two stage high power rocket" and "Three stage low power rocket" import. Their motors (H148R, I59WN-P, I357T, B6) are not in the bundled library, so they fly once those motors are chosen; their files stay in OpenRocket and their recorded figures are in values.txt part 1.

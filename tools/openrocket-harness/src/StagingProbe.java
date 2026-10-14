@@ -34,6 +34,9 @@
  *   java -Djava.awt.headless=true -cp out:lib/OpenRocket-24.12.jar StagingProbe --build <motors> <out>
  *   java -Djava.awt.headless=true -cp out:lib/OpenRocket-24.12.jar StagingProbe --gaps <motors> <out>
  * "--gaps" builds and probes two three-stage rockets with a stage that has no motor (see gap()).
+ * "--events" prints the file's words for every ignition and separation event (see events()).
+ * "--inactive" probes a stage switched off in the configuration (see inactive()).
+ * "--override" probes staged-bp with a mass and CG override on its booster stage.
  */
 import info.openrocket.core.document.*;
 import info.openrocket.core.file.GeneralRocketLoader;
@@ -63,6 +66,35 @@ public final class StagingProbe {
       out.mkdirs();
       probe(build("staged-bp", motors, out));
       probe(build("staged-hpr", motors, out));
+      return;
+    }
+    if (a.length == 3 && a[0].equals("--events")) {
+      events(new File(a[1]), new File(a[2]));
+      return;
+    }
+    if (a.length == 3 && a[0].equals("--inactive")) {
+      File motors = new File(a[1]);
+      File out = new File(a[2]);
+      out.mkdirs();
+      probe(inactive("staged-off-booster", motors, out));
+      probe(inactive("staged-off-middle", motors, out));
+      return;
+    }
+    if (a.length == 3 && a[0].equals("--override")) {
+      File motors = new File(a[1]);
+      File out = new File(a[2]);
+      out.mkdirs();
+      File f = build("staged-bp", motors, out);
+      OpenRocketDocument doc = new GeneralRocketLoader(f).load();
+      AxialStage booster = (AxialStage) doc.getRocket().getChild(1);
+      // The booster's own override, covering its parts' mass and CG: 70 g with its CG 50 mm from
+      // the stage's front (or from the nose tip, if that is how OpenRocket reads it).
+      booster.setMassOverridden(true); booster.setOverrideMass(0.07);
+      booster.setCGOverridden(true); booster.setOverrideCGX(0.05);
+      booster.setSubcomponentsOverridden(true);
+      File o = new File(out, "staged-override.ork");
+      new GeneralRocketSaver().save(o, doc);
+      probe(o);
       return;
     }
     if (a.length == 3 && a[0].equals("--gaps")) {
@@ -178,6 +210,108 @@ public final class StagingProbe {
     File f = new File(outDir, name + ".ork");
     new GeneralRocketSaver().save(f, OpenRocketDocumentFactory.createDocumentFromRocket(r));
     return f;
+  }
+
+  /** The file's text, unzipped when OpenRocket saved it as a zip. */
+  static String fileText(File f) throws Exception {
+    byte[] bytes = java.nio.file.Files.readAllBytes(f.toPath());
+    if (bytes.length > 1 && bytes[0] == 'P' && bytes[1] == 'K') {
+      try (java.util.zip.ZipInputStream z = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(bytes))) {
+        z.getNextEntry();
+        return new String(z.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+      }
+    }
+    return new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+  }
+
+  /**
+   * The words OpenRocket writes for each ignition and separation event: staged-bp saved once per
+   * event, with the sustainer's ignition (and a 0.25 s delay) or the booster's separation (with a
+   * 0.25 s delay and a 123 m altitude) set to it, and the matching elements of the file printed.
+   */
+  static void events(File motorDir, File outDir) throws Exception {
+    outDir.mkdirs();
+    for (IgnitionEvent e : IgnitionEvent.values()) {
+      File f = build("staged-bp", motorDir, outDir);
+      OpenRocketDocument doc = new GeneralRocketLoader(f).load();
+      Rocket r = doc.getRocket();
+      FlightConfigurationId id = r.getSelectedConfiguration().getFlightConfigurationID();
+      for (RocketComponent c : r) {
+        if (c instanceof InnerTube && c.getStageNumber() == 0 && ((InnerTube) c).isMotorMount()) {
+          MotorConfiguration mc = ((InnerTube) c).getMotorConfig(id);
+          mc.setIgnitionEvent(e); mc.setIgnitionDelay(0.25);
+        }
+      }
+      new GeneralRocketSaver().save(f, doc);
+      for (String line : fileText(f).split("\n")) {
+        if (line.contains("<ignitionevent>") || line.contains("<ignitiondelay>")) System.out.printf("ignition %s:%s%n", e.name(), line);
+      }
+    }
+    for (StageSeparationConfiguration.SeparationEvent e : StageSeparationConfiguration.SeparationEvent.values()) {
+      File f = build("staged-bp", motorDir, outDir);
+      OpenRocketDocument doc = new GeneralRocketLoader(f).load();
+      Rocket r = doc.getRocket();
+      AxialStage booster = (AxialStage) r.getChild(1);
+      StageSeparationConfiguration sep = booster.getSeparationConfigurations().getDefault();
+      sep.setSeparationEvent(e); sep.setSeparationDelay(0.25); sep.setSeparationAltitude(123.0);
+      new GeneralRocketSaver().save(f, doc);
+      boolean inBooster = false;
+      for (String line : fileText(f).split("\n")) {
+        if (line.contains("<name>Booster</name>")) inBooster = true;
+        if (inBooster && line.contains("<separation")) System.out.printf("separation %s:%s%n", e.name(), line);
+        if (inBooster && line.contains("<subcomponents>")) inBooster = false;
+      }
+    }
+  }
+
+  /**
+   * A stage switched off in the configuration: "staged-off-booster" is staged-bp with its booster
+   * off; "staged-off-middle" has three stages, C6-5 on D12-0 on D12-0 (all automatic, separating
+   * at the upper stage's ignition), with the middle stage off.
+   */
+  static File inactive(String name, File motorDir, File outDir) throws Exception {
+    File f;
+    if (name.equals("staged-off-booster")) {
+      f = build("staged-bp", motorDir, outDir);
+    } else {
+      Rocket r = new Rocket(); r.setName(name);
+      AxialStage s0 = new AxialStage(); s0.setName("Sustainer"); r.addChild(s0);
+      AxialStage s1 = new AxialStage(); s1.setName("Middle"); r.addChild(s1);
+      AxialStage s2 = new AxialStage(); s2.setName("Bottom"); r.addChild(s2);
+      double radius = 0.0165;
+      InnerTube t0 = stage(s0, true, radius, 0.35, 0.009, 0.075);
+      InnerTube t1 = stage(s1, false, radius, 0.12, 0.012, 0.075);
+      InnerTube t2 = stage(s2, false, radius, 0.12, 0.012, 0.075);
+      for (AxialStage s : new AxialStage[] { s1, s2 }) {
+        StageSeparationConfiguration sep = s.getSeparationConfigurations().getDefault();
+        sep.setSeparationEvent(StageSeparationConfiguration.SeparationEvent.UPPER_IGNITION);
+        sep.setSeparationDelay(0.0);
+      }
+      FlightConfigurationId id = new FlightConfigurationId("6a0f1c1e-1b2d-4c1a-9f00-0000000000d2");
+      Motor c6 = ReferenceHarness.loadMotor(motorDir, "Estes_C6.eng", "C6");
+      Motor d12 = ReferenceHarness.loadMotor(motorDir, "Estes_D12.eng", "D12");
+      MotorConfiguration m0 = new MotorConfiguration(t0, id);
+      m0.setMotor(c6); m0.setEjectionDelay(5.0); m0.setIgnitionEvent(IgnitionEvent.AUTOMATIC);
+      t0.setMotorConfig(m0, id);
+      for (InnerTube t : new InnerTube[] { t1, t2 }) {
+        MotorConfiguration m = new MotorConfiguration(t, id);
+        m.setMotor(d12); m.setEjectionDelay(0.0); m.setIgnitionEvent(IgnitionEvent.AUTOMATIC);
+        t.setMotorConfig(m, id);
+      }
+      r.createFlightConfiguration(id);
+      r.setSelectedConfiguration(id);
+      f = new File(outDir, name + ".ork");
+      new GeneralRocketSaver().save(f, OpenRocketDocumentFactory.createDocumentFromRocket(r));
+    }
+    OpenRocketDocument doc = new GeneralRocketLoader(f).load();
+    Rocket r = doc.getRocket();
+    r.getSelectedConfiguration().clearStage(1);
+    File out = new File(outDir, name + ".ork");
+    new GeneralRocketSaver().save(out, doc);
+    for (String line : fileText(out).split("\n")) {
+      if (line.contains("<stage number=")) System.out.printf("  file:%s%n", line);
+    }
+    return out;
   }
 
   static void probe(File f) throws Exception {

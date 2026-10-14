@@ -359,9 +359,17 @@ describe('inputs are refused, reported as malformed or approximated, by element 
   });
 
   it('structure: stages, motors, mounts, version, reference type', () => {
-    unsupported(
+    // Plan 0064: a second stage is read; one with no separation event in the file is listed.
+    const twoStages = parseOrk(
       edit(r1, '</stage>', '</stage><stage><name>Booster</name><subcomponents/></stage>'),
-      /2 stages/,
+      'edited.ork',
+    );
+    expect(twoStages.stages).toEqual([
+      { name: 'Sustainer' },
+      { name: 'Booster', separation: { event: 'upper-ignition', delay: 0 } },
+    ]);
+    expect(twoStages.approximations.map((a) => a.what)).toContain(
+      'its separation event, which the file does not give',
     );
     unsupported(edit(r1, 'version="1.10"', 'version="2.0"'), /format version "2.0"/);
     unsupported(edit(r1, '<referencetype>maximum', '<referencetype>nose'), /reference length/);
@@ -377,22 +385,26 @@ describe('inputs are refused, reported as malformed or approximated, by element 
     );
     expect(none.motorMount).toBeUndefined();
     expect(none.notices.join(' ')).toMatch(/none is marked as the default/);
-    unsupported(
-      edit(
-        r1,
-        '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>0.0',
-        '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>2.0',
-      ),
-      /motor ignition delay/,
-    );
-    unsupported(
+    // Plan 0064: an ignition delay is read, and a second motor mount is a second motor.
+    expect(
+      parseOrk(
+        edit(
+          r1,
+          '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>0.0',
+          '<ignitionevent>automatic</ignitionevent>\n                    <ignitiondelay>2.0',
+        ),
+        'edited.ork',
+      ).motorMount?.ignition,
+    ).toEqual({ event: 'automatic', delay: 2 });
+    const twoMounts = parseOrk(
       edit(
         r1,
         '<subcomponents>\n              <trapezoidfinset>',
         '<subcomponents><innertube><name>Second mount</name><axialoffset method="top">0.0</axialoffset><material type="bulk" density="700.0">p</material><length>0.05</length><outerradius>0.01</outerradius><thickness>0.001</thickness><motormount><overhang>0.0</overhang><motor configid="87104846-a550-42cb-8c9c-36360f4ef57c"><manufacturer>m</manufacturer><designation>d</designation><diameter>0.018</diameter><length>0.07</length><delay>3.0</delay></motor></motormount></innertube><trapezoidfinset>',
       ),
-      /more than one motor mount/,
+      'edited.ork',
     );
+    expect(twoMounts.motorMounts.map((m) => m.designation)).toEqual(['d', 'D12']);
     // Plan 0057: a cluster is n tubes holding the same motor, at OpenRocket's layout offsets.
     const double = parseOrk(
       edit(r1, '<clusterconfiguration>single', '<clusterconfiguration>double'),

@@ -74,6 +74,10 @@ Part 2 is two pull requests: 2a (the engine's further events and the design file
   - inactive stages;
   - each stage's recovery devices and stage overrides.
 - **2b, reference.** The probe's staged rockets are imported and flown against OpenRocket's figures: apogee within 5 % and maximum velocity within 3 % (CLAUDE.md 7.4), and the separation and ignition times. OpenRocket's own examples are compared from the recorded values only; their files stay in OpenRocket.
+- **2b, measured on the way** (D-098):
+  - the file's words for every event (probe part 4);
+  - a stage switched off at the bottom or in the middle (part 5);
+  - a lower stage's mass and CG override, whose CG is from the stage's front (part 6).
 
 ## 4. App and the MCP server (part 3)
 

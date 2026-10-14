@@ -106,6 +106,15 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - Step 3, design links (plan 0063, D-095): `#design=v1.` links open a design in the app (fresh id, stored at once, address cleared), bounded like every reader; the MCP server's `design_link` tool makes them.
 - Multi-stage (plan 0064, D-091, D-096), part 1: the engine flies staged vehicles (motors igniting on Table 4.2 events, separated stages leaving with their parts, motors and devices); single-stage results bit-identical; two-stage vacuum flights match the closed form.
 - Multi-stage part 2a (D-097): OpenRocket's staging measured as a black box (its two examples and four built rockets, including an empty stage). The engine has OpenRocket's nine separation events and a "never" ignition, and says why a motor never lit or a stage never separated. The design file is schema 2 (version-1 files unchanged): stages, a stage per part and device, further motor mounts and OpenRocket's ignition events, with "automatic" as OpenRocket does it. Golden outputs unchanged.
+- Multi-stage part 2b (D-098): staged `.ork` files import. The reader handles:
+  - stages one after another;
+  - every motor mount with its ignition;
+  - each stage's separation, per configuration;
+  - stages switched off, as OpenRocket does;
+  - per-stage mass overrides;
+  - ignition delays and second motor mounts, which were refused before.
+
+  The probe's staged rockets fly within tolerance of OpenRocket: apogee +2.78 % and +1.17 %, maximum velocity +2.21 % and −1.89 %, staging times within 1 ms.
 
 ## In progress
 
@@ -113,7 +122,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0064 part 2b (`.ork` stages import, OpenRocket comparison) and part 3 (stage editing in the app and the MCP server). Then plan 0061 step 4 (the modelling benchmark).
+- Plan 0064 part 3 (stage editing in the app and the MCP server, and each stage configuration's stability). Then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
