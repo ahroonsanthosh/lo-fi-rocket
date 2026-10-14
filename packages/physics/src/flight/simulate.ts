@@ -26,6 +26,7 @@ import {
   IntegrationUnstableError,
   InvalidInputError,
   NonFiniteResultError,
+  PhysicsError,
   SimulationStalledError,
 } from '../errors.js';
 import {
@@ -1662,7 +1663,20 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         );
       }
     }
-    let attempt = stepOnce(hTry);
+    // Plan 0065: with Dormand–Prince, a trial step so long that its stages leave the models' range
+    // (a canopy opening on a fast rocket after a long smooth coast, a stiff decay) is a rejected
+    // step, shrunk and retried like one whose error estimate is too large. Only when no step down
+    // to the minimum works is the error the flight's.
+    const tryStep = (hh: number): { yNext: number[]; errorNorm: number; error?: PhysicsError } => {
+      if (options.integrator.kind === 'rk4') return stepOnce(hh);
+      try {
+        return stepOnce(hh);
+      } catch (error) {
+        if (error instanceof PhysicsError) return { yNext: y, errorNorm: Infinity, error };
+        throw error;
+      }
+    };
+    let attempt = tryStep(hTry);
     if (options.integrator.kind === 'dormand-prince') {
       const o = {
         relativeTolerance: options.integrator.relativeTolerance,
@@ -1673,9 +1687,10 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       let tries = 0;
       while (attempt.errorNorm > 1 && hTry > 1e-9 && tries < 40) {
         hTry = nextStepSize(hTry, attempt.errorNorm, o);
-        attempt = stepOnce(hTry);
+        attempt = tryStep(hTry);
         tries++;
       }
+      if (attempt.error !== undefined) throw attempt.error;
       if (attempt.errorNorm > 1) {
         const f = derive(ctx, phase, t, y).derived.flight;
         throw new SimulationStalledError(

@@ -121,12 +121,12 @@ const FIELDS: Record<Component['kind'], readonly NumField[]> = {
     { key: 'density', label: 'Material density', kind: 'density', rule: 'positive' },
   ],
   massComponent: [
-    { key: 'mass', label: 'Mass', kind: 'g', rule: 'positive' },
+    { key: 'mass', label: 'Mass', kind: 'g', rule: 'non-negative' },
     { key: 'length', label: 'Length', kind: 'mm', rule: 'positive' },
     { key: 'radius', label: 'Radius', kind: 'mm', rule: 'positive' },
   ],
   parachute: [
-    { key: 'mass', label: 'Packed mass', kind: 'g', rule: 'positive' },
+    { key: 'mass', label: 'Packed mass', kind: 'g', rule: 'non-negative' },
     { key: 'length', label: 'Packed length', kind: 'mm', rule: 'positive' },
     { key: 'radius', label: 'Packed radius', kind: 'mm', rule: 'positive' },
   ],

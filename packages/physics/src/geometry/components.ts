@@ -294,7 +294,8 @@ export function componentMassProperties(c: Component): MassProperties {
     }
     case 'massComponent':
     case 'parachute': {
-      requirePositive('mass', c.mass);
+      // Plan 0065: 0 kg is a placeholder part that adds nothing (as a 0 kg override, GEO-12).
+      requireNonNegative('mass', c.mass);
       requirePositive('length', c.length);
       requirePositive('radius', c.radius);
       const volume = Math.PI * c.radius * c.radius * c.length;

@@ -114,6 +114,29 @@ describe('mass and CG overrides against OpenRocket (D-073)', () => {
     );
   });
 
+  it('a 0 kg mass item adds nothing: mass, CG and inertia as without it (plan 0065)', () => {
+    const item = {
+      position: metres(0.3),
+      component: {
+        kind: 'massComponent' as const,
+        mass: kilograms(0),
+        length: metres(0.02),
+        radius: metres(0.01),
+      },
+    };
+    const without = rocketMassProperties(probe());
+    const withItem = rocketMassProperties([...probe(), item]);
+    expect(withItem.mass).toBe(without.mass);
+    expect(withItem.cg).toBe(without.cg);
+    expect(withItem.inertiaLongitudinal).toBe(without.inertiaLongitudinal);
+    expect(() =>
+      rocketMassProperties([
+        ...probe(),
+        { ...item, component: { ...item.component, mass: kilograms(-0.01) } },
+      ]),
+    ).toThrow(/mass is invalid: received -0.01; must be 0 or greater/);
+  });
+
   it('a zero mass override removes the component from the total', () => {
     const r = rocketMassProperties(probe({ mass: kilograms(0) }));
     expect(r.mass).toBeCloseTo(

@@ -820,3 +820,22 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - A motor that can never light (for example the sustainer once a booster stage without a motor is added) is a danger in the checks before any flight, once, not repeated by the flight check. A motor too wide for its tube is checked for every stage's mount.
   - The motor view edits one stage at a time.
   - A second motor in one stage (an air start) comes from a file or the MCP server; the app shows the stage's first mount.
+
+## D-101 (2026-10-14): Random designs, and the fixes they found
+
+- **Decision:**
+  - **The test.** A property test flies random sensible designs (plan 0065): any nose, one or two stages, any fins, any bundled motor, a parachute, any ordinary pad and wind. Each must survive a file and fly to a finite result without being refused.
+  - **Float64 edge cases.** Where a model's formula divides by a quantity that can reach the subnormal numbers (a roll rate decaying to nothing, the first instant off a still rail, a rail tilted by next to nothing), the formula's finite limit is computed instead of ∞ × 0:
+    - the rotation axis and `normalise` scale by an exact power of two first;
+    - the roll damping is 0 when the dynamic pressure has underflowed to 0 (below 1e-150 N·m in truth).
+  - **Rejected trial steps.** A Dormand–Prince trial step whose stages leave a model's range is a rejected step (error ∞), shrunk and retried. If no step works down to the minimum, the model's own error is reported.
+  - **0 kg parts.** A mass item or packed parachute of 0 kg is allowed and adds nothing.
+- **Why:**
+  - Rule 3 and section 8: these designs are ordinary (a calm day, a parachute opening on the way down), yet 25 of 60 failed with messages about internal quantities. That is the program failing, not the design.
+  - None of the fixes changes a result where the old code gave one: the golden outputs are bit-identical.
+- **Alternatives:**
+  - Clamping small values to 0 (a silent change of the state; the exact scaling and the formula's limit are exact).
+  - A smaller maximum step for every flight (slower everywhere, and still not a guarantee).
+  - Resetting the step after each event (helps at deployments only).
+- **Consequences:**
+  - 300 random designs fly. 79 of them end at the model limit (unstable or tumbling designs past 90°, D-046): the large-angle flight after that is the next gap (task 5).
