@@ -22,7 +22,10 @@ import {
   searchMotors,
   ZERO_VARIATIONS,
   type DeployEvent,
+  type DesignStage,
   type DispersionResult,
+  type IgnitionEvent,
+  type MotorMount,
   type DispersionVariations,
   type MotorSummary,
   type Transport,
@@ -43,6 +46,7 @@ import {
   type Approximation,
   type ApproximationImpact,
   type MotorDefinition,
+  type SeparationEvent,
 } from '@lo-fi-rocket/physics';
 import { checked, EditError, subjectOf, type QuantityInput } from './edit.js';
 import { toSi } from './quantity.js';
@@ -99,6 +103,8 @@ export interface RecoveryInput {
     readonly altitude?: QuantityInput;
     readonly delay?: QuantityInput;
   };
+  /** Plan 0064: the stage the device is on (0, the top stage, when left out). */
+  readonly stage?: number;
 }
 
 export interface MotorInput {
@@ -108,6 +114,20 @@ export interface MotorInput {
   /** Seconds after burnout, or "plugged" for no ejection charge. */
   readonly ejectionDelay?: QuantityInput;
   readonly cluster?: readonly { readonly y: QuantityInput; readonly z: QuantityInput }[];
+  /** Plan 0064: when the motor ignites; automatic when left out. */
+  readonly ignition?: { readonly event: IgnitionEvent; readonly delay?: QuantityInput };
+  /** Plan 0064: add the mount beside the stage's existing one (an air start) instead of replacing it. */
+  readonly add?: boolean;
+}
+
+/** Plan 0064: a stage, top first; every stage but the top one says when it separates. */
+export interface StageInput {
+  readonly name: string;
+  readonly separation?: {
+    readonly event: SeparationEvent;
+    readonly delay?: QuantityInput;
+    readonly altitude?: QuantityInput;
+  };
 }
 
 export interface AssumptionInput {
@@ -119,6 +139,9 @@ export interface AssumptionInput {
 }
 
 const MOTOR_MOUNT = 'Motor mount';
+/** The subject of a mount's "not given" notes: the first mount's is "Motor mount" (plan 0062). */
+const mountSubject = (first: boolean, partName: string): string =>
+  first ? MOTOR_MOUNT : `${MOTOR_MOUNT} "${partName}"`;
 const MOTOR_WHATS = new Set(['ejection delay not given', 'motor overhang not given']);
 const RECOVERY_WHATS = new Set(['drag coefficient not given']);
 
@@ -418,13 +441,32 @@ export class Session {
     const motor = this.motors.get(input.motorId);
     if (motor === undefined)
       throw new EditError(`no motor "${input.motorId}" in the library (find_motor lists them)`);
+    // Plan 0064: the mount replaces its stage's mount (or the one on the same part), or is added.
+    const stageOf = (partId: string): number =>
+      design.components.find((c) => c.id === partId)?.stage ?? 0;
+    const stage = mount.stage ?? 0;
+    const sameSlot = (m: MotorMount): boolean =>
+      m.componentId === mount.id || (input.add !== true && stageOf(m.componentId) === stage);
+    const additional = [...(design.additionalMotorMounts ?? [])];
+    const replaced = [design.motorMount, ...additional].find(
+      (m): m is MotorMount => m !== undefined && sameSlot(m),
+    );
+    const first = design.motorMount === undefined || design.motorMount === replaced;
+    const subject = mountSubject(first, mount.name);
+    const oldSubject =
+      replaced === undefined
+        ? subject
+        : mountSubject(
+            first,
+            design.components.find((c) => c.id === replaced.componentId)?.name ?? '',
+          );
     const approximations: Approximation[] = (design.approximations ?? []).filter(
-      (a) => !(a.subject === MOTOR_MOUNT && MOTOR_WHATS.has(a.what)),
+      (a) => !((a.subject === subject || a.subject === oldSubject) && MOTOR_WHATS.has(a.what)),
     );
     let ejectionDelay: number | undefined;
     if (input.ejectionDelay === undefined) {
       approximations.push({
-        subject: MOTOR_MOUNT,
+        subject,
         what: 'ejection delay not given',
         method: `treated as plugged, no ejection charge${Array.isArray(motor.delays) && motor.delays.length > 0 ? ` (the motor file lists ${motor.delays.join(', ')} s)` : ''}; ask the user which delay they fly`,
         effect: 'a parachute set to open at the ejection charge never opens in this simulation',
@@ -436,7 +478,7 @@ export class Session {
     const overhang = input.overhang === undefined ? 0 : toSi('overhang', 'length', input.overhang);
     if (input.overhang === undefined) {
       approximations.push({
-        subject: MOTOR_MOUNT,
+        subject,
         what: 'motor overhang not given',
         method: 'the motor’s aft end level with the mount’s aft end (0 overhang); ask the user',
         effect:
@@ -448,20 +490,42 @@ export class Session {
       y: metres(toSi(`cluster[${String(i)}].y`, 'length', o.y)),
       z: metres(toSi(`cluster[${String(i)}].z`, 'length', o.z)),
     }));
-    const next = checked({
-      ...withApproximations(design, approximations),
-      motorMount: {
-        componentId: mount.id,
-        overhang: metres(overhang),
-        motor: {
-          definition: motor.definition,
-          provenance: motor.provenance,
-          ...(ejectionDelay === undefined ? {} : { ejectionDelay: seconds(ejectionDelay) }),
-        },
-        ...(cluster === undefined || cluster.length === 0 ? {} : { cluster }),
+    const ignition =
+      input.ignition === undefined
+        ? undefined
+        : {
+            event: input.ignition.event,
+            delay: seconds(
+              input.ignition.delay === undefined
+                ? 0
+                : toSi('ignition.delay', 'time', input.ignition.delay),
+            ),
+          };
+    const placed: MotorMount = {
+      componentId: mount.id,
+      overhang: metres(overhang),
+      motor: {
+        definition: motor.definition,
+        provenance: motor.provenance,
+        ...(ejectionDelay === undefined ? {} : { ejectionDelay: seconds(ejectionDelay) }),
       },
-    });
-    return { design: this.put(next), fitProblems: designMotorFitProblems(next) };
+      ...(cluster === undefined || cluster.length === 0 ? {} : { cluster }),
+      ...(ignition === undefined ? {} : { ignition }),
+    };
+    const others = additional.filter((m) => m !== replaced);
+    const rest = first
+      ? design.motorMount === undefined || design.motorMount === replaced
+        ? others
+        : [design.motorMount, ...others]
+      : [...others, placed];
+    const next: { -readonly [K in keyof RocketDesign]: RocketDesign[K] } = {
+      ...withApproximations(design, approximations),
+      additionalMotorMounts: rest,
+    };
+    if (first) next.motorMount = placed;
+    if (rest.length === 0) delete next.additionalMotorMounts;
+    const valid = checked(next);
+    return { design: this.put(valid), fitProblems: designMotorFitProblems(valid) };
   }
 
   setRecovery(id: string, devices: readonly RecoveryInput[]): RocketDesign {
@@ -506,9 +570,79 @@ export class Session {
                 ),
               }),
         },
+        ...(d.stage === undefined || d.stage === 0 ? {} : { stage: d.stage }),
       };
     });
     return this.put(checked({ ...withApproximations(design, approximations), recovery }));
+  }
+
+  /**
+   * Plan 0064: the stages, top first. A separation delay left out is 0 s and recorded as "not
+   * given"; one stage clears the list (a one-stage rocket).
+   */
+  setStages(id: string, input: readonly StageInput[]): RocketDesign {
+    const design = this.get(id);
+    if (input.length === 0) throw new EditError('give at least one stage (the top stage)');
+    const approximations: Approximation[] = (design.approximations ?? []).filter(
+      (a) => !(a.subject.startsWith('Stage "') && a.what === 'separation delay not given'),
+    );
+    const stages: DesignStage[] = input.map((st, k) => {
+      const name = text(`stages[${String(k)}].name`, st.name);
+      if (k === 0) {
+        if (st.separation !== undefined) {
+          throw new EditError(
+            'the top stage (stages[0]) never separates; leave out its separation',
+          );
+        }
+        return { name };
+      }
+      const sep = st.separation;
+      if (sep === undefined) {
+        throw new EditError(
+          `stages[${String(k)}].separation is needed: when "${name}" leaves the vehicle`,
+        );
+      }
+      if (sep.delay === undefined) {
+        approximations.push({
+          subject: `Stage "${name}"`,
+          what: 'separation delay not given',
+          method: '0 s after the event; ask the user',
+          effect: 'the stage may leave a little later in the real flight',
+          impact: 'minor',
+        });
+      }
+      const altitudeEvent =
+        sep.event === 'altitude-ascending' || sep.event === 'altitude-descending';
+      if (altitudeEvent && sep.altitude === undefined) {
+        throw new EditError(
+          `stages[${String(k)}].separation.altitude is needed for the event "${sep.event}"`,
+        );
+      }
+      return {
+        name,
+        separation: {
+          event: sep.event,
+          delay: seconds(
+            sep.delay === undefined
+              ? 0
+              : toSi(`stages[${String(k)}].separation.delay`, 'time', sep.delay),
+          ),
+          ...(sep.altitude === undefined
+            ? {}
+            : {
+                altitude: metres(
+                  toSi(`stages[${String(k)}].separation.altitude`, 'length', sep.altitude),
+                ),
+              }),
+        },
+      };
+    });
+    const next: { -readonly [K in keyof RocketDesign]: RocketDesign[K] } = {
+      ...withApproximations(design, approximations),
+      stages,
+    };
+    if (stages.length === 1) delete next.stages;
+    return this.put(checked(next));
   }
 
   setLaunch(id: string, input: LaunchInput): RocketDesign {

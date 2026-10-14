@@ -40,7 +40,15 @@ export const INSTRUCTIONS = `Lo-Fi Rocket models and simulates model and high-po
 4. If the rocket is built, ask for its weighed mass and balance point with the motor out, and set_as_built.
 5. Run review_design and clear or explain every "must" item before simulate. Never compute physics yourself.
 6. With every result, report the confidence and the largest approximations, the warnings, and the launch settings not given. Say plainly that the figures are predictions with the stated confidence, not guarantees; safety decisions (stability, rail exit speed, deployment speed) need the user's own judgement and their club's or the manufacturer's rules.
-7. Designs live only while this connection is open: design_link gives a link that opens the design in the web app, and export_design gives the .lofi.json file to save (the web app opens it with File > Open).`;
+7. Designs live only while this connection is open: design_link gives a link that opens the design in the web app, and export_design gives the .lofi.json file to save (the web app opens it with File > Open).
+8. A multi-stage rocket: set_stages names the stages, top first, and when each lower stage separates. Give every part its stage in add_part (0 is the top stage), each stage's parachute its stage in set_recovery, and each stage's motor with set_motor in a tube of that stage, with its ignition (automatic: the bottom stage at launch, every other stage at the ejection charge of the stage directly below, as OpenRocket). A separated stage leaves the vehicle with every stage below it; its own flight is not simulated.`;
+
+const stageNumber = z
+  .number()
+  .int()
+  .min(0)
+  .max(20)
+  .describe('The stage, 0 being the top stage (set_stages lists them).');
 
 const quantity = z.union([z.number(), z.string().max(64)]);
 const id = z.string().min(1).max(200);
@@ -265,6 +273,7 @@ export function createServer(session: Session = new Session()): McpServer {
         name: z.string().min(1).max(200).optional(),
         position: position.optional(),
         fields: fields.optional(),
+        stage: stageNumber.optional(),
       },
       annotations: edits,
     },
@@ -276,6 +285,7 @@ export function createServer(session: Session = new Session()): McpServer {
           ...(input.name === undefined ? {} : { name: input.name }),
           ...(input.position === undefined ? {} : { position: input.position as PositionInput }),
           ...(input.fields === undefined ? {} : { fields: input.fields }),
+          ...(input.stage === undefined ? {} : { stage: input.stage }),
         });
         session.put(result.design);
         return { part_id: result.part?.id, not_given: result.defaulted, part: result.part };
@@ -295,6 +305,7 @@ export function createServer(session: Session = new Session()): McpServer {
         position: position.optional(),
         fields: fields.optional(),
         remove: z.array(z.string().max(64)).max(20).optional(),
+        stage: stageNumber.optional(),
       },
       annotations: edits,
     },
@@ -305,6 +316,7 @@ export function createServer(session: Session = new Session()): McpServer {
           ...(input.position === undefined ? {} : { position: input.position as PositionInput }),
           ...(input.fields === undefined ? {} : { fields: input.fields }),
           ...(input.remove === undefined ? {} : { remove: input.remove }),
+          ...(input.stage === undefined ? {} : { stage: input.stage }),
         });
         session.put(result.design);
         return { part: result.part };
@@ -315,7 +327,7 @@ export function createServer(session: Session = new Session()): McpServer {
     'remove_part',
     {
       title: 'Remove a part',
-      description: 'Remove a part (and the motor mount, if it held the motor).',
+      description: 'Remove a part (and any motor mount on it).',
       inputSchema: { designId: id, partId: id },
       annotations: edits,
     },
@@ -440,7 +452,7 @@ export function createServer(session: Session = new Session()): McpServer {
     {
       title: 'Set the motor',
       description:
-        'Put a library motor in a motor mount (an inner tube or body tube). Give the ejection delay the user flies (seconds, or "plugged") and the overhang past the mount’s aft end; either left out is recorded as "not given". cluster gives each motor’s offset (y, z) from the axis for a cluster.',
+        'Put a library motor in a motor mount (an inner tube or body tube). Give the ejection delay the user flies (seconds, or "plugged") and the overhang past the mount’s aft end; either left out is recorded as "not given". cluster gives each motor’s offset (y, z) from the axis for a cluster. In a staged rocket the motor belongs to the mount’s stage and replaces that stage’s motor (add: true adds one beside it, an air start); ignition says when it lights (automatic when left out: the bottom stage at launch, any other stage at the ejection charge of the stage directly below; burnout and ejection are those of the stage directly below).',
       inputSchema: {
         designId: id,
         mountPartId: id,
@@ -451,6 +463,13 @@ export function createServer(session: Session = new Session()): McpServer {
           .array(z.object({ y: quantity, z: quantity }))
           .max(64)
           .optional(),
+        ignition: z
+          .object({
+            event: z.enum(['automatic', 'launch', 'burnout', 'ejection', 'never']),
+            delay: quantity.optional(),
+          })
+          .optional(),
+        add: z.boolean().optional(),
       },
       annotations: edits,
     },
@@ -462,9 +481,20 @@ export function createServer(session: Session = new Session()): McpServer {
           ...(input.overhang === undefined ? {} : { overhang: input.overhang }),
           ...(input.ejectionDelay === undefined ? {} : { ejectionDelay: input.ejectionDelay }),
           ...(input.cluster === undefined ? {} : { cluster: input.cluster }),
+          ...(input.ignition === undefined
+            ? {}
+            : {
+                ignition: {
+                  event: input.ignition.event,
+                  ...(input.ignition.delay === undefined ? {} : { delay: input.ignition.delay }),
+                },
+              }),
+          ...(input.add === undefined ? {} : { add: input.add }),
         });
+        const summary = designSummary(design, session.launchSettingsGiven(design.id));
         return {
-          motor: designSummary(design, session.launchSettingsGiven(design.id))['motor'],
+          motor: summary['motor'],
+          ...(summary['motors'] === undefined ? {} : { motors: summary['motors'] }),
           fit_problems: fitProblems,
         };
       }),
@@ -475,7 +505,7 @@ export function createServer(session: Session = new Session()): McpServer {
     {
       title: 'Set the recovery devices',
       description:
-        'Replace the recovery devices (parachutes, streamers): canopy diameter, drag coefficient (left out: 0.8, recorded as "not given") and when it opens: apogee, ejection (the motor’s charge), altitude (descending through it), launch or never, plus a delay. The packed mass is a parachute part (add_part kind parachute).',
+        'Replace the recovery devices (parachutes, streamers): canopy diameter, drag coefficient (left out: 0.8, recorded as "not given") and when it opens: apogee, ejection (the motor’s charge), altitude (descending through it), launch or never, plus a delay. The packed mass is a parachute part (add_part kind parachute). In a staged rocket give each device its stage: it leaves with that stage, and "ejection" is that stage’s motor’s charge.',
       inputSchema: {
         designId: id,
         devices: z
@@ -489,6 +519,7 @@ export function createServer(session: Session = new Session()): McpServer {
                 altitude: quantity.optional(),
                 delay: quantity.optional(),
               }),
+              stage: stageNumber.optional(),
             }),
           )
           .max(20),
@@ -508,10 +539,73 @@ export function createServer(session: Session = new Session()): McpServer {
               ...(d.deploy.altitude === undefined ? {} : { altitude: d.deploy.altitude }),
               ...(d.deploy.delay === undefined ? {} : { delay: d.deploy.delay }),
             },
+            ...(d.stage === undefined ? {} : { stage: d.stage }),
           })),
         );
         return {
           recovery: designSummary(design, session.launchSettingsGiven(designId))['recovery'],
+        };
+      }),
+  );
+
+  server.registerTool(
+    'set_stages',
+    {
+      title: 'Set the stages',
+      description:
+        'Name the stages of a multi-stage rocket, top first, and say when each lower stage separates: upper-ignition (the stage above lights), ignition, burnout or ejection (its own motor’s), launch, apogee, altitude-ascending or altitude-descending (with altitude above the pad), or never, plus a delay (left out: 0 s, recorded as "not given"). One stage makes it a one-stage rocket again. Then give parts, recovery devices and motors their stage.',
+      inputSchema: {
+        designId: id,
+        stages: z
+          .array(
+            z.object({
+              name: z.string().min(1).max(200),
+              separation: z
+                .object({
+                  event: z.enum([
+                    'upper-ignition',
+                    'ignition',
+                    'burnout',
+                    'ejection',
+                    'launch',
+                    'apogee',
+                    'altitude-ascending',
+                    'altitude-descending',
+                    'never',
+                  ]),
+                  delay: quantity.optional(),
+                  altitude: quantity.optional(),
+                })
+                .optional(),
+            }),
+          )
+          .min(1)
+          .max(10),
+      },
+      annotations: edits,
+    },
+    ({ designId, stages }) =>
+      respond(() => {
+        const design = session.setStages(
+          designId,
+          stages.map((st) => ({
+            name: st.name,
+            ...(st.separation === undefined
+              ? {}
+              : {
+                  separation: {
+                    event: st.separation.event,
+                    ...(st.separation.delay === undefined ? {} : { delay: st.separation.delay }),
+                    ...(st.separation.altitude === undefined
+                      ? {}
+                      : { altitude: st.separation.altitude }),
+                  },
+                }),
+          })),
+        );
+        return {
+          stages:
+            designSummary(design, session.launchSettingsGiven(designId))['stages'] ?? 'one stage',
         };
       }),
   );

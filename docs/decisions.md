@@ -788,3 +788,15 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Applying a staged file's stage override to the whole design (the booster's mass would stay with the sustainer after separation).
 - **Consequences:**
   - OpenRocket's "Two stage high power rocket" and "Three stage low power rocket" import. Their motors (H148R, I59WN-P, I357T, B6) are not in the bundled library, so they fly once those motors are chosen; their files stay in OpenRocket and their recorded figures are in values.txt part 1.
+
+## D-099 (2026-10-14): Staging through the MCP server
+
+- **Decision:** Claude builds staged rockets with the same tools as one-stage ones (plan 0064 part 3a).
+  - **Stages.** `set_stages` lists the stages, top first; every stage but the top one needs a separation event. A delay left out is 0 s and recorded as "not given" (minor), as every value the user did not give (D-092). One stage makes the design a one-stage rocket; while parts still name a lower stage, this is refused with the validator's message.
+  - **Parts and devices.** Each part and recovery device takes a stage (0 when left out, the top stage, so one-stage use is unchanged).
+  - **Motors.** A motor belongs to its mount part's stage (D-097). `set_motor` replaces the motor of that stage, so a one-stage design keeps its one mount as before; `add: true` adds a mount beside it (an air start). The ignition is optional: automatic when left out, which is OpenRocket's rule and the right one for a one-stage rocket, so it is not a "not given" note. The resolved ignition is shown with each motor, so Claude reports what will happen.
+  - **Review.** A motor whose ignition event can never come is a "must" in `review_design`.
+- **Why:** The owner's goal (any design) and D-091; the tools stay one per task, and every default stays visible.
+- **Consequences:**
+  - 24 tools (the bundle's smoke test).
+  - `update_part` no longer drops a part's stage (it rebuilt parts without it since schema 2).

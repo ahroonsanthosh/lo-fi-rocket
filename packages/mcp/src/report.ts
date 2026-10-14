@@ -7,7 +7,9 @@ import {
   componentLength,
   designFlightWarnings,
   designMassProperties,
+  designIgnitions,
   designMotor,
+  designMotors,
   designMotorFitProblems,
   designSimulationOptions,
   designStability,
@@ -67,6 +69,7 @@ export function partList(design: RocketDesign): Record<string, unknown>[] {
     kind: c.component.kind,
     position_m: r(c.position),
     length_m: r(componentLength(c.component)),
+    ...(c.stage === undefined ? {} : { stage: c.stage }),
     fields: c.component,
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
     not_given: (c.approximations ?? [])
@@ -98,11 +101,26 @@ export function designSummary(
               ? {}
               : { cluster_offsets_m: design.motorMount.cluster }),
           },
+    // Plan 0064: the stages, and every motor with its stage and ignition, for a staged design.
+    ...(design.stages === undefined ? {} : { stages: design.stages }),
+    ...(design.stages === undefined && design.additionalMotorMounts === undefined
+      ? {}
+      : {
+          motors: designMotors(design).map((dm, i) => ({
+            mount_part_id: dm.mount.componentId,
+            stage: dm.stage,
+            designation: `${dm.selection.definition.manufacturer} ${dm.selection.definition.designation}`,
+            ejection_delay_s: dm.selection.ejectionDelay ?? 'plugged',
+            ignition_given: dm.mount.ignition ?? 'automatic',
+            ignition_resolved: designIgnitions(design)[i]?.ignition,
+          })),
+        }),
     recovery: design.recovery.map((d) => ({
       name: d.name,
       diameter_m: d.diameter,
       drag_coefficient: d.dragCoefficient,
       deploy: d.deploy,
+      ...(d.stage === undefined ? {} : { stage: d.stage }),
     })),
     launch: {
       site_altitude_m: l.site.altitude,
@@ -255,8 +273,11 @@ export function reviewReport(
       'There are no fins: unless the rocket is meant to fly without fins, add the fin set.',
     );
   const m = designMotor(design);
-  if (m === undefined) add('must', 'No motor is selected: set_motor.');
+  if (designMotors(design).length === 0) add('must', 'No motor is selected: set_motor.');
   for (const p of designMotorFitProblems(design)) add('must', p);
+  // Plan 0064: a motor whose ignition event can never come.
+  for (const { problem } of designIgnitions(design))
+    if (problem !== undefined) add('must', problem);
   for (const c of design.components) {
     const missing = (c.approximations ?? []).filter((a) => a.what.endsWith(' not given'));
     if (missing.length > 0) {

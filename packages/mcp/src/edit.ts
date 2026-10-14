@@ -347,6 +347,8 @@ export interface AddPartInput {
   readonly name?: string;
   readonly position?: PositionInput;
   readonly fields?: Readonly<Record<string, unknown>>;
+  /** Plan 0064: the stage the part belongs to (0, the top stage, when left out). */
+  readonly stage?: number;
 }
 
 export interface EditResult {
@@ -449,6 +451,7 @@ export function addPart(
     position: position as DesignComponent['position'],
     component: component as unknown as Component,
     ...(approximations.length === 0 ? {} : { approximations }),
+    ...(input.stage === undefined || input.stage === 0 ? {} : { stage: input.stage }),
   };
   const next = checked({ ...design, components: [...design.components, part] });
   return { design: next, part: next.components.find((c) => c.id === id), defaulted };
@@ -460,6 +463,8 @@ export interface UpdatePartInput {
   readonly fields?: Readonly<Record<string, unknown>>;
   /** Remove these optional fields (for example a nose cone's wallThickness to make it solid). */
   readonly remove?: readonly string[];
+  /** Plan 0064: move the part to this stage. */
+  readonly stage?: number;
 }
 
 /** Change a part; each field given clears its "not given" approximation. */
@@ -501,6 +506,8 @@ export function updatePart(design: RocketDesign, id: string, input: UpdatePartIn
     component: component as unknown as Component,
     ...(old.massOverride === undefined ? {} : { massOverride: old.massOverride }),
     ...(approximations.length === 0 ? {} : { approximations }),
+    // Plan 0064: the part keeps its stage unless moved.
+    ...((input.stage ?? old.stage ?? 0) === 0 ? {} : { stage: input.stage ?? old.stage }),
   };
   const next = checked({
     ...design,
