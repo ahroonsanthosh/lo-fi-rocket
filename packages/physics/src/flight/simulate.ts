@@ -13,6 +13,7 @@
 import {
   clusterApproximations,
   componentApproximations,
+  podApproximations,
   confidenceOf,
   type Approximation,
   type Confidence,
@@ -1085,9 +1086,11 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
       components,
       indices,
       structure: structuralMassParts(components),
+      // Plan 0070: the main body's length; a pod set's parts are outside it.
       rocketLength: components.reduce((s, p) => {
         const c = p.component;
-        return c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition'
+        return p.instances === undefined &&
+          (c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition')
           ? s + (c.length as number)
           : s;
       }, 0),
@@ -2220,6 +2223,7 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
       })),
     ),
+    ...podApproximations(vehicle.components),
     ...largeAngleApproximations(vehicle, ctx.largeAngleMethod, used.approximatedFinBeyondStall),
     ...(used.supersonicReverseFlow ? [SUPERSONIC_REVERSE_FLOW_APPROXIMATION] : []),
     ...(stages === undefined

@@ -345,15 +345,38 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const finSets: { wettedArea: number; thickness: number; meanChord: number }[] = [];
 
   const statics = staticEntries(input.components);
-  input.components.forEach(({ component: c }, index) => {
+  // Plan 0070 (D-106): a pod set's parts form their own body, outside the main one; each term is
+  // the part's own times the count of pods (Niskanen's methods per part, as OpenRocket applies them:
+  // reference/rockets/pod-probe/values.txt).
+  const podBodies = new Map<string, { count: number; geometry: ExternalGeometry }>();
+  input.components.forEach((placed, index) => {
+    const c = placed.component;
     const st = statics[index];
     if (st === undefined) return;
+    const n = placed.instances?.count ?? 1;
+    let body = geometry;
+    if (placed.instances !== undefined) {
+      const key = `${String(n)}@${String(placed.instances.radialOffset)}`;
+      const pod = podBodies.get(key) ?? {
+        count: n,
+        geometry: { length: 0, wettedBody: 0, baseRadius: 0, maxRadius: 0 },
+      };
+      podBodies.set(key, pod);
+      body = pod.geometry;
+    }
+    const push = (t: DragTerm): void => {
+      terms.push(
+        n === 1
+          ? t
+          : { ...t, source: `${t.source}, × ${String(n)} pods`, area: t.area * n, cd: t.cd * n },
+      );
+    };
     switch (c.kind) {
       case 'noseCone': {
-        geometry.length += st.length;
-        geometry.wettedBody += st.wetted;
-        geometry.baseRadius = st.aftRadius;
-        geometry.maxRadius = Math.max(geometry.maxRadius, st.aftRadius, st.foreRadius);
+        body.length += st.length;
+        body.wettedBody += st.wetted;
+        body.baseRadius = st.aftRadius;
+        body.maxRadius = Math.max(body.maxRadius, st.aftRadius, st.foreRadius);
         const r = noseConePressureDrag(
           c.shape,
           c.shapeParameter,
@@ -362,7 +385,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           input.mach,
         );
         warnings.push(...r.warnings);
-        terms.push({
+        push({
           index,
           kind: c.kind,
           source: `nose pressure (${r.method})`,
@@ -373,17 +396,17 @@ export function dragCoefficient(input: DragInputs): DragResult {
         break;
       }
       case 'bodyTube': {
-        geometry.length += st.length;
-        geometry.wettedBody += st.wetted;
-        geometry.baseRadius = st.aftRadius;
-        geometry.maxRadius = Math.max(geometry.maxRadius, st.aftRadius, st.foreRadius);
+        body.length += st.length;
+        body.wettedBody += st.wetted;
+        body.baseRadius = st.aftRadius;
+        body.maxRadius = Math.max(body.maxRadius, st.aftRadius, st.foreRadius);
         break;
       }
       case 'transition': {
-        geometry.length += st.length;
-        geometry.wettedBody += st.wetted;
-        geometry.baseRadius = st.aftRadius;
-        geometry.maxRadius = Math.max(geometry.maxRadius, st.aftRadius, st.foreRadius);
+        body.length += st.length;
+        body.wettedBody += st.wetted;
+        body.baseRadius = st.aftRadius;
+        body.maxRadius = Math.max(body.maxRadius, st.aftRadius, st.foreRadius);
         if (st.aftRadius > st.foreRadius) {
           const r = shoulderPressureDrag(
             c.shape,
@@ -395,7 +418,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
             input.mach,
           );
           warnings.push(...r.warnings);
-          terms.push({
+          push({
             index,
             kind: c.kind,
             source: `shoulder pressure (${r.method})`,
@@ -406,7 +429,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
         } else if (st.aftRadius < st.foreRadius) {
           const r = boatTailPressureDrag(st.length, st.foreRadius, st.aftRadius, input.mach);
           warnings.push(...r.warnings);
-          terms.push({
+          push({
             index,
             kind: c.kind,
             source: `boat tail pressure (γ = ${r.lengthToHeight.toFixed(3)})`,
@@ -426,13 +449,13 @@ export function dragCoefficient(input: DragInputs): DragResult {
           );
         }
         finSets.push({
-          wettedArea: st.finWetted,
+          wettedArea: st.finWetted * n,
           thickness: st.finThickness,
           meanChord: st.finMeanChord,
         });
         const r = finPressureDrag(c.crossSection, st.finSweepAngle, input.mach);
         warnings.push(...r.warnings);
-        terms.push({
+        push({
           index,
           kind: c.kind,
           source: `fin pressure (${c.crossSection}, LE ${r.leadingEdge.toFixed(4)} + TE ${r.trailingEdge.toFixed(4)})`,
@@ -465,7 +488,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           });
           warnings.push(...w.warnings);
           const area = c.count * planform;
-          terms.push({
+          push({
             index,
             kind: c.kind,
             source: `fin wave drag (DATCOM ${w.method})`,
@@ -483,7 +506,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
           (c.outerRadius as number) - (c.wallThickness as number),
           input.mach,
         );
-        terms.push({
+        push({
           index,
           kind: c.kind,
           source: 'launch lug parasitic',
@@ -496,7 +519,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
       case 'railButton': {
         const r = railButtonDrag(c.outerDiameter, c.totalHeight, input.mach);
         const area = r.area * c.count;
-        terms.push({
+        push({
           index,
           kind: c.kind,
           source: `rail button parasitic (${String(c.count)})`,
@@ -542,6 +565,22 @@ export function dragCoefficient(input: DragInputs): DragResult {
     area: baseArea,
     cd: (baseCd * baseArea) / aRef,
   });
+  // Plan 0070: each pod's own base, by the same method on the pod's own body (OpenRocket: the base
+  // drag rises by 2 × 0.25 × 0.1317 for two pods of a quarter of the base area at Mach 0.3).
+  for (const pod of podBodies.values()) {
+    if (!(pod.geometry.baseRadius > 0)) continue;
+    const podBase = bodyBaseDrag(input, pod.geometry, cfcForBase(input, pod.geometry));
+    warnings.push(...podBase.warnings);
+    const area = pod.count * Math.PI * pod.geometry.baseRadius ** 2;
+    terms.push({
+      index: -1,
+      kind: 'base',
+      source: `pod base, × ${String(pod.count)} pods, ${podBase.method}`,
+      cdComponent: podBase.cd,
+      area,
+      cd: (podBase.cd * area) / aRef,
+    });
+  }
 
   // Skin friction, eqs. (3.78) to (3.85).
   const friction = skinFrictionCoefficient(
@@ -551,9 +590,14 @@ export function dragCoefficient(input: DragInputs): DragResult {
   );
   const cfc = compressibleSkinFriction(friction, input.mach, input.reynolds);
   const finenessRatio = geometry.length / d;
+  // Plan 0070: the pods' surfaces are friction surfaces like the body's.
+  const podWetted = [...podBodies.values()].reduce(
+    (sum, pod) => sum + pod.count * pod.geometry.wettedBody,
+    0,
+  );
   const frictionCd = frictionDragCoefficient(cfc, {
     finenessRatio,
-    wettedBodyArea: geometry.wettedBody,
+    wettedBodyArea: geometry.wettedBody + podWetted,
     finSets,
     referenceArea: aRef,
   });

@@ -168,10 +168,14 @@ export {
   overriddenMassProperties,
   rocketMassProperties,
   structuralMassParts,
+  isPodPart,
+  mainBodyParts,
+  repeated,
   type ClusterOffset,
   type MassOverride,
   type MotorMass,
   type PlacedComponent,
+  type Instances,
   type RocketMassProperties,
 } from './geometry/assembly.js';
 export {
@@ -464,6 +468,7 @@ export {
   clusterApproximations,
   componentApproximations,
   confidenceOf,
+  podApproximations,
   type Approximation,
   type ApproximationImpact,
   type Confidence,

@@ -16,7 +16,7 @@
 import { validateComponentFit } from '../geometry/fit.js';
 import { InvalidInputError, NotImplementedError } from '../errors.js';
 import type { PlacedComponent } from '../geometry/assembly.js';
-import { rocketMassProperties, type MotorMass } from '../geometry/assembly.js';
+import { isPodPart, rocketMassProperties, type MotorMass } from '../geometry/assembly.js';
 import type {
   Component,
   NoseConeComponent,
@@ -681,7 +681,10 @@ function transonicSingleFin(
 /** BAR-9. The maximum body diameter (Niskanen p. 20: the caliber) over nose cones, body tubes and transitions. */
 export function maximumBodyDiameter(components: readonly PlacedComponent[]): Metres {
   let r = 0;
-  for (const { component: c } of components) {
+  for (const p of components) {
+    // Plan 0070: the main body's caliber; a pod set's parts are outside it.
+    if (isPodPart(p)) continue;
+    const c = p.component;
     if (c.kind === 'noseCone') r = Math.max(r, c.baseRadius);
     else if (c.kind === 'bodyTube') r = Math.max(r, c.outerRadius);
     else if (c.kind === 'transition') r = Math.max(r, c.foreRadius, c.aftRadius);
@@ -718,7 +721,7 @@ export function centreOfPressure(
   let sumMoment = 0;
   const assembly = datcomBodyAssembly(components);
   const warnings: string[] = [];
-  components.forEach(({ component: c, position }, index) => {
+  components.forEach(({ component: c, position, instances }, index) => {
     let term: AerodynamicTerm | undefined;
     if (c.kind === 'noseCone') {
       term = noseConeTerm(c, referenceArea);
@@ -752,10 +755,13 @@ export function centreOfPressure(
       term = fin;
     }
     if (term === undefined || term.cnAlpha === 0) return;
+    // Plan 0070 (D-106): a pod set's part counts once per pod; its normal force does not depend
+    // on its distance from the axis (Barrowman), as OpenRocket's figures for the parts show.
+    const cnAlpha = term.cnAlpha * (instances?.count ?? 1);
     const cp = (position as number) + term.cpX;
-    contributions.push({ index, kind: c.kind, cnAlpha: term.cnAlpha, cp: metres(cp) });
-    sumCn += term.cnAlpha;
-    sumMoment += term.cnAlpha * cp;
+    contributions.push({ index, kind: c.kind, cnAlpha, cp: metres(cp) });
+    sumCn += cnAlpha;
+    sumMoment += cnAlpha * cp;
   });
   if (contributions.length === 0) {
     throw new InvalidInputError(
