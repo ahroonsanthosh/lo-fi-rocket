@@ -119,6 +119,7 @@ describe('a streamer in flight', () => {
     finRollReduction: false,
     baseDragMotorRule: 'while-thrusting',
     baseDragMethod: 'niskanen',
+    bodyFormFactor: 'niskanen',
     largeAngleMethod: 'linear',
     integrator: { kind: 'rk4', timeStep: seconds(0.002) },
     maxTime: seconds(120),

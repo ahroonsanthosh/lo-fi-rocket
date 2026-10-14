@@ -9,7 +9,13 @@ import type { WindModel } from '../environment/wind.js';
 import type { ClusterOffset, PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
 import type { KilogramsPerSquareMetre, Metres, Newtons, Seconds } from '../units/si.js';
-import type { BaseDragMethod, BaseDragMotorRule, RailButtonDragMethod } from '../drag/drag.js';
+import type {
+  BaseDragMethod,
+  BaseDragMotorRule,
+  FinFrictionLength,
+  RailButtonDragMethod,
+} from '../drag/drag.js';
+import type { BodyFormFactor } from '../drag/skin-friction.js';
 import type { StreamerDragMethod } from './recovery.js';
 import type { LargeAngleMethod } from './aerodynamics.js';
 import type { GravityModel } from './gravity.js';
@@ -190,6 +196,10 @@ export interface SimulationOptions {
   readonly baseDragClusterMotors?: 'all' | 'one';
   /** Body base drag method (D-069); defaults to the drag model's default. */
   readonly baseDragMethod?: BaseDragMethod;
+  /** Body friction form factor (plan 0076, DRAG-25); defaults to the drag model's default. */
+  readonly bodyFormFactor?: BodyFormFactor;
+  /** Fin friction's Reynolds length (plan 0076, DRAG-24); defaults to the rocket's. */
+  readonly finFrictionLength?: FinFrictionLength;
   /**
    * Normal force at large angles of attack (D-070): 'datcom' continues a flight through 180° (HA-1 to HA-10);
    * 'linear' keeps the small-angle model and ends the flight at 90° (D-046). Defaults to 'datcom'.

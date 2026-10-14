@@ -1103,3 +1103,29 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - The app imports `.CDX1` files (File menu, "Import RASAero"), and shows RASAero's predicted apogee and the flown one when the file gives them.
   - `known-limitations.md` records the apogee over-prediction against flights.
   - `openrocket-issues.md` item 6 records the same finding for OpenRocket, from our OpenRocket-equivalent mode.
+
+## D-115 (2026-10-14): The DATCOM body form factor in the displayed mode; the fin friction at the fin chord made selectable
+
+- **Decision (plan 0076):**
+  - **Body form factor.** The displayed mode multiplies the body's skin friction by the DATCOM's 1 + 60/f_B³ + 0.0025 f_B (eq. 4.2.3.1-a, DRAG-25) instead of Niskanen's 1 + 1/(2 f_B) (eq. 3.85). The OpenRocket-equivalent mode keeps Niskanen's, as OpenRocket does. `dragCoefficient`'s default is the displayed mode's, as for the base drag (D-069); tests that mean the comparison mode name `bodyFormFactor: 'niskanen'` beside `baseDragMethod: 'niskanen'`.
+  - **Fin friction at the fin chord.** Each fin set's C_fc at the Reynolds number of its own mean aerodynamic chord (the DATCOM's reference length for a lifting surface, eq. 4.1.5.1-a; DRAG-24) is implemented and selectable (`finFrictionLength: 'fin-chord'`), but the default stays the rocket's Reynolds number (eq. 3.85).
+- **Why:**
+  - **The owner's instruction.** "Fix any obvious gaps", and differing from OpenRocket and RASAero is accepted where we are more accurate, with the reasoning (2026-10-14).
+  - **The rule set in plan 0076 before measuring.** A change is adopted only if it is not worse on either independent measured dataset: the 21 flown rockets of D-114, and the held-out wind tunnel and free-flight drag of D-061.
+
+    | Displayed mode                | Flights below Mach 0.95 (mean apogee error) | Held-out C_D rms: subsonic | transonic | supersonic |
+    | ----------------------------- | ------------------------------------------- | -------------------------- | --------- | ---------- |
+    | Niskanen eq. (3.85) (before)  | +18.9 %                                     | 7.1 %                      | 21.3 %    | 15.0 %     |
+    | DATCOM body form factor       | +17.7 % (above Mach 0.95: +29.0 → +26.7 %)  | 6.1 % (target 7 %, met)    | 21.2 %    | 14.9 %     |
+    | Fin friction at the fin chord | +15.5 %                                     | 6.4 %                      | 19.9 %    | 15.5 %     |
+    | Both                          | +14.3 %                                     | 8.2 %                      | 20.2 %    | 15.6 %     |
+
+  - **The body form factor** is better on both datasets in every regime and is adopted.
+  - **The fin chord** is better on the flights and in two regimes of the held-out data, but worse in the supersonic one; with the form factor it overshoots the subsonic held-out drag. It is not adopted by the rule.
+- **Conflict recorded for the owner (CLAUDE.md 11 (a)).** Niskanen and the DATCOM differ in both terms by more than a test tolerance.
+  - **The form factor** is adopted on the evidence above, as D-069 adopted the DATCOM's base drag. Niskanen's is one option away.
+  - **The fin chord** is the owner's decision. The physical case for it is that a fin's boundary layer starts at the fin's own leading edge. The case against it here is the held-out supersonic data.
+- **Consequences:**
+  - **Displayed-mode figures fall slightly.** The example rocket's apogee goes from 172.94 to 172.41 m (−0.31 %) and its maximum velocity from 63.0 to 62.9 m/s.
+  - **Unchanged:** the OpenRocket-equivalent mode and every golden output (they use it).
+  - **Found on the way.** An MCP test built its expected flight from a design whose parts all had the id "y", so its motor mount resolved to the nose cone. It now gives each part its own id. Design files already refuse duplicate ids.

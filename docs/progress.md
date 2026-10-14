@@ -156,6 +156,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Importer.** `.CDX1` files are read: the nose, body, fin can, boat tail and boosters, recovery, site and motor. The file's lift-off weight and CG are reproduced exactly, per stage. The app's File menu has "Import RASAero".
   - **Running RASAero.** It runs here under Wine, driven by our own script (`reference/rasaero/`; nothing of RASAero committed). An opt-in test (`RASAERO=1`) writes `docs/reports/rasaero-comparison-data.md`.
   - **Found.** Our trajectory matches RASAero's when flown on its drag (within 1.4 % below Mach 0.95). Our drag is low: on 21 flown rockets our displayed apogee is above the measured one every time, +18.9 % mean below Mach 0.95 and +29.0 % above (RASAero: +0.4 % and +3.9 %). The causes, term by term, are in `docs/reports/rasaero-comparison.md`. The fixes await the owner.
+- Friction from the DATCOM (plan 0076, D-115): the displayed mode uses the DATCOM's body form factor (eq. 4.2.3.1-a) instead of eq. (3.85)'s, because it improved both independent datasets: the 21 flights (+18.9 → +17.7 % below Mach 0.95) and the held-out drag in every regime (subsonic 7.1 → 6.1 %, now within its 7 % target). The fin friction at the fin chord (DATCOM eq. 4.1.5.1-a) is implemented and selectable but not the default: it worsened the held-out supersonic drag. The comparison mode and the goldens are unchanged.
 
 ## In progress
 
@@ -192,8 +193,8 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - **Base drag after burnout (D-035).** The displayed mode uses the source's rule; the comparison mode uses OpenRocket's.
 - **Deployment speed warning (D-042).** It is a rule-of-thumb placeholder. Please state the figure you want.
 - **Drag against flown rockets (D-114, `docs/reports/rasaero-comparison.md` section 7).** Six decisions:
-  - **Fin friction.** Should it use each fin's own chord for the Reynolds number (DATCOM eq. 4.1.5.1-a) instead of the rocket's (Niskanen eq. 3.85)? Recommended.
-  - **Body form factor.** Should it be the DATCOM's (eq. 4.2.3.1-a)? Recommended, with the fin friction.
+  - **Fin friction.** Should it use each fin's own chord for the Reynolds number (DATCOM eq. 4.1.5.1-a) instead of the rocket's (Niskanen eq. 3.85)? It is implemented and selectable. It helps the flights (+17.7 → about +14 %) and the held-out subsonic and transonic drag, but worsens the supersonic (15.0 → 15.5 % rms), so by plan 0076's rule it is not the default.
+  - **Body form factor.** Done (D-115): the DATCOM's, on the evidence of both datasets.
   - **Rail guides and fin-body interference.** Please supply Hoerner, _Fluid-Dynamic Drag_, chapter 8 (approved source 4), or measured rail guide drag data.
   - **Thrust at altitude.** Approve a propulsion text for the nozzle-exit pressure thrust; needed for high flights and for liquid engines.
   - **The apogee note.** Should every flight carry a note that the apogee of real rockets has been about a fifth lower? The example rocket is currently reviewed to show no warnings.

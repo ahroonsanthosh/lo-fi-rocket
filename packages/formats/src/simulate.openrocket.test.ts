@@ -179,6 +179,7 @@ const options = (windX: number): SimulationOptions => ({
   baseDragMotorRule: 'never',
   railButtonDragMethod: 'openrocket',
   baseDragMethod: 'niskanen',
+  bodyFormFactor: 'niskanen',
   largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(200),

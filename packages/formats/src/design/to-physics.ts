@@ -521,6 +521,8 @@ export function designSimulationOptions(
     // Plan 0073: OpenRocket 24.12 caps a streamer's automatic C_D at 0.4 (FinishProbe).
     ...(mode === 'displayed' ? {} : { streamerDragMethod: 'openrocket' as const }),
     baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
+    // Plan 0076 (D-115): the DATCOM's body form factor; eq. (3.85)'s in the comparison mode.
+    bodyFormFactor: mode === 'displayed' ? 'datcom' : 'niskanen',
     largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,
     maxTime: design.simulation.maxTime,

@@ -121,6 +121,26 @@ export interface FrictionDragGeometry {
     readonly meanChord: number;
   }[];
   readonly referenceArea: number;
+  /**
+   * Plan 0076 (DRAG-24): a fin set's own C_fc from its mean aerodynamic chord, the DATCOM's
+   * reference length for a lifting surface (eq. 4.1.5.1-a). Absent: the body's C_fc (eq. 3.85).
+   */
+  readonly finFriction?: (meanChord: number) => number;
+  /** Plan 0076 (DRAG-25): the body's form factor, eq. (3.85)'s (the default) or the DATCOM's. */
+  readonly bodyFormFactor?: BodyFormFactor;
+}
+
+export type BodyFormFactor = 'niskanen' | 'datcom';
+
+/**
+ * DRAG-25. The body friction's form factor: Niskanen eq. (3.85) p. 46, 1 + 1/(2 f_B); or the
+ * DATCOM's eq. 4.2.3.1-a (section 4.2.3.1, p. 4.2.3.1-1), 1 + 60/(l/d)³ + 0.0025 (l/d), with l/d
+ * the body's fineness ratio. Both multiply the flat-plate C_f on the body's wetted area.
+ */
+export function bodyFormFactor(finenessRatio: number, method: BodyFormFactor): number {
+  const f = finenessRatio;
+  if (!(f > 0)) throw new InvalidInputError('fineness ratio', f, 'must be greater than 0');
+  return method === 'datcom' ? 1 + 60 / (f * f * f) + 0.0025 * f : 1 + 1 / (2 * f);
 }
 
 /**
@@ -134,6 +154,8 @@ export function frictionDragCoefficient(cfc: number, g: FrictionDragGeometry): n
   if (!(g.referenceArea > 0))
     throw new InvalidInputError('reference area', g.referenceArea, 'must be greater than 0 m²');
   let fins = 0;
+  // DRAG-24: with each fin set's own C_fc, the fin term is a friction force sum, not an area.
+  let finForce = 0;
   for (const f of g.finSets) {
     if (!(f.meanChord > 0))
       throw new InvalidInputError(
@@ -141,8 +163,13 @@ export function frictionDragCoefficient(cfc: number, g: FrictionDragGeometry): n
         f.meanChord,
         'must be greater than 0 m',
       );
-    fins += (1 + (2 * f.thickness) / f.meanChord) * f.wettedArea;
+    const area = (1 + (2 * f.thickness) / f.meanChord) * f.wettedArea;
+    fins += area;
+    if (g.finFriction !== undefined) finForce += g.finFriction(f.meanChord) * area;
   }
-  const body = (1 + 1 / (2 * g.finenessRatio)) * g.wettedBodyArea;
-  return finiteResult('friction drag coefficient', (cfc * (body + fins)) / g.referenceArea);
+  const body = bodyFormFactor(g.finenessRatio, g.bodyFormFactor ?? 'niskanen') * g.wettedBodyArea;
+  if (g.finFriction === undefined) {
+    return finiteResult('friction drag coefficient', (cfc * (body + fins)) / g.referenceArea);
+  }
+  return finiteResult('friction drag coefficient', (cfc * body + finForce) / g.referenceArea);
 }

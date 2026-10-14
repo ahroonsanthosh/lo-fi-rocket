@@ -67,6 +67,7 @@ const options = (windX: number, dof: 3 | 6): SimulationOptions => ({
   finRollReduction: false,
   baseDragMotorRule: 'always',
   baseDragMethod: 'niskanen',
+  bodyFormFactor: 'niskanen',
   largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(400),
