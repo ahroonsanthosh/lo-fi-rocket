@@ -22,7 +22,17 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
+      # Plan 0080: the real-flight benchmark flies RASAero II's flown examples. They are fetched,
+      # never redistributed, and checked against their SHA-256 (reference/rasaero/fetch-examples.sh).
+      - uses: actions/cache@v4
+        with:
+          path: reference/rasaero/download/RASAero_II_Setup_Version_1.0.2.0.zip
+          key: rasaero-installer-1.0.2.0
+      - run: sudo apt-get update && sudo apt-get install -y msitools
+      - run: reference/rasaero/fetch-examples.sh
       - run: pnpm test
+        env:
+          REAL_FLIGHTS_REQUIRED: '1'
       - run: pnpm --filter @lo-fi-rocket/app build
       # The MCP server as users download it: one file and the Claude Desktop extension (plan 0062).
       - run: pnpm --filter @lo-fi-rocket/mcp build

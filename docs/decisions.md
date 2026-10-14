@@ -1205,3 +1205,27 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - The step-by-step tools are unchanged and are how a result is refined.
   - No physics change; no golden output changes.
+
+## D-119 (2026-10-14): Real flights at the core: a flight benchmark in CI, its range beside every apogee, and the sources for the missing drag
+
+- **Decision:** Plan 0080, on the owner's instruction ("all these must be done, with real flights at the core … a sim is a sim, and needs accurate info").
+  - **The benchmark.** Every flown rocket among RASAero II's examples (24, after the importer learned the averaged and accelerometer apogees of three of them) is flown in both modes in CI. CI fetches the examples by their checked installer and never redistributes them.
+    - The results are `docs/reports/real-flights.md`.
+    - The measured-over-predicted ratios of each speed range are kept in `real-flights.data.json`. A physics change that moves them fails until they are regenerated, and its commit names the change, as with the goldens.
+  - **The target, set before any change:** below Mach 0.95, the mean and median error within ±3 % and the rms within 6 %, RASAero II's own scatter on these flights.
+  - **The selection rule.** A model is adopted on its source and on physical completeness. The flights report its effect and never choose it, and nothing is fitted to them (CLAUDE.md 7.4).
+  - **The residual rule (owner's choice).** Beside every apogee, the app and the MCP show the range measured flights of the same speed range reached, labelled as measured flights, not physics. Today it is 80 to 95 % of the displayed apogee below Mach 0.95 (13 flights) and 63 to 96 % above (11). It never changes a model constant.
+  - **New sources (owner's approval):**
+    - NACA TM 1299 (Tillmann, 1951; measured drag of protuberances in a turbulent boundary layer), for rail buttons, rail guides, launch shoes and lugs;
+    - NASA SP-125, for thrust at altitude.
+
+    Both are U.S. government works, to be added to `reference/` with their checks when their steps begin.
+
+  - **Flight data.** The owner has none to add yet; the benchmark grows when they do.
+- **Why:** Accuracy against real flights is the project's purpose. The displayed apogee was 16 % high on average below Mach 0.95 and 25 % above, worse than OpenRocket's model on the same flights (+9.1 % and +17.8 %). A gap that is measured in every change can be closed and can be shown honestly meanwhile.
+- **Alternatives:**
+  - **A correction factor fitted to the flights** (offered; the owner chose the labelled range). It would change the physics without a source and fit 24 showcase flights rather than reality.
+  - **Stating the bias only** (offered; the owner chose the range, which also gives the expected apogee).
+- **Consequences:**
+  - Plan 0080's steps 2 to 7 each regenerate the benchmark.
+  - The 21-flight figures in the RASAero report stay as that report's own runs.

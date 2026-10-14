@@ -63,6 +63,9 @@ export interface Cdx1Prediction {
   readonly timeToApogee: number;
 }
 
+/** How a flown apogee was measured (plan 0080): each has its own errors. */
+export type MeasuringInstrument = 'GPS' | 'barometric' | 'accelerometer' | 'optical tracking';
+
 export interface Cdx1Import {
   readonly design: RocketDesign;
   /** What the user should know: the motor taken or missing, what was approximated. */
@@ -71,6 +74,8 @@ export interface Cdx1Import {
   readonly prediction?: Cdx1Prediction;
   /** An apogee measured in flight, when the file's comments give one ("Altitude = 3964 ft"). */
   readonly measuredApogee?: Metres;
+  /** Plan 0080: what measured it, as the comments name it. */
+  readonly measuredBy?: MeasuringInstrument;
   /** The motor the file names, as "designation (manufacturer)". */
   readonly motorName?: string;
 }
@@ -804,7 +809,9 @@ export function importCdx1(
           maxVelocity: feetToMetres(r.optionalNumber(simulation, 'MaxVelocity') ?? 0),
           timeToApogee: r.optionalNumber(simulation, 'TimetoApogee') ?? 0,
         };
-  const measured = measuredApogee(r.optionalText(rocket, 'Comments') ?? '');
+  const comments = r.optionalText(rocket, 'Comments') ?? '';
+  const measured = measuredApogee(comments);
+  const instrument = measured === undefined ? undefined : measuringInstrument(comments);
   if (r.approximations.length > 0) {
     const major = r.approximations.filter((a) => a.impact === 'major').length;
     const n = r.approximations.length;
@@ -817,6 +824,7 @@ export function importCdx1(
     notices: r.notices,
     ...(prediction === undefined ? {} : { prediction }),
     ...(measured === undefined ? {} : { measuredApogee: measured }),
+    ...(instrument === undefined ? {} : { measuredBy: instrument }),
     ...(engine === undefined ? {} : { motorName: engine.replace(/\s+/g, ' ') }),
   };
 }
@@ -1011,12 +1019,58 @@ function readGuides(
   }
 }
 
-/** "Barometric Altitude = 3964 ft" and the like in the comments; not RASAero's own prediction. */
+/** Longest comments line read for a flown apogee: far above any real one. */
+const MAX_COMMENT_LINE = 500;
+
+/**
+ * The flown apogee the comments give, never RASAero's own prediction (plan 0080). In order: an
+ * average of several instruments ("Average of Two Barometric Altimeters = 6188 ft"), the author's
+ * final figure ("Final Altitude - GPS Altitude - 42771 ft"), the first "... Altitude = 3964 ft",
+ * then "Apogee Altitude 85067 ft".
+ */
 function measuredApogee(comments: string): Metres | undefined {
-  for (const line of comments.split('\n')) {
-    if (/predict|rasaero|error/i.test(line)) continue;
-    const m = /altitude[^=\n]*=\s*([\d,]+(?:\.\d+)?)\s*(?:ft|feet)/i.exec(line);
-    if (m?.[1] !== undefined) return feetToMetres(Number(m[1].replace(/,/g, '')));
+  // Notes lines are short; a longer line is not read, so no pattern can run long on hostile text.
+  const lines = comments
+    .split('\n')
+    .filter((l) => l.length <= MAX_COMMENT_LINE && !/predict|rasaero|error/i.test(l));
+  const feet = (line: string, pattern: RegExp): number | undefined => {
+    const m = pattern.exec(line);
+    return m?.[1] === undefined ? undefined : Number(m[1].replace(/,/g, ''));
+  };
+  const number = '([\\d,]+(?:\\.\\d+)?)\\s*(?:ft|feet)';
+  const rules: readonly ((line: string) => number | undefined)[] = [
+    (l) => (/average/i.test(l) ? feet(l, new RegExp(`=\\s*${number}`, 'i')) : undefined),
+    (l) => feet(l, new RegExp(`final altitude.*?${number}`, 'i')),
+    (l) => feet(l, new RegExp(`altitude[^=\\n]*=\\s*${number}`, 'i')),
+    (l) => feet(l, new RegExp(`apogee altitude\\s+${number}`, 'i')),
+  ];
+  for (const rule of rules) {
+    for (const line of lines) {
+      const ft = rule(line);
+      if (ft !== undefined && ft > 0) return feetToMetres(ft);
+    }
   }
+  return undefined;
+}
+
+/**
+ * The instrument the comments name for the flown apogee (plan 0080): the author's final figure's
+ * instrument first ("Final Altitude - GPS Altitude"), then an apogee based on accelerometers, then
+ * optical tracking, then a barometric altimeter, then GPS.
+ */
+function measuringInstrument(comments: string): MeasuringInstrument | undefined {
+  const text = comments
+    .split('\n')
+    .filter((l) => l.length <= MAX_COMMENT_LINE)
+    .join('\n')
+    .toLowerCase();
+  const final = /final altitude[^\n]*/.exec(text)?.[0];
+  if (final?.includes('gps') === true) return 'GPS';
+  if (final?.includes('accelerometer') === true) return 'accelerometer';
+  if (final?.includes('barometric') === true) return 'barometric';
+  if (/(apogee altitude|altitude based on)[^\n]*accelerometer/.test(text)) return 'accelerometer';
+  if (text.includes('optical track')) return 'optical tracking';
+  if (/barometric|altimeter|altacc/.test(text)) return 'barometric';
+  if (text.includes('gps')) return 'GPS';
   return undefined;
 }

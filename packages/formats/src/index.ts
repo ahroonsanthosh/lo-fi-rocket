@@ -187,6 +187,7 @@ export {
   importCdx1,
   RASAERO_FINISHES,
   type Cdx1Import,
+  type MeasuringInstrument,
   type Cdx1Prediction,
 } from './cdx1.js';
 export {
@@ -216,3 +217,10 @@ export {
   type SampleStatistics,
 } from './dispersion/dispersion.js';
 export type { DispersionSettingsRecord } from './design/model.js';
+export {
+  REAL_FLIGHT_MACH_SPLIT,
+  REAL_FLIGHTS,
+  realFlightRange,
+  type RealFlightRange,
+  type RealFlightRatios,
+} from './validation/real-flights.js';
