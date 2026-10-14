@@ -54,6 +54,8 @@ export function orkToDesign(
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
     ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
     ...(staged ? { stage: stageOf(i) } : {}),
+    // Plan 0070: a pod set's part keeps its count and radial offset.
+    ...(c.instances === undefined ? {} : { pod: c.instances }),
   }));
   const base = newDesign(id, rocket.name);
   let design: RocketDesign = {

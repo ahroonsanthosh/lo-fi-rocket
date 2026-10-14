@@ -4,7 +4,7 @@ Every physics equation implemented in this repository is listed here, per CLAUDE
 An equation that is not in this register must not be in the code.
 
 **Current phase:** v1.0 (all five phases and the v1.0 completion prompt); see `README.md`, `docs/known-limitations.md` and `docs/future-work.md`.
-**Current task:** simulate anything (plan 0055, D-083): import never refuses (task 4 part 2; plan 0070, D-106, pod sets: the physics). The last addition is GEO-18. The last additions are UNIT-12 and UNIT-13 (plan 0062, SI prefixes and km/h).
+**Current task:** simulate anything (plan 0055, D-083): import never refuses (task 4 part 2; plan 0070, D-106 and D-107, pod sets: the physics, then the design file and the `.ork` reader). The last addition is GEO-18. The last additions are UNIT-12 and UNIT-13 (plan 0062, SI prefixes and km/h).
 
 Source abbreviations: **USSA76** = NOAA/NASA/USAF, _U.S. Standard Atmosphere, 1976_ (`reference/docs/ussa1976-nasa-ntrs-19770009539.pdf`; printed page numbers; PDF page = printed + 16 in Part 1, printed + 15 in the tables). **SI9** = BIPM, _The International System of Units (SI)_, 9th edition 2019 (`reference/docs/si-brochure-9-en.pdf`). **N09** = Niskanen (2009), _Development of an Open Source model rocket simulation software_ (`reference/docs/niskanen-2009-openrocket-thesis.pdf`; printed page numbers; PDF page = printed + 10). **NIST SP 811** = Thompson and Taylor, _Guide for the Use of the International System of Units (SI)_, NIST Special Publication 811, 2008 (`reference/docs/nist-sp811-2008.pdf`; printed page numbers; PDF page = printed + 12 in Appendix B).
 

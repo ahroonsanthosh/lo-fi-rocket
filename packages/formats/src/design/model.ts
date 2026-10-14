@@ -23,7 +23,7 @@ import type {
 } from '@lo-fi-rocket/physics';
 
 /** Bumped whenever the file layout changes; migrate.ts carries one step per bump. */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export interface DesignComponent {
   readonly id: string;
@@ -37,6 +37,18 @@ export interface DesignComponent {
   readonly approximations?: readonly Approximation[];
   /** Plan 0064 (schema 2): the stage the part belongs to, 0 being the top stage; absent means 0. */
   readonly stage?: number;
+  /**
+   * Plan 0070 (schema 3, D-106): the part belongs to a pod set, repeated `count` times equally
+   * spaced around the axis with its own axis at `radialOffset` from the rocket's. Absent for a part
+   * of the main body or inside it.
+   */
+  readonly pod?: DesignPod;
+}
+
+/** Plan 0070: a pod set's count and the distance of each pod's axis from the rocket's. */
+export interface DesignPod {
+  readonly count: number;
+  readonly radialOffset: Metres;
 }
 
 /** Where a motor's data came from, for display and for refreshing from the source. */

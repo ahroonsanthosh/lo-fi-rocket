@@ -52,6 +52,8 @@ export function designPlacedComponents(design: RocketDesign): PlacedComponent[] 
     position: c.position,
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
     ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
+    // Plan 0070: a pod set's part is repeated around the axis (D-106).
+    ...(c.pod === undefined ? {} : { instances: c.pod }),
   }));
   return design.asBuilt === undefined ? parts : withAsBuilt(parts, design.asBuilt);
 }

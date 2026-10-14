@@ -351,7 +351,8 @@ describe('inputs are refused, reported as malformed or approximated, by element 
     const standIn = withMass.components.find((c) => c.element === 'streamer');
     expect(standIn?.component).toMatchObject({ kind: 'massComponent', mass: 0.02, length: 0.03 });
     expect(standIn?.approximations?.[0]?.method).toBe('a 20 g mass at its position, from the file');
-    // Parts outside the body (pods, stages) are the next step (plan 0056): still refused by name.
+    // A pod set is read on a body tube, the only part OpenRocket lets hold one (plan 0070,
+    // reference/rockets/pod-probe/positions.txt); anywhere else it is refused by name.
     unsupported(
       edit(r1, '</nosecone>', '</nosecone><podset><name>Pods</name></podset>'),
       /podset "Pods": element <podset>/,

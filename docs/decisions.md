@@ -933,3 +933,24 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - The physics simulates pod sets. The design model, the `.ork` reader and the app follow in plan 0070 step 3, motors in pods in step 4, booster sets in step 5.
   - Results without pods are unchanged: the golden outputs and the OpenRocket comparisons are bit-identical.
+
+## D-107 (2026-10-14): Pod sets in the design file and the `.ork` reader, placed as OpenRocket places them
+
+- **Decision:**
+  - **Design file.** A part may carry `pod: { count, radialOffset }`, the physics' `instances` (D-106). Schema version 3; a version-2 file migrates unchanged, as it has no pods. The count is a whole number of 1 or more, the offset 0 m or more.
+  - **Where a pod set is read.** On a body tube, the only part OpenRocket lets hold one (`reference/rockets/pod-probe/positions.txt`). Its parts are stacked from its front like a stage's, each tagged with the count and offset.
+  - **Its front** is read like any child of the tube; its length is the sum of its parts' lengths.
+  - **The distance of each pod's axis from the rocket's**, from `<radiusoffset method>`, with R the tube's radius and r_pod the largest radius of the pod's body parts:
+    - "coaxial": 0, whatever the value;
+    - "surface": R + r_pod, whatever the value;
+    - "free": |v|;
+    - "relative": |R + v + r_pod|. A negative distance is the same ring of pods turned half a turn.
+  - **A parachute or streamer in a pod** is one per pod: its recovery device is repeated n times, named "(pod k of n)".
+  - **Not read yet.** A motor in a pod is refused until plan 0070 step 4 models it, so that it is never lost. A pod set inside a pod is left out and listed as major.
+  - **The app** says on each pod part how many pods hold it, and in its editor how far out they are.
+- **Why:** rule 3; the probe fixes every rule above exactly. The front and distance of every probe file match OpenRocket to 1e-12. The three rockets of D-106 read from their files give OpenRocket's mass and CG within 1e-6, its C_Nα to rounding and its CP within 0.05 %. With the parachute in the pods, the mass, CG and descent show one parachute per pod: 4.623 m/s computed for two against OpenRocket's 4.623, and 6.538 for one.
+- **Alternatives:** a pod set as a separate design object holding its parts (a larger schema change, for no gain while the parts carry their own count and offset); the pods' radius from the first or last part (the probe's mixed pods rule both out).
+- **Consequences:**
+  - A file with pod sets now imports and simulates, unless a pod holds a motor.
+  - Two pod sets with the same count and distance are one body to the fit check, so pods one behind the other at the same distance are refused there (a gap).
+  - The side view and the 3D view still draw pod parts on the axis. That work belongs to the UI and 3D lanes, through issues.
