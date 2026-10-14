@@ -28,6 +28,7 @@ import {
   type AsBuilt,
   type ClusterOffset,
   type Component,
+  type FinFillet,
   type FinShape,
   type FinTab,
   type KilogramsPerCubicMetre,
@@ -468,7 +469,7 @@ class Element {
    * Density of a surface (kg/m²) or line (kg/m) material, from its `type` and `density` attributes
    * (D-079: a parachute canopy, its lines, a shock cord).
    */
-  materialDensity(element: string, type: 'surface' | 'line'): number {
+  materialDensity(element: string, type: 'surface' | 'line' | 'bulk'): number {
     const m = this.one(element);
     const found = m.attributes['type'];
     if (found !== type)
@@ -1074,6 +1075,9 @@ export const OPENROCKET_FINISHES: Readonly<Record<string, number>> = {
   mirror: 0,
 };
 
+/** OpenRocket's default fillet material, cardboard (`FilletProbe`'s files: 680 kg/m³). */
+const OPENROCKET_DEFAULT_FILLET_DENSITY = 680;
+
 /** OpenRocket's finish for a part that names none ("normal", regular paint). */
 const OPENROCKET_DEFAULT_FINISH = 60e-6;
 
@@ -1648,14 +1652,24 @@ class Reader {
         impact: 'minor',
       });
     }
-    const fillet = el.optionalNumber('filletradius') ?? 0;
-    if (fillet !== 0) {
-      this.note(el, {
-        what: `fin fillets of ${String(Math.round(fillet * 1e4) / 10)} mm radius`,
-        method: 'the fins without fillets',
-        effect: 'the fillets’ few grams and small drag are missing',
-        impact: 'minor',
-      });
+    // Plan 0073 (GEO-19): the fillets' mass, of their own material, as OpenRocket counts it.
+    const filletRadius = el.optionalNumber('filletradius') ?? 0;
+    let fillet: FinFillet | undefined;
+    if (filletRadius > 0) {
+      let density = OPENROCKET_DEFAULT_FILLET_DENSITY;
+      if (el.has('filletmaterial')) {
+        density = el.materialDensity('filletmaterial', 'bulk');
+      } else {
+        this.note(el, {
+          what: 'the fillets’ material, which the file does not give',
+          method: 'OpenRocket’s default fillet material, cardboard at 680 kg/m³',
+          effect: 'the fillets’ few grams may be a little off',
+          impact: 'minor',
+        });
+      }
+      if (density > 0) {
+        fillet = { radius: metres(filletRadius), density: kilogramsPerCubicMetre(density) };
+      }
     }
     const written = el.optionalText('crosssection') ?? 'square';
     const known = written === 'square' || written === 'rounded' || written === 'airfoil';
@@ -1690,6 +1704,7 @@ class Reader {
         density: el.bulkDensity(),
         bodyRadius: metres(parent.radius),
         ...(tab === undefined ? {} : { tab }),
+        ...(fillet === undefined ? {} : { fillet }),
       },
       position,
     );

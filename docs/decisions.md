@@ -1054,3 +1054,21 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - **RK4 step.** The campaign saw a refusal advise "at most 0.0020 s", the very step it refused, because the safe 0.00199 s was rounded up.
   - **Airfoil fins.** The campaign measured the airfoil slab at up to 8.5 % of the structure mass, moving its CG up to 3.4 % aft, which is more than "minor" describes.
 - **Consequences:** a design with airfoil fins and nothing else approximated now reports medium confidence instead of high.
+
+## D-113 (2026-10-14): Fin fillets, by plane geometry (GEO-19)
+
+- **Decision:**
+  - **The model.** A fin set may have fillets along both sides of each fin's root, of a radius and their own material (design file schema 6). Their mass, CG and inertias come from the exact plane geometry of GEO-19 along the root chord, and they add no aerodynamic force.
+  - **`.ork` reader.** It reads `<filletradius>` and `<filletmaterial>` instead of listing the fillets. A file with fillets but no fillet material takes OpenRocket's default, cardboard at 680 kg/m³, and lists it (minor).
+  - **MCP.** It sets them as a fin set's `fillet` field.
+- **Why:**
+  - **The gap.** The validation campaign found fillets left out and listed as minor. On one rocket they were 15 % of the fin mass: the structure mass was 2.5 % low and its CG 2.8 % forward, which overstates the stability margin (the unsafe side).
+  - **What OpenRocket does** (`FilletProbe`, 17 cases).
+    - Its fillet volume is the region between a radial plane, the body circle and a tangent arc, along the root chord, two per fin, to 7 digits, for every planform.
+    - The fin thickness does not enter.
+    - Its drag and CP are unchanged by fillets.
+  - **Inertias.** Our inertias are those of the geometry. OpenRocket keeps the fins' unit inertia and scales it by the new mass, a small difference in the fin set's inertia.
+- **Results:**
+  - Against the 17 probe cases, the fin set mass is within 1e-7 and its CG within 1e-9 m. For elliptical fins it is the fillet's own mass, because OpenRocket's elliptical plate is a polygon 0.18 % short of the ellipse (D-087).
+  - The fillet's cross-section polar moment agrees with a numerical integral to 8 digits.
+- **Consequences:** none for existing designs, which have no fillets.

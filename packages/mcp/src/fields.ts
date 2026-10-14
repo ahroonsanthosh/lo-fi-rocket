@@ -10,7 +10,7 @@ export interface FieldSpec {
   readonly label: string;
   /** A quantity's dimension, or the kind of value for the others. */
   readonly type:
-    Dimension | 'integer' | 'noseShape' | 'finSection' | 'shoulder' | 'tab' | 'finShape';
+    Dimension | 'integer' | 'noseShape' | 'finSection' | 'shoulder' | 'tab' | 'fillet' | 'finShape';
   readonly description: string;
 }
 
@@ -172,6 +172,12 @@ export const PART_FIELDS: Readonly<Record<ComponentKind, Readonly<Record<string,
       type: 'tab',
       description:
         'Tab into the body: height inward from the body surface, length along the axis, fore offset aft of the root leading edge. Mass only.',
+    },
+    fillet: {
+      label: 'fin fillets',
+      type: 'fillet',
+      description:
+        'Fillets along both sides of each fin root: {radius, density} (e.g. {"radius":"6 mm","density":"680 kg/m3"} for cardboard-filled glue). Mass only, by exact geometry (GEO-19).',
     },
     shape: {
       label: 'planform',

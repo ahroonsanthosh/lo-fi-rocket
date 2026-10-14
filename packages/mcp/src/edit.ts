@@ -138,6 +138,16 @@ function convertField(kind: ComponentKind, key: string, spec: FieldSpec, v: unkn
         ),
       };
     }
+    case 'fillet': {
+      if (!isRecord(v)) throw new QuantityError(path, 'expected {radius, density}');
+      return {
+        radius: quantity(`${path}.radius`, 'length', v['radius']),
+        density: quantity(`${path}.density`, 'density', v['density']),
+        ...Object.fromEntries(
+          Object.entries(v).filter(([k]) => !['radius', 'density'].includes(k)),
+        ),
+      };
+    }
     case 'finShape': {
       if (!isRecord(v))
         throw new QuantityError(

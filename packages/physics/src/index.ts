@@ -138,8 +138,10 @@ export {
 export {
   combine,
   componentMassProperties,
+  filletCrossSection,
   type Component,
   type FinCrossSection,
+  type FinFillet,
   type FinTab,
   type MassItemComponent,
   type NoseConeComponent,

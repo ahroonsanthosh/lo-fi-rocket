@@ -25,7 +25,11 @@
  *   javac -d out -cp lib/OpenRocket-24.12.jar src/FilletProbe.java
  *   java -Djava.awt.headless=true -cp out:lib/OpenRocket-24.12.jar FilletProbe
  */
+import info.openrocket.core.aerodynamics.AerodynamicForces;
+import info.openrocket.core.aerodynamics.BarrowmanCalculator;
+import info.openrocket.core.aerodynamics.FlightConditions;
 import info.openrocket.core.document.*;
+import info.openrocket.core.logging.WarningSet;
 import info.openrocket.core.file.GeneralRocketLoader;
 import info.openrocket.core.file.GeneralRocketSaver;
 import info.openrocket.core.material.Material;
@@ -100,6 +104,14 @@ public final class FilletProbe {
     File f = new File("fillet-" + tag + ".ork");
     new GeneralRocketSaver().save(f, OpenRocketDocumentFactory.createDocumentFromRocket(r));
     Rocket loaded = new GeneralRocketLoader(f).load().getRocket();
+    FlightConfiguration config = loaded.getSelectedConfiguration();
+    for (double m : new double[] {0.3, 1.5}) {
+      FlightConditions fc = new FlightConditions(config);
+      fc.setMach(m); fc.setAOA(0.0); fc.setRollRate(0.0);
+      AerodynamicForces total = new BarrowmanCalculator().getAerodynamicForces(config, fc, new WarningSet());
+      System.out.printf("%s DRAG M=%.2f cd=%.9e friction=%.9e pressure=%.9e cpWeight=%.9e cp=%.9f%n", tag, m, total.getCD(),
+          total.getFrictionCD(), total.getPressureCD(), total.getCP().weight, total.getCP().x);
+    }
     for (RocketComponent k : loaded) {
       if (!(k instanceof FinSet)) continue;
       FinSet fs = (FinSet) k;

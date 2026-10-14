@@ -17,8 +17,11 @@ export type Migration = (document: Record<string, unknown>) => Record<string, un
  * has the design's finish.
  * 4 to 5 (plan 0073 part 2): a recovery device may be a streamer, so a version-4 file's devices are
  * all parachutes.
+ * 5 to 6 (plan 0073 part 3b): a fin set's fillets are new and optional, so a version-5 file's fins
+ * have none.
  */
 export const MIGRATIONS: readonly Migration[] = [
+  (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,

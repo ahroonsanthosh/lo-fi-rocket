@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { InvalidInputError } from '../errors.js';
 import { kilograms, kilogramsPerCubicMetre, metres } from '../units/si.js';
 import { rocketMassProperties } from './assembly.js';
-import { componentMassProperties, type Component } from './components.js';
+import { componentMassProperties, filletCrossSection, type Component } from './components.js';
 import {
   R1_COMPONENTS,
   R2_COMPONENTS,
@@ -442,5 +442,75 @@ describe('GEO-14 fin tabs (D-081)', () => {
         tab: { height: metres(0.03), length: metres(0.06), foreOffset: metres(0) },
       }),
     ).toThrow(InvalidInputError);
+  });
+});
+
+describe('GEO-19 fin fillets (plan 0073)', () => {
+  // OpenRocket's FilletProbe case r6 (reference/rockets/fillet-probe/values.txt): 3 fins, root
+  // 0.1, tip 0.05, sweep 0.05, span 0.08 m, 3 mm, 630 kg/m³, body radius 0.025 m; 6 mm fillets of
+  // 680 kg/m³.
+  const fins: Component = {
+    kind: 'finSet',
+    count: 3,
+    rootChord: metres(0.1),
+    tipChord: metres(0.05),
+    sweep: metres(0.05),
+    span: metres(0.08),
+    thickness: metres(0.003),
+    density: kilogramsPerCubicMetre(630),
+    bodyRadius: metres(0.025),
+  };
+  const filleted: Component = {
+    ...fins,
+    fillet: { radius: metres(0.006), density: kilogramsPerCubicMetre(680) },
+  };
+
+  it('cross-section by hand: ½ r y_c − ½ R² φ − ½ r² θ = 5.605088e-6 m² (OpenRocket 5.6050883e-6)', () => {
+    // y_c = √(0.025² + 2 × 0.025 × 0.006) = 0.03041381; φ = asin(0.006/0.031) = 0.19477764;
+    // θ = acos(0.006/0.031) = 1.37601868. Triangle 0.5 × 0.006 × 0.03041381 = 9.124144e-5;
+    // body sector 0.5 × 0.025² × 0.19477764 = 6.086801e-5; arc sector 0.5 × 0.006² × 1.37601868
+    // = 2.476834e-5. OpenRocket's volume per fin and side over 0.1 m of root: 1.12101766e-6/2/0.1.
+    const { area, polarMoment } = filletCrossSection(0.025, 0.006);
+    expect(area).toBeCloseTo(5.605088e-6, 12);
+    expect(Math.abs(area / (1.12101766e-6 / 2 / 0.1) - 1)).toBeLessThan(1e-7);
+    // J against a 200 000-step midpoint integral in polar coordinates about the axis (Python):
+    // ∫₀^φ (ρ_arc⁴ − R⁴)/4 dψ = 3.8567472e-9 m⁴.
+    expect(polarMoment).toBeCloseTo(3.8567473e-9, 15);
+  });
+
+  it('mass 0.03402 + 2 × 3 × 680 × 5.605088e-6 × 0.1 = 0.0363068760 kg and CG 0.0604112510 m, as OpenRocket', () => {
+    // Fillet mass 0.0022868760; CG (0.03402 × 0.0611111 + 0.0022868760 × 0.05)/0.0363068760.
+    // OpenRocket: mass 3.630687602e-2, cgx 0.060411251.
+    const m = componentMassProperties(filleted);
+    expect(m.mass).toBeCloseTo(0.036306876, 9);
+    expect(m.cgX).toBeCloseTo(0.060411251, 9);
+    expect(m.inertiaRotational).toBeGreaterThan(componentMassProperties(fins).inertiaRotational);
+  });
+
+  it('no fillet, or a fillet of radius 0, changes nothing; a fillet without density is refused', () => {
+    expect(
+      componentMassProperties({
+        ...fins,
+        fillet: { radius: metres(0), density: kilogramsPerCubicMetre(680) },
+      }),
+    ).toEqual(componentMassProperties(fins));
+    expect(() =>
+      componentMassProperties({
+        ...fins,
+        fillet: { radius: metres(0.006), density: kilogramsPerCubicMetre(0) },
+      }),
+    ).toThrow(InvalidInputError);
+    expect(() => filletCrossSection(0.025, -0.001)).toThrow(InvalidInputError);
+  });
+
+  it('tends to the corner of a flat wall, r²(1 − π/4), as the body grows', () => {
+    // A 6 mm fillet on a flat wall: 0.006² × (1 − π/4) = 7.725664e-6 m².
+    fc.assert(
+      fc.property(fc.double({ min: 1e-4, max: 0.05, noNaN: true }), (r) => {
+        const { area } = filletCrossSection(1e6, r);
+        expect(Math.abs(area / (r * r * (1 - Math.PI / 4)) - 1)).toBeLessThan(1e-4);
+      }),
+    );
+    expect(filletCrossSection(1e6, 0.006).area).toBeCloseTo(7.725664e-6, 10);
   });
 });

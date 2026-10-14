@@ -218,7 +218,7 @@ export const COMPONENT_FIELDS = {
       'density',
       'bodyRadius',
     ],
-    optional: ['crossSection', 'shearModulus', 'tab', 'shape'],
+    optional: ['crossSection', 'shearModulus', 'tab', 'shape', 'fillet'],
   },
   railButton: {
     required: [
@@ -337,6 +337,15 @@ function component(c: Ctx, path: string, v: unknown): Component {
           foreOffset: metres(c.number(`${path}.tab.foreOffset`, t['foreOffset'])),
         };
       });
+      // Plan 0073 (GEO-19): fillets of their own material; the physics checks the sizes.
+      const fillet = opt('fillet', (x) => {
+        const f = c.object(`${path}.fillet`, x);
+        c.keys(`${path}.fillet`, f, ['radius', 'density']);
+        return {
+          radius: metres(c.number(`${path}.fillet.radius`, f['radius'])),
+          density: kilogramsPerCubicMetre(c.number(`${path}.fillet.density`, f['density'])),
+        };
+      });
       // D-087: an elliptical or freeform planform; the physics checks the outline against the root and span.
       const shape = opt('shape', (x): FinShape => {
         const sh = c.object(`${path}.shape`, x);
@@ -381,6 +390,7 @@ function component(c: Ctx, path: string, v: unknown): Component {
         ...(shearModulus === undefined ? {} : { shearModulus }),
         ...(tab === undefined ? {} : { tab }),
         ...(shape === undefined ? {} : { shape }),
+        ...(fillet === undefined ? {} : { fillet }),
       };
     }
     case 'railButton': {
