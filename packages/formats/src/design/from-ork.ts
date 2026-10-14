@@ -6,9 +6,9 @@
  * thrust curve); recovery devices keep their deployment settings.
  */
 import { metres, type MotorDefinition, type Seconds } from '@lo-fi-rocket/physics';
-import type { OrkRocket } from '../ork.js';
+import type { OrkMotorMount, OrkRocket } from '../ork.js';
 import { newDesign } from './example.js';
-import type { DesignComponent, MotorProvenance, RocketDesign } from './model.js';
+import type { DesignComponent, MotorMount, MotorProvenance, RocketDesign } from './model.js';
 
 export interface LibraryMotorRef {
   readonly definition: MotorDefinition;
@@ -43,6 +43,9 @@ export function orkToDesign(
   componentId: (index: number) => string = (i) => `ork-${String(i)}`,
 ): OrkImport {
   const notices: string[] = [...rocket.notices];
+  // Plan 0064: a stage only in a staged file, so that a one-stage import is unchanged.
+  const staged = rocket.stages.length > 1;
+  const stageOf = (i: number): number => rocket.componentStage[i] ?? 0;
   const components: DesignComponent[] = rocket.components.map((c, i) => ({
     id: componentId(i),
     name: c.name,
@@ -50,6 +53,7 @@ export function orkToDesign(
     component: c.component,
     ...(c.massOverride === undefined ? {} : { massOverride: c.massOverride }),
     ...(c.approximations === undefined ? {} : { approximations: c.approximations }),
+    ...(staged ? { stage: stageOf(i) } : {}),
   }));
   const base = newDesign(id, rocket.name);
   let design: RocketDesign = {
@@ -68,53 +72,33 @@ export function orkToDesign(
         delay: d.deployDelay,
         ...(d.deployEvent === 'altitude' ? { altitude: d.deployAltitude } : {}),
       },
+      ...(staged ? { stage: stageOf(d.component) } : {}),
     })),
+    ...(staged
+      ? {
+          stages: rocket.stages.map((st) => ({
+            name: st.name,
+            ...(st.separation === undefined ? {} : { separation: st.separation }),
+          })),
+        }
+      : {}),
   };
-  const mount = rocket.motorMount;
-  if (mount !== undefined) {
-    const holder = components[mount.mountComponent];
-    if (holder === undefined)
-      throw new Error(`motor mount component ${String(mount.mountComponent)} not found`);
-    const holderLength: number =
-      holder.component.kind === 'innerTube' || holder.component.kind === 'bodyTube'
-        ? holder.component.length
-        : 0;
-    const overhang: number = mount.aftEnd - (holder.position + holderLength);
-    const match = library.find(
-      (m) =>
-        m.definition.designation.toLowerCase() === mount.designation.toLowerCase() &&
-        sameManufacturer(m.definition.manufacturer, mount.manufacturer),
-    );
-    const delay: Seconds | undefined = mount.delay;
-    const delayText =
-      delay === undefined ? 'plugged (no ejection charge)' : `delay ${String(delay)} s`;
+  const mounts = rocket.motorMounts.map((mount) =>
+    designMount(
+      mount,
+      components,
+      library,
+      notices,
+      staged ? rocket.stages[mount.stage]?.name : undefined,
+    ),
+  );
+  const [first, ...rest] = mounts;
+  if (first !== undefined) {
     design = {
       ...design,
-      motorMount: {
-        componentId: holder.id,
-        overhang: metres(overhang),
-        ...(match === undefined
-          ? {}
-          : {
-              motor: {
-                definition: match.definition,
-                provenance: match.provenance,
-                ...(delay === undefined ? {} : { ejectionDelay: delay }),
-              },
-            }),
-        ...(mount.cluster === undefined ? {} : { cluster: mount.cluster }),
-      },
+      motorMount: first,
+      ...(rest.length === 0 ? {} : { additionalMotorMounts: rest }),
     };
-    const motors = mount.cluster === undefined ? '' : `${String(mount.cluster.length)} × `;
-    if (match === undefined) {
-      notices.push(
-        `The file names the motor ${motors}${mount.manufacturer} ${mount.designation} (${String(Math.round(mount.diameter * 1000))} mm, ${delayText}) but carries no thrust curve and no motor of that name is in the library: choose it in the motor panel.`,
-      );
-    } else {
-      notices.push(
-        `Motor ${motors}${match.definition.manufacturer} ${match.definition.designation} taken from the library, ${delay === undefined ? 'plugged as in the file (no ejection charge)' : `with the file's delay of ${String(delay)} s`}.`,
-      );
-    }
   }
   // D-084: say once what the import approximated; each one is listed with the results.
   const approximated = [
@@ -129,4 +113,63 @@ export function orkToDesign(
     );
   }
   return { design, notices };
+}
+
+/**
+ * A motor mount of the file as the design's: its part, overhang, the library's motor of that name
+ * (the file carries no thrust curve), the cluster and, plan 0064, the ignition when it is not
+ * automatic at once. A notice says which motor was taken or that none matched.
+ */
+function designMount(
+  mount: OrkMotorMount,
+  components: readonly DesignComponent[],
+  library: readonly LibraryMotorRef[],
+  notices: string[],
+  stageName: string | undefined,
+): MotorMount {
+  const holder = components[mount.mountComponent];
+  if (holder === undefined)
+    throw new Error(`motor mount component ${String(mount.mountComponent)} not found`);
+  const holderLength: number =
+    holder.component.kind === 'innerTube' || holder.component.kind === 'bodyTube'
+      ? holder.component.length
+      : 0;
+  const overhang: number = mount.aftEnd - (holder.position + holderLength);
+  const match = library.find(
+    (m) =>
+      m.definition.designation.toLowerCase() === mount.designation.toLowerCase() &&
+      sameManufacturer(m.definition.manufacturer, mount.manufacturer),
+  );
+  const delay: Seconds | undefined = mount.delay;
+  const delayText =
+    delay === undefined ? 'plugged (no ejection charge)' : `delay ${String(delay)} s`;
+  const motors = mount.cluster === undefined ? '' : `${String(mount.cluster.length)} × `;
+  const where = stageName === undefined ? '' : `${stageName}: `;
+  if (match === undefined) {
+    notices.push(
+      `${where}The file names the motor ${motors}${mount.manufacturer} ${mount.designation} (${String(Math.round(mount.diameter * 1000))} mm, ${delayText}) but carries no thrust curve and no motor of that name is in the library: choose it in the motor panel.`,
+    );
+  } else {
+    notices.push(
+      `${where}Motor ${motors}${match.definition.manufacturer} ${match.definition.designation} taken from the library, ${delay === undefined ? 'plugged as in the file (no ejection charge)' : `with the file's delay of ${String(delay)} s`}.`,
+    );
+  }
+  const { event, delay: ignitionDelay } = mount.ignition;
+  return {
+    componentId: holder.id,
+    overhang: metres(overhang),
+    ...(match === undefined
+      ? {}
+      : {
+          motor: {
+            definition: match.definition,
+            provenance: match.provenance,
+            ...(delay === undefined ? {} : { ejectionDelay: delay }),
+          },
+        }),
+    ...(mount.cluster === undefined ? {} : { cluster: mount.cluster }),
+    ...(event === 'automatic' && (ignitionDelay as number) === 0
+      ? {}
+      : { ignition: { event, delay: ignitionDelay } }),
+  };
 }
