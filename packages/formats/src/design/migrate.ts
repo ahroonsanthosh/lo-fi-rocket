@@ -15,8 +15,11 @@ export type Migration = (document: Record<string, unknown>) => Record<string, un
  * 2 to 3 (plan 0070): a part's pod set is new and optional, so a version-2 file has no pods.
  * 3 to 4 (plan 0073): a part's own finish is new and optional, so in a version-3 file every part
  * has the design's finish.
+ * 4 to 5 (plan 0073 part 2): a recovery device may be a streamer, so a version-4 file's devices are
+ * all parachutes.
  */
 export const MIGRATIONS: readonly Migration[] = [
+  (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,
   (document: Record<string, unknown>): Record<string, unknown> => document,

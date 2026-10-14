@@ -57,7 +57,9 @@ The work is split into one pull request per item, in the order above.
   - **Friction against OpenRocket.** The friction of all 14 probe rockets at Mach 0.1, 0.3, 0.8 and 1.5 is 1.24 to 1.46 % above OpenRocket's, the same as with regular paint everywhere within ±0.11 %. The 1.3 % offset is the form factor (campaign item 7: eq. (3.85) as printed against OpenRocket's 1 + 1/(4 f_B)).
 - **Unchanged.** Every reference rocket and golden output: all of them are regular paint throughout.
 
-## 3. Part 2: streamers (next)
+## 3. Part 2: streamers (D-111)
+
+### The source and what OpenRocket does
 
 - **Source.** Niskanen Appendix C (pp. 111 to 116) gives the streamer drag from wind tunnel measurements, eq. (C.6), normalised to the strip area w l:
   - C_D = 0.034 · ((ρ_m + 25 g/m²)/105 g/m²) · ((l + 1 m)/l).
@@ -66,11 +68,29 @@ The work is split into one pull request per item, in the order above.
   - A 0.6 × 0.06 m strip of 80 g/m² gives 0.090667.
   - A 0.05 m long strip gives 0.4, where eq. (C.6) gives 0.714.
   - The mass is the strip area times the surface density.
-- **The plan.**
-  - A streamer recovery device in the physics and the design file (schema 5), with the descent drag C_D · w · l.
-  - The reader reads `<striplength>`, `<stripwidth>`, the surface material and `<cd>`.
-  - The comparison mode takes OpenRocket's cap.
-  - A strip outside the measured lengths and widths of Figure C.1 (about 0.2 to 1 m long, 0.01 to 0.1 m wide) is listed.
+
+### What changed
+
+- **Physics.** A recovery device is a parachute or a streamer. The descent drag of a streamer is C_D · w · l, with C_D from eq. (C.6) unless the user gives one. A strip outside the measured ones is listed (moderate).
+- **Comparison mode.** It takes OpenRocket's cap (`streamerDragMethod: 'openrocket'`).
+- **Design file schema 5.** A recovery device may be `kind: 'streamer'` with `length`, `width`, `surfaceDensity` and an optional `dragCoefficient`. A version-4 file migrates unchanged.
+- **`.ork` reader.** It reads `<striplength>`, `<stripwidth>`, the surface material and `<cd>`. A test helper turns a file's devices into the physics' (`orkRecoveryDevice`).
+- **App.** An "Add streamer" button, and the editor's strip, material weight (g/m² or oz/yd²) and drag coefficient. The coefficient is eq. (C.6)'s, shown, unless unticked to enter a measured one. The 3D view does not draw a streamer yet.
+- **MCP.** `set_recovery` takes `streamer: {length, width, surfaceDensity}`, and the design summary reports it.
+
+### Tests
+
+- **Physics, `recovery.test.ts`.**
+  - Table C.2's five estimates to their printed digits.
+  - OpenRocket's automatic C_D for ten strips, and its cap in the comparison mode.
+  - A streamer of the parachute's C_D A descends as it does.
+  - A streamer's ground hit matches the closed-form terminal speed scaling within 0.5 %.
+- **Formats, `ork.streamer.test.ts`.**
+  - The ten probe files: strip, mass, structure mass and CG to 1e-6, and C_D.
+  - The design file round trip and its errors.
+  - The example rocket on a streamer, its ground hit at √(C_D A ratio) within 1 %.
+- **App, `Streamers.test.tsx`.** Adding and editing a streamer. `display.test.ts`: the oz/yd² factor against SP 811.
+- **MCP.** `set_recovery` with a streamer, and its error without a diameter or a strip.
 
 ## 4. Part 3: the smaller fixes (next)
 

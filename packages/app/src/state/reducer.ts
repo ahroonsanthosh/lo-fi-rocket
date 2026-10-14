@@ -65,7 +65,7 @@ export type Action =
       readonly stage: number;
       readonly mount: MotorMount | undefined;
     }
-  | { readonly type: 'add-recovery'; readonly id: string }
+  | { readonly type: 'add-recovery'; readonly id: string; readonly kind?: 'parachute' | 'streamer' }
   | {
       readonly type: 'update-recovery';
       readonly id: string;
@@ -175,7 +175,7 @@ export function reduce(state: AppState, action: Action): AppState {
     case 'set-stage-motor-mount':
       return withDesign(state, withStageMotorMount(d, action.stage, action.mount));
     case 'add-recovery': {
-      const device = defaultRecoveryDevice(action.id, d);
+      const device = defaultRecoveryDevice(action.id, d, action.kind);
       return {
         ...withDesign(state, { ...d, recovery: [...d.recovery, device] }),
         selectedId: device.id,

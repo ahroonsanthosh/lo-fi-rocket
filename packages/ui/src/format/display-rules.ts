@@ -31,7 +31,8 @@ export type QuantityKind =
   | 'angle'
   | 'time'
   | 'ratio'
-  | 'modulus'; // shear modulus of fin materials (app plan 0031)
+  | 'modulus' // shear modulus of fin materials (app plan 0031)
+  | 'surfaceDensity'; // a streamer's material (plan 0073)
 
 export interface DisplayRule {
   /** Unit label shown after the value; empty for a plain number. */
@@ -58,6 +59,7 @@ export const UNIT_DISPLAY: Readonly<
     time: { unit: 's', decimals: 2 },
     modulus: { unit: 'GPa', decimals: 2 },
     ratio: { unit: '', decimals: 2 },
+    surfaceDensity: { unit: 'g/m²', decimals: 0 },
   },
   imperial: {
     mm: { unit: 'in', decimals: 3 },
@@ -74,6 +76,7 @@ export const UNIT_DISPLAY: Readonly<
     angle: { unit: '°', decimals: 1 },
     time: { unit: 's', decimals: 2 },
     ratio: { unit: '', decimals: 2 },
+    surfaceDensity: { unit: 'oz/yd²', decimals: 2 },
   },
 };
 

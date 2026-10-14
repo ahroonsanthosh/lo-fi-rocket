@@ -23,7 +23,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.setConfig({ testTimeout: 120_000 });
 import { parseEng } from './eng.js';
 import { motorFromEng } from './motor-definition.js';
-import { parseOrk } from './ork.js';
+import { orkRecoveryDevice, parseOrk } from './ork.js';
 
 const REFERENCE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'reference');
 
@@ -164,12 +164,7 @@ function vehicleFor(c: (typeof CASES)[number]): FlightVehicle {
       aftEnd: mount.aftEnd,
       ejectionDelay: seconds(c.delay),
     },
-    recovery: rocket.recoveryDevices.map((d) => ({
-      name: d.name,
-      diameter: d.diameter,
-      dragCoefficient: d.dragCoefficient,
-      deploy: { event: d.deployEvent, altitude: d.deployAltitude, delay: d.deployDelay },
-    })),
+    recovery: rocket.recoveryDevices.map(orkRecoveryDevice),
     roughnessHeight: metres(60e-6),
   };
 }

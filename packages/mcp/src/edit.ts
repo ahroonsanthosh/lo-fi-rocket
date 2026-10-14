@@ -104,6 +104,7 @@ function convertField(kind: ComponentKind, key: string, spec: FieldSpec, v: unkn
     case 'temperature':
     case 'pressure':
     case 'density':
+    case 'surfaceDensity':
     case 'number':
       return quantity(path, spec.type, v);
     case 'integer': {

@@ -27,7 +27,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { parseEng } from './eng.js';
 import { motorFromEng } from './motor-definition.js';
-import { parseOrk } from './ork.js';
+import { orkRecoveryDevice, parseOrk } from './ork.js';
 
 const REFERENCE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'reference');
 const ROCKETS = [
@@ -54,14 +54,7 @@ function vehicle(c: (typeof ROCKETS)[number], recovery: boolean): FlightVehicle 
       aftEnd: mount.aftEnd,
       ejectionDelay: seconds(c.delay),
     },
-    recovery: recovery
-      ? rocket.recoveryDevices.map((d) => ({
-          name: d.name,
-          diameter: d.diameter,
-          dragCoefficient: d.dragCoefficient,
-          deploy: { event: d.deployEvent, altitude: d.deployAltitude, delay: d.deployDelay },
-        }))
-      : [],
+    recovery: recovery ? rocket.recoveryDevices.map(orkRecoveryDevice) : [],
     roughnessHeight: metres(60e-6),
   };
 }

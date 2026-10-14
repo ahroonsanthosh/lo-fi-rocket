@@ -221,14 +221,23 @@ export function EmptyStep({ step }: { readonly step: StepId }): JSX.Element {
       <p className="muted">This design has no {STEP_LABEL[step].toLowerCase()} yet.</p>
       <div className="editor-actions">
         {step === 'recovery' ? (
-          <Button
-            variant="primary"
-            onClick={() => {
-              dispatch({ type: 'add-recovery', id: newId() });
-            }}
-          >
-            Add a parachute
-          </Button>
+          <>
+            <Button
+              variant="primary"
+              onClick={() => {
+                dispatch({ type: 'add-recovery', id: newId() });
+              }}
+            >
+              Add a parachute
+            </Button>
+            <Button
+              onClick={() => {
+                dispatch({ type: 'add-recovery', id: newId(), kind: 'streamer' });
+              }}
+            >
+              Add a streamer
+            </Button>
+          </>
         ) : kind === '' ? null : (
           <Button
             variant="primary"

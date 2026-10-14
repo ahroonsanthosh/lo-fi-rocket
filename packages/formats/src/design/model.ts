@@ -12,6 +12,7 @@ import type {
   DragCurve,
   IntegratorOptions,
   Kelvin,
+  KilogramsPerSquareMetre,
   MassOverride,
   Metres,
   MetresPerSecond,
@@ -23,7 +24,7 @@ import type {
 } from '@lo-fi-rocket/physics';
 
 /** Bumped whenever the file layout changes; migrate.ts carries one step per bump. */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 export interface DesignComponent {
   readonly id: string;
@@ -110,13 +111,9 @@ export interface DesignStage {
 
 export type DeployEvent = 'apogee' | 'ejection' | 'altitude' | 'launch' | 'never';
 
-export interface DesignRecoveryDevice {
+interface DesignRecoveryBase {
   readonly id: string;
   readonly name: string;
-  /** Canopy diameter. */
-  readonly diameter: Metres;
-  /** Referred to the canopy area (Niskanen p. 67 gives 0.8 for a parachute). */
-  readonly dragCoefficient: number;
   readonly deploy: {
     readonly event: DeployEvent;
     /** For 'altitude': deploy when descending through this altitude above the pad. */
@@ -126,6 +123,28 @@ export interface DesignRecoveryDevice {
   /** Plan 0064 (schema 2): the stage the device is on (it leaves with it); absent means 0. */
   readonly stage?: number;
 }
+
+/** A parachute; `kind` is absent in files before schema 5. */
+export interface DesignParachute extends DesignRecoveryBase {
+  readonly kind?: 'parachute';
+  /** Canopy diameter. */
+  readonly diameter: Metres;
+  /** Referred to the canopy area (Niskanen p. 67 gives 0.8 for a parachute). */
+  readonly dragCoefficient: number;
+}
+
+/** Plan 0073 part 2 (schema 5): a streamer, a strip of `length` by `width` (Niskanen Appendix C). */
+export interface DesignStreamer extends DesignRecoveryBase {
+  readonly kind: 'streamer';
+  readonly length: Metres;
+  readonly width: Metres;
+  /** The strip material's mass per area. */
+  readonly surfaceDensity: KilogramsPerSquareMetre;
+  /** Referred to the strip area; absent, Niskanen's eq. (C.6) (STREAM-1). */
+  readonly dragCoefficient?: number;
+}
+
+export type DesignRecoveryDevice = DesignParachute | DesignStreamer;
 
 export interface LaunchSiteSettings {
   /** Pad altitude above mean sea level. */

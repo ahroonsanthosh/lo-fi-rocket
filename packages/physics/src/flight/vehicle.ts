@@ -8,17 +8,15 @@ import type { LaunchRail, LaunchSite } from '../environment/launch.js';
 import type { WindModel } from '../environment/wind.js';
 import type { ClusterOffset, PlacedComponent } from '../geometry/assembly.js';
 import type { MotorDefinition } from '../motor/motor.js';
-import type { Metres, Newtons, Seconds } from '../units/si.js';
+import type { KilogramsPerSquareMetre, Metres, Newtons, Seconds } from '../units/si.js';
 import type { BaseDragMethod, BaseDragMotorRule, RailButtonDragMethod } from '../drag/drag.js';
+import type { StreamerDragMethod } from './recovery.js';
 import type { LargeAngleMethod } from './aerodynamics.js';
 import type { GravityModel } from './gravity.js';
 
-/** A recovery device and when it deploys (Niskanen Table 4.2 p. 69; events with optional delays). */
-export interface RecoveryDevice {
+/** When a recovery device deploys (Niskanen Table 4.2 p. 69; events with optional delays). */
+interface RecoveryDeviceBase {
   readonly name: string;
-  readonly diameter: Metres;
-  /** Parachute drag coefficient referred to the canopy area (0.8 by default in Niskanen p. 67; the user may give another). */
-  readonly dragCoefficient: number;
   readonly deploy: {
     readonly event: 'apogee' | 'ejection' | 'altitude' | 'launch' | 'never';
     /** For 'altitude': deploy when descending through this altitude above the pad. */
@@ -26,6 +24,26 @@ export interface RecoveryDevice {
     readonly delay: Seconds;
   };
 }
+
+/** A parachute: a canopy of `diameter`. */
+export interface ParachuteDevice extends RecoveryDeviceBase {
+  readonly kind?: 'parachute';
+  readonly diameter: Metres;
+  /** Parachute drag coefficient referred to the canopy area (0.8 by default in Niskanen p. 67; the user may give another). */
+  readonly dragCoefficient: number;
+}
+
+/** Plan 0073 part 2: a streamer, a strip of `length` by `width` (Niskanen Appendix C). */
+export interface StreamerDevice extends RecoveryDeviceBase {
+  readonly kind: 'streamer';
+  readonly length: Metres;
+  readonly width: Metres;
+  readonly surfaceDensity: KilogramsPerSquareMetre;
+  /** Referred to the strip area; absent, eq. (C.6) (STREAM-1). */
+  readonly dragCoefficient?: number;
+}
+
+export type RecoveryDevice = ParachuteDevice | StreamerDevice;
 
 export type MotorSource =
   | {
@@ -162,6 +180,8 @@ export interface SimulationOptions {
   readonly baseDragMotorRule: BaseDragMotorRule;
   /** Rail button drag (D-108): Niskanen's (the default) or OpenRocket 24.12's (DRAG-23). */
   readonly railButtonDragMethod?: RailButtonDragMethod;
+  /** A streamer's automatic drag coefficient (plan 0073): eq. (C.6) (the default) or OpenRocket's cap. */
+  readonly streamerDragMethod?: StreamerDragMethod;
   /**
    * How many of a cluster's motors are taken off the base drag area (D-086): 'all', the thrusting
    * motors of N09 p. 51 (the default), or 'one' (D-086's reading of OpenRocket 24.12, which D-108

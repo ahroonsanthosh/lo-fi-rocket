@@ -98,11 +98,11 @@ describe('orkToDesign (plan 0015)', () => {
 });
 
 describe('approximations travel from the import to the result (D-084)', () => {
-  // R1 with canted fins (minor, on the fin set) and a streamer with no mass in the file, left out
-  // (major, on the design as a whole).
+  // R1 with canted fins (minor, on the fin set) and a tube fin set with no mass in the file, left
+  // out (major, on the design as a whole).
   const edited = orkXml('r1-three-fin-conical')
     .replace('<cant>0.0</cant>', '<cant>0.1</cant>')
-    .replace('<parachute>', '<streamer><name>Tail streamer</name></streamer><parachute>');
+    .replace('<parachute>', '<tubefinset><name>Tail fins</name></tubefinset><parachute>');
   const { design, notices } = orkToDesign(parseOrk(edited, 'edited.ork'), library, 'edited');
 
   it('the import says how many approximations there are, and how many are major', () => {
@@ -118,7 +118,7 @@ describe('approximations travel from the import to the result (D-084)', () => {
     const fins = design.components.find((c) => c.component.kind === 'finSet');
     expect(fins?.approximations?.map((a) => a.impact)).toEqual(['minor']);
     expect(design.approximations?.map((a) => [a.subject, a.impact])).toEqual([
-      ['Streamer "Tail streamer"', 'major'],
+      ['Tube fin set "Tail fins"', 'major'],
     ]);
     expect(parseDesign(serializeDesign(design))).toEqual(design);
   });
@@ -130,7 +130,7 @@ describe('approximations travel from the import to the result (D-084)', () => {
     );
     expect(r.approximations.map((a) => a.subject).sort()).toEqual([
       'Fin set "Fins (3)"',
-      'Streamer "Tail streamer"',
+      'Tube fin set "Tail fins"',
     ]);
     expect(r.confidence.level).toBe('low');
   }, 30000);

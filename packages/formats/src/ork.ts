@@ -17,6 +17,7 @@ import { strFromU8, Unzip, UnzipInflate } from 'fflate';
 import {
   kilograms,
   kilogramsPerCubicMetre,
+  kilogramsPerSquareMetre,
   metres,
   noseProfile,
   transitionProfile,
@@ -30,10 +31,12 @@ import {
   type FinShape,
   type FinTab,
   type KilogramsPerCubicMetre,
+  type KilogramsPerSquareMetre,
   type MassOverride,
   type Metres,
   type NoseShape,
   type PlacedComponent,
+  type RecoveryDevice,
   type Seconds,
   type SeparationEvent,
   type Shoulder,
@@ -94,15 +97,46 @@ export interface OrkStage {
 /** OpenRocket deployment events (DeploymentConfiguration.DeployEvent, from the jar's public signature). */
 export type OrkDeployEvent = 'launch' | 'ejection' | 'apogee' | 'altitude' | 'never';
 
-export interface OrkRecoveryDevice {
+interface OrkRecoveryBase {
   readonly name: string;
-  /** Index into `components` of the packed parachute. */
+  /** Index into `components` of the packed parachute or streamer. */
   readonly component: number;
-  readonly diameter: Metres;
-  readonly dragCoefficient: number;
   readonly deployEvent: OrkDeployEvent;
   readonly deployAltitude: Metres;
   readonly deployDelay: Seconds;
+}
+
+export interface OrkParachute extends OrkRecoveryBase {
+  readonly kind?: 'parachute';
+  readonly diameter: Metres;
+  readonly dragCoefficient: number;
+}
+
+/** Plan 0073 part 2: a streamer; its drag coefficient is absent for "auto" (eq. C.6). */
+export interface OrkStreamer extends OrkRecoveryBase {
+  readonly kind: 'streamer';
+  readonly length: Metres;
+  readonly width: Metres;
+  readonly surfaceDensity: KilogramsPerSquareMetre;
+  readonly dragCoefficient?: number;
+}
+
+export type OrkRecoveryDevice = OrkParachute | OrkStreamer;
+
+/** The physics' recovery device for one read from a file, deploying as the file says. */
+export function orkRecoveryDevice(d: OrkRecoveryDevice): RecoveryDevice {
+  const deploy = { event: d.deployEvent, altitude: d.deployAltitude, delay: d.deployDelay };
+  return d.kind === 'streamer'
+    ? {
+        kind: 'streamer',
+        name: d.name,
+        length: d.length,
+        width: d.width,
+        surfaceDensity: d.surfaceDensity,
+        ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
+        deploy,
+      }
+    : { name: d.name, diameter: d.diameter, dragCoefficient: d.dragCoefficient, deploy };
 }
 
 export interface OrkRocket {
@@ -1378,6 +1412,9 @@ class Reader {
             case 'parachute':
               this.readParachute(el, parent);
               break;
+            case 'streamer':
+              this.readStreamer(el, parent);
+              break;
             case 'shockcord':
               this.readShockCord(el, parent);
               break;
@@ -1919,19 +1956,46 @@ class Reader {
   }
 
   private readParachute(el: Element, parent: Parent): void {
+    this.readRecovery(el, parent, 'parachute');
+  }
+
+  /**
+   * Plan 0073 part 2: a streamer, a strip of `<striplength>` by `<stripwidth>` of a surface
+   * material. Its mass, without an override, is the strip's area times the material's surface
+   * density, and its automatic drag coefficient Niskanen's eq. (C.6), as OpenRocket computes
+   * both (FinishProbe part 3, reference/rockets/finish-probe/values.txt).
+   */
+  private readStreamer(el: Element, parent: Parent): void {
+    this.readRecovery(el, parent, 'streamer');
+  }
+
+  private readRecovery(el: Element, parent: Parent, kind: 'parachute' | 'streamer'): void {
     this.onAxis(el);
-    // An override "including subcomponents" is the parachute's own: OpenRocket gives a parachute no
-    // children, and any in the file are refused by name (D-084).
-    const diameter = el.number('diameter');
-    // D-079: without an override, OpenRocket's parachute mass is the canopy disc, π (d/2)² × the
-    // surface density, plus the lines, count × length × the line density
-    // (reference/rockets/parts-probe/values.txt: 0.018944 + 0.0072 = 0.026144 kg).
-    const mass = el.has('overridemass')
-      ? el.number('overridemass')
-      : Math.PI * (diameter / 2) ** 2 * el.materialDensity('material', 'surface') +
+    // An override "including subcomponents" is the device's own: OpenRocket gives a parachute or a
+    // streamer no children, and any in the file are refused by name (D-084).
+    const surfaceDensity = el.materialDensity('material', 'surface');
+    let mass: number;
+    let shape:
+      | { readonly kind: 'parachute'; readonly diameter: number }
+      | { readonly kind: 'streamer'; readonly length: number; readonly width: number };
+    if (kind === 'streamer') {
+      const length = el.number('striplength');
+      const width = el.number('stripwidth');
+      shape = { kind, length, width };
+      mass = length * width * surfaceDensity;
+    } else {
+      const diameter = el.number('diameter');
+      shape = { kind, diameter };
+      // D-079: without an override, OpenRocket's parachute mass is the canopy disc, π (d/2)² × the
+      // surface density, plus the lines, count × length × the line density
+      // (reference/rockets/parts-probe/values.txt: 0.018944 + 0.0072 = 0.026144 kg).
+      mass =
+        Math.PI * (diameter / 2) ** 2 * surfaceDensity +
         el.number('linecount') *
           el.number('linelength') *
           el.materialDensity('linematerial', 'line');
+    }
+    if (el.has('overridemass')) mass = el.number('overridemass');
     const length = el.number('packedlength');
     const position = axialPosition(el, parent, length);
     const index = this.place(
@@ -1944,7 +2008,7 @@ class Reader {
       },
       position,
     );
-    // D-077: a <deploymentconfiguration> for the selected configuration replaces the parachute's own
+    // D-077: a <deploymentconfiguration> for the selected configuration replaces the device's own
     // deployment elements; the other configurations' entries are not used.
     const own = el
       .all('deploymentconfiguration')
@@ -1966,7 +2030,7 @@ class Reader {
     }
     const event = known ? written : 'apogee';
     const cdText = el.text('cd');
-    if (cdText === 'auto') {
+    if (cdText === 'auto' && shape.kind === 'parachute') {
       // D-079 (the owner's choice): OpenRocket's automatic parachute C_D, 0.8 (parts-probe), an
       // OpenRocket default with no approved source, used and listed (D-084).
       this.attach(index, {
@@ -1978,27 +2042,40 @@ class Reader {
         impact: 'moderate',
       });
     }
-    this.recoveryDevices.push({
+    const common = {
       name: el.optionalText('name') ?? '',
       component: index,
-      diameter: metres(el.number('diameter')),
-      dragCoefficient: cdText === 'auto' ? OPENROCKET_AUTO_PARACHUTE_CD : el.number('cd'),
       deployEvent: event as OrkDeployEvent,
       deployAltitude: metres(deploy.number('deployaltitude')),
       deployDelay: seconds(deploy.number('deploydelay')),
-    });
+    };
+    this.recoveryDevices.push(
+      shape.kind === 'streamer'
+        ? {
+            kind: 'streamer',
+            ...common,
+            length: metres(shape.length),
+            width: metres(shape.width),
+            surfaceDensity: kilogramsPerSquareMetre(surfaceDensity),
+            // "auto": Niskanen's eq. (C.6), which OpenRocket also uses (STREAM-1).
+            ...(cdText === 'auto' ? {} : { dragCoefficient: el.number('cd') }),
+          }
+        : {
+            ...common,
+            diameter: metres(shape.diameter),
+            dragCoefficient: cdText === 'auto' ? OPENROCKET_AUTO_PARACHUTE_CD : el.number('cd'),
+          },
+    );
     if (own !== undefined) {
       deploy.finish([]);
-      // The parachute's own deployment elements are the other configurations' settings.
+      // The device's own deployment elements are the other configurations' settings.
       for (const name of ['deployevent', 'deployaltitude', 'deploydelay']) el.optional(name);
     }
     this.finishPart(el, [
       ...IGNORED_COMMON,
       ...IGNORED_ANGULAR,
       'material',
-      'linecount',
-      'linelength',
-      'linematerial',
+      ...(kind === 'parachute' ? ['linecount', 'linelength', 'linematerial'] : []),
     ]);
   }
 
@@ -2360,6 +2437,9 @@ class Reader {
               break;
             case 'parachute':
               this.readParachute(el, parent);
+              break;
+            case 'streamer':
+              this.readStreamer(el, parent);
               break;
             case 'shockcord':
               this.readShockCord(el, parent);

@@ -136,7 +136,13 @@ describe('pod sets from .ork files (plan 0070 step 3)', () => {
     const mp = rocketMassProperties(r.components);
     expect(relative(mp.mass, 0.129470467)).toBeLessThan(1e-6);
     expect(relative(mp.cg, 0.417451132)).toBeLessThan(1e-6);
-    expect(r.recoveryDevices.map((d) => [d.name, d.diameter, d.dragCoefficient])).toEqual([
+    expect(
+      r.recoveryDevices.map((d) => [
+        d.name,
+        d.kind === 'streamer' ? undefined : d.diameter,
+        d.dragCoefficient,
+      ]),
+    ).toEqual([
       ['Parachute (pod 1 of 2)', 0.3, 0.8],
       ['Parachute (pod 2 of 2)', 0.3, 0.8],
     ]);
