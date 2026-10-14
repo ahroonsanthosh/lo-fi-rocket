@@ -53,13 +53,20 @@ function resultText(results: HTMLElement, label: string): string {
   return dt?.nextElementSibling?.textContent ?? '';
 }
 
-/** The launch site, rail and wind have their own view, opened from the dock. */
+/** Back to the home list, from any page. */
+async function home(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  const back = screen.queryByRole('button', { name: 'Your rocket' });
+  if (back !== null) await user.click(back);
+}
+
+/** The launch site, rail and wind have their own page, opened from the home list. */
 async function openLaunch(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  const dock = screen.getByRole('navigation', { name: 'Views' });
-  await user.click(within(dock).getByRole('button', { name: 'Launch' }));
+  await home(user);
+  await user.click(within(screen.getByRole('listbox', { name: 'Launch' })).getByRole('option'));
 }
 
 async function openFlight(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await home(user);
   await user.click(within(screen.getByRole('listbox', { name: 'Flight' })).getByRole('option'));
 }
 
@@ -75,9 +82,9 @@ describe('FlightPanel (plan 0014)', () => {
     expect(dd('Apogee')).toBe('172.94 m');
     expect(dd('Maximum velocity')).toBe('63.0 m/s');
     expect(dd('Rail exit velocity')).toMatch(/^18\.5 m\/s at 0\.29\d s$/);
-    expect(
-      within(screen.getByRole('region', { name: 'Warnings' })).getByText('No warnings.'),
-    ).toBeInTheDocument();
+    // Nothing is wrong with the example's flight: the top bar says so and no list is shown.
+    expect(screen.getByText('All clear')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Warnings' })).not.toBeInTheDocument();
     const events = within(results).getByRole('list', { name: 'Events' });
     const kinds = within(events)
       .getAllByRole('listitem')

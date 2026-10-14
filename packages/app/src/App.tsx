@@ -9,29 +9,24 @@ import {
   AppShell,
   Button,
   Dialog,
-  Dock,
   GLOSSARY,
   Segmented,
   StabilityIndicator,
-  StepGuide,
   WarningList,
-  type DockItem,
   type WarningItem,
 } from '@lo-fi-rocket/ui';
 import { ComponentEditor } from './components/ComponentEditor.js';
 import { AsBuiltEditor } from './components/AsBuiltEditor.js';
-import { ComponentList } from './components/ComponentList.js';
 import { Header } from './components/Header.js';
-import { FLIGHT_SELECTION_ID, FlightPanel, type FlightState } from './components/FlightPanel.js';
+import { FlightPanel, type FlightState } from './components/FlightPanel.js';
 import { FlightPlots } from './components/FlightPlots.js';
-import { FlightViewer, type DispersionState } from './components/FlightViewer.js';
+import type { DispersionState } from './components/FlightViewer.js';
 import type { FileNotice } from './components/FilesMenu.js';
 import { LaunchEditor } from './components/LaunchEditor.js';
-import { MOTOR_SELECTION_ID, MotorPanel } from './components/MotorPanel.js';
+import { MotorPanel } from './components/MotorPanel.js';
 import { RecoveryEditor } from './components/RecoveryEditor.js';
 import { keyValueStore } from './motors/library.js';
 import { browserServices, ServicesContext, type Services } from './state/services.js';
-import { SideView } from './components/SideView.js';
 import { computeFigures, MassPanel, StabilityDetails } from './components/StabilityPanel.js';
 import {
   browserStorage,
@@ -53,17 +48,11 @@ import {
   splitMessage,
 } from './layout/warnings.js';
 import { stabilityProps } from './layout/stability.js';
-import {
-  EMPTY_STEP_PREFIX,
-  LAUNCH_TARGET,
-  STEP_ORDER,
-  stepOf,
-  steps,
-  stepTarget,
-} from './layout/steps.js';
-import { EmptyStep, InFlightChecks, StepStrip, Telemetry } from './layout/panels.js';
-import { Overview } from './layout/Overview.js';
-import { isView, viewOf, VIEW_TITLE, type View } from './layout/views.js';
+import { emptyStepOf } from './layout/steps.js';
+import { Home } from './layout/Home.js';
+import { pageOf } from './layout/pages.js';
+import { EmptyStep, InFlightChecks, Page } from './layout/panels.js';
+import { Stage, type StageMode } from './layout/Stage.js';
 
 export interface AppProps {
   /** Injected in tests; the browser's local storage by default. */
@@ -76,17 +65,6 @@ export interface AppProps {
 }
 
 const AUTOSAVE_DELAY_MS = 300;
-const GUIDE_KEY = 'lofi-rocket:guide-hidden';
-
-/** The views of the main screen, in the dock at its foot (the reference's icon row). */
-const DOCK: readonly DockItem[] = [
-  { id: 'overview', label: 'Overview', icon: 'overview' },
-  { id: 'airframe', label: 'Airframe', icon: 'airframe' },
-  { id: 'motor', label: 'Motor', icon: 'motor' },
-  { id: 'recovery', label: 'Recovery', icon: 'recovery' },
-  { id: 'launch', label: 'Launch', icon: 'launch' },
-  { id: 'flight', label: 'Flight', icon: 'flight' },
-];
 
 export function App(props: AppProps): JSX.Element {
   const storage = props.storage ?? browserStorage();
@@ -106,10 +84,10 @@ export function App(props: AppProps): JSX.Element {
   const [dispersion, setDispersion] = useState<DispersionState | undefined>(undefined);
   const [fileNotices, setFileNotices] = useState<readonly (FileNotice & { id: number })[]>([]);
   const [theme, setTheme] = useState<Theme>(() =>
-    storage === undefined ? 'dark' : loadTheme(storage),
+    storage === undefined ? 'auto' : loadTheme(storage),
   );
-  const [guideHidden, setGuideHidden] = useState(() => storage?.getItem(GUIDE_KEY) === 'true');
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [stageMode, setStageMode] = useState<StageMode>('rocket');
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(new Set());
   // Loaded once, on mount: the stored design (or the example), and a notice if the stored one was invalid.
   const [start] = useState(() => {
@@ -128,7 +106,6 @@ export function App(props: AppProps): JSX.Element {
   });
   const notice = start.notice;
   const [state, dispatch] = useReducer(reduce, start.state);
-  const [view, setView] = useState<View>('overview');
 
   // Autosave after each change.
   useEffect(() => {
@@ -143,8 +120,10 @@ export function App(props: AppProps): JSX.Element {
   useEffect(() => {
     if (storage !== undefined) saveUnits(storage, state.units);
   }, [storage, state.units]);
+  // The theme follows the system unless the user picked one (D-UI-12).
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', theme);
     if (storage !== undefined) saveTheme(storage, theme);
   }, [storage, theme]);
   // Results belong to a design (redesign section 2): replacing the design clears them.
@@ -154,49 +133,21 @@ export function App(props: AppProps): JSX.Element {
     setDispersion(undefined);
     setSimError(undefined);
   }, [designId]);
-  // A new selection opens the view it belongs to; editing the selected part does not move the view.
-  // The effect runs only when the selection changes, and sees the design of that render.
-  const selectedId = state.selectedId;
-  const designNow = state.design;
-  useEffect(() => {
-    const v = viewOf(selectedId, designNow);
-    if (v !== undefined) setView(v);
-  }, [selectedId]);
 
   const figures = useMemo(() => computeFigures(state.design), [state.design]);
   const selectedComponent = state.design.components.find((c) => c.id === state.selectedId);
   const selectedDevice = state.design.recovery.find((r) => r.id === state.selectedId);
+  // Opening a part shows the rocket, not the replay, so the edit can be seen.
+  const editingPart = selectedComponent !== undefined;
+  useEffect(() => {
+    if (editingPart) setStageMode('rocket');
+  }, [editingPart, state.selectedId]);
   const store = useMemo(() => ({ state, dispatch }), [state]);
   const flightCurrent = flight?.design === state.design;
   const stale = flight !== undefined && !flightCurrent;
-
-  const step = stepOf(state.selectedId, state.design);
-  // Only an open step is marked current; on the overview every step shows its own status.
-  const currentStep = step;
-  const stepList = steps(
-    { design: state.design, liftoffLevel: figures.stability?.liftoff.level, flightCurrent },
-    currentStep,
-  );
-  const openStep = (id: string): void => {
-    const s = STEP_ORDER.find((x) => x === id);
-    if (s === undefined) return;
-    const target = stepTarget(s, state.design);
-    dispatch({ type: 'select', id: target });
-    const v = viewOf(target, state.design);
-    if (v !== undefined) setView(v);
-  };
-  const openView = (id: string): void => {
-    if (!isView(id)) return;
-    setView(id);
-    const d = state.design;
-    const sel = state.selectedId;
-    if (id === 'motor') dispatch({ type: 'select', id: MOTOR_SELECTION_ID });
-    else if (id === 'flight') dispatch({ type: 'select', id: FLIGHT_SELECTION_ID });
-    else if (id === 'launch') dispatch({ type: 'select', id: LAUNCH_TARGET });
-    else if (id === 'recovery' && !d.recovery.some((r) => r.id === sel))
-      dispatch({ type: 'select', id: d.recovery[0]?.id ?? `${EMPTY_STEP_PREFIX}recovery` });
-    else if (id === 'airframe' && !d.components.some((c) => c.id === sel))
-      dispatch({ type: 'select', id: d.components[0]?.id ?? `${EMPTY_STEP_PREFIX}body` });
+  const page = pageOf(state.selectedId, state.design);
+  const open = (id: string | undefined): void => {
+    dispatch({ type: 'select', id });
   };
 
   const warnings = useMemo((): WarningItem[] => {
@@ -265,112 +216,82 @@ export function App(props: AppProps): JSX.Element {
     return out.map((w) => (acknowledged.has(w.id) ? { ...w, acknowledged: true } : w));
   }, [notice, fileNotices, simError, state.design, state.units, flight, stale, acknowledged]);
 
-  const thresholds = state.design.stabilityThresholds;
-  const stability = stabilityProps(figures, thresholds);
-  const onSelectPart = (id: string): void => {
-    dispatch({ type: 'select', id });
+  const stability = stabilityProps(figures, state.design.stabilityThresholds);
+  const back = (): void => {
+    open(undefined);
   };
+  const emptyStep = emptyStepOf(state.selectedId);
 
-  const stepStrip = step === undefined ? null : <StepStrip step={step} onOpen={openStep} />;
   const content = ((): JSX.Element => {
-    switch (view) {
-      case 'overview':
+    switch (page) {
+      case 'home':
+        return <Home figures={figures} onOpen={open} />;
+      case 'part':
         return (
-          <Overview
-            figures={figures}
-            design={state.design}
-            units={state.units}
-            flight={flight}
-            stale={stale}
-            selectedId={state.selectedId}
-            onSelect={onSelectPart}
-            onStart={() => {
-              openStep('body');
-            }}
-          />
+          <Page onBack={back}>
+            {selectedComponent === undefined ? null : (
+              <ComponentEditor key={selectedComponent.id} item={selectedComponent} />
+            )}
+          </Page>
         );
-      case 'airframe':
+      case 'add-part':
         return (
-          <>
-            <div className="view-frame">
-              <SideView
-                components={state.design.components}
-                selectedId={state.selectedId}
-                cg={figures.stability?.result.cgLiftoff}
-                cp={figures.stability?.result.centreOfPressure.cp}
-                onSelect={onSelectPart}
-              />
-              <p className="view-legend">
-                <span className="legend-key legend-key--cg" aria-hidden="true" /> CG, centre of
-                gravity <span className="legend-key legend-key--cp" aria-hidden="true" /> CP, centre
-                of pressure. Distances from the nose tip.
-              </p>
-            </div>
-            <section className="view-card" aria-label="Editor">
-              {stepStrip}
-              {selectedComponent !== undefined ? (
-                <ComponentEditor key={selectedComponent.id} item={selectedComponent} />
-              ) : step !== undefined && state.selectedId?.startsWith(EMPTY_STEP_PREFIX) === true ? (
-                <EmptyStep step={step} />
-              ) : (
-                <p className="muted">
-                  Select a part in the parts list or on the drawing to edit it.
-                </p>
-              )}
-              <AsBuiltEditor />
-            </section>
-          </>
+          <Page onBack={back}>
+            {emptyStep === undefined ? null : <EmptyStep step={emptyStep} />}
+          </Page>
         );
       case 'motor':
         return (
-          <section className="view-card" aria-label="Editor">
-            {stepStrip}
+          <Page onBack={back}>
             <MotorPanel />
-          </section>
+          </Page>
         );
       case 'recovery':
         return (
-          <section className="view-card" aria-label="Editor">
-            {stepStrip}
-            {selectedDevice !== undefined ? (
+          <Page onBack={back}>
+            {selectedDevice === undefined ? null : (
               <RecoveryEditor key={selectedDevice.id} device={selectedDevice} />
-            ) : (
-              <EmptyStep step="recovery" />
             )}
-          </section>
+          </Page>
         );
       case 'launch':
         return (
-          <section className="view-card" aria-label="Editor">
-            {stepStrip}
+          <Page onBack={back}>
             <section className="editor" aria-label="Launch">
+              <h2>Launch</h2>
               <LaunchEditor />
             </section>
-          </section>
+          </Page>
+        );
+      case 'stability':
+        return (
+          <Page onBack={back}>
+            <h2 className="page-title">Stability and mass</h2>
+            <StabilityIndicator
+              {...stability}
+              {...(stability.state === 'ready'
+                ? { details: <StabilityDetails figures={figures} /> }
+                : {})}
+            />
+            <InFlightChecks flight={flight} stale={stale} />
+            <MassPanel figures={figures} />
+            <AsBuiltEditor />
+          </Page>
         );
       case 'flight':
         return (
-          <section className="view-card" aria-label="Editor">
-            {stepStrip}
+          <Page onBack={back}>
             <FlightPanel
               flight={flight}
-              onFlight={setFlight}
+              onFlight={(f) => {
+                setFlight(f);
+                // A new flight is shown as its replay; the rocket is one switch away.
+                if (f !== undefined) setStageMode('replay');
+              }}
               onError={setSimError}
               error={simError}
               dispersion={dispersion}
               onDispersion={setDispersion}
-              replay={
-                flight === undefined ? null : (
-                  <div className="flight-section">
-                    <FlightViewer
-                      design={flight.design}
-                      result={flight.result}
-                      units={state.units}
-                      dispersion={dispersion}
-                    />
-                  </div>
-                )
-              }
               plots={
                 flight === undefined ? null : (
                   <div className="flight-section">
@@ -384,7 +305,7 @@ export function App(props: AppProps): JSX.Element {
                 )
               }
             />
-          </section>
+          </Page>
         );
     }
   })();
@@ -393,158 +314,77 @@ export function App(props: AppProps): JSX.Element {
     <StoreContext.Provider value={store}>
       <ServicesContext.Provider value={services}>
         <AppShell
+          {...(page === 'flight' ? { className: 'is-wide' } : {})}
           header={
             <Header
               storage={storage}
-              theme={theme}
-              onTheme={setTheme}
-              title={VIEW_TITLE[view]}
+              warnings={warnings}
+              onSettings={() => {
+                setSettingsOpen(true);
+              }}
               onNotice={(n) => {
                 setFileNotices((list) => [...list, { ...n, id: list.length }]);
               }}
             />
           }
-          statusBar={
-            <Telemetry
+          stage={
+            <Stage
               figures={figures}
-              thresholds={thresholds}
-              warningThresholds={state.design.warningThresholds}
-              units={state.units}
+              design={state.design}
               flight={flight}
               stale={stale}
+              dispersion={dispersion}
+              mode={stageMode}
+              onMode={setStageMode}
             />
           }
-          navigation={
-            <>
-              <div className="nav-scroll">
-                <section className="nav-section" aria-label="Checklist">
-                  <div className="nav-section__head">
-                    <h2 className="lfr-section-title">Checklist</h2>
-                    {guideHidden ? (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setGuideHidden(false);
-                          storage?.setItem(GUIDE_KEY, 'false');
-                        }}
-                      >
-                        Show the guide
-                      </Button>
-                    ) : null}
-                  </div>
-                  {guideHidden ? null : (
-                    <StepGuide
-                      steps={stepList}
-                      currentId={currentStep ?? ''}
-                      onSelect={openStep}
-                      onHide={() => {
-                        setGuideHidden(true);
-                        storage?.setItem(GUIDE_KEY, 'true');
-                      }}
-                    />
-                  )}
-                </section>
-                <div className="nav-section parts-panel">
-                  <ComponentList />
-                </div>
-              </div>
-              <div className="nav-foot">
-                <Segmented
-                  legend="Units"
-                  name="units"
-                  value={state.units}
-                  options={[
-                    { value: 'metric', label: 'Metric' },
-                    { value: 'imperial', label: 'Imperial' },
-                  ]}
-                  onChange={(units) => {
-                    dispatch({ type: 'set-units', units });
-                  }}
-                />
-              </div>
-            </>
-          }
-          main={
-            <>
-              <h2 className="visually-hidden">{VIEW_TITLE[view]}</h2>
-              <div key={view} className={`view-scroll view-scroll--${view}`}>
-                {content}
-              </div>
-              <Dock label="Views" items={DOCK} selectedId={view} onSelect={openView} />
-            </>
-          }
           checks={
-            <>
-              <div className="checks-scroll">
-                <div id="warnings" className="warnings-anchor">
-                  <WarningList
-                    warnings={warnings}
-                    emptyText={
-                      flight === undefined ? 'No warnings for the design so far.' : 'No warnings.'
-                    }
-                    onAcknowledge={(id) => {
-                      setAcknowledged((a) => new Set([...a, id]));
-                    }}
-                  />
-                </div>
-                <StabilityIndicator
-                  {...stability}
-                  {...(stability.state === 'ready'
-                    ? { details: <StabilityDetails figures={figures} /> }
-                    : {})}
-                />
-                <InFlightChecks flight={flight} stale={stale} />
-                <MassPanel figures={figures} />
-              </div>
-              <div className="checks-foot">
-                <p className="checks-foot__text">
-                  {storage === undefined
-                    ? 'Not saved in this browser'
-                    : 'Autosaved in this browser'}
-                </p>
-                <Button
-                  onClick={() => {
-                    setMoreOpen(true);
+            warnings.length === 0 ? null : (
+              <div id="warnings">
+                <WarningList
+                  warnings={warnings}
+                  onAcknowledge={(id) => {
+                    setAcknowledged((a) => new Set([...a, id]));
                   }}
-                >
-                  More
-                </Button>
+                />
               </div>
-            </>
+            )
           }
+          main={content}
         />
         <Dialog
-          open={moreOpen}
-          title="More"
-          description="Display settings, and what every term in the app means."
+          open={settingsOpen}
+          title="Settings"
+          description="How the app looks, and what every term in it means."
           onClose={() => {
-            setMoreOpen(false);
+            setSettingsOpen(false);
           }}
           actions={
             <Button
               variant="primary"
               onClick={() => {
-                setMoreOpen(false);
+                setSettingsOpen(false);
               }}
             >
-              Close
+              Done
             </Button>
           }
         >
-          <div className="more-row">
-            <span className="more-row__label">Theme</span>
+          <div className="settings-row">
+            <span className="settings-row__label">Appearance</span>
             <Segmented
-              legend="Theme"
+              legend="Appearance"
               name="theme"
               value={theme}
               options={[
-                { value: 'dark', label: 'Dark' },
+                { value: 'auto', label: 'System' },
                 { value: 'light', label: 'Light' },
+                { value: 'dark', label: 'Dark' },
               ]}
               onChange={setTheme}
             />
           </div>
-          <h3 className="more-heading">Glossary</h3>
+          <h3 className="settings-heading">Glossary</h3>
           <dl className="glossary">
             {Object.values(GLOSSARY).map((g) => (
               <div key={g.term} className="glossary__entry">

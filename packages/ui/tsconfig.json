@@ -5,5 +5,5 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "@testing-library/jest-dom", "node"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "mockups/**/*.ts", "mockups/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
