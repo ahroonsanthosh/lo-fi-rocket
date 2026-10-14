@@ -45,6 +45,8 @@ function ourFriction(rocket: OrkRocket, m: number): number {
     reynolds: (m * SPEED_OF_SOUND * (rocket.length as number)) / NU,
     roughnessHeight: rocket.roughnessHeight,
     baseDragMotorRule: 'never',
+    // Against OpenRocket: eq. (3.85)'s body form factor, as the comparison mode (plan 0076).
+    bodyFormFactor: 'niskanen',
   }).skinFriction.cd;
 }
 

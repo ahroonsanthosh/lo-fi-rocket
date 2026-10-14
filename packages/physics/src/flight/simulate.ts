@@ -593,6 +593,12 @@ function derive(
         ...(ctx.options.baseDragMethod === undefined
           ? {}
           : { baseDragMethod: ctx.options.baseDragMethod }),
+        ...(ctx.options.bodyFormFactor === undefined
+          ? {}
+          : { bodyFormFactor: ctx.options.bodyFormFactor }),
+        ...(ctx.options.finFrictionLength === undefined
+          ? {}
+          : { finFrictionLength: ctx.options.finFrictionLength }),
         referenceDiameter: metres(ctx.config.referenceDiameter),
       });
       cd0 = drag.cd0;

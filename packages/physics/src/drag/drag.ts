@@ -45,10 +45,12 @@ import {
   shoulderPressureDrag,
 } from './pressure-drag.js';
 import {
+  type BodyFormFactor,
   compressibleSkinFriction,
   frictionDragCoefficient,
-  skinFrictionCoefficient,
+  type FrictionDragGeometry,
   type SkinFriction,
+  skinFrictionCoefficient,
 } from './skin-friction.js';
 
 /** GEO-13. Wetted (lateral) area of a body of revolution: ∫ 2π r √(1 + r′²) dx. */
@@ -118,7 +120,20 @@ export interface DragInputs {
    * measured (DRAG-23, D-108), for the OpenRocket-equivalent mode.
    */
   readonly railButtonDragMethod?: RailButtonDragMethod;
+  /**
+   * The body friction's form factor (plan 0076, DRAG-25): Niskanen's eq. (3.85) or the DATCOM's
+   * eq. 4.2.3.1-a. Defaults to `DEFAULT_BODY_FORM_FACTOR`.
+   */
+  readonly bodyFormFactor?: BodyFormFactor;
+  /**
+   * The fin friction's Reynolds length (plan 0076, DRAG-24): 'rocket', one C_fc at the rocket's
+   * Reynolds number (eq. 3.85, the default); or 'fin-chord', each fin set's C_fc at its own mean
+   * aerodynamic chord (DATCOM eq. 4.1.5.1-a). Awaiting the owner's decision (D-115).
+   */
+  readonly finFrictionLength?: FinFrictionLength;
 }
+
+export type FinFrictionLength = 'rocket' | 'fin-chord';
 
 export type BaseDragMotorRule = 'while-thrusting' | 'always' | 'never';
 export type RailButtonDragMethod = 'niskanen' | 'openrocket';
@@ -304,6 +319,9 @@ function staticEntries(components: readonly PlacedComponent[]): readonly StaticE
 /** Body base drag method (D-069): Niskanen eq. (3.94), or the DATCOM's body correlation (DRAG-21, DRAG-22). */
 export type BaseDragMethod = 'niskanen' | 'datcom';
 export const DEFAULT_BASE_DRAG_METHOD: BaseDragMethod = 'datcom';
+
+/** The body form factor of the displayed mode (plan 0076, D-115). */
+export const DEFAULT_BODY_FORM_FACTOR: BodyFormFactor = 'datcom';
 
 /** Fairing from the end of figure 4.2.3.1-24 to Niskanen's supersonic base drag (DATCOM sketch (a), p. 4.2.3.1-5). */
 export const DATCOM_BASE_FAIRING_END = 1.5;
@@ -701,6 +719,27 @@ export function dragCoefficient(input: DragInputs): DragResult {
   );
   const cfc = compressibleSkinFriction(friction, input.mach, input.reynolds);
   const finenessRatio = geometry.length / d;
+  // Plan 0076: the body form factor (DRAG-25) and the fins' Reynolds length (DRAG-24).
+  const bodyFactor = input.bodyFormFactor ?? DEFAULT_BODY_FORM_FACTOR;
+  const reynoldsPerMetre = geometry.length > 0 ? input.reynolds / geometry.length : 0;
+  const finFrictionAt = (
+    roughness: number,
+  ): Pick<FrictionDragGeometry, 'bodyFormFactor' | 'finFriction'> => ({
+    bodyFormFactor: bodyFactor,
+    ...(input.finFrictionLength === 'fin-chord'
+      ? {
+          finFriction: (chord: number): number => {
+            // DRAG-24: eqs. (3.78) to (3.84) on the fin's own length, its mean aerodynamic chord.
+            const re = reynoldsPerMetre * chord;
+            return compressibleSkinFriction(
+              skinFrictionCoefficient(re, metres(roughness), metres(chord)),
+              input.mach,
+              re,
+            );
+          },
+        }
+      : {}),
+  });
   let frictionCd: number;
   if (surfaces.size <= 1 && (surfaces.size === 0 || surfaces.has(input.roughnessHeight))) {
     // Plan 0070: the pods' surfaces are friction surfaces like the body's.
@@ -713,6 +752,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
       wettedBodyArea: geometry.wettedBody + podWetted,
       finSets,
       referenceArea: aRef,
+      ...finFrictionAt(input.roughnessHeight),
     });
   } else {
     // Plan 0073 (D-110): parts of several finishes. The friction force is the sum of each
@@ -724,7 +764,13 @@ export function dragCoefficient(input: DragInputs): DragResult {
     for (const [roughness, s] of surfaces) {
       frictionCd += frictionDragCoefficient(
         compressibleFrictionAt(input, roughness, geometry.length),
-        { finenessRatio, wettedBodyArea: s.body, finSets: s.fins, referenceArea: aRef },
+        {
+          finenessRatio,
+          wettedBodyArea: s.body,
+          finSets: s.fins,
+          referenceArea: aRef,
+          ...finFrictionAt(roughness),
+        },
       );
     }
   }

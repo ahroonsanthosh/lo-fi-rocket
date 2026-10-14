@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { InvalidInputError } from '../errors.js';
 import { noseProfile } from '../geometry/profiles.js';
 import { R1_COMPONENTS, R2_COMPONENTS } from '../geometry/reference-rockets.js';
-import { dimensionless, mach, metres } from '../units/si.js';
+import { dimensionless, kilogramsPerCubicMetre, mach, metres } from '../units/si.js';
 import {
   axialDragCoefficient,
   axialDragScaling,
@@ -37,6 +37,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
     motor: { diameter: metres(0.024), thrusting: true },
     baseDragMotorRule: 'while-thrusting',
     baseDragMethod: 'niskanen',
+    bodyFormFactor: 'niskanen',
   };
   it('at 54.1456 m/s, Mach 0.159141, R = 2.2241·10⁶, thrusting: C_D0 = 0.75745', () => {
     // Friction: roughness-limited C_f = 5.07166·10⁻³ (R > R_crit = 7.304·10⁵), × (1 − 0.1 × 0.025326) = 5.05881·10⁻³;
@@ -107,6 +108,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       motor: { diameter: metres(0.024), thrusting: false },
       baseDragMotorRule: 'always',
       baseDragMethod: 'niskanen',
+      bodyFormFactor: 'niskanen',
     });
     // Full base: 0.123292 × 1 = 0.123292 against 0.094886 while thrusting: + 0.028406.
     expect(coasting.cd0 - base.components.length * 0 - dragCoefficient(base).cd0).toBeCloseTo(
@@ -127,6 +129,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       roughnessHeight: base.roughnessHeight,
       baseDragMotorRule: 'never',
       baseDragMethod: 'niskanen',
+      bodyFormFactor: 'niskanen',
     });
     expect(none.cd0).toBeCloseTo(0.785856, 5);
     for (const thrusting of [true, false]) {
@@ -135,6 +138,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
         motor: { diameter: metres(0.024), thrusting },
         baseDragMotorRule: 'never',
         baseDragMethod: 'niskanen',
+        bodyFormFactor: 'niskanen',
       });
       expect(r.cd0).toBe(none.cd0);
       expect(r.terms.find((t) => t.kind === 'base')?.source).toContain('base (full)');
@@ -148,6 +152,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       roughnessHeight: metres(60e-6),
       baseDragMotorRule: 'while-thrusting',
       baseDragMethod: 'niskanen',
+      bodyFormFactor: 'niskanen',
     });
     expect(r.terms.map((t) => t.kind)).toEqual([
       'noseCone',
@@ -165,6 +170,7 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       roughnessHeight: metres(60e-6),
       baseDragMotorRule: 'while-thrusting',
       baseDragMethod: 'niskanen',
+      bodyFormFactor: 'niskanen',
     });
     expect(t.warnings.join('\n')).toContain('transonic regime');
     expect(t.warnings.join('\n')).toContain('expansion fans');
@@ -226,6 +232,7 @@ describe('properties', () => {
     roughnessHeight: metres(60e-6),
     baseDragMotorRule: 'while-thrusting',
     baseDragMethod: 'niskanen',
+    bodyFormFactor: 'niskanen',
   });
   it('C_D0 is positive and adding a launch lug never reduces it; results are deterministic', () => {
     fc.assert(
@@ -259,5 +266,63 @@ describe('properties', () => {
       ),
       { numRuns: 100 },
     );
+  });
+});
+
+describe('plan 0076: the fin friction at the fin chord (DRAG-24) in the drag model', () => {
+  // A 1 m tube of 50 mm radius (A_ref = π 0.05² = 7.853982·10⁻³ m²) with three rectangular fins of
+  // 0.1 m chord (c̄ = 0.1 m), 0.05 m span and 3 mm thickness: wetted area 3 × 2 × 0.005 = 0.03 m²,
+  // thickness factor 1 + 2 × 0.003/0.1 = 1.06. Smooth surface, R = 10⁶ on the 1 m length, Mach 0.3.
+  const components = [
+    {
+      position: metres(0),
+      component: {
+        kind: 'bodyTube' as const,
+        length: metres(1),
+        outerRadius: metres(0.05),
+        wallThickness: metres(0.001),
+        density: kilogramsPerCubicMetre(1850),
+      },
+    },
+    {
+      position: metres(0.9),
+      component: {
+        kind: 'finSet' as const,
+        count: 3,
+        rootChord: metres(0.1),
+        tipChord: metres(0.1),
+        sweep: metres(0),
+        span: metres(0.05),
+        thickness: metres(0.003),
+        density: kilogramsPerCubicMetre(1850),
+        bodyRadius: metres(0.05),
+        crossSection: 'square' as const,
+      },
+    },
+  ];
+  const input = {
+    components,
+    mach: mach(0.3),
+    reynolds: 1e6,
+    roughnessHeight: metres(0),
+    baseDragMotorRule: 'never' as const,
+  };
+
+  it('raises the friction by (C_f(10⁵) − C_f(10⁶)) × 0.991 × 1.06 × 0.03 / A_ref = 0.0119219', () => {
+    // C_f(10⁵) = 7.343512·10⁻³, C_f(10⁶) = 4.372289·10⁻³ (eq. 3.78); (1 − 0.1 × 0.09) = 0.991 (eq. 3.82).
+    // 2.971223·10⁻³ × 0.991 × 0.0318 / 7.853982·10⁻³ = 0.0119219.
+    const rocket = dragCoefficient({ ...input, finFrictionLength: 'rocket' });
+    const chord = dragCoefficient({ ...input, finFrictionLength: 'fin-chord' });
+    expect(chord.skinFriction.cd - rocket.skinFriction.cd).toBeCloseTo(0.0119219, 6);
+    expect(chord.cd0 - rocket.cd0).toBeCloseTo(0.0119219, 6);
+  });
+  it("the body form factor: the DATCOM's (f = 10: 1.085) against eq. (3.85)'s (1.05) on the 1 m tube", () => {
+    // Body friction C_fc × A_wet / A_ref = 4.372289·10⁻³ × 0.991 × (2π × 0.05 × 1) / 7.853982·10⁻³
+    // = 4.332938·10⁻³ × 40 = 0.1733175; × (1.085 − 1.05) = 0.00606611.
+    const n = dragCoefficient({ ...input, bodyFormFactor: 'niskanen' });
+    const d = dragCoefficient({ ...input, bodyFormFactor: 'datcom' });
+    expect(d.skinFriction.cd - n.skinFriction.cd).toBeCloseTo(0.00606611, 7);
+    // The displayed default is the DATCOM's (D-115).
+    expect(dragCoefficient(input).skinFriction.cd).toBe(d.skinFriction.cd);
   });
 });

@@ -60,6 +60,7 @@ describe('reference rockets: static drag against OpenRocket 24.12 (comparison mo
           baseDragMotorRule: 'never',
           railButtonDragMethod: 'openrocket',
           baseDragMethod: 'niskanen',
+          bodyFormFactor: 'niskanen',
         });
         const or = openRocket(c.file, m);
         const rel = (r.cd0 as number) / or - 1;

@@ -233,7 +233,9 @@ export {
 } from './motor/motor.js';
 export {
   compressibleSkinFriction,
+  bodyFormFactor,
   frictionDragCoefficient,
+  type BodyFormFactor,
   ROUGHNESS_HEIGHTS,
   skinFrictionCoefficient,
   type FrictionDragGeometry,
@@ -457,7 +459,9 @@ export {
 export {
   DATCOM_BASE_FAIRING_END,
   DEFAULT_BASE_DRAG_METHOD,
+  DEFAULT_BODY_FORM_FACTOR,
   type BaseDragMethod,
+  type FinFrictionLength,
 } from './drag/drag.js';
 export * from './stability/datcom-large-angle-data.js';
 export {

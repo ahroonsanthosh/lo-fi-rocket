@@ -481,12 +481,12 @@ describe('imported files fly as the formats package flies them', () => {
   for (const file of ['r1-three-fin-conical.ork', 'r4-scratch-38mm.ork']) {
     it(`${file}, as base64 zip and as XML`, async () => {
       const bytes = readFileSync(join(ROCKETS, file));
-      const design = orkToDesign(
-        parseOrk(new Uint8Array(bytes), file),
-        library,
-        'x',
-        () => 'y',
-      ).design;
+      // Unique part ids: with one id for every part, the motor mount would resolve to the first.
+      let next = 0;
+      const design = orkToDesign(parseOrk(new Uint8Array(bytes), file), library, 'x', () => {
+        next += 1;
+        return `part-${String(next)}`;
+      }).design;
       const expected = simulateFlight(designVehicle(design), designSimulationOptions(design));
       const imported = await ok('import_design', {
         content: bytes.toString('base64'),

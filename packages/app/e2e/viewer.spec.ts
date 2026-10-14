@@ -50,10 +50,12 @@ test('the replay shows the stored apogee figure of the flight panel at the apoge
   const toApogee = await results.locator('dt:text-is("Time to apogee") + dd').textContent();
   await viewer.getByRole('button', { name: /^Apogee / }).click();
   await expect(viewer.locator('dt:text-is("Altitude") + dd')).toHaveText(apogee ?? '');
-  // The flight panel prints the time to apogee with 2 decimals, the replay its stored step with 3.
+  // The flight panel prints the time to apogee with 2 decimals, the replay its stored step with 3:
+  // the two agree within the sum of their half display units (0.005 + 0.0005 s). Comparing the
+  // two after rounding again fails whenever the time falls on a rounding boundary.
   const step = (await viewer.locator('dt:text-is("Stored step") + dd').textContent()) ?? '';
   const stepTime = Number.parseFloat(/at ([\d.]+) s/.exec(step)?.[1] ?? 'NaN');
-  expect(stepTime.toFixed(2)).toBe(Number.parseFloat(toApogee ?? '0').toFixed(2));
+  expect(Math.abs(stepTime - Number.parseFloat(toApogee ?? 'NaN'))).toBeLessThanOrEqual(0.0055);
   expect(step).toContain('(descent)');
   // The follow camera looks at the rocket, so the apogee marker's label is in view.
   await expect(viewer.locator('.viewer-label-event', { hasText: 'Apogee' })).toBeVisible();
