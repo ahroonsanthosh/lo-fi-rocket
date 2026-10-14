@@ -125,6 +125,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - Random-design robustness (plan 0065, D-101): a property test flies random sensible designs (40 per run; 300 in the exploration). It found two float64 edge cases (a decaying roll rate and the first instant off the rail overflowing to ∞ or ∞ × 0), a rail tilted by next to nothing, an adaptive-step failure when a canopy opens on a fast rocket after a smooth coast, and the refusal of 0 kg parts. All are fixed and each is tested; golden outputs unchanged. Now 300 of 300 fly: 212 land, 79 end at the model limit (tumbling past 90°), 8 at the time limit.
 - Wedge and high-aspect-ratio fins past 90° (plan 0066, D-102): the large-angle model no longer refuses them in the displayed mode. A single wedge reads the 23b family, and a high aspect ratio uses the low-aspect-ratio method with its charts held at their ends. Each is listed in the result as an approximation. These fin sets caused all 79 model-limit endings; now 300 of 300 random designs land (291) or reach the time limit (9). No reference design has such fins, so the golden outputs and the OpenRocket comparisons are unchanged.
 - Tumbling above Mach 1 (plan 0067, D-103): the displayed mode now continues past 90° at any Mach number. Above Mach 1 the small-angle supersonic fin force is applied to the reversed fin, and a flight that does this lists it as a major approximation. The wedge and high-aspect-ratio listing of D-102 is now minor below the stall and moderate past it. Only the OpenRocket-equivalent mode still stops at 90°.
+- A sample's Mach, angle of attack, C_D0, CP and margin are documented, and tested, as NaN exactly where no attitude is modelled: under a recovery device, after landing, and with no aerodynamics. The app's plots, CSV export, 3D viewer and the MCP report already treat them as "not defined". With this, task 5 (the physics never refuses a sensible design) is complete.
 
 ## In progress
 
@@ -132,7 +133,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Document that a sample's Mach and angle of attack are NaN while no attitude is modelled (descent under a recovery device). Then task 4 (import part 2: pods and nose variants), then plan 0061 step 4 (the modelling benchmark).
+- Task 4 (import part 2: pods and nose variants), then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 

@@ -173,16 +173,24 @@ export interface FlightSample {
   readonly altitude: number;
   readonly speed: number;
   readonly airspeed: number;
+  /**
+   * NaN where the rocket's attitude is not modelled, so no flight parameters exist: under a
+   * recovery device (phase 'descent', where only the canopy drag acts, DYN-14), after landing,
+   * and with `aerodynamics: 'none'`. The same holds for `angleOfAttack`, `cd0`, `cp` and
+   * `stabilityCalibers`. NaN marks "not defined here", not a failed calculation (section 8).
+   */
   readonly mach: number;
+  /** Radians; NaN as for `mach`. */
   readonly angleOfAttack: number;
   readonly acceleration: number;
   readonly thrust: number;
   /** Magnitude of the aerodynamic force, N. */
   readonly aerodynamicForce: number;
+  /** Zero-angle drag coefficient on the reference area; NaN as for `mach`. */
   readonly cd0: number;
   readonly mass: number;
   readonly cg: number;
-  /** CP at the current angle of attack; NaN when no aerodynamics. */
+  /** CP at the current angle of attack; NaN as for `mach`. */
   readonly cp: number;
   /** (CP − CG)/d with the CP of the in-flight margin: with the DATCOM model the more forward of its CP and the small-angle model's (D-070). */
   readonly stabilityCalibers: number;

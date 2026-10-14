@@ -278,3 +278,54 @@ describe('an unstable rocket tumbling at Mach 2 (plan 0067)', () => {
     expect(r.approximations.some((a) => a.what.includes('above Mach 1'))).toBe(false);
   });
 });
+
+describe('sample fields without a modelled attitude (section 8)', () => {
+  it('Mach, angle of attack, C_D0, CP and margin are NaN exactly under the canopy and after landing', () => {
+    // R1 on an ideal 40 N, 1 s motor with the Niskanen aerodynamics and a 1 m canopy at 100 m on
+    // the way down: the descent is the canopy drag alone (DYN-14), so no attitude is modelled.
+    const r = simulateFlight(
+      {
+        components: R1_COMPONENTS,
+        motor: { kind: 'ideal', thrust: newtons(40), burnTime: seconds(1) },
+        recovery: [
+          {
+            name: 'Main',
+            diameter: metres(1),
+            dragCoefficient: 0.8,
+            deploy: { event: 'altitude', altitude: metres(100), delay: seconds(0) },
+          },
+        ],
+        roughnessHeight: metres(60e-6),
+      },
+      {
+        site: { altitude: metres(0) },
+        rail: { length: metres(1.5), angleFromVertical: radians(0), azimuth: radians(0) },
+        wind: { kind: 'vector', velocity: { x: 0, y: 0, z: 0 } },
+        gravity: { seaLevel: metresPerSecondSquared(9.80665), altitudeDependence: 'constant' },
+        aerodynamics: 'niskanen',
+        finRollReduction: false,
+        baseDragMotorRule: 'while-thrusting',
+        integrator: {
+          kind: 'dormand-prince',
+          relativeTolerance: 1e-8,
+          absoluteTolerance: 1e-10,
+          initialStep: seconds(0.001),
+          maxStep: seconds(0.05),
+        },
+        maxTime: seconds(600),
+        degreesOfFreedom: 6,
+      },
+    );
+    expect(r.summary.endReason).toBe('landing');
+    const phases = new Set(r.samples.map((s) => s.phase));
+    expect(phases).toContain('descent');
+    for (const s of r.samples) {
+      const fields = [s.mach, s.angleOfAttack, s.cd0, s.cp, s.stabilityCalibers];
+      if (s.phase === 'descent' || s.phase === 'landed') {
+        expect(fields.every((x) => Number.isNaN(x))).toBe(true);
+      } else {
+        expect(fields.every((x) => Number.isFinite(x))).toBe(true);
+      }
+    }
+  });
+});
