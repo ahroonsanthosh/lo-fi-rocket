@@ -147,6 +147,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Physics.** The skin friction is the sum over the surfaces, each at its own finish. With one finish it is eq. (3.85) exactly, so every existing result is unchanged. A 0 µm finish is a smooth surface.
   - **Against OpenRocket.** 14 probe rockets at Mach 0.1 to 1.5: friction 1.24 to 1.46 % above OpenRocket's, the regular-paint offset within ±0.11 %.
   - **Also fixed.** The MCP part editor dropped a part's pod set; it now keeps that and its finish.
+- Small import and message fixes (plan 0073 part 3a, D-112): an `.ork` file's rail buttons past the end of the body are moved onto it and listed, instead of the stability refusing the design; the RK4 refusal advises a step rounded down, never up; the airfoil fin slab mass is rated moderate by its measured effect.
 - Streamers (plan 0073 part 2, D-111, STREAM-1): a recovery device may be a streamer, with Niskanen's Appendix C drag (eq. C.6), in the physics, the design file (schema 5), the `.ork` reader, the app and the MCP. Before this an imported streamer was dropped with a wrong "no mass" message and the rocket fell ballistically. Against OpenRocket on ten strips: mass and CG to 1e-6, C_D exact (OpenRocket uses the same equation, capped at 0.4, which the comparison mode copies).
 - Pod sets in files (plan 0070 step 3, D-107): the design file's `pod` group (schema 3, with its migration), the `.ork` reader's pod sets on body tubes, placed as OpenRocket places them (every radius and axial method probed exactly; a parachute in a pod is one per pod), and the app's part list and editor naming pod parts. A motor in a pod is still refused (step 4). Issues opened for the UI and 3D lanes to draw pods off the axis.
 
@@ -156,7 +157,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Plan 0073, the rest of the import gaps, one pull request each: part 1b, a finish control in the app for the design and for a part; part 3, fillet mass, the airfoil fin mass rating, the RK4 refusal message's rounding, and rail buttons past the end of the body.
+- Plan 0073, the rest of the import gaps, one pull request each: part 1b, a finish control in the app for the design and for a part; part 3b, fillet mass (GEO-19, from `FilletProbe`: OpenRocket's fillet is exact plane geometry).
 - Validation campaign (owner, 2026-10-14):
   - **What runs.** Exhaustive comparison against OpenRocket on many generated designs, against the measured NACA/NASA data by regime, and against RASAero II if it can be run here or from its published predictions. Background agents are running all three.
   - **Output.** A differences report with the reasoning for each difference, and a list of OpenRocket issues for its developers.

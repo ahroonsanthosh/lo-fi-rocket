@@ -101,13 +101,28 @@ export function componentApproximations(
       (component.crossSection === 'rounded' || component.crossSection === 'airfoil')
     ) {
       // D-077: no approved source gives the volume of a rounded or airfoil fin; the slab is kept.
-      out.push({
-        subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
-        what: `the volume of ${component.crossSection} fin edges`,
-        method: 'mass taken as a flat slab of the same outline (area × thickness × density)',
-        effect: `the fins weigh slightly more than they are (OpenRocket uses ${component.crossSection === 'rounded' ? '99' : '85'} % of the slab), putting the CG slightly aft: the stability margin shown is a little low, the cautious side`,
-        impact: 'minor',
-      });
+      // Plan 0073: rated by its measured effect. OpenRocket makes airfoil fins 85 % of the slab;
+      // on the validation campaign's rockets the slab was up to 8.5 % of the structure mass and
+      // moved its CG up to 3.4 % aft, so the airfoil case is moderate; the rounded one (99 %) minor.
+      out.push(
+        component.crossSection === 'rounded'
+          ? {
+              subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
+              what: 'the volume of rounded fin edges',
+              method: 'mass taken as a flat slab of the same outline (area × thickness × density)',
+              effect:
+                'the fins weigh about 1 % more than they are (OpenRocket uses 99 % of the slab), putting the CG slightly aft: the stability margin shown is a little low, the cautious side',
+              impact: 'minor',
+            }
+          : {
+              subject: `Fin set${name === undefined ? '' : ` "${name}"`}`,
+              what: 'the volume of airfoil fin edges',
+              method: 'mass taken as a flat slab of the same outline (area × thickness × density)',
+              effect:
+                'the fins weigh about 18 % more than OpenRocket’s airfoil (85 % of the slab); with large fins that is up to 8 % of the rocket’s mass, moving the CG aft by up to 3 %: the stability margin shown is low (the cautious side) and the apogee a little low. Enter the fins’ weighed mass as an override if you have it',
+              impact: 'moderate',
+            },
+      );
     }
   }
   return out;

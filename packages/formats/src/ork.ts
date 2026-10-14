@@ -952,6 +952,70 @@ function subjectOf(el: Element): string {
 }
 
 /**
+ * Plan 0073 part 3: rail buttons the file places past the end of their body. OpenRocket accepts
+ * them and counts their mass and drag where they are; the app needs every button on the body (the
+ * physics' fit check), so the set is moved forward until its last button sits a button's diameter
+ * inside the body's end, and its spacing shortened if it is longer than the body (its first button
+ * a diameter inside the body's front). Listed (minor).
+ */
+function railButtonsOnBody(components: readonly OrkPlacedComponent[]): OrkPlacedComponent[] {
+  // The extent of each body, the main one and each pod set's, as the physics keys them.
+  const key = (p: PlacedComponent): string =>
+    p.instances === undefined
+      ? 'main'
+      : `${String(p.instances.count)}@${String(p.instances.radialOffset)}`;
+  const extent = new Map<string, { start: number; end: number }>();
+  for (const p of components) {
+    const c = p.component;
+    if (c.kind !== 'noseCone' && c.kind !== 'bodyTube' && c.kind !== 'transition') continue;
+    const fore: number = p.position;
+    const e = extent.get(key(p)) ?? { start: Infinity, end: -Infinity };
+    extent.set(key(p), {
+      start: Math.min(e.start, fore),
+      end: Math.max(e.end, fore + (c.length as number)),
+    });
+  }
+  return components.map((p) => {
+    const c = p.component;
+    const body = extent.get(key(p));
+    if (c.kind !== 'railButton' || body === undefined) return p;
+    const n = Math.max(1, c.count);
+    const spacing: number = c.separation ?? 0;
+    const first: number = p.position;
+    const last = first + (n - 1) * spacing;
+    const limit = body.end - (c.outerDiameter as number);
+    if (last <= limit) return p;
+    const front = body.start + (c.outerDiameter as number);
+    const moved = Math.max(front, first - (last - limit));
+    let separation = spacing;
+    if (n > 1 && moved + (n - 1) * spacing > limit) {
+      separation = Math.max(0, (limit - moved) / (n - 1));
+    }
+    const mm = (x: number): string => `${String(Math.round(x * 1e4) / 10)} mm`;
+    const approximation: Approximation = {
+      subject: p.name === '' ? 'Rail buttons' : `Rail buttons "${p.name}"`,
+      what: `buttons the file places past the end of the body (the last ${mm(last - body.end)} beyond it)`,
+      method:
+        separation === spacing
+          ? `the set moved ${mm(first - moved)} forward so that every button sits on the body`
+          : `the set moved to the front of the body and its spacing shortened to ${mm(separation)}`,
+      effect:
+        'their mass and drag are counted a little further forward than OpenRocket counts them: a small change to the CG and drag',
+      impact: 'minor',
+    };
+    return {
+      ...p,
+      position: metres(moved),
+      component: {
+        ...c,
+        ...(c.separation === undefined ? {} : { separation: metres(separation) }),
+      },
+      approximations: [...(p.approximations ?? []), approximation],
+    };
+  });
+}
+
+/**
  * Plan 0073: the finish most of the parts have, the first of those in file order on a tie, or
  * OpenRocket's default when no part has one. Only the design's later edits use the choice: every
  * part with another finish keeps its own.
@@ -2695,7 +2759,7 @@ class Reader {
       name: rocket.optionalText('name') ?? '',
       formatVersion: version,
       creator: root.attribute('creator'),
-      components: components.map(({ roughnessHeight, ...c }) =>
+      components: railButtonsOnBody(components).map(({ roughnessHeight, ...c }) =>
         roughnessHeight === undefined || roughnessHeight === finish ? c : { ...c, roughnessHeight },
       ),
       length: metres(

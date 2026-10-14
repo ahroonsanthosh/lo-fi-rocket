@@ -90,6 +90,17 @@ export class SimulationStalledError extends PhysicsError {
 }
 
 /**
+ * Plan 0073: a time step written to two significant figures, rounded down, so that the step a
+ * message advises is never above the one it was computed from (0.00199 s is "0.0019", not the
+ * "0.0020" that `toPrecision(2)` gives).
+ */
+export function stepRoundedDown(step: number): string {
+  if (!(step > 0) || !Number.isFinite(step)) return step.toPrecision(2);
+  const unit = 10 ** (Math.floor(Math.log10(step)) - 1);
+  return (Math.floor(step / unit) * unit).toPrecision(2);
+}
+
+/**
  * Thrown when a fixed-step RK4 run would leave the integrator's stability
  * region or lose the pitch oscillation to numerical damping (DYN-16, DYN-17,
  * D-063): continuing would show an unstable run as a result (CLAUDE.md
@@ -101,7 +112,7 @@ export class IntegrationUnstableError extends PhysicsError {
   readonly mode: string;
   constructor(time: number, mode: string, safeStep: number, detail: string) {
     super(
-      `The RK4 time step is too large at t = ${time.toFixed(3)} s (${mode}): ${detail} Use a time step of at most ${safeStep.toPrecision(2)} s, or the Dormand–Prince integrator, which chooses its own step.`,
+      `The RK4 time step is too large at t = ${time.toFixed(3)} s (${mode}): ${detail} Use a time step of at most ${stepRoundedDown(safeStep)} s, or the Dormand–Prince integrator, which chooses its own step.`,
     );
     this.time = time;
     this.safeStep = safeStep;
