@@ -24,6 +24,7 @@ import {
   type FlightScene,
   type SceneLabel,
 } from '../scene/flight-scene.js';
+import { frameStep } from '../replay/clock.js';
 import { mergeLabels } from '../scene/labels.js';
 import { buildLightDome } from '../scene/sky.js';
 import { loadSceneAssets } from './assets.js';
@@ -31,7 +32,8 @@ import { loadSceneAssets } from './assets.js';
 export interface ViewerOptions {
   /**
    * Called once per animation frame with the wall-clock seconds since the
-   * previous frame; returns true when the scene changed (the replay time
+   * previous frame, at most `MAX_FRAME_STEP` (a stall does not jump the
+   * replay); returns true when the scene changed (the replay time
    * moved) so the frame must be drawn. Frames are drawn only on a change.
    */
   readonly onFrame?: (deltaSeconds: number) => boolean;
@@ -316,7 +318,7 @@ export function mountViewer(
         slowCount = 0;
       }
     }
-    if (options.onFrame?.(dt) === true) dirty = true;
+    if (options.onFrame?.(frameStep(dt)) === true) dirty = true;
     drewLast = dirty;
     if (dirty) {
       dirty = false;

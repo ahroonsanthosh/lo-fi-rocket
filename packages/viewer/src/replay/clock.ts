@@ -107,6 +107,20 @@ export function displayPose(samples: readonly FlightSample[], t: number): Displa
 
 export const REPLAY_SPEEDS: readonly number[] = [0.1, 0.25, 0.5, 1, 2, 4];
 
+/**
+ * The most wall-clock time one animation frame may add to the replay,
+ * seconds (a drawing choice). A longer interval is a stall (a shader
+ * compiled, a texture uploaded, a background tab), not time the user
+ * watched: without the limit, the stall before a "Play" would jump the
+ * replay forward. Replays still run at their speed down to 4 frames a second.
+ */
+export const MAX_FRAME_STEP = 0.25;
+
+/** A frame's interval as replay wall-clock time: never negative, at most `MAX_FRAME_STEP`. */
+export function frameStep(deltaSeconds: number): number {
+  return deltaSeconds > 0 ? Math.min(deltaSeconds, MAX_FRAME_STEP) : 0;
+}
+
 export interface ReplayState {
   readonly time: number;
   readonly playing: boolean;

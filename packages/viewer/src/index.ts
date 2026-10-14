@@ -30,6 +30,8 @@ export {
 } from './geometry/rocket-model.js';
 export {
   displayPose,
+  frameStep,
+  MAX_FRAME_STEP,
   nearestStep,
   REPLAY_SPEEDS,
   ReplayController,
