@@ -1176,3 +1176,32 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - Keep sending `hasDataFiles` and fall back when the answer is empty (rejected: two requests, and an empty answer is also a real "no motor").
   - Take the delay nearest the coast time to apogee (OpenRocket's optimum delay; rejected for now: it needs a flight per motor, and the user still chooses).
 - **Consequences:** No physics changes; no golden output changes. The other open review findings follow in their own pull requests (plan 0078 section 4).
+
+## D-118 (2026-10-14): The MCP server builds and flies a pasted design in one call; what was left out is listed after, not asked first
+
+- **Decision:** Plan 0079, on the owner's request ("i dont like the way you have to fill in everything, i want the claude mcp to bypass everything if you paste the info into the chat").
+  - **The instructions** tell Claude to build and fly a pasted specification or file at once, without asking questions first. It gives exactly what the user gave. The must items, the fields not given, the largest approximations and the confidence come with the result, then an offer to refine. This supersedes the workflow of D-092 (ask for what is missing before estimating; clear every must item before simulating).
+  - **`build_and_fly`** takes the whole design in one call:
+    - the parts, built by the same `addPart` as `add_part`, so every default is recorded the same way;
+    - the motor by its written name;
+    - the recovery, the launch, the weighed mass and CG, and Claude's estimates.
+
+    A step that fails names itself ("part 2 (Body tube): …") and keeps nothing.
+
+  - **Motor names** are read as NAR/TRA codes: "D12-5", "G80-7T", "H128W-14A", "1/2A6-2", "C6-P".
+    - **Matching.** The library is searched first. A manufacturer written in the name must match: another maker's motor with the same code is never used in its place.
+    - **ThrustCurve.org.** If the library has no match, the catalogue is searched by the common name, and only an exact, unambiguous designation is downloaded. So three tools now reach the network (D-093 named two), all through the same bounded, read-only transport.
+    - **Not found.** A motor that cannot be found or reached never fails the call: the stability is returned, with why the rocket was not flown.
+    - **Delays and mounts.** A delay written as letters ("-M") is not a time and stays not given. A mount not given is the aftmost inner tube, otherwise the aftmost body tube, and is listed.
+  - **`import_design`** also reads RASAero II `.CDX1` text, and `simulate: true` returns the stability and the flight with the import.
+  - The server lists 25 tools (D-094 recorded 22; two were added since, and this one).
+- **Why:**
+  - **The owner's request.** Asking for every value before any number appears made the tool slow to use.
+  - **Rule 3 still holds** (CLAUDE.md 1): nothing is silent. Every default and estimate is listed with its effect and the confidence, after the result instead of before it.
+  - **Motor names.** Reading a motor code in the server, not in Claude's head, removes a step where a wrong motor could slip in.
+- **Alternatives:**
+  - Free-text parsing in the server (rejected: it would need a language model in the server, a cost and an attack surface; Claude already reads the paste).
+  - Defaulting a missing motor or parachute (rejected: inventing hardware would change the result without the user having chosen it; a missing motor gives the stability and no flight, a missing parachute a ballistic descent, both said).
+- **Consequences:**
+  - The step-by-step tools are unchanged and are how a result is refined.
+  - No physics change; no golden output changes.

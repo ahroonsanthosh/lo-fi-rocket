@@ -8,6 +8,7 @@ import {
   designMotorFitProblems,
   downloadMotor,
   exampleDesign,
+  importCdx1,
   motorFromEng,
   motorFromRse,
   newDesign,
@@ -49,7 +50,22 @@ import {
   type MotorDefinition,
   type SeparationEvent,
 } from '@lo-fi-rocket/physics';
-import { checked, EditError, subjectOf, type QuantityInput } from './edit.js';
+import {
+  addPart,
+  checked,
+  EditError,
+  subjectOf,
+  type AddPartInput,
+  type PositionInput,
+  type QuantityInput,
+} from './edit.js';
+import {
+  compactDesignation,
+  matchLibrary,
+  parseMotorName,
+  sameManufacturer,
+  type MotorName,
+} from './motor-name.js';
 import { toSi } from './quantity.js';
 
 export const MAX_DESIGNS = 50;
@@ -147,6 +163,43 @@ export interface AssumptionInput {
   readonly impact: ApproximationImpact;
 }
 
+/** Plan 0079: a whole design in one call, as a user pastes it. */
+export interface BuildSpec {
+  readonly name: string;
+  readonly stages?: readonly StageInput[];
+  /** Positions relative to another part may name an earlier part of this list instead of an id. */
+  readonly parts: readonly AddPartInput[];
+  readonly motor?: {
+    /** As people write it: "D12-5", "Estes D12", "G80-7T", "AeroTech H128W". */
+    readonly name: string;
+    /** The tube that holds it: its index in `parts` or its name; the aftmost inner tube when left out. */
+    readonly mount?: number | string;
+    readonly overhang?: QuantityInput;
+    /** Seconds, or "plugged"; overrides a delay written in the name. */
+    readonly ejectionDelay?: QuantityInput;
+    readonly cluster?: readonly { readonly y: QuantityInput; readonly z: QuantityInput }[];
+  };
+  readonly recovery?: readonly RecoveryInput[];
+  readonly launch?: LaunchInput;
+  readonly asBuilt?: { readonly mass?: QuantityInput; readonly cg?: QuantityInput };
+  /** What the caller estimated from the paste, each listed with every result. */
+  readonly assumptions?: readonly (Omit<AssumptionInput, 'partId'> & { readonly part?: number })[];
+}
+
+export interface BuildResult {
+  readonly design: RocketDesign;
+  /** The motor used, and where it came from. */
+  readonly motor?: {
+    readonly id: string;
+    readonly name: string;
+    readonly source: LibraryMotor['source'];
+    readonly downloaded: boolean;
+    readonly delay: string;
+  };
+  /** Why the rocket was not flown (no motor given, or the motor could not be found). */
+  readonly notFlown?: string;
+}
+
 const MOTOR_MOUNT = 'Motor mount';
 /** The subject of a mount's "not given" notes: the first mount's is "Motor mount" (plan 0062). */
 const mountSubject = (first: boolean, partName: string): string =>
@@ -234,13 +287,22 @@ export class Session {
   /** A design from file content: `.lofi.json` text, `.ork` XML text, or a base64 `.ork` zip. */
   import(
     content: string,
-    format: 'lofi' | 'ork' | 'ork-base64',
+    format: 'lofi' | 'ork' | 'ork-base64' | 'cdx1',
     fileName?: string,
   ): { design: RocketDesign; notices: readonly string[] } {
     let design: RocketDesign;
     let notices: readonly string[] = [];
     if (format === 'lofi') {
       design = parseDesign(content, fileName);
+    } else if (format === 'cdx1') {
+      // Plan 0079: a pasted RASAero II file (plan 0075's importer).
+      const library = [...this.motors.values()].map((m) => ({
+        definition: m.definition,
+        provenance: m.provenance,
+      }));
+      const imported = importCdx1(content, library, newId(), fileName);
+      design = imported.design;
+      notices = imported.notices;
     } else {
       const data = format === 'ork' ? content : Uint8Array.from(Buffer.from(content, 'base64'));
       const rocket = parseOrk(data, fileName);
@@ -741,6 +803,226 @@ export class Session {
     }
     this.launchGiven.set(id, given);
     return this.put(next);
+  }
+
+  /** Forget a design: a one-call build that fails part way keeps nothing (plan 0079). */
+  discard(id: string): void {
+    this.designs.delete(id);
+    this.launchGiven.delete(id);
+  }
+
+  /**
+   * Plan 0079: the library motor a written name means ("D12-5", "Estes D12", "G80-7T"). When the
+   * library has none, ThrustCurve.org is searched by the common name and only an exact
+   * designation (and the manufacturer, when written) is downloaded. A motor that cannot be found
+   * is never an error: the answer says why, so the design is still built and its stability given.
+   */
+  async resolveMotor(
+    written: string,
+  ): Promise<
+    | { readonly motor: LibraryMotor; readonly parsed: MotorName; readonly downloaded: boolean }
+    | { readonly problem: string }
+  > {
+    const parsed = parseMotorName(text('motor.name', written));
+    if (parsed === undefined)
+      return {
+        problem: `"${written}" is not a motor code (for example "D12-5", "Estes D12", "G80-7T", "H128W")`,
+      };
+    const label = (m: LibraryMotor): string =>
+      `${m.definition.manufacturer} ${m.definition.designation}`;
+    const local = matchLibrary(parsed, [...this.motors.values()]);
+    const only = local.length === 1 ? local[0] : undefined;
+    if (only !== undefined) return { motor: only, parsed, downloaded: false };
+    if (local.length > 1)
+      return {
+        problem: `"${written}" matches ${local.map(label).join(', ')} in the library: give the manufacturer or the full designation`,
+      };
+    if (this.transport === undefined)
+      return {
+        problem: `no ${parsed.designation} in the library, and the ThrustCurve.org catalogue is not available in this server: give its .eng or .rse file with import_motor`,
+      };
+    let found: DataSearchResult;
+    try {
+      found = await searchMotorsWithData(this.transport, {
+        commonName: parsed.commonName,
+        maxResults: 50,
+      });
+    } catch (error) {
+      return {
+        problem: `no ${parsed.designation} in the library, and ThrustCurve.org could not be searched (${error instanceof Error ? error.message : String(error)}): give its .eng or .rse file with import_motor, or try again later`,
+      };
+    }
+    const maker = found.results.filter(
+      (m) =>
+        sameManufacturer(parsed.manufacturer, m.manufacturer) ||
+        sameManufacturer(parsed.manufacturer, m.manufacturerAbbrev),
+    );
+    const exact = maker.filter((m) => compactDesignation(m.designation) === parsed.designation);
+    // Without a propellant suffix ("F39"), the common name alone may name one motor.
+    const pick = exact.length > 0 || parsed.designation !== parsed.commonName ? exact : maker;
+    const chosen = pick.length === 1 ? pick[0] : undefined;
+    if (chosen === undefined) {
+      return {
+        problem:
+          pick.length === 0
+            ? `no motor "${written}" with a thrust curve in the library or on ThrustCurve.org: check the name, or give its .eng or .rse file with import_motor`
+            : `"${written}" matches ${pick
+                .slice(0, 8)
+                .map((m) => `${m.manufacturerAbbrev} ${m.designation}`)
+                .join(', ')} on ThrustCurve.org: give the manufacturer and the full designation`,
+      };
+    }
+    try {
+      return { motor: await this.addCatalogueMotor(chosen.motorId), parsed, downloaded: true };
+    } catch (error) {
+      return {
+        problem: `${chosen.manufacturerAbbrev} ${chosen.designation} could not be downloaded from ThrustCurve.org (${error instanceof Error ? error.message : String(error)})`,
+      };
+    }
+  }
+
+  /**
+   * Plan 0079: a whole design in one call, built with the same steps as the step-by-step tools,
+   * so every default is recorded as they record it. A step that fails names itself and leaves
+   * nothing behind. The motor is looked up first, so a slow or failed catalogue search never
+   * leaves a half-built design.
+   */
+  async build(spec: BuildSpec): Promise<BuildResult> {
+    const resolved =
+      spec.motor === undefined ? undefined : await this.resolveMotor(spec.motor.name);
+    const id = this.create(spec.name, 'empty').id;
+    let step = 'the stages';
+    try {
+      if (spec.stages !== undefined) this.setStages(id, spec.stages);
+      const ids: string[] = [];
+      const names = new Map<string, string>();
+      spec.parts.forEach((part, i) => {
+        step = `part ${String(i + 1)} (${part.name ?? part.kind})`;
+        const position: PositionInput | undefined =
+          part.position !== undefined &&
+          typeof part.position === 'object' &&
+          names.has(part.position.relativeTo)
+            ? { ...part.position, relativeTo: names.get(part.position.relativeTo) ?? '' }
+            : part.position;
+        const result = addPart(this.get(id), {
+          ...part,
+          ...(position === undefined ? {} : { position }),
+        });
+        this.put(result.design);
+        const partId = result.part?.id ?? '';
+        ids.push(partId);
+        if (part.name !== undefined && !names.has(part.name)) names.set(part.name, partId);
+      });
+      let motor: BuildResult['motor'];
+      let notFlown: string | undefined;
+      if (spec.motor === undefined || resolved === undefined) {
+        notFlown = 'no motor was given: give one (motor.name) to fly the rocket';
+      } else if ('problem' in resolved) {
+        notFlown = resolved.problem;
+      } else {
+        step = 'the motor';
+        const design = this.get(id);
+        const tubes = design.components.filter(
+          (c) => c.component.kind === 'innerTube' || c.component.kind === 'bodyTube',
+        );
+        const mountOf = (m: number | string): string => {
+          const found =
+            typeof m === 'number'
+              ? design.components.find((c) => c.id === ids[m])
+              : design.components.find((c) => c.name === m);
+          if (found === undefined)
+            throw new EditError(
+              `motor.mount: no part ${typeof m === 'number' ? `number ${String(m)} (counted from 0)` : `named "${m}"`}`,
+            );
+          return found.id;
+        };
+        const aftEnd = (c: (typeof tubes)[number]): number =>
+          c.position +
+          (c.component.kind === 'innerTube' || c.component.kind === 'bodyTube'
+            ? c.component.length
+            : 0);
+        const aftmost = (kind: 'innerTube' | 'bodyTube'): (typeof tubes)[number] | undefined =>
+          tubes
+            .filter((c) => c.component.kind === kind)
+            .reduce<(typeof tubes)[number] | undefined>(
+              (best, c) => (best === undefined || aftEnd(c) > aftEnd(best) ? c : best),
+              undefined,
+            );
+        const defaultMount = aftmost('innerTube') ?? aftmost('bodyTube');
+        if (spec.motor.mount === undefined && defaultMount === undefined) {
+          notFlown = 'there is no body tube or inner tube to hold the motor';
+        } else {
+          const mountPartId =
+            spec.motor.mount === undefined ? (defaultMount?.id ?? '') : mountOf(spec.motor.mount);
+          const delay = spec.motor.ejectionDelay ?? resolved.parsed.delay;
+          this.setMotor(id, {
+            mountPartId,
+            motorId: resolved.motor.id,
+            ...(spec.motor.overhang === undefined ? {} : { overhang: spec.motor.overhang }),
+            ...(delay === undefined ? {} : { ejectionDelay: delay }),
+            ...(spec.motor.cluster === undefined ? {} : { cluster: spec.motor.cluster }),
+          });
+          if (spec.motor.mount === undefined && defaultMount !== undefined) {
+            this.noteAssumption(id, {
+              partId: defaultMount.id,
+              what: 'motor mount not given',
+              method: `the motor is put in "${defaultMount.name}", the aftmost ${defaultMount.component.kind === 'innerTube' ? 'inner tube' : 'body tube'}`,
+              effect: 'the motor’s mass sits in that tube; another tube would move the CG',
+              impact: 'minor',
+            });
+          }
+          const placed = this.get(id).motorMount?.motor;
+          motor = {
+            id: resolved.motor.id,
+            name: `${resolved.motor.definition.manufacturer} ${resolved.motor.definition.designation}`,
+            source: resolved.motor.source,
+            downloaded: resolved.downloaded,
+            delay:
+              placed?.ejectionDelay === undefined
+                ? resolved.parsed.delayCode === undefined
+                  ? 'plugged (not given)'
+                  : `plugged: the delay code "${resolved.parsed.delayCode}" is not a time, give the delay in seconds`
+                : `${String(placed.ejectionDelay)} s`,
+          };
+        }
+      }
+      if (spec.recovery !== undefined) {
+        step = 'the recovery';
+        this.setRecovery(id, spec.recovery);
+      }
+      if (spec.launch !== undefined && Object.keys(spec.launch).length > 0) {
+        step = 'the launch';
+        this.setLaunch(id, spec.launch);
+      }
+      if (spec.asBuilt !== undefined) {
+        step = 'the weighed mass and CG';
+        this.setAsBuilt(id, spec.asBuilt);
+      }
+      (spec.assumptions ?? []).forEach((a, i) => {
+        step = `assumption ${String(i + 1)}`;
+        const partId = a.part === undefined ? undefined : ids[a.part];
+        if (a.part !== undefined && partId === undefined)
+          throw new EditError(`no part number ${String(a.part)} (counted from 0)`);
+        this.noteAssumption(id, {
+          what: a.what,
+          method: a.method,
+          effect: a.effect,
+          impact: a.impact,
+          ...(partId === undefined ? {} : { partId }),
+        });
+      });
+      return {
+        design: this.get(id),
+        ...(motor === undefined ? {} : { motor }),
+        ...(notFlown === undefined ? {} : { notFlown }),
+      };
+    } catch (error) {
+      this.discard(id);
+      if (error instanceof Error && !(error instanceof TypeError)) {
+        error.message = `${step}: ${error.message}`;
+      }
+      throw error;
+    }
   }
 
   setAsBuilt(

@@ -91,12 +91,13 @@ const get = (o: unknown, ...path: string[]): unknown =>
   );
 
 describe('tool list', () => {
-  it('offers the tools of plan 0062; only the two catalogue tools reach the network', async () => {
+  it('offers the tools of plans 0062 and 0079; only the catalogue tools and the one-call build reach the network', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
         'about',
         'add_part',
+        'build_and_fly',
         'design_link',
         'export_design',
         'find_motor',
@@ -123,13 +124,22 @@ describe('tool list', () => {
     );
     for (const t of tools) {
       expect(t.annotations?.openWorldHint).toBe(
-        t.name === 'search_thrustcurve' || t.name === 'add_thrustcurve_motor',
+        t.name === 'search_thrustcurve' ||
+          t.name === 'add_thrustcurve_motor' ||
+          // Plan 0079: it downloads a named motor the library does not have.
+          t.name === 'build_and_fly',
       );
     }
   });
 
   it('sends the working instructions at connection', () => {
     expect(client.getInstructions()).toMatch(/Never compute physics yourself/);
+    // Plan 0079: a paste is built and flown at once; what was left out is listed, not asked first.
+    expect(client.getInstructions()).toMatch(
+      /build and fly it at once, without asking questions first/,
+    );
+    expect(client.getInstructions()).toMatch(/build_and_fly/);
+    expect(client.getInstructions()).not.toMatch(/Ask the user for what is missing before/);
   });
 });
 

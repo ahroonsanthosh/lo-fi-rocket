@@ -15,11 +15,12 @@
       <p><a href="./">← Back to the simulator</a></p>
       <h1>Use Lo-Fi Rocket with Claude</h1>
       <p>
-        Give Claude your rocket's specification, a kit's parts list, a photo or an OpenRocket file.
-        Claude builds the design and asks for anything missing. The simulator then computes the
-        stability, the flight, the landing and the Monte Carlo spread with the same sourced physics
-        as this site. Every figure Claude had to estimate is listed with the results, together with
-        a confidence rating.
+        Paste your rocket's specification, a kit's parts list, a photo, or an OpenRocket or RASAero
+        II file into the chat. Claude builds the design from what you gave and flies it at once,
+        without a questionnaire first. The simulator computes the stability, the flight, the landing
+        and the Monte Carlo spread with the same sourced physics as this site. Everything you did
+        not give, and every figure Claude had to estimate, is listed with the results, together with
+        a confidence rating, so you can correct the ones that matter.
       </p>
 
       <h2>What it costs, and what it can reach</h2>
@@ -33,8 +34,8 @@
           you give Claude, and leave as a file Claude gives back to you.
         </li>
         <li>
-          Its only network use is the ThrustCurve.org motor catalogue, and only when you ask for a
-          motor that is not in the library. It only reads from it.
+          Its only network use is the ThrustCurve.org motor catalogue, and only when you name or ask
+          for a motor that is not in the library. It only reads from it.
         </li>
       </ul>
 
@@ -74,9 +75,10 @@
       <h2>What to expect</h2>
       <ul>
         <li>
-          Claude asks for what it needs: dimensions, materials or weights, the motor, the parachute,
-          and the launch site, rail and wind. Values you do not give are marked "not given" until
-          you supply them.
+          Give what you know: dimensions, materials or weights, the motor as you would write it
+          ("D12-5", "G80-7T"), the parachute, and the launch site, rail and wind. Values you do not
+          give take a default and are marked "not given" in the results; give any of them later and
+          Claude flies it again.
         </li>
         <li>
           If your rocket is built, give its weighed mass and balance point with the motor out. They
