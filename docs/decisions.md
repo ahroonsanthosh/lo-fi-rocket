@@ -913,3 +913,23 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Alternatives:** option (b) above; the DATCOM's own subsonic body method (4.2.3.1-a), whose fineness-ratio term carries the after-body pressure. That would replace Niskanen's body pressure terms as a whole, a larger change for which there is no measured case that favours it.
 - **Also corrected (plan 0069 section 5):** two lines of `docs/known-limitations.md` named the wrong side as safe for altitude limits. An under-predicted apogee is the unsafe side for an altitude limit; an over-predicted apogee is the safe side, though an ejection delay chosen from it may fire after apogee.
 - **Consequences:** none in the results. The open item of D-104 is closed. More measured boat-tail data, if added to `reference/`, would reopen it.
+
+## D-106 (2026-10-14): Pod sets are parts repeated around the axis, each counted once per pod
+
+- **Decision:** a placed part may carry `instances: { count, radialOffset }` (GEO-18): n copies equally spaced around the axis at that distance, the parts of a pod set.
+  - **Outside the main body.** Such parts are not part of the main body's stacking, continuity, caliber, length, base or DATCOM body assembly. Each pod set (parts sharing a count and offset) is a body of its own, checked for fit like the main one except that it need not start at the nose tip.
+  - **Mass.** n m at the part's CG. The roll inertia gains n m r², the pitch inertia n m r²/2.
+  - **Normal force.** Every term × n: the Barrowman terms, the body lift, the DATCOM large-angle terms. The main body's reverse-flow potential term does not include the pods.
+  - **Drag.** Every pressure and fin term × n on the part's own area; the pods' surfaces in the friction; each pod set's base on its own geometry, by the method in use.
+  - **Damping.** Each pod body's pitch damping and its fins' × n. The pod fins' roll damping is taken about their own pod's axis.
+  - **Listed in every result.** The flow between the pods and the body (moderate); a single pod's CG off the axis (moderate); the mean inertia of two pods (minor).
+- **Why:** rule 3 and CLAUDE.md section 2 ask that podded designs be simulated. The pod probe (`reference/rockets/pod-probe/values.txt`) shows OpenRocket computes each pod part on its own, scaled by the count, so this model reproduces it without its source.
+- **Evidence:**
+  - **Static figures.** The mass and CG match OpenRocket exactly, and the C_Nα exactly (23.414484 with finned pods). The CP is within R1's own 0.016 %.
+  - **Inertias.** The roll inertia the pods add matches exactly (0.23 % with pod fins). The pitch inertia matches exactly for three pods. For two, OpenRocket reports Iyy = Izz without the pods' offset, whereas the true pitch and yaw inertias differ by 2 m r²; our value is their mean.
+  - **Drag at Mach 0.3.** The base drag matches exactly and the pressure drag within 1e-4. The friction is within R1's own +1.4 %, and the total within 0.65 %.
+  - **Flights on a D12-5.** Apogee is +1.1 to +1.7 % and maximum velocity +0.6 to +0.8 %, the pods no worse than R1's airframe alone.
+- **Alternatives:** stand the pods in as masses, as the reader did (no drag or normal force: a large error); model pods as extra fins (not what they are).
+- **Consequences:**
+  - The physics simulates pod sets. The design model, the `.ork` reader and the app follow in plan 0070 step 3, motors in pods in step 4, booster sets in step 5.
+  - Results without pods are unchanged: the golden outputs and the OpenRocket comparisons are bit-identical.

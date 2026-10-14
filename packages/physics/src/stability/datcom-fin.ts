@@ -50,7 +50,7 @@
  * value at Mach 0.8 to the DATCOM value at Mach 1.4 (BAR-12).
  */
 import { InvalidInputError } from '../errors.js';
-import type { PlacedComponent } from '../geometry/assembly.js';
+import { isPodPart, type PlacedComponent } from '../geometry/assembly.js';
 import { finiteResult } from '../numerics/finite.js';
 import {
   DATCOM_FIGURE_4132_56,
@@ -470,7 +470,14 @@ export function finAfterbodyLength(
     throw new InvalidInputError('fin set index', finIndex, 'must point at a fin set');
   }
   let bodyEnd = 0;
-  for (const { component: c, position } of components) {
+  // Plan 0070: a pod's fins have its own body behind them, the main body's fins the main body's.
+  const sameBody = (p: PlacedComponent): boolean =>
+    isPodPart(p) === isPodPart(placed) &&
+    (p.instances?.radialOffset as number | undefined) ===
+      (placed.instances?.radialOffset as number | undefined);
+  for (const p of components) {
+    if (!sameBody(p)) continue;
+    const { component: c, position } = p;
     if (c.kind === 'noseCone' || c.kind === 'bodyTube' || c.kind === 'transition') {
       bodyEnd = Math.max(bodyEnd, (position as number) + (c.length as number));
     }

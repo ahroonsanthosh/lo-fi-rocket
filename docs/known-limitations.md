@@ -418,6 +418,14 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 - **Moderate angles.** The two normal-force models differ in the in-flight CP at 10 to 20° by up to 0.8 calibers. Measured Blue Scout data show a larger forward CP shift than either model. The reported in-flight margin uses the more forward CP (D-070).
 - **Chart reading.** In figure 4.1.4.3-23(a) the curves are hidden under the gridline within about ±0.3 of stability index 0. Δ₃ there is interpolated and uncertain by up to about ±0.2 root chords.
 
+## Pod sets (plan 0070, D-106)
+
+- **Each pod on its own.** A pod set's parts are counted once per pod, in their mass, normal force, drag and damping, as OpenRocket does. The flow between the pods and the body (interference, shielding, the pods' effect on the body's base pressure) is not modelled by either, and no approved source gives it. Each flight result lists it as a moderate approximation.
+- **One or two pods.** A single pod's CG sits off the axis, which tilts a real flight; the model keeps it on the axis (listed). Two pods give different pitch and yaw inertias; the axisymmetric model uses their mean (listed, minor). OpenRocket uses the smaller one for both.
+- **Roll.** A pod's fins damp roll about their own pod's axis; about the rocket's axis their damping is larger.
+- **Reverse flow.** In the displayed mode, beyond 90° the pods have no body potential term of their own.
+- **Not yet in files.** Plan 0070 step 3 brings pod sets into the design model and the `.ork` reader; until then a pod set in a file is stood in or refused as before.
+
 ## Security (plan 0061 step 1, D-090)
 
 - **Size limits.** Files over 64 MiB, `.ork` archives whose design entry unzips past 256 MiB, and `.ork` designs whose part outside the stored simulations is over 16 MiB are refused with a message. No real design or motor file is near these limits.

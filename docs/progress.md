@@ -128,6 +128,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - A sample's Mach, angle of attack, C_D0, CP and margin are documented, and tested, as NaN exactly where no attitude is modelled: under a recovery device, after landing, and with no aerodynamics. The app's plots, CSV export, 3D viewer and the MCP report already treat them as "not defined". With this, task 5 (the physics never refuses a sensible design) is complete.
 - Flipped nose cones (plan 0068, D-104): an `.ork` tail cone (a flipped nose cone) is read as a transition to a point, which OpenRocket shows is exact for all six shapes; the physics accepts an aft radius of 0, and so does the app. Probe files and values in `reference/rockets/flipped-nose-probe/`. Found on the way: the boat-tail drag combination in the displayed mode (D-104, open).
 - The boat-tail drag combination checked (plan 0069, D-105): keeping Niskanen's eq. (3.88) on eq. (3.94) beside the DATCOM base, because the alternative doubled the error against the ARCAS wind-tunnel boat-tail data while moving R2 by only 0.66 %. Two limitation lines that named the wrong side as safe for altitude limits are corrected.
+- Pod sets, the physics (plan 0070 steps 1 and 2, D-106, GEO-18): parts repeated around the axis, counted once per pod in the mass, inertias, normal force, drag and damping, with their approximations listed. Against the new OpenRocket pod probe: mass, CG and C_Nα exact, CP within R1's 0.016 %, drag within 0.65 %, apogee +1.1 to +1.7 %.
 
 ## In progress
 
@@ -135,7 +136,7 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 
 ## Next
 
-- Task 4's remaining refusals (pods and booster sets carrying motors, unknown nose shapes, a stage not after the one above), then plan 0061 step 4 (the modelling benchmark).
+- Plan 0070 step 3: pod sets in the design model (schema and migration), the `.ork` reader and the app's part list; then motors in pods (step 4) and booster sets (step 5). Then plan 0061 step 4 (the modelling benchmark).
 
 - Plan 0055, in order: step 3 part 2 (multi-stage designs and motor ignition delays, pods and booster sets, nose cone variants; the stage mass override as a design-level measured mass), step 2 (freeform and elliptical fins), step 4 (the physics' remaining refusals), step 5 (random-design robustness tests), step 6 (canted-fin roll forcing).
 
