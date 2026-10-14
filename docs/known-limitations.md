@@ -427,7 +427,8 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 ## The MCP server (plan 0062, D-092)
 
 - **Designs are kept only while the connection is open.** Nothing is written to disk; `export_design` returns the file for the user to save.
-- **Motors.** The library holds the eight bundled motors and the motor files imported in the session; ThrustCurve.org search follows in plan 0062's second pull request.
+- **Motors.** The library holds the eight bundled motors, the motor files imported in the session and the ThrustCurve.org motors downloaded in it (D-093); downloads are not kept after the connection closes.
+- **Monte Carlo** runs at most 200 flights per call (about a minute; D-093).
 - **Defaults.** Values Claude does not give take the app's editing defaults and are listed as approximations; their impact ratings are rules of this app (major for the outline, moderate for masses, minor for lugs and buttons), not measured errors.
 - **Launch settings not given** (site, pad temperature and pressure, rail, wind) are reported with every result but do not lower the confidence rating, as in the app.
-- **Not yet distributed.** The single-file server and the Claude Desktop extension follow in plan 0062's third pull request.
+- **Unsigned extension.** The Claude Desktop extension is not code-signed (D-094); its SHA-256 is published beside it. There is no release channel other than the site, which updates on every merge.

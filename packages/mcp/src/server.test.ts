@@ -10,6 +10,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import {
   BUNDLED_MOTOR_FILES,
+  runDispersion,
+  type Transport,
   designSimulationOptions,
   designStability,
   designVehicle,
@@ -26,6 +28,7 @@ import { simulateFlight } from '@lo-fi-rocket/physics';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { r } from './report.js';
 import { createServer, MAX_CONTENT_CHARACTERS } from './server.js';
+import { Session } from './session.js';
 
 const ROCKETS = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -44,11 +47,16 @@ interface Call {
 
 let client: Client;
 
-beforeEach(async () => {
+async function connect(session?: Session): Promise<Client> {
   const [a, b] = InMemoryTransport.createLinkedPair();
-  await createServer().connect(a);
-  client = new Client({ name: 'test', version: '0' });
-  await client.connect(b);
+  await createServer(session).connect(a);
+  const c = new Client({ name: 'test', version: '0' });
+  await c.connect(b);
+  return c;
+}
+
+beforeEach(async () => {
+  client = await connect();
 });
 
 async function call(name: string, args: Record<string, unknown> = {}): Promise<Call> {
@@ -80,7 +88,7 @@ const get = (o: unknown, ...path: string[]): unknown =>
   );
 
 describe('tool list', () => {
-  it('offers the tools of plan 0062 step 1, none of which touches files or the network', async () => {
+  it('offers the tools of plan 0062; only the two catalogue tools reach the network', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
@@ -92,10 +100,13 @@ describe('tool list', () => {
         'import_design',
         'import_motor',
         'list_designs',
+        'monte_carlo',
         'new_design',
         'note_assumption',
         'remove_part',
         'review_design',
+        'search_thrustcurve',
+        'add_thrustcurve_motor',
         'set_as_built',
         'set_launch',
         'set_motor',
@@ -105,7 +116,11 @@ describe('tool list', () => {
         'update_part',
       ].sort(),
     );
-    for (const t of tools) expect(t.annotations?.openWorldHint).toBe(false);
+    for (const t of tools) {
+      expect(t.annotations?.openWorldHint).toBe(
+        t.name === 'search_thrustcurve' || t.name === 'add_thrustcurve_motor',
+      );
+    }
   });
 
   it('sends the working instructions at connection', () => {
@@ -400,4 +415,130 @@ describe('hostile and mistaken input', () => {
     // Still answering.
     expect((await ok('list_designs')) as unknown).toHaveLength(1);
   });
+});
+
+describe('the ThrustCurve.org catalogue (recorded answers, no network)', () => {
+  // The answers follow reference/docs/thrustcurve-api/swagger.json, as in the formats client tests;
+  // the download carries reference/motors/Estes_D12.eng in Base64.
+  const d12 = BUNDLED_MOTOR_FILES.find((m) => m.file === 'Estes_D12.eng')?.text ?? '';
+  const answers: Record<string, unknown> = {
+    'search.json': {
+      matches: 1,
+      results: [
+        {
+          motorId: '5f4294d20002310000000055',
+          manufacturer: 'Estes Industries',
+          manufacturerAbbrev: 'Estes',
+          designation: 'D12',
+          commonName: 'D12',
+          impulseClass: 'D',
+          diameter: 24,
+          length: 70,
+          type: 'SU',
+          avgThrustN: 10.2,
+          maxThrustN: 29.7,
+          totImpulseNs: 16.8,
+          burnTimeS: 1.6,
+          dataFiles: 2,
+          delays: '0,3,5,7',
+          availability: 'regular',
+        },
+      ],
+    },
+    'download.json': {
+      results: [
+        {
+          motorId: '5f4294d20002310000000055',
+          simfileId: 'sim-1',
+          format: 'RASP',
+          source: 'cert',
+          data: Buffer.from(d12).toString('base64'),
+        },
+      ],
+    },
+  };
+  const bodies: unknown[] = [];
+  const transport: Transport = (url, init) => {
+    bodies.push(JSON.parse(init.body));
+    const answer = answers[url.replace('https://www.thrustcurve.org/api/v1/', '')];
+    return Promise.resolve({
+      ok: answer !== undefined,
+      status: answer === undefined ? 404 : 200,
+      text: () => Promise.resolve(JSON.stringify(answer)),
+    });
+  };
+
+  it('searches, downloads into the library and flies the downloaded motor as the bundled one', async () => {
+    const c = await connect(new Session(transport));
+    const call2 = async (
+      name: string,
+      args: Record<string, unknown>,
+    ): Promise<Record<string, unknown>> => {
+      const result = await c.callTool({ name, arguments: args });
+      const text = (result.content as { text?: string }[])[0]?.text ?? '';
+      if (result.isError === true) throw new Error(text);
+      return JSON.parse(text) as Record<string, unknown>;
+    };
+    const found = await call2('search_thrustcurve', { designation: 'D12', diameter: '24 mm' });
+    expect(get(found, 'results')).toHaveLength(1);
+    // The diameter goes to the API in millimetres; only motors with data files are asked for.
+    expect(bodies[0]).toMatchObject({ commonName: 'D12', diameter: 24, hasDataFiles: true });
+    const added = await call2('add_thrustcurve_motor', { motorId: '5f4294d20002310000000055' });
+    expect(added['id']).toBe('thrustcurve:5f4294d20002310000000055');
+    expect(added['delays_s']).toEqual([0, 3, 5, 7]);
+    const designId = (await call2('new_design', { name: 'E', from: 'example' }))['id'] as string;
+    const parts = (await call2('get_design', { designId }))['parts'] as {
+      id: string;
+      name: string;
+    }[];
+    const mount = parts.find((p) => p.name === 'Motor mount')?.id;
+    const a = await call2('set_motor', {
+      designId,
+      mountPartId: mount,
+      motorId: 'thrustcurve:5f4294d20002310000000055',
+      overhang: 0,
+      ejectionDelay: 5,
+    });
+    expect(get(a, 'motor', 'designation')).toBe('Estes D12');
+    const viaCatalogue = await call2('simulate', { designId });
+    await call2('set_motor', {
+      designId,
+      mountPartId: mount,
+      motorId: 'Estes_D12.eng',
+      overhang: 0,
+      ejectionDelay: 5,
+    });
+    const viaBundled = await call2('simulate', { designId });
+    expect(get(viaCatalogue, 'summary', 'apogee_m')).toBe(get(viaBundled, 'summary', 'apogee_m'));
+  });
+
+  it('says plainly when the catalogue is not available', async () => {
+    const offline = await call('search_thrustcurve', { designation: 'D12' });
+    expect(offline.ok).toBe(false);
+    expect(offline.text).toMatch(/not available in this server \(offline\)/);
+  });
+});
+
+describe('Monte Carlo', () => {
+  it('reports the seed and reproduces runDispersion on the same design and settings', async () => {
+    const designId = (await ok('new_design', { name: 'E', from: 'example' }))['id'] as string;
+    const variations = {
+      windSpeed: 1,
+      windDirection: 0.2,
+      railAngle: 0.02,
+      railAzimuth: 0.1,
+      motorImpulseScale: 0.03,
+      structuralMassScale: 0.02,
+    };
+    const mc = await ok('monte_carlo', { designId, runs: 8, seed: 42, variations });
+    expect(mc['seed']).toBe(42);
+    expect(mc['not_varied']).toEqual([]);
+    const exported = parseDesign((await call('export_design', { designId })).text);
+    const expected = runDispersion(exported, { runs: 8, seed: 42, variations });
+    expect(get(mc, 'apogee_m', 'p50')).toBe(r(expected.summary.apogee?.p50 ?? Number.NaN));
+    expect(get(mc, 'landing_radius_95_m')).toBe(r(expected.summary.containmentRadius95));
+    const again = await ok('monte_carlo', { designId, runs: 8, seed: 42, variations });
+    expect(again).toEqual(mc);
+    expect((await call('monte_carlo', { designId, runs: 5000 })).ok).toBe(false);
+  }, 60_000);
 });

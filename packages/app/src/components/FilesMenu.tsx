@@ -199,6 +199,9 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
           >
             Load example
           </button>
+          <a className="file-button" href="claude.html">
+            Use with Claude
+          </a>
         </div>
         {listOpen ? (
           <ul className="design-list" aria-label="Stored designs">
