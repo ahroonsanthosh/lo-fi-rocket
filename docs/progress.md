@@ -137,6 +137,11 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
     - OpenRocket's nose pressure drag below Mach 1 (tangent ogives flat to Mach 1 and near zero supersonic; other shapes zero to Mach 0.9), which is not copied;
     - our skin friction, 1.4 % higher;
     - the launch lug.
+- Validation corrections (plan 0072, D-109), from the measured-data survey and each checked against the report page:
+  - **TN D-3182 model A.** Its fins are corrected to the drawing (span 4.95 in, not 4.38; a 1.37 in mean trailing edge, not 0.69). Its C_A is compared with the forebody drag, since the report subtracts the base. CP rms is 4.1 % of body length (was 5.7 %) and forebody drag −17 %.
+  - **Blue Scout at angle of attack.** The values behind D-070 were the fins-off configurations. The fins-on CP moves only about 0.03 body lengths to 6°; both models over-predict this, which is conservative.
+  - **Known limitations.** Stale statements were replaced. Two items are newly documented: the ARCAS transonic CP, about 1 caliber on the unsafe side at Mach 0.8 to 0.9, and drag under-predicted just above Mach 1 and on wedge fins.
+  - **OpenRocket issues.** Draft list in `docs/reports/openrocket-issues.md`.
 - Pod sets in files (plan 0070 step 3, D-107): the design file's `pod` group (schema 3, with its migration), the `.ork` reader's pod sets on body tubes, placed as OpenRocket places them (every radius and axial method probed exactly; a parachute in a pod is one per pod), and the app's part list and editor naming pod parts. A motor in a pod is still refused (step 4). Issues opened for the UI and 3D lanes to draw pods off the axis.
 
 ## In progress

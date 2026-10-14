@@ -448,10 +448,10 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   8. **Reverse flow.** The reversed wing's leading edge is the old trailing edge. A forward-swept reversed edge is evaluated as unswept, with a warning. The carry-over CP is mirrored along the root chord.
   9. **Figures 23a, 23b, 22a and 25b.** Each label set applies where its curves are drawn. Where a curve is not drawn, the nearest drawn curve is used and a warning is given when it matters (beyond the stall). In figure 23(a) the near-vertical rises through stability index 0 are hidden under the gridline and are interpolated linearly. Δ₃ for a stability index within ±0.3 of 0 is therefore uncertain by up to about ±0.2 root chords. None of the reference rockets is in that band.
 - **Conservative in-flight margin:** the reported in-flight stability margin (plan 0030) uses the more forward of the two models' CPs at each sample, and covers nose-forward flight only (α ≤ 90°). The reason is the following comparison.
-  - **Measured:** NASA TN D-1958 figure 7 shows Blue Scout's CP moving forward by about 0.13 body lengths between 0 and 6° at Mach 0.6.
+  - **Measured:** NASA TN D-1958 figure 7 shows Blue Scout's CP moving forward by about 0.13 body lengths between 0 and 6° at Mach 0.6. _Corrected by D-109: those values are figure 7(a), configurations B and C with the fins off; the fins-on configuration D (figure 7(b), PDF page 29) moves forward by only about 0.03 (0.805, 0.80, 0.79, 0.77 at 0, 2, 4, 6°)._
   - **Small-angle model:** 0.062 body lengths. Its body lift is K sin²α with K = 1.1.
   - **DATCOM model:** 0.054 body lengths, evaluated with the fins as square-edged for this comparison only.
-  - **Consequence:** both models under-predict the forward shift, and the DATCOM's smaller cross-flow factor (η c_dc ≈ 0.84 against 1.1) and its low-aspect-ratio fin lift make it the less conservative of the two at moderate angles. The dynamics use the DATCOM model, the approved large-angle source (D-053), and the reported margin uses whichever CP is more forward.
+  - **Consequence:** both models under-predict the forward shift (_reversed by D-109: both over-predict it, which is conservative, and the DATCOM model is the closer; the choice below stays on the safe side_), and the DATCOM's smaller cross-flow factor (η c_dc ≈ 0.84 against 1.1) and its low-aspect-ratio fin lift make it the less conservative of the two at moderate angles. The dynamics use the DATCOM model, the approved large-angle source (D-053), and the reported margin uses whichever CP is more forward.
   - **Effect on the reference rockets:** the powered-flight minima are identical to item 5's. The coast minima are 0.05 to 0.36 calibers higher than before, because the trajectory near apogee differs (smaller angles of attack).
 - **Why:** completion prompt Part C item 8; D-053 named the DATCOM as the source. The 90° limit was the last place where a flight ended because of a missing model rather than physics.
 - **Validation:**
@@ -977,3 +977,18 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - The comparison mode's results change, the displayed mode's do not. The golden R1 comparison apogee goes from 168.866 to 166.187 m (OpenRocket 167.045 m).
   - The displayed mode's rail button drag stays Niskanen's, 6 to 10 times OpenRocket's. Which is closer to reality is open: no measured rail button data is in `reference/` (known limitations).
   - OpenRocket's nose pressure drag differences are recorded for the validation campaign and the list of OpenRocket issues.
+
+## D-109 (2026-10-14): Validation corrections: TN D-3182 model A's fins and drag basis; Blue Scout's CP at angle of attack
+
+- **Decision:**
+  - TN D-3182 model A's fins are modelled to the drawing: span and sweep 4.95 in, a 1.37 in mean trailing edge (a 10° included-angle wedge).
+  - Its C_A is compared with our forebody drag, as the report defines it.
+  - Blue Scout's measured CP at angle of attack is taken from the fins-on configuration D (figure 7(b)). D-070's comparison is corrected and its choice kept.
+  - The stale validation statements in `docs/known-limitations.md` are replaced with current figures (plan 0072).
+- **Why:** plan 0072. Each finding was checked against the report page:
+  - TN D-3182 figure 1, Table I and page 2.
+  - TN D-1958 figures 7(a) and 7(b), PDF pages 28 and 29.
+- **Results:**
+  - **TN D-3182.** CP rms is 4.1 % of body length (was 5.7 %), C_Nα −12 % (was −17 %), forebody drag −16.7 % mean (was −21 % against the total). Held-out supersonic CP rms is 3.1 % (was 3.8 %), C_D rms 15.0 % (was 16.4 %).
+  - **Blue Scout.** It moves its CP forward by about 0.03 body lengths to 6°. Both models over-predict that (conservative), the DATCOM model less.
+- **Consequences:** no physics change. The supersonic regime warning quotes the new figures. The open measured gaps (drag just above Mach 1, wedge-fin drag) are recorded in the known limitations, with their safety direction.
