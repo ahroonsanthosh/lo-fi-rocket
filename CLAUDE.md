@@ -227,7 +227,7 @@ Several sessions work on this repository at once. Each session is told its lane 
 
 | Lane    | Branch prefix | May edit                                                                                                           | Decision IDs                                      | Notes file                |
 | ------- | ------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- | ------------------------- |
-| physics | `physics/`    | `packages/physics`, `packages/formats`, `reference/`, `docs/equations.md`, `docs/plans/`                           | `D-0nn` (next free number in `docs/decisions.md`) | `docs/progress.md`        |
+| physics | `physics/`    | `packages/physics`, `packages/formats`, `packages/mcp`, `reference/`, `docs/equations.md`, `docs/plans/`           | `D-0nn` (next free number in `docs/decisions.md`) | `docs/progress.md`        |
 | ui      | `ui/`         | `packages/ui`, `packages/app`                                                                                      | `D-UI-n` in `docs/ui/decisions.md`                | `docs/progress/ui.md`     |
 | 3d      | `3d/`         | `packages/viewer`, and `packages/app/src/components/FlightViewer*`                                                 | `D-3D-n` in `docs/decisions.md`                   | `docs/progress/3d.md`     |
 | review  | `review/`     | nothing in `packages/`; findings go to GitHub issues labelled `bug` (one issue per finding, severity in the title) | none                                              | `docs/progress/review.md` |

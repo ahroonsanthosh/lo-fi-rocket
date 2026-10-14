@@ -3,15 +3,21 @@ import { describe, expect, it } from 'vitest';
 import { InvalidInputError } from '../errors.js';
 import {
   celsiusToKelvin,
+  centimetresToMetres,
   CUSTOMARY_UNIT_FACTORS,
   degreesToRadians,
   fahrenheitToKelvin,
   feetPerSecondToMetresPerSecond,
   feetToMetres,
+  gramsPerCubicCentimetreToKilogramsPerCubicMetre,
   gramsToKilograms,
+  hectopascalsToPascals,
   inchesToMetres,
+  kilometresPerHourToMetresPerSecond,
+  kilopascalsToPascals,
   milesPerHourToMetresPerSecond,
   millimetresToMetres,
+  millisecondsToSeconds,
   ouncesToKilograms,
   poundsForceToNewtons,
   poundsToKilograms,
@@ -181,5 +187,43 @@ describe('UNIT-5 to UNIT-11 customary units (NIST SP 811 Appendix B, D-040)', ()
     expect(fahrenheitToKelvin(-40)).toBeCloseTo(celsiusToKelvin(-40), 12);
     expect(fahrenheitToKelvin(-459.67)).toBeCloseTo(0, 12);
     expect(() => fahrenheitToKelvin(Number.NaN)).toThrow(InvalidInputError);
+  });
+});
+
+describe('UNIT-12 SI prefixes (SI Brochure Table 7, p. 138)', () => {
+  it('matches hand values', () => {
+    // 250 cm / 100 = 2.5 m (exactly representable).
+    expect(centimetresToMetres(250)).toBe(2.5);
+    // 2.54 cm = 1 in = 0.0254 m (UNIT-5); one correctly rounded division.
+    expect(centimetresToMetres(2.54)).toBe(2.54 / 100);
+    // 1500 ms = 1.5 s.
+    expect(millisecondsToSeconds(1500)).toBe(1.5);
+    // 1013.25 hPa = 101 325 Pa, the standard sea-level pressure (USSA76 Table 2); 1013.25 = 4053/4 is
+    // exactly representable, so the product is exact.
+    expect(hectopascalsToPascals(1013.25)).toBe(101325);
+    // 101.325 kPa = 101 325 Pa; 101.325 is not exactly representable, so the product is within 1e-9.
+    expect(kilopascalsToPascals(101.325)).toBeCloseTo(101325, 9);
+    // Water, 1 g/cm³ = 1000 kg/m³; balsa about 0.16 g/cm³ = 160 kg/m³.
+    expect(gramsPerCubicCentimetreToKilogramsPerCubicMetre(1)).toBe(1000);
+    expect(gramsPerCubicCentimetreToKilogramsPerCubicMetre(0.16)).toBeCloseTo(160, 12);
+  });
+  it('rejects non-finite input', () => {
+    expect(() => centimetresToMetres(Number.NaN)).toThrow(InvalidInputError);
+    expect(() => hectopascalsToPascals(Number.POSITIVE_INFINITY)).toThrow(InvalidInputError);
+  });
+});
+
+describe('UNIT-13 kilometresPerHourToMetresPerSecond (SI Brochure Tables 7 and 8)', () => {
+  it('matches hand values', () => {
+    // 36 km/h = 36 000 m / 3600 s = 10 m/s exactly.
+    expect(kilometresPerHourToMetresPerSecond(36)).toBe(10);
+    // 18 km/h = 5 m/s; 0 stays 0.
+    expect(kilometresPerHourToMetresPerSecond(18)).toBe(5);
+    expect(kilometresPerHourToMetresPerSecond(0)).toBe(0);
+    // 100 km/h = 27.777… m/s (100 000 / 3600, by hand 27.7777777777778).
+    expect(kilometresPerHourToMetresPerSecond(100)).toBeCloseTo(27.7777777777778, 12);
+  });
+  it('rejects non-finite input', () => {
+    expect(() => kilometresPerHourToMetresPerSecond(Number.NaN)).toThrow(InvalidInputError);
   });
 });

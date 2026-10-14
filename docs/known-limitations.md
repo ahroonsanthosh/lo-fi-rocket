@@ -423,3 +423,11 @@ Every model limitation and validity range, per CLAUDE.md rule 8. Each entry says
 - **Document type declarations.** An XML file with a `<!DOCTYPE` or `<!ENTITY` declaration is refused, even inside a comment. OpenRocket and RockSim never write one.
 - **Framing.** The site is served by GitHub Pages, which cannot send headers, and a Content-Security-Policy in a meta tag cannot carry `frame-ancestors`. Another site can therefore show the app in a frame. The app has no account, password or key that a framing site could misuse; this must be revisited before anything secret is ever entered in the page.
 - **Development server.** `vite` in development runs without the policy, because it injects inline scripts for hot reloading. The built site (`vite build`, `vite preview`, GitHub Pages) has it.
+
+## The MCP server (plan 0062, D-092)
+
+- **Designs are kept only while the connection is open.** Nothing is written to disk; `export_design` returns the file for the user to save.
+- **Motors.** The library holds the eight bundled motors and the motor files imported in the session; ThrustCurve.org search follows in plan 0062's second pull request.
+- **Defaults.** Values Claude does not give take the app's editing defaults and are listed as approximations; their impact ratings are rules of this app (major for the outline, moderate for masses, minor for lugs and buttons), not measured errors.
+- **Launch settings not given** (site, pad temperature and pressure, rail, wind) are reported with every result but do not lower the confidence rating, as in the app.
+- **Not yet distributed.** The single-file server and the Claude Desktop extension follow in plan 0062's third pull request.

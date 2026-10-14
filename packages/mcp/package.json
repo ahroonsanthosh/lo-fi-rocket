@@ -1,0 +1,24 @@
+{
+  "name": "@lo-fi-rocket/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local MCP server: Claude builds and simulates rocket designs with the engine, on the user's own Claude plan (plan 0062).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lo-fi-rocket/formats": "workspace:*",
+    "@lo-fi-rocket/physics": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "zod": "4.6.5"
+  },
+  "sideEffects": false
+}

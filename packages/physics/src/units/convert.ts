@@ -6,7 +6,8 @@
  * nothing inside the physics package calls them with its own values.
  *
  * Source for UNIT-1 to UNIT-4: BIPM, The International System of Units (SI),
- * 9th edition (2019), "the SI Brochure". Source for UNIT-5 to UNIT-11 (the
+ * 9th edition (2019), "the SI Brochure"; also UNIT-12 and UNIT-13 (plan 0062, the
+ * units the MCP server accepts). Source for UNIT-5 to UNIT-11 (the
  * customary units behind the UI units toggle, D-040): NIST Special
  * Publication 811 (2008), Appendix B (reference/docs/nist-sp811-2008.pdf;
  * printed page numbers, PDF page = printed + 12). Section references are
@@ -18,17 +19,23 @@
  */
 import {
   kelvin,
+  kilogramsPerCubicMetre,
   metres,
   metresPerSecond,
   kilograms,
   newtons,
+  pascals,
   radians,
+  seconds,
   type Kelvin,
   type Kilograms,
+  type KilogramsPerCubicMetre,
   type Metres,
   type MetresPerSecond,
   type Newtons,
+  type Pascals,
   type Radians,
+  type Seconds,
 } from './si.js';
 
 /**
@@ -166,4 +173,53 @@ export function feetPerSecondToMetresPerSecond(feetPerSecond: number): MetresPer
  */
 export function fahrenheitToKelvin(fahrenheit: number): Kelvin {
   return kelvin(((fahrenheit + 459.67) * 5) / 9);
+}
+
+/**
+ * UNIT-12: the SI prefixes centi, milli, hecto and kilo on the metre, second and pascal, and the
+ * gram per cubic centimetre: x_m = x_cm / 100, t_s = t_ms / 1000, p_Pa = p_hPa × 100,
+ * p_Pa = p_kPa × 1000, ρ_kg/m³ = ρ_g/cm³ × 1000 (1 g/cm³ = 10^-3 kg / 10^-6 m³).
+ * Source: SI Brochure 9th ed. (2019), §3, Table 7 "SI prefixes" (printed p. 138): centi = 10^-2,
+ * milli = 10^-3, hecto = 10^2, kilo = 10^3.
+ * Validity: every finite float64. Tolerance: correctly rounded (one division or one multiplication
+ * by an exactly representable integer).
+ */
+export function centimetresToMetres(centimetres: number): Metres {
+  return metres(centimetres / 100);
+}
+
+/** UNIT-12: milliseconds to seconds, t_s = t_ms / 1000 (SI Brochure Table 7, milli = 10^-3). */
+export function millisecondsToSeconds(milliseconds: number): Seconds {
+  return seconds(milliseconds / 1000);
+}
+
+/** UNIT-12: hectopascals to pascals, p = p_hPa × 100 (SI Brochure Table 7, hecto = 10^2). */
+export function hectopascalsToPascals(hectopascals: number): Pascals {
+  return pascals(hectopascals * 100);
+}
+
+/** UNIT-12: kilopascals to pascals, p = p_kPa × 1000 (SI Brochure Table 7, kilo = 10^3). */
+export function kilopascalsToPascals(kilopascals: number): Pascals {
+  return pascals(kilopascals * 1000);
+}
+
+/**
+ * UNIT-12: grams per cubic centimetre to kilograms per cubic metre, ρ = ρ_g/cm³ × 1000
+ * (SI Brochure Table 7: 1 g = 10^-3 kg, 1 cm³ = (10^-2 m)³ = 10^-6 m³).
+ */
+export function gramsPerCubicCentimetreToKilogramsPerCubicMetre(
+  gramsPerCubicCentimetre: number,
+): KilogramsPerCubicMetre {
+  return kilogramsPerCubicMetre(gramsPerCubicCentimetre * 1000);
+}
+
+/**
+ * UNIT-13: kilometres per hour to metres per second, v = v_km/h × 1000 / 3600.
+ * Source: SI Brochure 9th ed. (2019), Table 7 (kilo = 10^3, printed p. 138) and §4, Table 8
+ * "Non-SI units accepted for use with the SI units" (printed p. 140): 1 h = 3600 s.
+ * Validity: every finite float64. Tolerance: ≤ 1 ulp (one multiplication by an integer, exact
+ * below 2^43 km/h, and one correctly rounded division).
+ */
+export function kilometresPerHourToMetresPerSecond(kilometresPerHour: number): MetresPerSecond {
+  return metresPerSecond((kilometresPerHour * 1000) / 3600);
 }
