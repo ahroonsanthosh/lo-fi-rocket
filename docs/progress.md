@@ -152,6 +152,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - Small import and message fixes (plan 0073 part 3a, D-112): an `.ork` file's rail buttons past the end of the body are moved onto it and listed, instead of the stability refusing the design; the RK4 refusal advises a step rounded down, never up; the airfoil fin slab mass is rated moderate by its measured effect.
 - Streamers (plan 0073 part 2, D-111, STREAM-1): a recovery device may be a streamer, with Niskanen's Appendix C drag (eq. C.6), in the physics, the design file (schema 5), the `.ork` reader, the app and the MCP. Before this an imported streamer was dropped with a wrong "no mass" message and the rocket fell ballistically. Against OpenRocket on ten strips: mass and CG to 1e-6, C_D exact (OpenRocket uses the same equation, capped at 0.4, which the comparison mode copies).
 - Pod sets in files (plan 0070 step 3, D-107): the design file's `pod` group (schema 3, with its migration), the `.ork` reader's pod sets on body tubes, placed as OpenRocket places them (every radius and axial method probed exactly; a parachute in a pod is one per pod), and the app's part list and editor naming pod parts. A motor in a pod is still refused (step 4). Issues opened for the UI and 3D lanes to draw pods off the axis.
+- RASAero II import and comparison (plan 0075, D-114):
+  - **Importer.** `.CDX1` files are read: the nose, body, fin can, boat tail and boosters, recovery, site and motor. The file's lift-off weight and CG are reproduced exactly, per stage. The app's File menu has "Import RASAero".
+  - **Running RASAero.** It runs here under Wine, driven by our own script (`reference/rasaero/`; nothing of RASAero committed). An opt-in test (`RASAERO=1`) writes `docs/reports/rasaero-comparison-data.md`.
+  - **Found.** Our trajectory matches RASAero's when flown on its drag (within 1.4 % below Mach 0.95). Our drag is low: on 21 flown rockets our displayed apogee is above the measured one every time, +18.9 % mean below Mach 0.95 and +29.0 % above (RASAero: +0.4 % and +3.9 %). The causes, term by term, are in `docs/reports/rasaero-comparison.md`. The fixes await the owner.
 
 ## In progress
 
@@ -187,7 +191,12 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
 - **Fibreglass shear modulus (D-068).** No approved source gives it. R3 and R5 need at least 0.18 and 0.43 GPa to be flutter-free by TN 4197.
 - **Base drag after burnout (D-035).** The displayed mode uses the source's rule; the comparison mode uses OpenRocket's.
 - **Deployment speed warning (D-042).** It is a rule-of-thumb placeholder. Please state the figure you want.
-- **`.CDX1` import.** It needs sample RASAero II files.
+- **Drag against flown rockets (D-114, `docs/reports/rasaero-comparison.md` section 7).** Six decisions:
+  - **Fin friction.** Should it use each fin's own chord for the Reynolds number (DATCOM eq. 4.1.5.1-a) instead of the rocket's (Niskanen eq. 3.85)? Recommended.
+  - **Body form factor.** Should it be the DATCOM's (eq. 4.2.3.1-a)? Recommended, with the fin friction.
+  - **Rail guides and fin-body interference.** Please supply Hoerner, _Fluid-Dynamic Drag_, chapter 8 (approved source 4), or measured rail guide drag data.
+  - **Thrust at altitude.** Approve a propulsion text for the nozzle-exit pressure thrust; needed for high flights and for liquid engines.
+  - **The apogee note.** Should every flight carry a note that the apogee of real rockets has been about a fifth lower? The example rocket is currently reviewed to show no warnings.
 - **Default branch.** `main` exists. Making it the default branch needs the owner, because the `gh` token here is invalid.
 - **Review-fix follow-ups for the owner (2026-10-13):**
   - #9 suggests making the example's parachute open at the motor's ejection charge. That would change the example's figures used across the app tests, so it was not done.

@@ -1,6 +1,7 @@
 import {
   DESIGN_FILE_EXTENSION,
   exampleDesign,
+  importCdx1,
   MAX_INPUT_BYTES,
   newDesign,
   newId,
@@ -37,7 +38,15 @@ export interface FilesMenuProps {
   readonly onNotice: (notice: FileNotice) => void;
 }
 
-/** Save, open, switch between stored designs, import OpenRocket files (plan 0015), behind a File menu. */
+/** An imported design's recorded apogee, in metres and feet (RASAero files are in feet). */
+function apogeeText(m: number): string {
+  return `${Math.round(m).toLocaleString('en-US')} m (${Math.round(m / 0.3048).toLocaleString('en-US')} ft)`;
+}
+
+/**
+ * Save, open, switch between stored designs, import OpenRocket files (plan 0015) and RASAero II
+ * files (plan 0075), behind a File menu.
+ */
 export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
   const { state, dispatch } = useStore();
   const services = useServices();
@@ -48,6 +57,7 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const openId = useId();
   const orkId = useId();
+  const cdxId = useId();
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -92,19 +102,38 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
       setNotice(errorText(e), 'error');
     }
   };
+  const library = (): ReturnType<typeof bundledMotors> => [
+    ...bundledMotors(),
+    ...(services.motorStore === undefined ? [] : storedMotors(services.motorStore).motors),
+  ];
   const importOrk = async (file: File): Promise<void> => {
     try {
       requireWithin(file.name, file.size, MAX_INPUT_BYTES);
       const bytes = new Uint8Array(await file.arrayBuffer());
       const rocket = parseOrk(bytes, file.name);
-      const library = [
-        ...bundledMotors(),
-        ...(services.motorStore === undefined ? [] : storedMotors(services.motorStore).motors),
-      ];
-      const { design, notices } = orkToDesign(rocket, library, newId(), () => newId());
+      const { design, notices } = orkToDesign(rocket, library(), newId(), () => newId());
       dispatch({ type: 'replace-design', design });
       setNotice(
         [`Imported ${file.name} (OpenRocket ${rocket.formatVersion}).`, ...notices].join(' '),
+      );
+    } catch (e) {
+      setNotice(errorText(e), 'error');
+    }
+  };
+  const importCdx = async (file: File): Promise<void> => {
+    try {
+      const imported = importCdx1(await services.readFile(file), library(), newId(), file.name);
+      dispatch({ type: 'replace-design', design: imported.design });
+      const recorded = [
+        ...(imported.prediction === undefined
+          ? []
+          : [`RASAero II predicted an apogee of ${apogeeText(imported.prediction.apogee)}.`]),
+        ...(imported.measuredApogee === undefined
+          ? []
+          : [`The file’s notes give a flown apogee of ${apogeeText(imported.measuredApogee)}.`]),
+      ];
+      setNotice(
+        [`Imported ${file.name} (RASAero II).`, ...imported.notices, ...recorded].join(' '),
       );
     } catch (e) {
       setNotice(errorText(e), 'error');
@@ -168,6 +197,22 @@ export function FilesMenu({ storage, onNotice }: FilesMenuProps): JSX.Element {
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f !== undefined) void importOrk(f);
+              e.target.value = '';
+              close();
+            }}
+          />
+          <label className="file-button" htmlFor={cdxId}>
+            Import RASAero
+          </label>
+          <input
+            id={cdxId}
+            type="file"
+            accept=".cdx1,.CDX1"
+            aria-label="Import a RASAero II file"
+            className="visually-hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f !== undefined) void importCdx(f);
               e.target.value = '';
               close();
             }}

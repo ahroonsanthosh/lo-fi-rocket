@@ -62,6 +62,22 @@ Status: draft, growing as the validation campaign runs (2026-10-14).
 
 **Why it matters.** It is minor: Reynolds numbers 1.3 % low, skin friction a fraction of a per cent high.
 
+## 6. Apogee of flown amateur rockets predicted high: missing fin and protuberance drag (for discussion)
+
+**Reproduce.** RASAero II's 24 example designs, 21 of which record the apogee the real rocket reached (altimeter or GPS), flown in lo-fi-rocket's OpenRocket-equivalent mode (`docs/reports/rasaero-comparison.md`, D-114). That mode reproduces OpenRocket 24.12's flights within 1.2 % on our reference rockets (D-108). OpenRocket itself was not run on these designs, so the figures are an estimate of OpenRocket's.
+
+**Result.** The predicted apogee is above the measured one on all 21 flights: +9.9 % on average below Mach 0.95 (+2.1 to +21.1 %) and +18.0 % above. RASAero II's own predictions are +0.4 % and +3.9 %.
+
+**Why, term by term against RASAero's drag breakdown.**
+
+- **Body friction:** agrees.
+- **Base drag:** the thesis's eq. (3.94) gives about twice RASAero's and the DATCOM's (0.132 against 0.063 on a typical rocket at Mach 0.3). That hides part of what is missing below.
+- **Fin friction:** it is computed at the rocket's Reynolds number (thesis eq. 3.85). The DATCOM uses each fin's own mean chord (eq. 4.1.5.1-a), which gives about 1.5 times more on a typical fin.
+- **Fin-body interference drag:** none. The thesis ignores it as small (p. 41). RASAero charges about as much again as the fin friction.
+- **Rail buttons:** 20 to 30 times below RASAero's for the same guide (section "Not issues" below, and D-108).
+
+**Why it matters.** A predicted coast that is too long leads to an ejection delay that fires after the real apogee. The fin Reynolds number is a small change with a published basis. Measured rail button drag would settle the largest of the differences.
+
 ## Not issues, recorded for completeness
 
 - **Rail buttons.** OpenRocket 24.12's drag is that of a button partly sheltered by a turbulent boundary layer; Niskanen's rail pin gives 6 to 10 times more. OpenRocket's is a newer model, not a departure from physics. lo-fi-rocket reproduces it in its comparison mode (D-108).

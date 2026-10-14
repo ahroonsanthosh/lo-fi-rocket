@@ -8,3 +8,7 @@ reference/motors/
 reference/rockets/
 # GPLv3 harness (Java); not part of the TypeScript toolchain.
 tools/openrocket-harness/
+# RASAero II's downloaded files, Wine prefix and run outputs (plan 0075); gitignored, local only.
+reference/rasaero/download/
+reference/rasaero/runs/
+reference/rasaero/wine/
