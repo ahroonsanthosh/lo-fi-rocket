@@ -74,6 +74,15 @@ export {
 } from './design/migrate.js';
 export { DESIGN_FILE_EXTENSION, parseDesign, serializeDesign } from './design/serialize.js';
 export {
+  decodeDesignLink,
+  DESIGN_LINK_PREFIX,
+  DesignLinkError,
+  encodeDesignLink,
+  isDesignLink,
+  MAX_LINK_CHARACTERS,
+  MAX_LINK_DESIGN_BYTES,
+} from './design/link.js';
+export {
   assessMargin,
   DEFAULT_ROUGHNESS_HEIGHT,
   DESIGN_MACH,

@@ -700,3 +700,20 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
   - `mcpb pack`, the official packer (not needed for a single file; the official validator checks the result instead).
   - Code signing of the extension (deferred: it needs a certificate the owner would hold).
 - **Consequences:** The extension is unsigned, so Claude Desktop may say so when installing it, and users who want certainty compare the published SHA-256. Each merge to `main` publishes new files; there is no separate release channel yet.
+
+## D-095 (2026-10-14): Designs travel in links, in the address fragment
+
+- **Decision:** A link `…/lo-fi-rocket/#design=v1.<data>` opens a design in the web app (plan 0063), and the MCP server's `design_link` tool makes one.
+  - **Encoding.** `<data>` is the design file text, deflated (fflate, level 9) and written in base64url (RFC 4648 §5, no padding). `v1.` names the encoding.
+  - **Decoding** is bounded as every other reader (D-090): at most 512 Ki characters of base64url only, then a decompression fed in 16 KiB slices and abandoned past 4 MiB of output, then `parseDesign` with its migration and validation.
+  - **Opening.** The app opens the design with a fresh id and stores it at once, then removes the fragment from the address, so a link never overwrites a stored design and a reload opens the stored copy. A notice names the design and says it came from a link.
+  - **A bad link** opens the autosave instead, with a notice saying why.
+- **Why:** Plan 0061 step 3. A design built with Claude should open in the app with one click, approximations and "not given" notes intact, without a server. The fragment is never sent to a server (RFC 3986 §3.5), so GitHub Pages never sees the design.
+- **Alternatives:**
+  - A query string (rejected: it is sent to the server and kept in its logs).
+  - Uncompressed JSON (rejected: the example design is about 3 kB deflated and several times that as text).
+  - Opening the linked design in place of the open one without storing it (rejected: a reload would lose it).
+- **Consequences:**
+  - The example and all five reference rockets round-trip exactly (tests).
+  - A 64 MiB deflate bomb in a link stops at 4 MiB within the time limit (test).
+  - The end-to-end test opens a link in the built app and checks that the address is cleared and the design survives a reload.
