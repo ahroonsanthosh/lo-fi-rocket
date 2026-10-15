@@ -17,14 +17,15 @@ Two findings answer it.
 
 ## 2. What the prototype measured
 
-A prototype read both figures once, by eye, and is not the result. It only shows that the work is worth doing. The two-pass digitisation will move the figures.
+A prototype read both figures once, by eye, to see whether the work was worth doing. The last row of the table is part A's measured result, with the charts digitised twice.
 
-| Displayed mode                           | Held-out C_D rms: subsonic (target 7 %) | transonic | supersonic | 13 flights below Mach 0.95, mean |
-| ---------------------------------------- | --------------------------------------- | --------- | ---------- | -------------------------------- |
-| Before step 2 (D-115)                    | 6.1 %                                   | 21.2 %    | 14.9 %     | +16.4 %                          |
-| Step 2 alone (fin chord Reynolds)        | 8.2 %                                   | 20.2 %    | 15.6 %     | +13.2 %                          |
-| Eq. 4.3.3.1-a complete (prototype)       | about 6.6 %                             | 20.2 %    | 15.4 %     | about +12.5 %                    |
-| The same, against the barometric reading |                                         |           |            | about +5.5 %                     |
+| Displayed mode                                             | Held-out C_D rms: subsonic (target 7 %) | transonic | supersonic | 13 flights below Mach 0.95, mean |
+| ---------------------------------------------------------- | --------------------------------------- | --------- | ---------- | -------------------------------- |
+| Before step 2 (D-115)                                      | 6.1 %                                   | 21.2 %    | 14.9 %     | +16.4 %                          |
+| Step 2 alone (fin chord Reynolds)                          | 8.2 %                                   | 20.2 %    | 15.6 %     | +13.2 %                          |
+| Eq. 4.3.3.1-a complete (prototype)                         | about 6.6 %                             | 20.2 %    | 15.4 %     | about +12.5 %                    |
+| Eq. 4.3.3.1-a complete, two-pass charts (part A, measured) | 6.7 % (met)                             | 20.3 %    | 15.4 %     | +12.4 %                          |
+| The same, against the barometric reading                   |                                         |           |            | about +5.5 %                     |
 
 - **Datasets.** With the complete method, the mean C_D error improves on five of the six held-out datasets: RM-10 free flight, TN D-3182 model A, TM X-1661, Blue Scout and L8A05. The sixth, the RM-10 tunnel model, is already over-predicted above Mach 1.4 (+5 %, from its wave drag), and the higher friction takes it to about +10 %. That keeps the supersonic rms about 0.5 points above D-115's. Step 6 of plan 0080 (transonic and supersonic drag) is where it belongs.
 - **The barometric comparison, flight by flight** (step 2 alone, exact): from −6.3 to +18.3 %; median +7.5 %; rms 8.5 %.
