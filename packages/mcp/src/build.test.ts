@@ -111,6 +111,14 @@ describe('build_and_fly (plan 0079)', () => {
       r(expectedStability.result.marginLiftoff),
     );
     expect(get(out, 'flight', 'summary', 'apogee_m')).toBe(r(expectedFlight.summary.apogee));
+    // Plan 0081 (D-121): no temperature given, a standard day: the barometric reading is the
+    // geopotential apogee, within a metre of the true one at this height.
+    expect(get(out, 'flight', 'summary', 'barometric_altimeter_apogee_m')).toBe(
+      r(expectedFlight.summary.barometricApogee),
+    );
+    expect(
+      Math.abs(expectedFlight.summary.barometricApogee - expectedFlight.summary.apogee),
+    ).toBeLessThan(1);
     expect(get(out, 'flight', 'summary', 'max_velocity_m_s')).toBe(
       r(expectedFlight.summary.maxVelocity),
     );

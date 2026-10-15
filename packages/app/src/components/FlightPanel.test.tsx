@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import { newtons, seconds } from '@lo-fi-rocket/physics';
 import { App } from '../App.js';
 import { synchronousRunner } from '../simulation/runner.js';
+import { barometricText } from './FlightPanel.js';
 import type { Storage } from '../state/autosave.js';
 
 function memory(): Storage & KeyValueStore {
@@ -287,5 +288,18 @@ describe('warning thresholds are user-adjustable rules of thumb (D-042, D-053)',
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const warnings = await screen.findByRole('region', { name: 'Warnings' });
     expect(warnings).toHaveTextContent(/below 20 m\/s/);
+  });
+});
+
+describe('the barometric altimeter line (plan 0081, D-121)', () => {
+  it('says what a barometric altimeter reads when the day is not standard, and nothing when it is', () => {
+    // The 100 °F day at 2750 ft of ussa1976.altimeter.test.ts: 1327.7 m true, 1206.6 m on the altimeter.
+    expect(barometricText(1327.7, 1206.6, 'metric')).toMatch(
+      /^A barometric altimeter will read about 1[ ,]?20[67](\.\d+)? m: it assumes a standard day, and this one is warmer\.$/,
+    );
+    expect(barometricText(1000, 1040, 'metric')).toMatch(/this one is colder\.$/);
+    // Within 0.5 %: the altimeter reads the apogee; nothing is added.
+    expect(barometricText(1000, 1004, 'metric')).toBeUndefined();
+    expect(barometricText(Number.NaN, 1000, 'metric')).toBeUndefined();
   });
 });

@@ -1260,3 +1260,31 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Rules.** Plan 0080's rule (D-119: "adopted on its source and physical completeness; the benchmarks report") adopts it. Plan 0076's stricter rule ("not worse on either independent dataset") would still object to the supersonic rms, 0.5 points higher, from one dataset already over-predicted by another term. Every target that was met is still met, and the flights improve.
 - **The held-out test does not assert its targets.** It writes the report; a green CI does not mean the targets are met.
 - **Unchanged:** the OpenRocket-equivalent mode and every golden output. The RK4 step-check and in-flight stability reports are not regenerated, as for D-115.
+
+## D-121 (2026-10-15): Real flights compared as their instrument reads them; every result gives the barometric altimeter's reading
+
+- **Decision (plan 0081 part B).**
+  - **The benchmark.** A flight measured with a barometric altimeter is compared with what a barometric altimeter would have read on the predicted flight (ATM-13). GPS, optical tracking and accelerometer flights stay compared with the true apogee. The report lists both figures.
+  - **Every result.** `FlightSummary.barometricApogee` gives the reading. The app's Apogee card says "A barometric altimeter will read about X: it assumes a standard day, and this one is warmer (colder)" when it is 0.5 % or more from the apogee. The MCP report has `barometric_altimeter_apogee_m`.
+  - **The flight-based range (D-119)** is re-based on the same like-with-like ratios and still applies to the true apogee.
+- **Why.**
+  - A barometric altimeter converts pressure to height with the standard atmosphere, which is "a basis for pressure altimeter calibrations" (U.S. Standard Atmosphere 1976, foreword p. xiv, quoting the WMO definition). On a day warmer than standard the air column is taller for the same pressure drop, so it reads low.
+  - The simulator already applies each day's temperature (ATM-11), so its apogee is the true height on that day. Comparing that with a barometric reading is comparing two different quantities.
+  - All 13 flights below Mach 0.95 were measured barometrically, on days of 62 to 100 °F at sites where the standard day is 45 to 51 °F.
+- **Effect** (the 24 flown rockets of RASAero II's examples):
+
+  | 13 flights below Mach 0.95            | Mean    | Median  | rms    |
+  | ------------------------------------- | ------- | ------- | ------ |
+  | Displayed, true apogee (before)       | +12.4 % | +11.5 % | 13.7 % |
+  | Displayed, as the instrument reads it | +5.3 %  | +6.3 %  | 7.7 %  |
+  | OpenRocket-equivalent, the same       | +2.1 %  | +1.8 %  | 6.2 %  |
+
+  Above Mach 0.95 the displayed mean goes from +21.2 to +18.0 %.
+
+- **Uncertainty, stated with it.**
+  - The day's atmosphere is the site's temperature offset carried up at the standard lapse rate (Niskanen §4.1.1). A desert afternoon's offset shrinks with height, so the simulated density and the predicted reading share that uncertainty.
+  - Instruments differ. On the Kinsel flight two barometric altimeters read 42 231 and 40 113 ft, 5 % apart (GPS 42 771 ft). That flight is far above the layer the model covers, so it is supporting evidence, not a test.
+- **Found with it.**
+  - **RASAero II applies the launch temperature too.** Thunder&Lightning flown in RASAero II at its file's 100 °F reaches 3989 ft; the same file at 49 °F reaches 3823 ft (two runs with `reference/rasaero/run-rasaero.sh`, the temperature changed in a copy of the file). So its apogees are true heights. Compared like with like on the 13 flights below Mach 0.95, RASAero II is −5.4 % mean and 7.5 % rms: it predicts too much drag, and its +0.4 % against barometers (plan 0075) was two errors cancelling. Its rail guide rule (about 2.6 on the guide's frontal area) reads as part of that compensation.
+  - **The base drag decides between the modes.** The OpenRocket-equivalent mode is closer to these flights (+2.1 % mean). With only the base drag switched to Niskanen's eq. (3.94), the displayed mode goes from +5.3 to −3.4 %; the rail buttons (+8.7 % with OpenRocket's), the friction (+10.0 % with eq. 3.85's), the roll damping and the large-angle model move it the other way or not at all. The held-out data favoured the DATCOM's base drag (D-069), which the DATCOM says fins raise the base pressure above. The truth on these rockets lies between the two methods: tracing why, from sources, is next. Nothing is changed for it here.
+- **Unchanged:** the physics; every golden output; the true apogee shown.

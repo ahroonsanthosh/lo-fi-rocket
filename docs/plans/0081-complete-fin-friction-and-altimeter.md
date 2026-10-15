@@ -83,6 +83,8 @@ A prototype read both figures once, by eye, to see whether the work was worth do
   - A hand calculation for a 100 °F day at 2750 ft.
   - Property tests: hotter is never higher on the altimeter for the same true height, and the reading is monotonic in true height.
 
+**Part B's result (D-121).** Compared as each instrument reads it, the 13 flights below Mach 0.95 are +5.3 % mean, +6.3 % median and 7.7 % rms (from +12.4, +11.5 and 13.7 % against the true apogee). The OpenRocket-equivalent mode, on the same basis, is +2.1 %, +1.8 % and 6.2 %: the difference between the modes is the next thing to trace.
+
 ## 5. What follows, and what will not close the gap
 
 - **Rail buttons and guides (plan 0080 step 4).** NACA TM 1299 measures a hexagonal nut with washer, the closest shape to a rail button, at C_w ≈ 0.65 on the mean dynamic pressure over its height. Partly inside the boundary layer, that is about 0.4 to 0.5 on the free stream: below the current rail pin (about 0.87) and far below RASAero's 2.6. The measured value will lower the drag and raise the flight error by a point or two. It is still adopted, because it is measured. A boundary-layer thickness source is needed first; one will be proposed then.
