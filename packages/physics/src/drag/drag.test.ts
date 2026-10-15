@@ -38,6 +38,8 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
     baseDragMotorRule: 'while-thrusting',
     baseDragMethod: 'niskanen',
     bodyFormFactor: 'niskanen',
+    finFrictionLength: 'rocket',
+    liftingSurfaceFactors: 'none',
   };
   it('at 54.1456 m/s, Mach 0.159141, R = 2.2241·10⁶, thrusting: C_D0 = 0.75745', () => {
     // Friction: roughness-limited C_f = 5.07166·10⁻³ (R > R_crit = 7.304·10⁵), × (1 − 0.1 × 0.025326) = 5.05881·10⁻³;
@@ -109,6 +111,8 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       baseDragMotorRule: 'always',
       baseDragMethod: 'niskanen',
       bodyFormFactor: 'niskanen',
+      finFrictionLength: 'rocket',
+      liftingSurfaceFactors: 'none',
     });
     // Full base: 0.123292 × 1 = 0.123292 against 0.094886 while thrusting: + 0.028406.
     expect(coasting.cd0 - base.components.length * 0 - dragCoefficient(base).cd0).toBeCloseTo(
@@ -130,6 +134,8 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       baseDragMotorRule: 'never',
       baseDragMethod: 'niskanen',
       bodyFormFactor: 'niskanen',
+      finFrictionLength: 'rocket',
+      liftingSurfaceFactors: 'none',
     });
     expect(none.cd0).toBeCloseTo(0.785856, 5);
     for (const thrusting of [true, false]) {
@@ -139,6 +145,8 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
         baseDragMotorRule: 'never',
         baseDragMethod: 'niskanen',
         bodyFormFactor: 'niskanen',
+        finFrictionLength: 'rocket',
+        liftingSurfaceFactors: 'none',
       });
       expect(r.cd0).toBe(none.cd0);
       expect(r.terms.find((t) => t.kind === 'base')?.source).toContain('base (full)');
@@ -153,6 +161,8 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       baseDragMotorRule: 'while-thrusting',
       baseDragMethod: 'niskanen',
       bodyFormFactor: 'niskanen',
+      finFrictionLength: 'rocket',
+      liftingSurfaceFactors: 'none',
     });
     expect(r.terms.map((t) => t.kind)).toEqual([
       'noseCone',
@@ -171,6 +181,8 @@ describe('DRAG-13 R1 by hand (Niskanen §3.4)', () => {
       baseDragMotorRule: 'while-thrusting',
       baseDragMethod: 'niskanen',
       bodyFormFactor: 'niskanen',
+      finFrictionLength: 'rocket',
+      liftingSurfaceFactors: 'none',
     });
     expect(t.warnings.join('\n')).toContain('transonic regime');
     expect(t.warnings.join('\n')).toContain('expansion fans');
@@ -233,6 +245,8 @@ describe('properties', () => {
     baseDragMotorRule: 'while-thrusting',
     baseDragMethod: 'niskanen',
     bodyFormFactor: 'niskanen',
+    finFrictionLength: 'rocket',
+    liftingSurfaceFactors: 'none',
   });
   it('C_D0 is positive and adding a launch lug never reduces it; results are deterministic', () => {
     fc.assert(
@@ -306,6 +320,8 @@ describe('plan 0076: the fin friction at the fin chord (DRAG-24) in the drag mod
     reynolds: 1e6,
     roughnessHeight: metres(0),
     baseDragMotorRule: 'never' as const,
+    // DRAG-24 and DRAG-25 alone, without the rest of eq. 4.3.3.1-a (DRAG-26, plan 0081).
+    liftingSurfaceFactors: 'none' as const,
   };
 
   it('raises the friction by (C_f(10⁵) − C_f(10⁶)) × 0.991 × 1.06 × 0.03 / A_ref = 0.0119219', () => {

@@ -201,6 +201,8 @@ describe('pod sets in the mass properties and the stability (plan 0070)', () => 
         baseDragMotorRule: 'while-thrusting',
         baseDragMethod: 'niskanen',
         bodyFormFactor: 'niskanen',
+        finFrictionLength: 'rocket',
+        liftingSurfaceFactors: 'none',
       });
       const sum = (base: boolean): number =>
         r.terms.filter((t) => (t.kind === 'base') === base).reduce((a, t) => a + t.cd, 0);
@@ -227,6 +229,8 @@ describe('pod sets in the mass properties and the stability (plan 0070)', () => 
       baseDragMotorRule: 'always',
       baseDragMethod: 'niskanen',
       bodyFormFactor: 'niskanen',
+      finFrictionLength: 'rocket',
+      liftingSurfaceFactors: 'none',
       largeAngleMethod: 'linear',
       integrator: { kind: 'rk4', timeStep: seconds(0.001) },
       maxTime: seconds(120),

@@ -52,6 +52,11 @@ The owner decides before the work (section 7, question 2):
      - held-out subsonic drag: 7.1 → 6.4 %;
      - held-out transonic drag: 21.3 → 19.9 %;
      - held-out supersonic drag: 15.0 → 15.5 % (worse), reported as such.
+   - **Correction (2026-10-15, D-120).** The figures above are D-115's "fin chord alone" row, measured against the state before the DATCOM body form factor. With that form factor in place (D-115's "both" row, re-measured now), the effect is:
+     - flights below Mach 0.95: +16.4 → +13.2 % mean (above: +24.7 → +21.1 %);
+     - held-out subsonic drag: 6.1 → 8.2 % rms, above its 7 % target (met before);
+     - held-out transonic drag: 21.2 → 20.2 %; supersonic: 14.9 → 15.6 %.
+   - Asked to keep or revert it, the owner asked for another solution. Plan 0081 completes the DATCOM's equation instead (D-120).
 3. **The DATCOM wing-body build-up** (eq. 4.3.3.1-a, approved).
    - **Terms:** the fins' thickness factor 1 + L(t/c) + 100(t/c)⁴, the lifting-surface correction R_LS (figure 4.1.5.1-28), and the wing-body interference factor R_WB (figure 4.3.3.1-37). R_WB multiplies the exposed fin and body friction.
    - **Digitising:** each figure is digitised in two passes. Its stated range is recorded: Mach 0.25 and above, and the body Reynolds number covered. Model rockets sit at the low end, which is listed.

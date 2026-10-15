@@ -8,41 +8,41 @@ Nothing is fitted to these flights (CLAUDE.md 7.4). They are RASAero II's own sh
 
 | Flight                    | Measured by      | Wind in file (mph) | Max Mach | Measured (ft) | Displayed (ft) | Error (%) | OpenRocket-equivalent (ft) | Error (%) |
 | ------------------------- | ---------------- | ------------------ | -------- | ------------- | -------------- | --------- | -------------------------- | --------- |
-| Thunder&Lightning         | barometric       | 0                  | 0.56     | 3577          | 4450           | +24.4     | 4332                       | +21.1     |
-| Gibb                      | barometric       | 0                  | 0.56     | 3913          | 4747           | +21.3     | 4463                       | +14.1     |
-| CancerDescending          | barometric       | 0                  | 0.58     | 6188          | 6996           | +13.1     | 6696                       | +8.2      |
-| EZI65-1                   | barometric       | 0                  | 0.62     | 3965          | 4986           | +25.7     | 4771                       | +20.3     |
-| CalIsp1                   | barometric       | 0                  | 0.65     | 3964          | 4422           | +11.5     | 4098                       | +3.4      |
-| CalIsp3                   | barometric       | 0                  | 0.66     | 3710          | 4426           | +19.3     | 4100                       | +10.5     |
-| CalIsp2                   | barometric       | 0                  | 0.69     | 3837          | 4546           | +18.5     | 4187                       | +9.1      |
-| Byrum                     | barometric       | 0                  | 0.77     | 5732          | 6976           | +21.7     | 6569                       | +14.6     |
-| IonDrive                  | barometric       | 0                  | 0.80     | 8027          | 8453           | +5.3      | 8111                       | +1.0      |
-| Blister                   | barometric       | 8                  | 0.85     | 9026          | 9675           | +7.2      | 9239                       | +2.4      |
-| CalIsp5                   | barometric       | 0                  | 0.85     | 4930          | 5766           | +17.0     | 5172                       | +4.9      |
-| CalIsp4                   | barometric       | 0                  | 0.89     | 5085          | 5824           | +14.5     | 5194                       | +2.1      |
-| Rabia-ShortFinCan         | barometric       | 14                 | 0.90     | 10584         | 12005          | +13.4     | 11281                      | +6.6      |
-| Raven                     | barometric       | 0                  | 1.17     | 8815          | 12861          | +45.9     | 12568                      | +42.6     |
-| Rabia                     | barometric       | 8                  | 1.23     | 12745         | 15828          | +24.2     | 14304                      | +12.2     |
-| Torrent                   | barometric       | 10                 | 1.29     | 12807         | 15806          | +23.4     | 14284                      | +11.5     |
-| L500Roc                   | optical tracking | 0                  | 2.23     | 24771         | 31781          | +28.3     | 27281                      | +10.1     |
-| Full Metal Jacket1        | optical tracking | 0                  | 2.29     | 37981         | 41839          | +10.2     | 39903                      | +5.1      |
-| Full Metal Jacket2        | optical tracking | 0                  | 2.46     | 30038         | 33919          | +12.9     | 32304                      | +7.5      |
-| Kinsel_P4935_A-601_Rocket | GPS              | 0                  | 2.47     | 42771         | 67570          | +58.0     | 65780                      | +53.8     |
-| Proteus6                  | accelerometer    | 0                  | 2.83     | 85067         | 88666          | +4.2      | 98557                      | +15.9     |
-| AeroPac104KStageOne&Two-2 | GPS              | 0                  | 3.18     | 104659        | 134330         | +28.4     | 109115                     | +4.3      |
-| DontDebateThisN5800MinDia | barometric       | 5                  | 3.19     | 56573         | 69480          | +22.8     | 64435                      | +13.9     |
-| Qu8k                      | accelerometer    | 0                  | 3.52     | 121478        | 137378         | +13.1     | 144524                     | +19.0     |
+| Thunder&Lightning         | barometric       | 0                  | 0.55     | 3577          | 4349           | +21.6     | 4332                       | +21.1     |
+| Gibb                      | barometric       | 0                  | 0.56     | 3913          | 4545           | +16.1     | 4463                       | +14.1     |
+| CancerDescending          | barometric       | 0                  | 0.57     | 6188          | 6896           | +11.4     | 6696                       | +8.2      |
+| EZI65-1                   | barometric       | 0                  | 0.62     | 3965          | 4808           | +21.3     | 4771                       | +20.3     |
+| CalIsp1                   | barometric       | 0                  | 0.65     | 3964          | 4214           | +6.3      | 4098                       | +3.4      |
+| CalIsp3                   | barometric       | 0                  | 0.65     | 3710          | 4218           | +13.7     | 4100                       | +10.5     |
+| CalIsp2                   | barometric       | 0                  | 0.68     | 3837          | 4327           | +12.8     | 4187                       | +9.1      |
+| Byrum                     | barometric       | 0                  | 0.77     | 5732          | 6838           | +19.3     | 6569                       | +14.6     |
+| IonDrive                  | barometric       | 0                  | 0.80     | 8027          | 8200           | +2.2      | 8111                       | +1.0      |
+| CalIsp5                   | barometric       | 0                  | 0.84     | 4930          | 5495           | +11.5     | 5172                       | +4.9      |
+| Blister                   | barometric       | 8                  | 0.85     | 9026          | 9453           | +4.7      | 9239                       | +2.4      |
+| CalIsp4                   | barometric       | 0                  | 0.89     | 5085          | 5549           | +9.1      | 5194                       | +2.1      |
+| Rabia-ShortFinCan         | barometric       | 14                 | 0.90     | 10584         | 11800          | +11.5     | 11281                      | +6.6      |
+| Raven                     | barometric       | 0                  | 1.16     | 8815          | 12583          | +42.7     | 12568                      | +42.6     |
+| Rabia                     | barometric       | 8                  | 1.23     | 12745         | 15471          | +21.4     | 14304                      | +12.2     |
+| Torrent                   | barometric       | 10                 | 1.28     | 12807         | 15446          | +20.6     | 14284                      | +11.5     |
+| L500Roc                   | optical tracking | 0                  | 2.18     | 24771         | 29945          | +20.9     | 27281                      | +10.1     |
+| Full Metal Jacket1        | optical tracking | 0                  | 2.29     | 37981         | 41078          | +8.2      | 39903                      | +5.1      |
+| Kinsel_P4935_A-601_Rocket | GPS              | 0                  | 2.45     | 42771         | 65586          | +53.3     | 65780                      | +53.8     |
+| Full Metal Jacket2        | optical tracking | 0                  | 2.45     | 30038         | 33420          | +11.3     | 32304                      | +7.5      |
+| Proteus6                  | accelerometer    | 0                  | 2.82     | 85067         | 86800          | +2.0      | 98557                      | +15.9     |
+| AeroPac104KStageOne&Two-2 | GPS              | 0                  | 3.14     | 104659        | 129033         | +23.3     | 109115                     | +4.3      |
+| DontDebateThisN5800MinDia | barometric       | 5                  | 3.18     | 56573         | 67531          | +19.4     | 64435                      | +13.9     |
+| Qu8k                      | accelerometer    | 0                  | 3.51     | 121478        | 134009         | +10.3     | 144524                     | +19.0     |
 
 ## By speed range (split at Mach 0.95)
 
-- **Below, displayed:** 13 flights: mean +16.4 %, median +17.0 %, rms 17.5 %, from +5.3 to +25.7 %
+- **Below, displayed:** 13 flights: mean +12.4 %, median +11.5 %, rms 13.7 %, from +2.2 to +21.6 %
 - **Below, OpenRocket-equivalent:** 13 flights: mean +9.1 %, median +8.2 %, rms 11.2 %, from +1.0 to +21.1 %
-- **Above, displayed:** 11 flights: mean +24.7 %, median +23.4 %, rms 28.9 %, from +4.2 to +58.0 %
+- **Above, displayed:** 11 flights: mean +21.2 %, median +20.6 %, rms 25.6 %, from +2.0 to +53.3 %
 - **Above, OpenRocket-equivalent:** 11 flights: mean +17.8 %, median +12.2 %, rms 23.3 %, from +4.3 to +53.8 %
 
 ## The target (plan 0080 section 2)
 
 Below Mach 0.95: the mean and median within ±3 % and the rms within 6 %, RASAero II's own scatter on these flights. Until it is met, every flight result shows the range these flights give (D-119):
 
-- **Below Mach 0.95:** 13 rockets reached 80 to 95 % of the displayed apogee (median 86 %).
-- **Mach 0.95 and above:** 11 rockets reached 63 to 96 % (median 81 %).
+- **Below Mach 0.95:** 13 rockets reached 82 to 98 % of the displayed apogee (median 90 %).
+- **Mach 0.95 and above:** 11 rockets reached 65 to 98 % (median 83 %).

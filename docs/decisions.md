@@ -1229,3 +1229,34 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - Plan 0080's steps 2 to 7 each regenerate the benchmark.
   - The 21-flight figures in the RASAero report stay as that report's own runs.
+
+## D-120 (2026-10-15): The DATCOM's wing-body friction for the fins in the displayed mode (eq. 4.3.3.1-a complete)
+
+- **Decision (plans 0080 step 2 and 0081).** The displayed mode computes the fins' and body's friction by the DATCOM's wing-body zero-lift drag, eq. 4.3.3.1-a, whole:
+  - each fin set's skin friction at the Reynolds number of its own mean aerodynamic chord (DATCOM eq. 4.1.5.1-a, DRAG-24) instead of the rocket's (Niskanen eq. 3.85);
+  - its thickness bracket 1 + L(t/c) + 100(t/c)⁴ in place of 1 + 2t/c, and its lifting-surface factor R_LS (figure 4.1.5.1-28b);
+  - the wing-body factor R_WB (figure 4.3.3.1-37) on the fin and body friction (DRAG-26).
+
+  `dragCoefficient`'s defaults follow (`DEFAULT_FIN_FRICTION_LENGTH`, `DEFAULT_LIFTING_SURFACE_FACTORS`). The OpenRocket-equivalent mode keeps eq. (3.85) whole; tests that mean it name `finFrictionLength: 'rocket'` and `liftingSurfaceFactors: 'none'`.
+
+- **How it got here.**
+  - Step 2 of plan 0080 took the fin chord's Reynolds number alone. It improved the flights (+16.4 → +13.2 %) but took the held-out subsonic drag over its target (6.1 → 8.2 % rms). Plan 0080 had quoted D-115's "fin chord alone" row, measured before the body form factor, so the figures the owner saw were stale; the plan is corrected.
+  - Asked to keep or revert it, the owner answered: "we need another solution. we can't have everything inaccurate" (2026-10-15).
+  - The answer is the rest of the same equation. R_LS lowers the friction of swept fins (0.81 at 60°) and the bracket that of airfoil sections, which is what the over-predicted free-flight model (RM L8A05, fins swept 60°, airfoil section) has; R_WB is about 1.05 for a model rocket at low speed.
+- **The charts.** Both were digitised twice: by pixel, on a cleaned image for figure 4.3.3.1-37's dense log paper, and by eye. Every reading either chart gives in the DATCOM's sample problems is reproduced within 0.005 (16 readings), and the passes agree within 0.007 (`reference/digitised/`).
+- **Where the charts end.** Both are subsonic to Mach 0.9; the factors are faired linearly to 1 at Mach 1.0, where the DATCOM's transonic method (eq. 4.3.3.1-c) uses neither. R_WB has no data below Mach 0.25 or a body Reynolds number of 2.8 × 10⁶; R_LS comes from round-nosed airfoil wings. Each edge is held and named in the flight's technical notes, as the base drag's chart limits are (issue #19), and in `known-limitations.md`. They are not in the approximation list, which would show every model rocket "3 warnings" for chart edges.
+- **Effect, measured on every dataset:**
+
+  | Dataset                                           | Before (D-115)                       | Fin chord alone (measured, superseded) | Eq. 4.3.3.1-a complete      |
+  | ------------------------------------------------- | ------------------------------------ | -------------------------------------- | --------------------------- |
+  | 13 flights below Mach 0.95: mean, median, rms     | +16.4 %, +17.0 %, 17.5 %             | +13.2 %, +12.6 %, 14.5 %               | +12.4 %, +11.5 %, 13.7 %    |
+  | 11 flights above Mach 0.95: mean                  | +24.7 %                              | +21.1 %                                | +21.2 %                     |
+  | Held-out C_D rms: subsonic, transonic, supersonic | 6.1 % (target 7 %), 21.2 %, 14.9 %   | 8.2 % (not met), 20.2 %, 15.6 %        | 6.7 % (met), 20.3 %, 15.4 % |
+  | ARCAS forebody C_A rms (not held out, D-061)      | 7.8 %, 29.1 %, 20.2 % (last written) |                                        | 2.8 %, 25.5 %, 15.5 %       |
+  | Example rocket: apogee, maximum velocity          | 172.41 m, 62.9 m/s                   | 167.42 m, 62.2 m/s                     | 164.36 m, 61.7 m/s          |
+  - **Better:** the mean C_D error of five of the six held-out datasets (RM-10 free flight −6.8 → −1.3 %, TN D-3182 model A −16.2 → −13.6 %, TM X-1661 −16.2 → −12.4 %, Blue Scout −13.4 → −11.3 %, L8A05 −2.4 → +0.8 %).
+  - **Worse:** the RM-10 tunnel model, already over-predicted above Mach 1.4 by its wave drag (+5.0 → +10.3 %), which raises the supersonic rms by 0.5 points; and the two transonic points of the RM A53D02 rounds (square fins 6.2 → 8.0 %, wedge 1.0 → 3.9 %), which were over-predicted. Plan 0080 step 6 (transonic and supersonic drag) is where they belong.
+
+- **Rules.** Plan 0080's rule (D-119: "adopted on its source and physical completeness; the benchmarks report") adopts it. Plan 0076's stricter rule ("not worse on either independent dataset") would still object to the supersonic rms, 0.5 points higher, from one dataset already over-predicted by another term. Every target that was met is still met, and the flights improve.
+- **The held-out test does not assert its targets.** It writes the report; a green CI does not mean the targets are met.
+- **Unchanged:** the OpenRocket-equivalent mode and every golden output. The RK4 step-check and in-flight stability reports are not regenerated, as for D-115.

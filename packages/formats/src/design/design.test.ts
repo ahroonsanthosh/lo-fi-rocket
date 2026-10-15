@@ -232,7 +232,7 @@ describe('physics adapter on the example (R1 with the D12)', () => {
   it('thrust to weight: 16.839 N·s / 1.65 s = 10.205 N over 0.190904 × 9.80665 = 1.87213 N gives 5.451', () => {
     expect(designThrustToWeight(d)).toBeCloseTo(5.451, 3);
   });
-  it('the displayed flight gives 172.41 m with the DATCOM base drag and body form factor (172.94 m before D-115; 167.33 m with Niskanen base drag before D-069) and the OpenRocket-equivalent 166.19 m (168.87 m before D-108; OpenRocket 167.045 m)', () => {
+  it('the displayed flight gives 164.36 m with the DATCOM base drag, body form factor and wing-body fin friction (172.41 m before D-120; 172.94 m before D-115; 167.33 m with Niskanen base drag before D-069) and the OpenRocket-equivalent 166.19 m (168.87 m before D-108; OpenRocket 167.045 m)', () => {
     const rk: RocketDesign = {
       ...d,
       simulation: {
@@ -242,7 +242,7 @@ describe('physics adapter on the example (R1 with the D12)', () => {
       },
     };
     const shown = simulateFlight(designVehicle(rk), designSimulationOptions(rk));
-    expect(shown.summary.apogee).toBeCloseTo(172.41, 2);
+    expect(shown.summary.apogee).toBeCloseTo(164.36, 2);
     expect(shown.modes.finRollReduction).toBe(true);
     expect(shown.modes.baseDragMotorRule).toBe('while-thrusting');
     expect(shown.modes.gravitySeaLevel).toBe(9.80665);

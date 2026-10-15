@@ -47,6 +47,8 @@ function ourFriction(rocket: OrkRocket, m: number): number {
     baseDragMotorRule: 'never',
     // Against OpenRocket: eq. (3.85)'s body form factor, as the comparison mode (plan 0076).
     bodyFormFactor: 'niskanen',
+    finFrictionLength: 'rocket',
+    liftingSurfaceFactors: 'none',
   }).skinFriction.cd;
 }
 

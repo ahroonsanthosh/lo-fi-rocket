@@ -8,6 +8,7 @@
 import { InvalidInputError } from '../errors.js';
 import { finiteResult } from '../numerics/finite.js';
 import type { Mach, Metres } from '../units/si.js';
+import { finThicknessBracket } from './datcom-wing-body.js';
 
 /**
  * Approximate roughness heights, Table 3.2 p. 44 (from Hoerner p. 5-3), plus
@@ -119,6 +120,13 @@ export interface FrictionDragGeometry {
     readonly wettedArea: number;
     readonly thickness: number;
     readonly meanChord: number;
+    /**
+     * Plan 0081 (DRAG-26): the DATCOM's thickness location parameter L, whose bracket
+     * 1 + L(t/c) + 100(t/c)⁴ (eq. 4.1.5.1-a) replaces eq. (3.85)'s 1 + 2t/c. Absent: eq. (3.85).
+     */
+    readonly thicknessLocation?: number;
+    /** Plan 0081 (DRAG-26): the lifting-surface factor R_LS (figure 4.1.5.1-28b). Absent: 1. */
+    readonly liftingSurfaceFactor?: number;
   }[];
   readonly referenceArea: number;
   /**
@@ -163,7 +171,10 @@ export function frictionDragCoefficient(cfc: number, g: FrictionDragGeometry): n
         f.meanChord,
         'must be greater than 0 m',
       );
-    const area = (1 + (2 * f.thickness) / f.meanChord) * f.wettedArea;
+    const tc = f.thickness / f.meanChord;
+    const bracket =
+      f.thicknessLocation === undefined ? 1 + 2 * tc : finThicknessBracket(f.thicknessLocation, tc);
+    const area = bracket * (f.liftingSurfaceFactor ?? 1) * f.wettedArea;
     fins += area;
     if (g.finFriction !== undefined) finForce += g.finFriction(f.meanChord) * area;
   }

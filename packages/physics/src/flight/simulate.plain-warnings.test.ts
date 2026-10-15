@@ -21,6 +21,8 @@ const OPTIONS: SimulationOptions = {
   baseDragMotorRule: 'always',
   baseDragMethod: 'niskanen',
   bodyFormFactor: 'niskanen',
+  finFrictionLength: 'rocket',
+  liftingSurfaceFactors: 'none',
   largeAngleMethod: 'datcom',
   integrator: { kind: 'rk4', timeStep: seconds(0.005) },
   maxTime: seconds(120),

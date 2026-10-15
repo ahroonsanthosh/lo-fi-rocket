@@ -1,14 +1,14 @@
 {
   "below": {
     "flights": 13,
-    "low": 0.7952,
-    "median": 0.8551,
-    "high": 0.9497
+    "low": 0.8225,
+    "median": 0.897,
+    "high": 0.9789
   },
   "above": {
     "flights": 11,
-    "low": 0.633,
-    "median": 0.8103,
-    "high": 0.9594
+    "low": 0.6521,
+    "median": 0.8291,
+    "high": 0.98
   }
 }

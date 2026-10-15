@@ -78,18 +78,19 @@ describe('FlightPanel (plan 0014)', () => {
     await user.click(screen.getByRole('button', { name: 'Simulate flight' }));
     const results = await screen.findByRole('region', { name: 'Flight' });
     const dd = (label: string): string => resultText(results, label);
-    // Displayed modes with the DATCOM base drag (D-069) and body form factor (D-115): apogee 172.41 m, maximum velocity
-    // 62.9 m/s (172.94 m, 63.0 m/s before D-115; 167.33 m, 62.3 m/s in docs/reports/phase-2-acceptance.md with Niskanen's
-    // base drag), rail exit 18.45 m/s.
-    expect(dd('Apogee')).toMatch(/^172\.41 m /);
+    // Displayed modes with the DATCOM base drag (D-069), body form factor (D-115) and wing-body fin friction
+    // (D-120, plan 0081): apogee 164.36 m, maximum velocity 61.7 m/s (172.41 m, 62.9 m/s before D-120;
+    // 172.94 m, 63.0 m/s before D-115; 167.33 m, 62.3 m/s in docs/reports/phase-2-acceptance.md with
+    // Niskanen's base drag), rail exit 18.4 m/s (18.5 m/s before D-120).
+    expect(dd('Apogee')).toMatch(/^164\.36 m /);
     // Plan 0080 (D-119): the range real flights of this speed range reached, labelled as such.
     const below = REAL_FLIGHTS.below;
     expect(dd('Apogee')).toContain(
       `Real flights: ${String(below.flights)} flown rockets below Mach 0.95 reached ${(below.low * 100).toFixed(0)} to ${(below.high * 100).toFixed(0)} % of the predicted apogee`,
     );
-    expect(dd('Maximum velocity')).toBe('62.9 m/s');
-    expect(dd('Rail exit velocity')).toMatch(/^18\.5 m\/s at 0\.29\d s$/);
-    // The maximum Mach number's regime in words (CLAUDE.md 6.3): 62.9 m/s is about Mach 0.18.
+    expect(dd('Maximum velocity')).toBe('61.7 m/s');
+    expect(dd('Rail exit velocity')).toMatch(/^18\.4 m\/s at 0\.29\d s$/);
+    // The maximum Mach number's regime in words (CLAUDE.md 6.3): 61.7 m/s is about Mach 0.18.
     expect(dd('Maximum Mach')).toMatch(/Subsonic/);
     // Nothing is wrong with the example's flight: the top bar says so and no list is shown.
     expect(screen.getByText('All clear')).toBeInTheDocument();
