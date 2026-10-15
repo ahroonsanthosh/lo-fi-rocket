@@ -150,6 +150,7 @@ describe('build_and_fly (plan 0079)', () => {
     );
   });
 
+  // A full flight to the ground (the delay left out is plugged): the full-flight allowance, as elsewhere.
   it('lists every field, position and delay left out, and still flies', async () => {
     const c = await connect();
     const res = await call(c, 'build_and_fly', {
@@ -182,7 +183,7 @@ describe('build_and_fly (plan 0079)', () => {
     expect(res.json['should']).toEqual(
       expect.arrayContaining([expect.stringMatching(/No recovery device/)]),
     );
-  });
+  }, 30000);
 
   it('says a plugged motor the user wrote is plugged, not "not given"', async () => {
     const c = await connect();
