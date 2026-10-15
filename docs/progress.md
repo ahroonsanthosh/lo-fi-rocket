@@ -176,11 +176,12 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Shown with every result.** Each apogee in the app and the MCP now carries the range measured flights reached.
   - **Sources approved:** NACA TM 1299 and NASA SP-125.
   - **Next:** the fin friction at the fin chord as the default (step 2), then the DATCOM wing-body build-up (step 3).
-- Plan 0080 step 2 (D-120), **held for the owner's decision**: the fins' friction at their own mean chord in the displayed mode.
-  - **Flights:** +16.4 → +13.2 % mean below Mach 0.95, +24.7 → +21.1 % above.
-  - **Held-out drag rms:** subsonic 6.1 → 8.2 % (target 7 %, met → not met), transonic 21.2 → 20.2 %, supersonic 14.9 → 15.6 %.
-  - **Open question for the owner:** keep it (plan 0080's rule: source and physics) or revert it (plan 0076's rule: not worse on either dataset).
-  - **Next:** step 3, the DATCOM wing-body build-up, whichever way step 2 goes.
+- The DATCOM's wing-body friction for the fins, eq. 4.3.3.1-a complete (plans 0080 step 2 and 0081, D-120):
+  - **Why whole.** The fin chord's Reynolds number alone overshot the held-out subsonic drag; the owner asked for "another solution". The same equation's R_LS, thickness bracket and R_WB are that solution.
+  - **Charts.** Figures 4.1.5.1-28b and 4.3.3.1-37 digitised twice; all 16 sample-problem readings within 0.005.
+  - **Effect.** Flights below Mach 0.95 +16.4 → +12.4 %; held-out subsonic 6.7 % (target met), transonic 21.2 → 20.3 %, supersonic 14.9 → 15.4 %.
+- **Found (plan 0081 part B, next).** All 13 flights below Mach 0.95 were measured by barometric altimeters on 62 to 100 °F days. A barometer reads height through the standard atmosphere (U.S. Standard Atmosphere 1976, p. xiv: "pressure altimeter calibrations"), so on a hot day it reads up to 10 % low. Compared like with like, the mean error falls to about +5.5 %.
+  - **Next:** part B: the benchmark compares barometric flights with the predicted barometric reading, and every result gives "a barometric altimeter will read about X".
 
 ## In progress
 

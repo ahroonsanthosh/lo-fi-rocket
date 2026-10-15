@@ -117,6 +117,7 @@ describe('C_D0 against OpenRocket time series (R1 to R4, ascent above 15 m/s)', 
           baseDragMethod: 'niskanen',
           bodyFormFactor: 'niskanen',
           finFrictionLength: 'rocket',
+          liftingSurfaceFactors: 'none',
         };
         const rel = Math.abs((dragCoefficient(inputs).cd0 - cdOr) / cdOr);
         worst = Math.max(worst, rel);

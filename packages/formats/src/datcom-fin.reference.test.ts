@@ -6,7 +6,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  DATCOM_FIGURE_4151_28B,
   DATCOM_FIGURE_4231_24,
+  DATCOM_FIGURE_4331_37,
   DATCOM_FIGURE_4132_56,
   DATCOM_FIGURE_4132_56G_LEFT,
   DATCOM_FIGURE_4132_60,
@@ -117,5 +119,32 @@ describe('DATCOM figure 4.2.3.1-24 against the digitised file (D-069)', () => {
     curves.forEach((c, i) => {
       expect(plain(DATCOM_FIGURE_4231_24[i]?.points ?? [])).toEqual(c.points);
     });
+  });
+});
+
+describe('DATCOM figures 4.1.5.1-28b and 4.3.3.1-37 against the digitised files (plan 0081, DRAG-26)', () => {
+  it('R_LS: four Mach curves, each check and every sample reading within 0.005', () => {
+    const f = load('datcom-figure-4-1-5-1-28b.json') as {
+      curves: Record<string, { values: number[]; worst_disagreement: number }>;
+      worst_sample_difference: number;
+    };
+    expect(DATCOM_FIGURE_4151_28B.map(([m]) => String(m))).toEqual(Object.keys(f.curves));
+    for (const [m, values] of DATCOM_FIGURE_4151_28B) {
+      expect([...values]).toEqual(f.curves[String(m)]?.values);
+      expect(f.curves[String(m)]?.worst_disagreement).toBeLessThan(0.0075);
+    }
+    expect(f.worst_sample_difference).toBeLessThan(0.005);
+  });
+  it('R_WB: seven Mach curves, each check within 0.0065 and every sample reading within 0.003', () => {
+    const f = load('datcom-figure-4-3-3-1-37.json') as {
+      curves: Record<string, { values: number[]; worst_disagreement: number }>;
+      worst_sample_difference: number;
+    };
+    expect(DATCOM_FIGURE_4331_37.map(([m]) => String(m))).toEqual(Object.keys(f.curves));
+    for (const [m, values] of DATCOM_FIGURE_4331_37) {
+      expect([...values]).toEqual(f.curves[String(m)]?.values);
+      expect(f.curves[String(m)]?.worst_disagreement).toBeLessThanOrEqual(0.0065);
+    }
+    expect(f.worst_sample_difference).toBeLessThan(0.003);
   });
 });

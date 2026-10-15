@@ -34,6 +34,12 @@ import { finPressureDrag } from './fin-drag.js';
 import { openRocketRailButtonDrag } from './openrocket-rail-button.js';
 import { finWaveDrag } from './datcom-fin-wave-drag.js';
 import {
+  chordLineSweepCosine,
+  liftingSurfaceFactor,
+  maximumThicknessLine,
+  wingBodyInterferenceFactor,
+} from './datcom-wing-body.js';
+import {
   DATCOM_BASE_GUIDE_END,
   datcomBaseDragAtMach,
   datcomSubsonicBaseDrag,
@@ -56,9 +62,22 @@ import {
 /** GEO-13. Wetted (lateral) area of a body of revolution: ∫ 2π r √(1 + r′²) dx. */
 /** Regime warnings naming the validation status (docs/reports/held-out-validation.md, D-061, D-069). */
 export const TRANSONIC_DRAG_WARNING =
-  'transonic regime (Mach 0.8 to 1.2): accuracy is lower than in subsonic flight (CLAUDE.md 6.3); against held-out wind tunnel and flight data the drag is within 21 % rms and the drag rise within 0.05 Mach (docs/reports/held-out-validation.md)';
+  'transonic regime (Mach 0.8 to 1.2): accuracy is lower than in subsonic flight (CLAUDE.md 6.3); against held-out wind tunnel and flight data the drag is within 20 % rms and the drag rise within 0.05 Mach (docs/reports/held-out-validation.md)';
 export const SUPERSONIC_DRAG_WARNING =
   'supersonic regime (above Mach 1.2): against held-out data the drag is within 15 % rms to Mach 2.0, low by about 17 % for thick wedge fins (docs/reports/held-out-validation.md); above Mach 2.0 it is outside the validated range';
+
+/**
+ * Plan 0081 (DRAG-26): technical notes for the DATCOM wing-body factors where a chart is held at its
+ * edge or faired, as for the other charts' limits and fairings (issue #19: `FlightResult.notes`).
+ */
+export const WING_BODY_FAIRING_NOTE =
+  'DATCOM wing-body factors R_LS and R_WB faired linearly to 1 between Mach 0.9 (where figures 4.1.5.1-28b and 4.3.3.1-37 end) and Mach 1.0 (the DATCOM transonic method, eq. 4.3.3.1-c, which has neither); the fairing is not from the DATCOM (plan 0081)';
+export const WING_BODY_EDGE_NOTE =
+  'DATCOM wing-body interference factor R_WB held at the edge of figure 4.3.3.1-37: the correlation covers Mach 0.25 to 0.9 and body Reynolds numbers 2.8 × 10⁶ to 10⁹ (p. 4.3.3.1-2; plan 0081)';
+export const LIFTING_SURFACE_FLAT_PLATE_NOTE =
+  'DATCOM lifting-surface factor R_LS (figure 4.1.5.1-28b) applied to a square-edged fin: its solid curves come from wing tests with round-nosed airfoil sections (p. 4.1.5.1-2; plan 0081)';
+export const LIFTING_SURFACE_SWEEP_NOTE =
+  'DATCOM lifting-surface factor R_LS held at cos Λ = 0.5: the solid curves of figure 4.1.5.1-28b end at a maximum-thickness sweep of 60° (plan 0081)';
 
 export function wettedArea(profile: Profile): number {
   return integrate(
@@ -131,9 +150,17 @@ export interface DragInputs {
    * aerodynamic chord (DATCOM eq. 4.1.5.1-a). Defaults to `DEFAULT_FIN_FRICTION_LENGTH`.
    */
   readonly finFrictionLength?: FinFrictionLength;
+  /**
+   * The fins' and body's friction factors of the DATCOM's wing-body build-up (plan 0081, DRAG-26,
+   * eq. 4.3.3.1-a): 'datcom', each fin set's thickness bracket 1 + L(t/c) + 100(t/c)⁴ and its
+   * lifting-surface factor R_LS, and the wing-body factor R_WB on all the friction; or 'none', eq.
+   * (3.85)'s 1 + 2t/c alone. Defaults to `DEFAULT_LIFTING_SURFACE_FACTORS`.
+   */
+  readonly liftingSurfaceFactors?: LiftingSurfaceFactors;
 }
 
 export type FinFrictionLength = 'rocket' | 'fin-chord';
+export type LiftingSurfaceFactors = 'datcom' | 'none';
 
 export type BaseDragMotorRule = 'while-thrusting' | 'always' | 'never';
 export type RailButtonDragMethod = 'niskanen' | 'openrocket';
@@ -181,6 +208,8 @@ interface FinSurface {
   readonly wettedArea: number;
   readonly thickness: number;
   readonly meanChord: number;
+  readonly thicknessLocation?: number;
+  readonly liftingSurfaceFactor?: number;
 }
 
 const emptyGeometry = (): ExternalGeometry => ({
@@ -211,6 +240,9 @@ interface StaticEntry {
   readonly finThickness: number;
   readonly finMeanChord: number;
   readonly finSweepAngle: number;
+  /** Plan 0081: cos Λ of the fin's maximum-thickness line and the DATCOM's L (0 when not a fin set). */
+  readonly finThicknessSweepCosine: number;
+  readonly finThicknessLocation: number;
 }
 
 const STATIC_CACHE = new WeakMap<readonly PlacedComponent[], readonly StaticEntry[]>();
@@ -231,6 +263,8 @@ function staticEntries(components: readonly PlacedComponent[]): readonly StaticE
     finThickness: 0,
     finMeanChord: 0,
     finSweepAngle: 0,
+    finThicknessSweepCosine: 1,
+    finThicknessLocation: 0,
   };
   const entries = components.map(({ component: c }): StaticEntry => {
     switch (c.kind) {
@@ -286,6 +320,9 @@ function staticEntries(components: readonly PlacedComponent[]): readonly StaticE
         const p = finPlanform(c);
         const s: number = c.span;
         const t: number = c.thickness;
+        // Plan 0081: the maximum-thickness line on the planform's equivalent trapezoid (D-087).
+        const line = maximumThicknessLine(c.crossSection ?? 'square');
+        const trapezoid = p.equivalentTrapezoid;
         return {
           ...none,
           kind: 'fins',
@@ -294,6 +331,14 @@ function staticEntries(components: readonly PlacedComponent[]): readonly StaticE
           finThickness: t,
           finMeanChord: p.mac,
           finSweepAngle: p.leadingEdgeSweep,
+          finThicknessSweepCosine: chordLineSweepCosine(
+            p.rootChord,
+            trapezoid.tipChord,
+            trapezoid.sweep,
+            p.span,
+            line.chordFraction,
+          ),
+          finThicknessLocation: line.location,
         };
       }
       case 'launchLug':
@@ -328,6 +373,12 @@ export const DEFAULT_BODY_FORM_FACTOR: BodyFormFactor = 'datcom';
  * mean aerodynamic chord, where its boundary layer starts (DATCOM eq. 4.1.5.1-a, DRAG-24).
  */
 export const DEFAULT_FIN_FRICTION_LENGTH: FinFrictionLength = 'fin-chord';
+
+/**
+ * The displayed mode's friction factors (plan 0081, D-120): the DATCOM's eq. 4.3.3.1-a complete, of
+ * which the fin chord's Reynolds number (DRAG-24) is one part.
+ */
+export const DEFAULT_LIFTING_SURFACE_FACTORS: LiftingSurfaceFactors = 'datcom';
 
 /** Fairing from the end of figure 4.2.3.1-24 to Niskanen's supersonic base drag (DATCOM sketch (a), p. 4.2.3.1-5). */
 export const DATCOM_BASE_FAIRING_END = 1.5;
@@ -418,6 +469,8 @@ export function dragCoefficient(input: DragInputs): DragResult {
   const terms: DragTerm[] = [];
   const geometry = emptyGeometry();
   const finSets: FinSurface[] = [];
+  const datcomFactors =
+    (input.liftingSurfaceFactors ?? DEFAULT_LIFTING_SURFACE_FACTORS) === 'datcom';
   // Plan 0073 (D-110): the friction surfaces by roughness height, every part at its own finish.
   const surfaces = new Map<number, { body: number; fins: FinSurface[] }>();
   const surface = (roughness: number): { body: number; fins: FinSurface[] } => {
@@ -548,10 +601,22 @@ export function dragCoefficient(input: DragInputs): DragResult {
             'must be square, rounded, airfoil, wedge or double-wedge for the drag model (Niskanen §3.4.4, D-066)',
           );
         }
+        // Plan 0081 (DRAG-26): the DATCOM's thickness bracket and lifting-surface factor R_LS.
+        const rls = datcomFactors
+          ? liftingSurfaceFactor(input.mach, st.finThicknessSweepCosine)
+          : undefined;
+        if (rls !== undefined) {
+          if (rls.outside) warnings.push(LIFTING_SURFACE_SWEEP_NOTE);
+          if (c.crossSection === 'square' && (input.mach as number) < 1)
+            warnings.push(LIFTING_SURFACE_FLAT_PLATE_NOTE);
+        }
         const fin: FinSurface = {
           wettedArea: st.finWetted * n,
           thickness: st.finThickness,
           meanChord: st.finMeanChord,
+          ...(rls === undefined
+            ? {}
+            : { thicknessLocation: st.finThicknessLocation, liftingSurfaceFactor: rls.value }),
         };
         finSets.push(fin);
         surface(roughness).fins.push(fin);
@@ -781,6 +846,15 @@ export function dragCoefficient(input: DragInputs): DragResult {
     }
   }
 
+  // Plan 0081 (DRAG-26): R_WB multiplies the fins' and the body's friction (eq. 4.3.3.1-a), at the
+  // body's Reynolds number on its length; a rocket without fins is not a wing-body.
+  if (datcomFactors && finSets.length > 0 && input.reynolds > 0) {
+    const rwb = wingBodyInterferenceFactor(M, input.reynolds);
+    frictionCd *= rwb.value;
+    if (rwb.outside) warnings.push(WING_BODY_EDGE_NOTE);
+  }
+  if (datcomFactors && finSets.length > 0 && M > 0.9 && M < 1)
+    warnings.push(WING_BODY_FAIRING_NOTE);
   if (M >= 0.8 && M <= 1.2) warnings.push(TRANSONIC_DRAG_WARNING);
   else if (M > 1.2) warnings.push(SUPERSONIC_DRAG_WARNING);
 

@@ -69,6 +69,7 @@ const options = (windX: number, dof: 3 | 6): SimulationOptions => ({
   baseDragMethod: 'niskanen',
   bodyFormFactor: 'niskanen',
   finFrictionLength: 'rocket',
+  liftingSurfaceFactors: 'none',
   largeAngleMethod: 'linear',
   integrator: { kind: 'rk4', timeStep: seconds(0.002) },
   maxTime: seconds(400),

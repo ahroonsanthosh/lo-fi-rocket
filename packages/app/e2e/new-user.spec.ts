@@ -71,15 +71,15 @@ test('a new user builds a basic rocket, picks a motor and reads an apogee', asyn
   await expect(page.getByRole('img', { name: 'Altitude above the pad' })).toBeVisible();
 });
 
-test('the example flies to the displayed apogee (DATCOM base drag, body form factor and fin chord friction, D-069, D-115, D-120) and survives a reload', async ({
+test('the example flies to the displayed apogee (DATCOM base drag, body form factor and wing-body fin friction, D-069, D-115, D-120) and survives a reload', async ({
   page,
 }) => {
   await page.goto('/');
   await fileAction(page, 'Load example');
   await page.getByRole('listbox', { name: 'Flight' }).getByRole('option').click();
   await page.getByRole('button', { name: 'Simulate flight' }).click();
-  await expect(resultValue(page, 'Apogee')).toHaveText('167.42 m');
-  await expect(resultValue(page, 'Maximum velocity')).toHaveText('62.2 m/s');
+  await expect(resultValue(page, 'Apogee')).toHaveText('164.36 m');
+  await expect(resultValue(page, 'Maximum velocity')).toHaveText('61.7 m/s');
   // Nothing is wrong with the example's flight: the top bar says so and no list is shown.
   await expect(page.getByText('All clear')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Warnings' })).toHaveCount(0);

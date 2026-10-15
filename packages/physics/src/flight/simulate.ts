@@ -599,6 +599,9 @@ function derive(
         ...(ctx.options.finFrictionLength === undefined
           ? {}
           : { finFrictionLength: ctx.options.finFrictionLength }),
+        ...(ctx.options.liftingSurfaceFactors === undefined
+          ? {}
+          : { liftingSurfaceFactors: ctx.options.liftingSurfaceFactors }),
         referenceDiameter: metres(ctx.config.referenceDiameter),
       });
       cd0 = drag.cd0;

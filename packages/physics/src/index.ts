@@ -461,9 +461,27 @@ export {
   DEFAULT_BASE_DRAG_METHOD,
   DEFAULT_BODY_FORM_FACTOR,
   DEFAULT_FIN_FRICTION_LENGTH,
+  DEFAULT_LIFTING_SURFACE_FACTORS,
+  LIFTING_SURFACE_FLAT_PLATE_NOTE,
+  LIFTING_SURFACE_SWEEP_NOTE,
+  WING_BODY_EDGE_NOTE,
+  WING_BODY_FAIRING_NOTE,
   type BaseDragMethod,
   type FinFrictionLength,
+  type LiftingSurfaceFactors,
 } from './drag/drag.js';
+export {
+  chordLineSweepCosine,
+  DATCOM_FIGURE_4151_28B,
+  DATCOM_FIGURE_4331_37,
+  DATCOM_WING_BODY_CHART_END_MACH,
+  DATCOM_WING_BODY_FAIRING_END_MACH,
+  finThicknessBracket,
+  liftingSurfaceFactor,
+  maximumThicknessLine,
+  wingBodyInterferenceFactor,
+  type ChartFactor,
+} from './drag/datcom-wing-body.js';
 export * from './stability/datcom-large-angle-data.js';
 export {
   crossflowDragCoefficient,

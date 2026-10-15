@@ -13,6 +13,7 @@ import type {
   BaseDragMethod,
   BaseDragMotorRule,
   FinFrictionLength,
+  LiftingSurfaceFactors,
   RailButtonDragMethod,
 } from '../drag/drag.js';
 import type { BodyFormFactor } from '../drag/skin-friction.js';
@@ -200,6 +201,8 @@ export interface SimulationOptions {
   readonly bodyFormFactor?: BodyFormFactor;
   /** Fin friction's Reynolds length (plan 0076, DRAG-24); defaults to the drag model's default. */
   readonly finFrictionLength?: FinFrictionLength;
+  /** The DATCOM wing-body friction factors (plan 0081, DRAG-26); defaults to the drag model's default. */
+  readonly liftingSurfaceFactors?: LiftingSurfaceFactors;
   /**
    * Normal force at large angles of attack (D-070): 'datcom' continues a flight through 180° (HA-1 to HA-10);
    * 'linear' keeps the small-angle model and ends the flight at 90° (D-046). Defaults to 'datcom'.
