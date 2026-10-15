@@ -184,8 +184,8 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Why.** All 13 flights below Mach 0.95 were measured by barometric altimeters on 62 to 100 °F days. A barometer reads height through the standard atmosphere (U.S. Standard Atmosphere 1976, p. xiv), so on a hot day it reads low; the simulation gives the true height.
   - **Effect.** Below Mach 0.95: +12.4 → +5.3 % mean, rms 13.7 → 7.7 %. Above: +21.2 → +18.0 %.
   - **For users.** Every result says what a barometric altimeter will read on a non-standard day.
-  - **RASAero II**, which also applies the launch temperature, is −5.4 % mean on the same basis: too much drag, where the displayed mode has too little.
-  - **Found.** The base drag decides between the modes: Niskanen's eq. (3.94) alone takes the displayed mode to −3.4 %, the DATCOM's gives +5.3 %. Next: trace why, from sources (D-069 chose the DATCOM's on the held-out data).
+  - **RASAero II**, which also applies the launch temperature, is −5.4 % mean on the same basis (its apogees converted with this simulator's atmosphere): too much drag, where the displayed mode has too little.
+  - **Found.** The base drag decides between the modes: Niskanen's eq. (3.94) alone takes the displayed mode to −3.4 % (one benchmark rerun, not committed), the DATCOM's gives +5.3 %. Next: trace why, from sources (D-069 chose the DATCOM's on the held-out data).
 
 ## In progress
 
