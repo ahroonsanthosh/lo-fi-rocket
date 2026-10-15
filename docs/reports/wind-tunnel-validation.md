@@ -1,6 +1,6 @@
 # Wind tunnel validation (CLAUDE.md 6.7 item 1, plan 0021)
 
-**Date:** 2026-10-12. **Status:** regenerated after Part C item 7 (plan 0032, D-069: DATCOM body base drag; the RM A53D02 free-flight drag with square fins moved from +23 % to −4 % subsonic and from +35 % to +6 % transonic), item 4 (plan 0029, D-066: ARCAS fins now 'double-wedge', the NACA fins reported as 'wedge' and 'square') and item 3 (plan 0028, D-065; before it the ARCAS supersonic CP rms was 16.95 % L, now 1.95); no constant was tuned. The ARCAS CP data were used to choose the fin interpolation (D-056) and no longer count as held out (D-061). The tables below are printed by `packages/formats/src/wind-tunnel.validation.test.ts`, which pins the reported errors as regression values (a physics change that moves them fails the test and must be explained in the commit message, CLAUDE.md 7.6).
+**Date:** 2026-10-15. **Status:** regenerated after plan 0080 step 2 (D-120, held for the owner's decision: each fin set's friction at its own mean chord's Reynolds number; the ARCAS forebody C_A rms moves from 6.2 to 1.5 % subsonic, 28.3 to 25.0 % transonic and 19.2 to 15.2 % supersonic, the RM A53D02 square-fin drag from 7.3 to 11.1 % transonic and the wedge-fin drag from 13.3 to 11.3 % supersonic) and plan 0076 (D-115, the DATCOM body form factor, not regenerated then; before both, the ARCAS rms was 7.8, 29.1 and 20.2 %); earlier after Part C item 7 (plan 0032, D-069: DATCOM body base drag; the RM A53D02 free-flight drag with square fins moved from +23 % to −4 % subsonic and from +35 % to +6 % transonic), item 4 (plan 0029, D-066: ARCAS fins now 'double-wedge', the NACA fins reported as 'wedge' and 'square') and item 3 (plan 0028, D-065; before it the ARCAS supersonic CP rms was 16.95 % L, now 1.95); no constant was tuned. The ARCAS CP data were used to choose the fin interpolation (D-056) and no longer count as held out (D-061). The tables below are printed by `packages/formats/src/wind-tunnel.validation.test.ts`, which pins the reported errors as regression values (a physics change that moves them fails the test and must be explained in the commit message, CLAUDE.md 7.6).
 
 ## What was compared
 
@@ -92,84 +92,84 @@ Lowest rms: cubic-hermite; default in code: cubic-hermite.
 
 | Mach  | regime     | measured | predicted forebody | predicted total | error |
 | ----- | ---------- | -------- | ------------------ | --------------- | ----- |
-| 0.6   | subsonic   | 0.301    | 0.280              | 0.298           | -7 %  |
-| 0.7   | subsonic   | 0.310    | 0.283              | 0.302           | -9 %  |
-| 0.8   | transonic  | 0.325    | 0.290              | 0.310           | -11 % |
-| 0.85  | transonic  | 0.344    | 0.298              | 0.319           | -13 % |
-| 0.9   | transonic  | 0.385    | 0.313              | 0.336           | -19 % |
-| 0.95  | transonic  | 0.494    | 0.342              | 0.372           | -31 % |
-| 0.975 | transonic  | 0.559    | 0.366              | 0.404           | -35 % |
-| 1     | transonic  | 0.657    | 0.405              | 0.449           | -38 % |
-| 1.025 | transonic  | 0.692    | 0.437              | 0.474           | -37 % |
-| 1.05  | transonic  | 0.692    | 0.460              | 0.483           | -34 % |
-| 1.1   | transonic  | 0.675    | 0.470              | 0.483           | -30 % |
-| 1.15  | transonic  | 0.642    | 0.455              | 0.466           | -29 % |
-| 1.2   | transonic  | 0.600    | 0.427              | 0.439           | -29 % |
-| 1.5   | supersonic | 0.500    | 0.361              | 0.432           | -28 % |
-| 1.8   | supersonic | 0.440    | 0.319              | 0.378           | -28 % |
-| 2.3   | supersonic | 0.345    | 0.272              | 0.318           | -21 % |
-| 2.96  | supersonic | 0.275    | 0.230              | 0.266           | -16 % |
-| 3.96  | supersonic | 0.205    | 0.186              | 0.213           | -9 %  |
-| 4.63  | supersonic | 0.185    | 0.165              | 0.188           | -11 % |
+| 0.6   | subsonic   | 0.301    | 0.307              | 0.326           | +2 %  |
+| 0.7   | subsonic   | 0.310    | 0.310              | 0.329           | +0 %  |
+| 0.8   | transonic  | 0.325    | 0.317              | 0.336           | -3 %  |
+| 0.85  | transonic  | 0.344    | 0.325              | 0.345           | -6 %  |
+| 0.9   | transonic  | 0.385    | 0.339              | 0.362           | -12 % |
+| 0.95  | transonic  | 0.494    | 0.368              | 0.398           | -25 % |
+| 0.975 | transonic  | 0.559    | 0.392              | 0.429           | -30 % |
+| 1     | transonic  | 0.657    | 0.431              | 0.475           | -34 % |
+| 1.025 | transonic  | 0.692    | 0.463              | 0.500           | -33 % |
+| 1.05  | transonic  | 0.692    | 0.486              | 0.509           | -30 % |
+| 1.1   | transonic  | 0.675    | 0.495              | 0.508           | -27 % |
+| 1.15  | transonic  | 0.642    | 0.481              | 0.492           | -25 % |
+| 1.2   | transonic  | 0.600    | 0.453              | 0.464           | -25 % |
+| 1.5   | supersonic | 0.500    | 0.385              | 0.456           | -23 % |
+| 1.8   | supersonic | 0.440    | 0.341              | 0.400           | -22 % |
+| 2.3   | supersonic | 0.345    | 0.293              | 0.338           | -15 % |
+| 2.96  | supersonic | 0.275    | 0.247              | 0.283           | -10 % |
+| 3.96  | supersonic | 0.205    | 0.200              | 0.227           | -2 %  |
+| 4.63  | supersonic | 0.185    | 0.177              | 0.200           | -4 %  |
 
-- subsonic: n=2 rms 7.84 % max 8.65 % mean -7.80 %
-- transonic: n=11 rms 29.14 % max 38.38 % mean -27.73 %
-- supersonic: n=6 rms 20.18 % max 27.73 % mean -18.81 %
+- subsonic: n=2 rms 1.51 % max 2.14 % mean +1.09 %
+- transonic: n=11 rms 24.95 % max 34.40 % mean -22.65 %
+- supersonic: n=6 rms 15.19 % max 22.95 % mean -12.88 %
 
 ### ARCAS drag breakdown (contributions to C_D0 on A_ref) at selected Mach numbers
 
 | term                                               | M 0.6 | M 0.9 | M 1.05 | M 1.5 | M 2.96 | M 4.63 |
 | -------------------------------------------------- | ----- | ----- | ------ | ----- | ------ | ------ |
-| skin friction                                      | 0.223 | 0.213 | 0.212  | 0.196 | 0.142  | 0.101  |
+| skin friction                                      | 0.251 | 0.239 | 0.238  | 0.220 | 0.160  | 0.113  |
 | nose pressure (subsonic-interpolation)             | 0.002 | 0.026 | 0.148  | 0.071 | 0.044  | 0.037  |
 | boat tail pressure (γ = 1.867)                     | 0.055 | 0.074 | 0.078  | 0.055 | 0.028  | 0.018  |
 | fin pressure (double-wedge, LE 0.0000 + TE 0.0000) | 0.000 | 0.000 | 0.000  | 0.000 | 0.000  | 0.000  |
 | fin wave drag (DATCOM transonic-chart)             | 0.000 | 0.000 | 0.021  | 0.040 | 0.016  | 0.010  |
 | base (full), DATCOM 4.2.3.1                        | 0.018 | 0.023 | 0.023  | 0.070 | 0.036  | 0.023  |
-| total C_D0                                         | 0.298 | 0.336 | 0.483  | 0.432 | 0.266  | 0.188  |
+| total C_D0                                         | 0.326 | 0.362 | 0.509  | 0.456 | 0.283  | 0.200  |
 
 ## NACA RM A53D02 C_D at zero lift (free flight, base included; digitisation ±0.01)
 
 | Mach | regime     | Re      | measured | square fins | wedge fins | error (square) | error (wedge) |
 | ---- | ---------- | ------- | -------- | ----------- | ---------- | -------------- | ------------- |
-| 0.6  | subsonic   | 8.60e+5 | 0.358    | 0.344       | 0.322      | -4 %           | -10 %         |
-| 0.91 | transonic  | 1.28e+6 | 0.363    | 0.391       | 0.367      | 8 %            | 1 %           |
-| 1.04 | transonic  | 1.54e+6 | 0.536    | 0.558       | 0.532      | 4 %            | -1 %          |
-| 1.3  | supersonic | 1.90e+6 | 0.512    | 0.410       | 0.383      | -20 %          | -25 %         |
-| 1.47 | supersonic | 2.20e+6 | 0.492    | 0.466       | 0.440      | -5 %           | -11 %         |
-| 1.53 | supersonic | 2.20e+6 | 0.492    | 0.471       | 0.444      | -4 %           | -10 %         |
-| 1.45 | supersonic | 2.20e+6 | 0.474    | 0.459       | 0.432      | -3 %           | -9 %          |
-| 1.46 | supersonic | 2.20e+6 | 0.458    | 0.463       | 0.436      | 1 %            | -5 %          |
-| 1.56 | supersonic | 2.30e+6 | 0.455    | 0.464       | 0.436      | 2 %            | -4 %          |
-| 1.58 | supersonic | 2.30e+6 | 0.443    | 0.460       | 0.432      | 4 %            | -3 %          |
-| 1.94 | supersonic | 2.90e+6 | 0.447    | 0.395       | 0.366      | -12 %          | -18 %         |
-| 2.09 | supersonic | 3.20e+6 | 0.423    | 0.374       | 0.344      | -12 %          | -19 %         |
-| 2.32 | supersonic | 3.50e+6 | 0.390    | 0.347       | 0.317      | -11 %          | -19 %         |
-| 2.56 | supersonic | 3.80e+6 | 0.378    | 0.324       | 0.293      | -14 %          | -22 %         |
-| 2.89 | supersonic | 4.30e+6 | 0.322    | 0.297       | 0.266      | -8 %           | -17 %         |
-| 3.3  | supersonic | 4.90e+6 | 0.296    | 0.271       | 0.239      | -9 %           | -19 %         |
-| 3.99 | supersonic | 6.60e+6 | 0.241    | 0.235       | 0.202      | -2 %           | -16 %         |
-| 4.02 | supersonic | 6.80e+6 | 0.217    | 0.233       | 0.201      | 8 %            | -8 %          |
-| 4.58 | supersonic | 7.50e+6 | 0.207    | 0.213       | 0.180      | 3 %            | -13 %         |
-| 4.59 | supersonic | 7.50e+6 | 0.193    | 0.213       | 0.180      | 10 %           | -7 %          |
-| 4.67 | supersonic | 4.20e+6 | 0.187    | 0.217       | 0.184      | 16 %           | -2 %          |
-| 4.75 | supersonic | 4.30e+6 | 0.191    | 0.215       | 0.181      | 12 %           | -5 %          |
-| 5.34 | hypersonic | 6.70e+6 | 0.152    | 0.195       | 0.161      | 28 %           | 6 %           |
-| 5.43 | hypersonic | 7.00e+6 | 0.156    | 0.192       | 0.158      | 23 %           | 2 %           |
-| 5.49 | hypersonic | 7.00e+6 | 0.164    | 0.191       | 0.157      | 16 %           | -4 %          |
-| 7.16 | hypersonic | 7.10e+6 | 0.163    | 0.162       | 0.128      | -0 %           | -22 %         |
-| 7.22 | hypersonic | 1.50e+7 | 0.151    | 0.157       | 0.122      | 4 %            | -19 %         |
-| 7.18 | hypersonic | 7.10e+6 | 0.138    | 0.162       | 0.128      | 17 %           | -8 %          |
-| 10   | hypersonic | 1.59e+7 | 0.107    | 0.131       | 0.096      | 23 %           | -10 %         |
-| 10   | hypersonic | 1.59e+7 | 0.097    | 0.131       | 0.096      | 35 %           | -1 %          |
+| 0.6  | subsonic   | 8.60e+5 | 0.358    | 0.369       | 0.348      | 3 %            | -3 %          |
+| 0.91 | transonic  | 1.28e+6 | 0.363    | 0.413       | 0.389      | 14 %           | 7 %           |
+| 1.04 | transonic  | 1.54e+6 | 0.536    | 0.578       | 0.553      | 8 %            | 3 %           |
+| 1.3  | supersonic | 1.90e+6 | 0.512    | 0.428       | 0.402      | -16 %          | -22 %         |
+| 1.47 | supersonic | 2.20e+6 | 0.492    | 0.484       | 0.457      | -2 %           | -7 %          |
+| 1.53 | supersonic | 2.20e+6 | 0.492    | 0.488       | 0.461      | -1 %           | -6 %          |
+| 1.45 | supersonic | 2.20e+6 | 0.474    | 0.476       | 0.449      | 0 %            | -5 %          |
+| 1.46 | supersonic | 2.20e+6 | 0.458    | 0.480       | 0.453      | 5 %            | -1 %          |
+| 1.56 | supersonic | 2.30e+6 | 0.455    | 0.480       | 0.453      | 6 %            | -1 %          |
+| 1.58 | supersonic | 2.30e+6 | 0.443    | 0.476       | 0.448      | 7 %            | 1 %           |
+| 1.94 | supersonic | 2.90e+6 | 0.447    | 0.409       | 0.380      | -8 %           | -15 %         |
+| 2.09 | supersonic | 3.20e+6 | 0.423    | 0.387       | 0.358      | -8 %           | -15 %         |
+| 2.32 | supersonic | 3.50e+6 | 0.390    | 0.360       | 0.330      | -8 %           | -15 %         |
+| 2.56 | supersonic | 3.80e+6 | 0.378    | 0.336       | 0.305      | -11 %          | -19 %         |
+| 2.89 | supersonic | 4.30e+6 | 0.322    | 0.308       | 0.277      | -4 %           | -14 %         |
+| 3.3  | supersonic | 4.90e+6 | 0.296    | 0.280       | 0.248      | -5 %           | -16 %         |
+| 3.99 | supersonic | 6.60e+6 | 0.241    | 0.242       | 0.210      | 1 %            | -13 %         |
+| 4.02 | supersonic | 6.80e+6 | 0.217    | 0.241       | 0.208      | 11 %           | -4 %          |
+| 4.58 | supersonic | 7.50e+6 | 0.207    | 0.220       | 0.187      | 6 %            | -10 %         |
+| 4.59 | supersonic | 7.50e+6 | 0.193    | 0.220       | 0.186      | 14 %           | -3 %          |
+| 4.67 | supersonic | 4.20e+6 | 0.187    | 0.225       | 0.191      | 20 %           | 2 %           |
+| 4.75 | supersonic | 4.30e+6 | 0.191    | 0.222       | 0.188      | 16 %           | -1 %          |
+| 5.34 | hypersonic | 6.70e+6 | 0.152    | 0.200       | 0.167      | 32 %           | 10 %          |
+| 5.43 | hypersonic | 7.00e+6 | 0.156    | 0.198       | 0.164      | 27 %           | 5 %           |
+| 5.49 | hypersonic | 7.00e+6 | 0.164    | 0.196       | 0.163      | 20 %           | -1 %          |
+| 7.16 | hypersonic | 7.10e+6 | 0.163    | 0.166       | 0.132      | 2 %            | -19 %         |
+| 7.22 | hypersonic | 1.50e+7 | 0.151    | 0.160       | 0.126      | 6 %            | -17 %         |
+| 7.18 | hypersonic | 7.10e+6 | 0.138    | 0.166       | 0.132      | 20 %           | -4 %          |
+| 10   | hypersonic | 1.59e+7 | 0.107    | 0.134       | 0.099      | 25 %           | -8 %          |
+| 10   | hypersonic | 1.59e+7 | 0.097    | 0.134       | 0.099      | 38 %           | 2 %           |
 
 - square fins:
-  - subsonic: n=1 rms 4.04 % max 4.04 % mean -4.04 %
-  - transonic: n=2 rms 6.20 % max 7.76 % mean +5.92 %
-  - supersonic: n=19 rms 9.71 % max 19.89 % mean -2.27 %
-  - hypersonic: n=8 rms 21.43 % max 35.36 % mean +18.29 %
+  - subsonic: n=1 rms 3.03 % max 3.03 % mean +3.03 %
+  - transonic: n=2 rms 11.14 % max 13.65 % mean +10.75 %
+  - supersonic: n=19 rms 9.64 % max 20.14 % mean +1.14 %
+  - hypersonic: n=8 rms 24.08 % max 37.91 % mean +21.23 %
 - wedge fins:
-  - subsonic: n=1 rms 9.98 % max 9.98 % mean -9.98 %
-  - transonic: n=2 rms 0.97 % max 1.19 % mean +0.26 %
-  - supersonic: n=19 rms 14.00 % max 25.15 % mean -12.13 %
-  - hypersonic: n=8 rms 11.37 % max 21.54 % mean -6.91 %
+  - subsonic: n=1 rms 2.92 % max 2.92 % mean -2.92 %
+  - transonic: n=2 rms 5.47 % max 7.08 % mean +5.09 %
+  - supersonic: n=19 rms 11.30 % max 21.57 % mean -8.72 %
+  - hypersonic: n=8 rms 10.23 % max 18.94 % mean -3.97 %

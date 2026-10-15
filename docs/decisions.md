@@ -1229,3 +1229,30 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - Plan 0080's steps 2 to 7 each regenerate the benchmark.
   - The 21-flight figures in the RASAero report stay as that report's own runs.
+
+## D-120 (2026-10-15): The fins' friction at their own chord in the displayed mode, held for the owner's decision
+
+- **Change (plan 0080 step 2).** The displayed mode takes each fin set's skin friction at the Reynolds number of its own mean aerodynamic chord (DATCOM eq. 4.1.5.1-a, DRAG-24) instead of the rocket's (Niskanen eq. 3.85). `dragCoefficient`'s default follows it (`DEFAULT_FIN_FRICTION_LENGTH`), as for the base drag (D-069) and the body form factor (D-115). The OpenRocket-equivalent mode keeps eq. (3.85)'s, as OpenRocket does; tests that mean the comparison mode name `finFrictionLength: 'rocket'` beside `bodyFormFactor: 'niskanen'`.
+- **Why it is physical.** A fin's boundary layer starts at the fin's own leading edge, not at the nose, and the DATCOM takes a lifting surface's friction at its mean aerodynamic chord. Eq. (3.85)'s single Reynolds number is the thesis's simplification.
+- **Effect, measured on every dataset:**
+
+  | Dataset                                           | Before (D-115)                          | After                           |
+  | ------------------------------------------------- | --------------------------------------- | ------------------------------- |
+  | 13 flights below Mach 0.95: mean, median, rms     | +16.4 %, +17.0 %, 17.5 %                | +13.2 %, +12.6 %, 14.5 %        |
+  | 11 flights above Mach 0.95: mean                  | +24.7 %                                 | +21.1 %                         |
+  | Held-out C_D rms: subsonic, transonic, supersonic | 6.1 % (target 7 %, met), 21.2 %, 14.9 % | 8.2 % (not met), 20.2 %, 15.6 % |
+  | ARCAS forebody C_A rms (not held out, D-061)      | 6.2 %, 28.3 %, 19.2 %                   | 1.5 %, 25.0 %, 15.2 %           |
+  | Example rocket (displayed): apogee, max velocity  | 172.41 m, 62.9 m/s                      | 167.42 m, 62.2 m/s              |
+  - **The held-out mean bias, which the rms hides.** The drag rises a few per cent everywhere. Where the model under-predicts, it helps: RM-10 free flight −6.8 → −0.2 %, TN D-3182 model A −16.2 → −13.3 %, TM X-1661 −16.2 → −12.0 %, Blue Scout −13.4 → −10.7 %. Where it already over-predicts, it hurts: the RM-10 tunnel model +5.0 → +11.1 % (supersonic) and NACA RM L8A05's three lowest-Mach free-flight points (+10.6 → +17.1 % at Mach 0.62), which drive the subsonic rms.
+  - **Plan 0080 quoted the wrong figures.** Its step 2 gave D-115's "fin chord alone" row (held-out subsonic 7.1 → 6.4 %), measured before the body form factor. With the form factor the subsonic figure rises above its target, as D-115's "both" row had already shown (8.2 %). The plan is corrected.
+
+- **The two selection rules give different answers (CLAUDE.md 11 (a)).**
+  - Plan 0076's rule, "not worse on either independent dataset", rejects it: the held-out subsonic target goes from met to not met, and the supersonic rms rises.
+  - Plan 0080's rule (D-119), "adopted on its source and physical completeness; the benchmarks report and never choose", adopts it.
+  - D-115 left the fin chord to the owner. The pull request is therefore held for the owner, not merged on the standing approval. Reverting is one line in `to-physics.ts` and one constant.
+- **The held-out test does not assert its targets.** It writes the report, as it did with the transonic and supersonic targets not met; a green CI does not mean the targets are met.
+- **Consequences:**
+  - The flight-based range beside every apogee is regenerated: below Mach 0.95, 13 rockets reached 81 to 97 % of the displayed apogee (median 89 %); above, 65 to 98 % (median 83 %).
+  - The OpenRocket-equivalent mode and every golden output are unchanged.
+  - The displayed mode is still further from the flights than the OpenRocket-equivalent mode (+13.2 against +9.1 % below Mach 0.95). One difference between the modes is the base drag: eq. (3.94), the comparison mode's, gives about twice the DATCOM's on a typical rocket (`openrocket-issues.md` item 6), and the held-out data favour the DATCOM's (D-069). The remaining steps of plan 0080 (wing-body build-up, protuberances, thrust at altitude) add drag the rockets really have.
+  - The RK4 step check and in-flight stability reports were not regenerated, as for D-115; they check step size and margins, not drag.

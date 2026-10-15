@@ -176,6 +176,11 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **Shown with every result.** Each apogee in the app and the MCP now carries the range measured flights reached.
   - **Sources approved:** NACA TM 1299 and NASA SP-125.
   - **Next:** the fin friction at the fin chord as the default (step 2), then the DATCOM wing-body build-up (step 3).
+- Plan 0080 step 2 (D-120), **held for the owner's decision**: the fins' friction at their own mean chord in the displayed mode.
+  - **Flights:** +16.4 → +13.2 % mean below Mach 0.95, +24.7 → +21.1 % above.
+  - **Held-out drag rms:** subsonic 6.1 → 8.2 % (target 7 %, met → not met), transonic 21.2 → 20.2 %, supersonic 14.9 → 15.6 %.
+  - **Open question for the owner:** keep it (plan 0080's rule: source and physics) or revert it (plan 0076's rule: not worse on either dataset).
+  - **Next:** step 3, the DATCOM wing-body build-up, whichever way step 2 goes.
 
 ## In progress
 

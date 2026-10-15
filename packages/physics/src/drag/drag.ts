@@ -127,8 +127,8 @@ export interface DragInputs {
   readonly bodyFormFactor?: BodyFormFactor;
   /**
    * The fin friction's Reynolds length (plan 0076, DRAG-24): 'rocket', one C_fc at the rocket's
-   * Reynolds number (eq. 3.85, the default); or 'fin-chord', each fin set's C_fc at its own mean
-   * aerodynamic chord (DATCOM eq. 4.1.5.1-a). Awaiting the owner's decision (D-115).
+   * Reynolds number (Niskanen eq. 3.85); or 'fin-chord', each fin set's C_fc at its own mean
+   * aerodynamic chord (DATCOM eq. 4.1.5.1-a). Defaults to `DEFAULT_FIN_FRICTION_LENGTH`.
    */
   readonly finFrictionLength?: FinFrictionLength;
 }
@@ -322,6 +322,12 @@ export const DEFAULT_BASE_DRAG_METHOD: BaseDragMethod = 'datcom';
 
 /** The body form factor of the displayed mode (plan 0076, D-115). */
 export const DEFAULT_BODY_FORM_FACTOR: BodyFormFactor = 'datcom';
+
+/**
+ * The fins' friction length of the displayed mode (plan 0080 step 2, D-120): each fin set's own
+ * mean aerodynamic chord, where its boundary layer starts (DATCOM eq. 4.1.5.1-a, DRAG-24).
+ */
+export const DEFAULT_FIN_FRICTION_LENGTH: FinFrictionLength = 'fin-chord';
 
 /** Fairing from the end of figure 4.2.3.1-24 to Niskanen's supersonic base drag (DATCOM sketch (a), p. 4.2.3.1-5). */
 export const DATCOM_BASE_FAIRING_END = 1.5;
@@ -726,7 +732,7 @@ export function dragCoefficient(input: DragInputs): DragResult {
     roughness: number,
   ): Pick<FrictionDragGeometry, 'bodyFormFactor' | 'finFriction'> => ({
     bodyFormFactor: bodyFactor,
-    ...(input.finFrictionLength === 'fin-chord'
+    ...((input.finFrictionLength ?? DEFAULT_FIN_FRICTION_LENGTH) === 'fin-chord'
       ? {
           finFriction: (chord: number): number => {
             // DRAG-24: eqs. (3.78) to (3.84) on the fin's own length, its mean aerodynamic chord.

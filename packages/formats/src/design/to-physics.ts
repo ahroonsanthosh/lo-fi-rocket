@@ -523,6 +523,10 @@ export function designSimulationOptions(
     baseDragMethod: mode === 'displayed' ? 'datcom' : 'niskanen',
     // Plan 0076 (D-115): the DATCOM's body form factor; eq. (3.85)'s in the comparison mode.
     bodyFormFactor: mode === 'displayed' ? 'datcom' : 'niskanen',
+    // Plan 0080 step 2 (D-120): each fin set's friction at its own mean chord's Reynolds number
+    // (DATCOM eq. 4.1.5.1-a, DRAG-24), whose boundary layer starts at its own leading edge; the
+    // rocket's length (Niskanen eq. 3.85) in the comparison mode.
+    finFrictionLength: mode === 'displayed' ? 'fin-chord' : 'rocket',
     largeAngleMethod: mode === 'displayed' ? 'datcom' : 'linear',
     integrator: design.simulation.integrator,
     maxTime: design.simulation.maxTime,

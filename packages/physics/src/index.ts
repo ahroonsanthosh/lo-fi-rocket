@@ -460,6 +460,7 @@ export {
   DATCOM_BASE_FAIRING_END,
   DEFAULT_BASE_DRAG_METHOD,
   DEFAULT_BODY_FORM_FACTOR,
+  DEFAULT_FIN_FRICTION_LENGTH,
   type BaseDragMethod,
   type FinFrictionLength,
 } from './drag/drag.js';

@@ -198,7 +198,7 @@ export interface SimulationOptions {
   readonly baseDragMethod?: BaseDragMethod;
   /** Body friction form factor (plan 0076, DRAG-25); defaults to the drag model's default. */
   readonly bodyFormFactor?: BodyFormFactor;
-  /** Fin friction's Reynolds length (plan 0076, DRAG-24); defaults to the rocket's. */
+  /** Fin friction's Reynolds length (plan 0076, DRAG-24); defaults to the drag model's default. */
   readonly finFrictionLength?: FinFrictionLength;
   /**
    * Normal force at large angles of attack (D-070): 'datcom' continues a flight through 180° (HA-1 to HA-10);
