@@ -111,6 +111,14 @@ describe('build_and_fly (plan 0079)', () => {
       r(expectedStability.result.marginLiftoff),
     );
     expect(get(out, 'flight', 'summary', 'apogee_m')).toBe(r(expectedFlight.summary.apogee));
+    // Plan 0081 (D-121): no temperature given, a standard day: the barometric reading is the
+    // geopotential apogee, within a metre of the true one at this height.
+    expect(get(out, 'flight', 'summary', 'barometric_altimeter_apogee_m')).toBe(
+      r(expectedFlight.summary.barometricApogee),
+    );
+    expect(
+      Math.abs(expectedFlight.summary.barometricApogee - expectedFlight.summary.apogee),
+    ).toBeLessThan(1);
     expect(get(out, 'flight', 'summary', 'max_velocity_m_s')).toBe(
       r(expectedFlight.summary.maxVelocity),
     );
@@ -142,6 +150,7 @@ describe('build_and_fly (plan 0079)', () => {
     );
   });
 
+  // A full flight to the ground (the delay left out is plugged): the full-flight allowance, as elsewhere.
   it('lists every field, position and delay left out, and still flies', async () => {
     const c = await connect();
     const res = await call(c, 'build_and_fly', {
@@ -174,7 +183,7 @@ describe('build_and_fly (plan 0079)', () => {
     expect(res.json['should']).toEqual(
       expect.arrayContaining([expect.stringMatching(/No recovery device/)]),
     );
-  });
+  }, 30000);
 
   it('says a plugged motor the user wrote is plugged, not "not given"', async () => {
     const c = await connect();

@@ -409,3 +409,61 @@ function atmosphereState(
     molecularWeightRatio: ratio,
   };
 }
+
+/**
+ * ATM-12 (plan 0081). The standard atmosphere's geopotential altitude H (m′) at which its pressure
+ * is `pressure`: the inverse of eqs. 33a and 33b (p. 12) on the standard's own layers,
+ *   L_M,b ≠ 0: H = H_b + (T_M,b/L_M,b) [(P/P_b)^(−R* L_M,b/(g₀′ M₀)) − 1]
+ *   L_M,b = 0: H = H_b − (R* T_M,b/(g₀′ M₀)) ln(P/P_b)
+ * This is what a barometric altimeter computes: the standard is "a basis for pressure altimeter
+ * calibrations" (foreword p. xiv, quoting the WMO definition). Below sea level the first layer
+ * serves (p. 12). The result is geopotential: the standard writes its pressure-height relation in
+ * it; geometric height differs by H²/(r₀ − H), under 0.2 % below 10 km.
+ */
+export function standardPressureAltitude(pressure: Pascals): Metres {
+  const p: number = pressure;
+  if (!(p > 0) || !Number.isFinite(p))
+    throw new InvalidInputError('pressure', p, 'must be greater than 0 Pa');
+  const top = LAYERS[LAYERS.length - 1];
+  if (top === undefined) throw new Error('USSA1976 layer table is malformed');
+  const pTop = pressureInLayer(top, USSA1976_TOP_GEOPOTENTIAL);
+  if (p < pTop)
+    throw new InvalidInputError(
+      'pressure',
+      p,
+      `must be at least ${pTop.toPrecision(4)} Pa, the standard's pressure at 84.852 km′ (the top of its lower atmosphere)`,
+    );
+  let layer = LAYERS[0];
+  for (const l of LAYERS) if (p <= l.basePressure) layer = l;
+  if (layer === undefined) throw new Error('USSA1976 layer table is malformed');
+  const ratio = p / layer.basePressure;
+  const h =
+    layer.gradient === 0
+      ? layer.baseGeopotential - (layer.baseTemperature / G0_M0_OVER_RSTAR) * Math.log(ratio)
+      : layer.baseGeopotential +
+        (layer.baseTemperature / layer.gradient) *
+          (ratio ** (-layer.gradient / G0_M0_OVER_RSTAR) - 1);
+  return metres(finiteResult('standard pressure altitude', h));
+}
+
+/**
+ * ATM-13 (plan 0081). What a barometric altimeter zeroed on the pad reads at a height `height` above
+ * it, on the day whose atmosphere is `atmosphere`: the standard pressure altitude (ATM-12) of the
+ * pressure there, minus that of the pressure on the pad. On a standard day it is the height itself
+ * to within the geopotential difference; on a warmer day the air column is taller than the standard
+ * one for the same pressure drop, and the altimeter reads low.
+ */
+export function barometricAltimeterReading(
+  atmosphere: (geometricAltitude: Metres) => StandardAtmosphereState,
+  siteAltitude: Metres,
+  height: Metres,
+): Metres {
+  const pad = atmosphere(siteAltitude).pressure;
+  const at = atmosphere(metres((siteAltitude as number) + (height as number))).pressure;
+  return metres(
+    finiteResult(
+      'barometric altimeter reading',
+      (standardPressureAltitude(at) as number) - (standardPressureAltitude(pad) as number),
+    ),
+  );
+}

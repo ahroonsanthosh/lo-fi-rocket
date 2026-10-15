@@ -181,7 +181,7 @@ function Summary({
           decimals={m.decimals}
           unit={m.label}
           stale={stale}
-          {...(range === undefined ? {} : { detail: realFlightText(range, units) })}
+          {...apogeeDetail(s.apogee, s.barometricApogee, range, units)}
         />
         <ResultCard
           label="Time to apogee"
@@ -317,6 +317,34 @@ function Summary({
       </p>
     </div>
   );
+}
+
+/**
+ * Plan 0081 (D-121): what a barometric altimeter would show, when the day is not standard enough for
+ * it to read the true apogee (0.5 % apart or more). Users compare the simulator with their altimeter.
+ */
+export function barometricText(
+  apogee: number,
+  reading: number,
+  units: UnitSystem,
+): string | undefined {
+  if (!Number.isFinite(apogee) || !Number.isFinite(reading) || !(apogee > 0)) return undefined;
+  if (Math.abs(reading / apogee - 1) < 0.005) return undefined;
+  return `A barometric altimeter will read about ${formatQuantity(reading, 'm', units)}: it assumes a standard day, and this one is ${reading < apogee ? 'warmer' : 'colder'}.`;
+}
+
+/** The apogee card's lines: the barometric reading, then the real-flight range. */
+function apogeeDetail(
+  apogee: number,
+  reading: number,
+  range: RealFlightRange | undefined,
+  units: UnitSystem,
+): { detail?: string } {
+  const lines = [
+    barometricText(apogee, reading, units),
+    range === undefined ? undefined : realFlightText(range, units),
+  ].filter((x): x is string => x !== undefined);
+  return lines.length === 0 ? {} : { detail: lines.join(' ') };
 }
 
 /**

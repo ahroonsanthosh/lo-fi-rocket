@@ -18,7 +18,11 @@ import {
   type Approximation,
   type Confidence,
 } from '../fidelity.js';
-import { atmosphereModel, type StandardAtmosphereState } from '../atmosphere/ussa1976.js';
+import {
+  atmosphereModel,
+  barometricAltimeterReading,
+  type StandardAtmosphereState,
+} from '../atmosphere/ussa1976.js';
 import { flutterGeometry, flutterVelocity } from '../stability/flutter.js';
 import {
   dragCoefficient,
@@ -205,6 +209,12 @@ export interface FlightSample {
 
 export interface FlightSummary {
   readonly apogee: number;
+  /**
+   * Plan 0081 (ATM-13): what a barometric altimeter zeroed on the pad reads at apogee on this flight's
+   * day. It converts pressure with the standard atmosphere, so on a day warmer than standard it reads
+   * below the true apogee, and above it on a colder one; on a standard day the two agree.
+   */
+  readonly barometricApogee: number;
   readonly timeToApogee: number;
   readonly maxVelocity: number;
   readonly maxMach: number;
@@ -2088,8 +2098,14 @@ export function simulateFlight(vehicle: FlightVehicle, options: SimulationOption
         : worst,
     undefined,
   );
+  const apogeeHeight = finiteResult('apogee', apogee?.z ?? apogeeZ);
   const summary: FlightSummary = {
-    apogee: finiteResult('apogee', apogee?.z ?? apogeeZ),
+    apogee: apogeeHeight,
+    barometricApogee: barometricAltimeterReading(
+      ctx.atmosphere,
+      options.site.altitude,
+      metres(Math.max(apogeeHeight, 0)),
+    ),
     timeToApogee: apogee?.t ?? Number.NaN,
     maxVelocity,
     maxMach,

@@ -226,6 +226,8 @@ export function simulateReport(
   return {
     summary: {
       apogee_m: r(s.apogee),
+      // Plan 0081 (D-121): what a barometric altimeter on the pad would read on this day.
+      barometric_altimeter_apogee_m: r(s.barometricApogee),
       time_to_apogee_s: r(s.timeToApogee),
       max_velocity_m_s: r(s.maxVelocity),
       max_mach: r(s.maxMach),
@@ -275,7 +277,7 @@ function realFlights(apogee: number, maxMach: number): Record<string, unknown> {
       apogee_low_m: r(range.low),
       apogee_median_m: r(range.median),
       apogee_high_m: r(range.high),
-      note: `Measured flights, not physics: ${String(range.flights)} flown rockets ${range.below ? 'below' : 'at or above'} Mach ${String(REAL_FLIGHT_MACH_SPLIT)} reached ${String(pct(range.lowRatio))} to ${String(pct(range.highRatio))} % of this simulator's apogee (median ${String(pct(range.medianRatio))} %). Report this range with the apogee.`,
+      note: `Measured flights, not physics: ${String(range.flights)} flown rockets ${range.below ? 'below' : 'at or above'} Mach ${String(REAL_FLIGHT_MACH_SPLIT)} reached ${String(pct(range.lowRatio))} to ${String(pct(range.highRatio))} % of this simulator's apogee, each compared as its own instrument reads it (median ${String(pct(range.medianRatio))} %). Report this range with the apogee. A barometric altimeter reads barometric_altimeter_apogee_m, not apogee_m, on a day that is not standard.`,
     },
   };
 }

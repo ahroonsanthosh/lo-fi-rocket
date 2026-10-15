@@ -44,6 +44,8 @@ export {
   atmosphereModel,
   seaLevelEquivalent,
   ussa1976Layers,
+  standardPressureAltitude,
+  barometricAltimeterReading,
   type AtmosphereBaseConditions,
   type StandardAtmosphereState,
 } from './atmosphere/ussa1976.js';
