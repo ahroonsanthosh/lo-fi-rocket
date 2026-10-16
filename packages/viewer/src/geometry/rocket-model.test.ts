@@ -1,7 +1,7 @@
 /**
  * The 3D model's dimensions match the design geometry (plan 0034).
  */
-import { metres, noseProfile, R1_COMPONENTS } from '@lo-fi-rocket/physics';
+import { kilogramsPerCubicMetre, metres, noseProfile, R1_COMPONENTS } from '@lo-fi-rocket/physics';
 import { Mesh } from 'three';
 import { describe, expect, it } from 'vitest';
 import { REFERENCE_ROCKETS, referenceComponents } from '../test-support/reference-flights.js';
@@ -266,5 +266,37 @@ describe('three.js geometry', () => {
     expect(o.group.children.every((c) => c instanceof Mesh)).toBe(true);
     expect(o.group.position.toArray()).toEqual([0, 0, 0]);
     expect(o.extent.length).toBeCloseTo(0.6, 15);
+  });
+});
+
+describe('pod sets (issue #96)', () => {
+  it('draws a pod part count times round the axis, each copy radialOffset out', () => {
+    // Two pods 75 mm out, as in reference/rockets/pod-probe/pods2.ork.
+    const tube = {
+      component: {
+        kind: 'bodyTube' as const,
+        length: metres(0.2),
+        outerRadius: metres(0.0125),
+        wallThickness: metres(0.0005),
+        density: kilogramsPerCubicMetre(700),
+      },
+      position: 0.3,
+      name: 'Pod tube',
+      instances: { count: 2, radialOffset: 0.075 },
+    };
+    const parts = rocketModelParts([tube]);
+    expect(parts).toHaveLength(2);
+    const [a, b] = parts as RevolvedPart[];
+    expect(a!.shift!.y).toBeCloseTo(0.075, 12);
+    expect(a!.shift!.z).toBeCloseTo(0, 12);
+    // The second at π: (−0.075, 0).
+    expect(b!.shift!.y).toBeCloseTo(-0.075, 12);
+    expect(Math.abs(b!.shift!.z)).toBeLessThan(1e-12);
+    expect(a!.name).toBe('Pod tube (pod 1)');
+    // The extent's radius reaches the outer pod wall: 0.075 + 0.0125.
+    expect(rocketModelExtent(parts).maxRadius).toBeCloseTo(0.0875, 12);
+    // The meshes stand at their shift.
+    const o = buildRocketObject(parts);
+    expect(o.group.children[1]!.position.y).toBeCloseTo(-0.075, 12);
   });
 });

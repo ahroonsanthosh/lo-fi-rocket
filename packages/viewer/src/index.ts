@@ -148,11 +148,13 @@ export {
 } from './geometry/motor-model.js';
 export { chordAt, finSectionGeometry, sectionHalfThickness } from './geometry/fin-section.js';
 export {
+  launcherFootprint,
   launchGuide,
   railProfile,
   RAIL_1010,
   RAIL_1515,
   type LaunchGuide,
+  type LauncherFootprint,
 } from './scene/launcher.js';
 export {
   SKY_HAZE,
@@ -165,3 +167,16 @@ export {
   SUN_DIRECTION,
 } from './scene/sky.js';
 export { placeTrees, TREE_VARIANTS, type TreeVariant } from './scene/trees.js';
+export {
+  AFTER_LANDING_S,
+  blend,
+  hangingNose,
+  lyingAttitude,
+  lyingHeight,
+  noseAlong,
+  restingPlace,
+  type RestInputs,
+  type RestPlace,
+} from './scene/recovery-pose.js';
+export { labelShown, mergeLabels } from './scene/labels.js';
+export { streamerStations, StreamerRibbon } from './scene/effects.js';

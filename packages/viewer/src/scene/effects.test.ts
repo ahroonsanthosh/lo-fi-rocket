@@ -15,6 +15,8 @@ import {
   canopyPoint,
   deployedCanopies,
   groundCloud,
+  SMOKE_MAX_GAP,
+  streamerStations,
   displayThrust,
   inflation,
   smokeEmissions,
@@ -76,14 +78,15 @@ describe('smokePuffs by hand', () => {
     { time: 1, origin: { x: 0, y: 0, z: 10 }, scatter: { x: 0.3, y: 0.1, z: -0.2 } },
     { time: 4, origin: { x: 1, y: 1, z: 30 }, scatter: { x: 0, y: 0, z: 0 } },
   ];
-  it('a puff emitted at 1 s seen at 3 s has drifted 2 s of wind, grown and faded', () => {
+  it('a puff emitted at 1 s seen at 3 s has drifted 2 s of wind, grown, thinned and faded', () => {
     const puffs = smokePuffs(emissions, { x: 3, y: -4, z: 0 }, 3, options);
     expect(puffs).toHaveLength(1); // the 4 s puff is not emitted yet
     const p = puffs[0]!;
     expect(p.position).toEqual({ x: 6, y: -8, z: 10 }); // origin + (3, −4, 0) × 2
     // 0.2 + 0.5 × 2 + 0.4 (1 − e^(−2/0.3)) = 1.2 + 0.4 × 0.998727 = 1.599491
     expect(p.size).toBeCloseTo(1.599491, 6);
-    expect(p.opacity).toBeCloseTo(Math.exp(-0.2), 12); // e^(−2/10), fully faded in
+    // e^(−2/10) × ((0.2 + 0.4) / 1.599491)^1 = 0.818731 × 0.375119 = 0.307122
+    expect(p.opacity).toBeCloseTo(0.307122, 6);
   });
   it('drops puffs fainter than 0.01 (age above fade × ln 100 = 46 s)', () => {
     expect(smokePuffs(emissions, { x: 0, y: 0, z: 0 }, 60, options)).toHaveLength(0);
@@ -173,16 +176,20 @@ describe('groundCloud by hand', () => {
   const o = { groundZ: -0.3, start: 0, end: 0.5, reach: 2, size: 1, fade: 6 };
   it('has no puff before ignition and only the puffs born so far', () => {
     expect(groundCloud({ x: 0, y: 0, z: 0 }, -0.1, o)).toHaveLength(0);
-    // Puffs are born every 0.5/24 s: at t = 0.1, the five puffs 0..4 (born 0, 0.0208, … 0.0833).
-    expect(groundCloud({ x: 0, y: 0, z: 0 }, 0.1, o)).toHaveLength(5);
+    // 40 puffs over 0.5 s, one every 0.0125 s: at t = 0.1 puffs 0..8 are born, and puff 8 (born
+    // at 0.1, age 0) has not faded in yet, so eight are drawn.
+    expect(groundCloud({ x: 0, y: 0, z: 0 }, 0.1, o)).toHaveLength(8);
   });
-  it('puff 0 at age 1 s: rolled out 2 × 0.6 × (1 − e^(−1/0.8)) along +x, drifted by the wind, risen 0.3 m', () => {
+  it('puff 0 at age 1 s: rolled out 2 × 0.3 × (1 − e^(−1/0.8)), half size, drifted by the wind', () => {
     const [p] = groundCloud({ x: 1, y: 0, z: 0 }, 1, o);
-    const roll = 2 * 0.6 * (1 - Math.exp(-1 / 0.8)); // 0.8562
-    expect(p!.position.x).toBeCloseTo(roll + 1, 12);
+    // Puff 0: far = 0 and big = 0. Roll 0.6 × (1 − e^(−1.25)) = 0.6 × 0.713495 = 0.428097.
+    expect(p!.position.x).toBeCloseTo(0.428097 + 1, 6);
     expect(p!.position.y).toBeCloseTo(0, 12);
-    expect(p!.position.z).toBeCloseTo(-0.3 + 0.3 * 1 + 0.3, 12);
-    expect(p!.size).toBeCloseTo(0.35 + 0.65 * (1 - Math.exp(-1 / 0.6)), 12);
+    // Size 1 × 0.5 × (0.35 + 0.65 (1 − e^(−1/0.6))) = 0.5 × (0.35 + 0.65 × 0.811124) = 0.438615.
+    expect(p!.size).toBeCloseTo(0.438615, 6);
+    expect(p!.position.z).toBeCloseTo(-0.3 + 0.3 * 0.438615 + 0.3, 6);
+    // Opacity 0.22 × e^(−1/6) × min(1, 1/0.15) = 0.22 × 0.846482 = 0.186226 (fade 6 s here).
+    expect(p!.opacity).toBeCloseTo(0.186226, 6);
   });
 });
 
@@ -252,5 +259,50 @@ describe('the scene with motors and a launcher (plan 3d-0002)', () => {
       if (o.name === 'exhaust-flame' && o.visible) flames++;
     });
     expect(flames).toBe(2);
+  });
+});
+
+describe('smoke emission spacing', () => {
+  it('on the rail a puff waits until the tail has moved or 40 ms have passed', () => {
+    const f = referenceFlight(REFERENCE_ROCKETS[0]);
+    const all = smokeEmissions(f.result, 0.6);
+    const spaced = smokeEmissions(f.result, 0.6, 0.1);
+    expect(spaced.length).toBeLessThan(all.length);
+    for (let i = 1; i < spaced.length; i++) {
+      const a = spaced[i - 1]!;
+      const b = spaced[i]!;
+      const moved = Math.hypot(
+        b.origin.x - a.origin.x,
+        b.origin.y - a.origin.y,
+        b.origin.z - a.origin.z,
+      );
+      // Each puff is either 0.1 m on or SMOKE_MAX_GAP later (less one emission step).
+      expect(moved >= 0.1 - 1e-12 || b.time - a.time >= SMOKE_MAX_GAP - 0.003).toBe(true);
+    }
+  });
+});
+
+describe('streamers (issue #102)', () => {
+  it('a deployed streamer is drawn at its length and width', () => {
+    const result = {
+      events: [{ kind: 'deployment', time: 6, detail: 'Streamer deployed (at apogee)' }],
+    } as unknown as FlightResult;
+    expect(
+      deployedCanopies(result, [
+        { name: 'Streamer', diameter: 0, streamer: { length: 1.2, width: 0.08 } },
+      ]),
+    ).toEqual([
+      { name: 'Streamer', diameter: 0, deployedAt: 6, streamer: { length: 1.2, width: 0.08 } },
+    ]);
+  });
+  it('streamerStations by hand: fixed at the cord, unfurled length, wave growing to the free end', () => {
+    const st = streamerStations(1.2, 0.08, 0.3, 1, 0, 4);
+    expect(st[0]).toEqual([0, 0]);
+    expect(st[4]![0]).toBeCloseTo(1.2, 12);
+    // Amplitude at the free end: 0.25 × 0.08 + 0.04 × 1.2 = 0.068 m.
+    for (const [, z] of st) expect(Math.abs(z)).toBeLessThanOrEqual(0.068 + 1e-12);
+    // Half unfurled: the free end at 0.6 m; calm: flat.
+    expect(streamerStations(1.2, 0.08, 0.3, 0.5, 0, 4)[4]![0]).toBeCloseTo(0.6, 12);
+    for (const [, z] of streamerStations(1.2, 0.08, 0.3, 1, 1, 4)) expect(Math.abs(z)).toBe(0);
   });
 });
