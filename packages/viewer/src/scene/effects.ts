@@ -134,15 +134,33 @@ export interface SmokePuff {
   readonly seed: number;
 }
 
+/**
+ * Exponent of a puff's thinning as it grows: opacity × (s₀ / s)^k with s₀ the
+ * size once billowed (start + billow). k = 1 rather than 2 (the column
+ * density of a fixed amount of smoke in a sphere of growing diameter s),
+ * because the drawn puff is a soft disc whose edge is already transparent
+ * and the puffs overlap along the trail (a drawing choice, D-3D-7).
+ */
+export const SMOKE_DILUTION = 1;
+
 /** Most puffs emitted over a burn (a drawing budget). */
 export const SMOKE_MAX_PUFFS = 1500;
+
+/** Longest interval between two puffs while the tail is nearly still, s (a drawing choice). */
+export const SMOKE_MAX_GAP = 0.04;
 
 /**
  * The emission schedule: times spaced evenly over the stored steps whose
  * blended thrust is above zero, at most `SMOKE_MAX_PUFFS`, each at the
- * tail of the drawn pose (nose tip minus the length along the nose axis).
+ * tail of the drawn pose (nose tip minus the length along the nose axis);
+ * a time is skipped when the tail has moved less than `minSpacing` since the
+ * last puff and less than SMOKE_MAX_GAP has passed.
  */
-export function smokeEmissions(result: FlightResult, rocketLength: number): SmokeEmission[] {
+export function smokeEmissions(
+  result: FlightResult,
+  rocketLength: number,
+  minSpacing = 0,
+): SmokeEmission[] {
   const samples = result.samples;
   let start = Infinity;
   let end = -Infinity;
@@ -168,15 +186,23 @@ export function smokeEmissions(result: FlightResult, rocketLength: number): Smok
     const pose = displayPose(samples, t);
     const nose = noseDirection(pose.orientation);
     const back = pose.cg - rocketLength;
-    out.push({
-      time: t,
-      origin: {
-        x: pose.position.x + back * nose.x,
-        y: pose.position.y + back * nose.y,
-        z: pose.position.z + back * nose.z,
-      },
-      scatter,
-    });
+    const origin = {
+      x: pose.position.x + back * nose.x,
+      y: pose.position.y + back * nose.y,
+      z: pose.position.z + back * nose.z,
+    };
+    // While the tail barely moves (on the rail) the puffs would stack into one opaque blob:
+    // a new one only when it has moved minSpacing or SMOKE_MAX_GAP has passed (D-3D-7).
+    const prev = out[out.length - 1];
+    if (
+      prev !== undefined &&
+      t - prev.time < SMOKE_MAX_GAP &&
+      Math.hypot(origin.x - prev.origin.x, origin.y - prev.origin.y, origin.z - prev.origin.z) <
+        minSpacing
+    ) {
+      continue;
+    }
+    out.push({ time: t, origin, scatter });
   }
   return out;
 }
@@ -184,8 +210,9 @@ export function smokeEmissions(result: FlightResult, rocketLength: number): Smok
 /**
  * The puffs alive at replay time `t`: each emitted puff of age a = t − t_e ≥ 0
  * sits at its origin plus the wind velocity times a (plus its scatter), with
- * diameter startSize + growth·a + billow·(1 − e^(−a/0.3)) and opacity e^(−a/fade), faded in over the
- * first 0.1 s. Puffs fainter than 0.01 are dropped.
+ * diameter s = startSize + growth·a + billow·(1 − e^(−a/0.3)) and opacity
+ * e^(−a/fade) × min(1, (startSize + billow)/s)^SMOKE_DILUTION, faded in over
+ * the first 0.1 s. Puffs fainter than 0.01 are dropped.
  */
 export function smokePuffs(
   emissions: readonly SmokeEmission[],
@@ -197,7 +224,11 @@ export function smokePuffs(
   for (const e of emissions) {
     const age = t - e.time;
     if (age < 0) break;
-    const opacity = Math.exp(-age / options.fade) * Math.min(1, 0.25 + age / 0.1);
+    const size =
+      options.startSize + options.growth * age + options.billow * (1 - Math.exp(-age / 0.3));
+    // The same smoke spread through a growing puff thins out (D-3D-7).
+    const dilution = Math.min(1, (options.startSize + options.billow) / size) ** SMOKE_DILUTION;
+    const opacity = Math.exp(-age / options.fade) * Math.min(1, 0.25 + age / 0.1) * dilution;
     if (opacity < 0.01) continue;
     const spread = options.jitter * options.growth * age;
     out.push({
@@ -206,7 +237,7 @@ export function smokePuffs(
         y: e.origin.y + wind.y * age + spread * e.scatter.y,
         z: e.origin.z + wind.z * age + spread * e.scatter.z,
       },
-      size: options.startSize + options.growth * age + options.billow * (1 - Math.exp(-age / 0.3)),
+      size,
       opacity,
       seed: e.scatter.x + 0.5,
     });
@@ -229,13 +260,15 @@ export interface GroundCloudOptions {
 }
 
 /** Puffs in the ground cloud (a drawing budget). */
-export const GROUND_CLOUD_PUFFS = 24;
+export const GROUND_CLOUD_PUFFS = 40;
 
 /**
  * The cloud the exhaust raises from the blast deflector while the rocket is
  * on the rail (illustrative): puffs leave the pad in fixed directions between
- * `start` and `end`, roll out to `reach` (1 − e^(−a/0.8)), rise slowly
- * (0.3 m/s), drift with the wind, grow and fade. A pure function of t.
+ * `start` and `end`, roll out to between 0.3 and 1 times `reach`
+ * (× (1 − e^(−a/0.8))), are 0.5 to 1.2 times `size`, rise slowly (0.3 m/s),
+ * drift with the wind, grow and fade (opacity 0.22 at most, so they overlap
+ * into a cloud rather than a dome). A pure function of t.
  */
 export function groundCloud(wind: Vec3, t: number, o: GroundCloudOptions): SmokePuff[] {
   const out: SmokePuff[] = [];
@@ -245,18 +278,22 @@ export function groundCloud(wind: Vec3, t: number, o: GroundCloudOptions): Smoke
     const age = t - born;
     if (age < 0) break;
     const angle = 2.39996 * k; // golden angle: evenly round the pad
-    const roll = o.reach * (0.6 + 0.4 * ((k * 0.618) % 1)) * (1 - Math.exp(-age / 0.8));
+    // Fixed per-puff variety (the golden ratio's fractional parts): how far it rolls, its size.
+    const far = (k * 0.618034) % 1;
+    const big = (k * 0.754877) % 1;
+    const roll = o.reach * (0.3 + 0.7 * far) * (1 - Math.exp(-age / 0.8));
+    const size = o.size * (0.5 + 0.7 * big) * (0.35 + 0.65 * (1 - Math.exp(-age / 0.6)));
     const opacity = Math.exp(-age / o.fade) * Math.min(1, age / 0.15);
     if (opacity < 0.01) continue;
     out.push({
       position: {
         x: roll * Math.cos(angle) + wind.x * age,
         y: roll * Math.sin(angle) + wind.y * age,
-        z: o.groundZ + 0.3 * o.size + 0.3 * age,
+        z: o.groundZ + 0.3 * size + 0.3 * age,
       },
-      size: o.size * (0.35 + 0.65 * (1 - Math.exp(-age / 0.6))),
-      opacity: 0.8 * opacity,
-      seed: (k * 0.754877) % 1,
+      size,
+      opacity: 0.22 * opacity,
+      seed: big,
     });
   }
   return out;
@@ -325,9 +362,11 @@ uniform float projScale;
 varying float vAlpha;
 varying float vSeed;
 void main() {
-  vAlpha = alpha;
   vSeed = seed;
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+  // A billboard nearer the camera than its own size would cover the view with its centre's
+  // opacity; seen from inside, a puff is a thin haze, so it fades out within 1.5 sizes.
+  vAlpha = alpha * smoothstep(0.5 * size, 1.5 * size, -mvPosition.z);
   gl_PointSize = clamp(size * projScale / -mvPosition.z, 1.0, 1024.0);
   gl_Position = projectionMatrix * mvPosition;
   #include <logdepthbuf_vertex>
@@ -602,8 +641,10 @@ export class ExhaustFlame {
 
 export interface RecoveryInputs {
   readonly name: string;
-  /** Canopy diameter, metres (the design's value). */
+  /** Canopy diameter, metres (the design's value); 0 for a streamer. */
   readonly diameter: number;
+  /** A streamer's strip (issue #102), metres (the design's values); absent for a parachute. */
+  readonly streamer?: { readonly length: number; readonly width: number };
 }
 
 export interface CanopyState {
@@ -611,13 +652,16 @@ export interface CanopyState {
   readonly diameter: number;
   /** Time of the stored deployment event, s. */
   readonly deployedAt: number;
+  /** Set for a streamer: its strip's length and width, metres. */
+  readonly streamer?: { readonly length: number; readonly width: number };
 }
 
 /**
- * The canopies to draw: one per stored deployment event whose detail names
- * a device of the design (the simulator writes "<name> deployed (...)"). A
- * deployment of a device not in the list is not drawn, since its size is
- * not known.
+ * The recovery devices to draw: one per stored deployment event whose
+ * detail names a device of the design (the simulator writes "<name>
+ * deployed (...)"): a canopy of the design's diameter, or a streamer of its
+ * length and width. A deployment of a device not in the list, or without a
+ * size, is not drawn, since its size is not known.
  */
 export function deployedCanopies(
   result: FlightResult,
@@ -627,9 +671,14 @@ export function deployedCanopies(
   for (const e of result.events) {
     if (e.kind !== 'deployment') continue;
     const device = recovery.find((d) => e.detail.startsWith(`${d.name} deployed`));
-    if (device === undefined || !(device.diameter > 0)) continue;
+    if (device === undefined) continue;
     if (out.some((c) => c.name === device.name)) continue;
-    out.push({ name: device.name, diameter: device.diameter, deployedAt: e.time });
+    const st = device.streamer;
+    if (st !== undefined && st.length > 0 && st.width > 0) {
+      out.push({ name: device.name, diameter: 0, deployedAt: e.time, streamer: st });
+    } else if (device.diameter > 0) {
+      out.push({ name: device.name, diameter: device.diameter, deployedAt: e.time });
+    }
   }
   return out;
 }
@@ -733,4 +782,86 @@ export function buildCanopy(
   group.add(shroud);
   group.userData = { diameter: c.diameter, rimY: radius * Math.cos(CANOPY_DOME_ANGLE), lineLength };
   return group;
+}
+
+// --- Streamers ---
+
+/** Rows of the drawn streamer strip (a drawing budget). */
+export const STREAMER_ROWS = 32;
+
+/**
+ * The streamer strip's shape at time t (issue #102): `rows + 1` stations
+ * along its length (local +y, from the cord's end, unfurled to `unfurl` of
+ * its length), each a sideways (local z) offset of a travelling wave whose
+ * amplitude grows from 0 at the cord to a quarter of the width plus 4 % of
+ * the length at the free end (drawing choices). `calm` (0 to 1) damps the
+ * wave once it lies on the ground. Returns [y, z] per station.
+ */
+export function streamerStations(
+  length: number,
+  width: number,
+  t: number,
+  unfurl: number,
+  calm = 0,
+  rows = STREAMER_ROWS,
+): [number, number][] {
+  const out: [number, number][] = [];
+  const amp = (0.25 * width + 0.04 * length) * (1 - calm);
+  const wavelength = Math.max(0.2, 0.35 * length);
+  for (let i = 0; i <= rows; i++) {
+    const f = i / rows;
+    const y = f * length * Math.min(1, Math.max(0, unfurl));
+    const z = amp * f * Math.sin(2 * Math.PI * (y / wavelength) - 2 * Math.PI * 2.2 * t);
+    out.push([y, z]);
+  }
+  return out;
+}
+
+/** The streamer strip as a mesh whose vertices `update` rewrites; local +y from the cord's end. */
+export class StreamerRibbon {
+  readonly mesh: Mesh;
+  private readonly position: BufferAttribute;
+
+  constructor(
+    readonly name: string,
+    readonly length: number,
+    readonly width: number,
+  ) {
+    const rows = STREAMER_ROWS;
+    const g = new BufferGeometry();
+    this.position = new BufferAttribute(new Float32Array((rows + 1) * 2 * 3), 3);
+    g.setAttribute('position', this.position);
+    const index: number[] = [];
+    for (let i = 0; i < rows; i++) {
+      const a = 2 * i;
+      index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+    g.setIndex(index);
+    this.mesh = new Mesh(
+      g,
+      new MeshPhysicalMaterial({
+        color: new Color().setHex(0xff4a1c, SRGBColorSpace),
+        roughness: 0.35,
+        metalness: 0.1,
+        sheen: 0.4,
+        side: DoubleSide,
+      }),
+    );
+    this.mesh.name = `streamer-${name}`;
+    this.mesh.castShadow = true;
+    this.mesh.frustumCulled = false;
+    this.mesh.userData = { length, width };
+  }
+
+  update(t: number, unfurl: number, calm: number): void {
+    const stations = streamerStations(this.length, this.width, t, unfurl, calm);
+    const half = this.width / 2;
+    stations.forEach(([y, z], i) => {
+      this.position.setXYZ(2 * i, -half, y, z);
+      this.position.setXYZ(2 * i + 1, half, y, z);
+    });
+    this.position.needsUpdate = true;
+    this.mesh.geometry.computeVertexNormals();
+    this.mesh.geometry.computeBoundingSphere();
+  }
 }

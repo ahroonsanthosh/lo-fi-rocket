@@ -11,6 +11,8 @@ import { Line, Mesh } from 'three';
 import { describe, expect, it } from 'vitest';
 import { SI_FORMATTER } from '../units.js';
 import { REFERENCE_ROCKETS, referenceFlight } from '../test-support/reference-flights.js';
+import { displayVelocity, windVelocity } from './effects.js';
+import { HANG_BLEND_S, SWAY_AMPLITUDE, TIP_OVER_S } from './recovery-pose.js';
 import {
   cameraPose,
   FlightScene,
@@ -18,6 +20,8 @@ import {
   horizontalExtent,
   verticalExtent,
 } from './flight-scene.js';
+
+const WIND = { speed: 5, from: 1.5 * Math.PI };
 
 function sceneFor(rocket: (typeof REFERENCE_ROCKETS)[number]): {
   scene: FlightScene;
@@ -28,7 +32,7 @@ function sceneFor(rocket: (typeof REFERENCE_ROCKETS)[number]): {
     result: f.result,
     components: f.components,
     rail: { length: 1.5, angleFromVertical: radians(0.05), azimuth: radians(0.3) },
-    wind: { speed: 5, from: 1.5 * Math.PI },
+    wind: WIND,
     format: SI_FORMATTER,
   });
   return { scene, result: f.result };
@@ -37,10 +41,14 @@ function sceneFor(rocket: (typeof REFERENCE_ROCKETS)[number]): {
 describe.each(REFERENCE_ROCKETS)('FlightScene for $id', (rocket) => {
   const { scene, result } = sceneFor(rocket);
 
-  it('at every 20th stored step the scene axis equals noseDirection of the stored quaternion within 1e-12', () => {
+  it('at every 20th stored step before the deployment the scene axis equals noseDirection of the stored quaternion within 1e-12', () => {
     let checked = 0;
+    // From the deployment on the attitude is drawn under the recovery device (D-3D-7, tested below).
+    const deployments = result.events.filter((e) => e.kind === 'deployment').map((e) => e.time);
+    const deploy = deployments.length > 0 ? Math.min(...deployments) : Infinity;
     for (let i = 0; i < result.samples.length; i += 20) {
       const s = result.samples[i]!;
+      if (s.time >= deploy) break;
       scene.setStep(i);
       const expected = noseDirection(s.orientation);
       const axis = scene.noseAxisInScene();
@@ -62,7 +70,60 @@ describe.each(REFERENCE_ROCKETS)('FlightScene for $id', (rocket) => {
       expect(scene.time).toBe(s.time);
       checked++;
     }
+    expect(checked).toBeGreaterThan(3);
+  });
+
+  it('under the recovery device the rocket hangs nose up within the sway, its CG at the stored position', () => {
+    const deploy = Math.min(
+      ...result.events.filter((e) => e.kind === 'deployment').map((e) => e.time as number),
+    );
+    const land = result.events.find((e) => e.kind === 'landing')!.time as number;
+    let checked = 0;
+    for (const s of result.samples) {
+      // After the 0.8 s blend and before the landing.
+      if (s.time < deploy + HANG_BLEND_S || s.time >= land) continue;
+      scene.setTime(s.time);
+      const axis = scene.noseAxisInScene();
+      const n = Math.hypot(axis.x, axis.y, axis.z);
+      // The canopy stands against the air-relative velocity (the blended stored velocity minus
+      // the ground wind input, at least 0.2 up): the nose is within the 6° sway of that line.
+      const v = displayVelocity(result.samples, s.time);
+      const w = windVelocity(WIND);
+      const up = { x: w.x - v.x, y: w.y - v.y, z: w.z - v.z };
+      const un = Math.hypot(up.x, up.y, up.z);
+      up.z = Math.max(up.z / un, 0.2);
+      up.x /= un;
+      up.y /= un;
+      const um = Math.hypot(up.x, up.y, up.z);
+      const cos = (axis.x * up.x + axis.y * up.y + axis.z * up.z) / (n * um);
+      expect(cos).toBeGreaterThan(Math.cos(SWAY_AMPLITUDE) - 1e-9);
+      expect(scene.rocket.position.x).toBe(s.position.x);
+      expect(scene.rocket.position.y).toBe(s.position.y);
+      expect(scene.rocket.position.z).toBe(s.position.z);
+      checked++;
+    }
     expect(checked).toBeGreaterThan(10);
+  });
+
+  it('after the landing the rocket has fallen over about its tail: tail at the stored landing point, nose along the drift', () => {
+    const land = result.events.find((e) => e.kind === 'landing')!.time as number;
+    const last = result.samples[result.samples.length - 1]!;
+    scene.setTime(land + TIP_OVER_S + 0.5);
+    const axis = scene.noseAxisInScene();
+    const n = Math.hypot(axis.x, axis.y, axis.z);
+    expect(Math.abs(axis.z / n)).toBeLessThan(1e-9);
+    // These flights land hundreds of metres from the pad, drifting with the wind: the nose
+    // lies along the stored horizontal velocity at the landing.
+    const drift = Math.hypot(last.velocity.x, last.velocity.y);
+    expect(drift).toBeGreaterThan(1);
+    expect(axis.x / n).toBeCloseTo(last.velocity.x / drift, 9);
+    expect(axis.y / n).toBeCloseTo(last.velocity.y / drift, 9);
+    // The tail is (length − CG) behind the CG along the axis, at the stored landing point.
+    const back = scene.rocketLength - last.cg;
+    expect(scene.rocket.position.x - (back * axis.x) / n).toBeCloseTo(last.position.x, 9);
+    expect(scene.rocket.position.y - (back * axis.y) / n).toBeCloseTo(last.position.y, 9);
+    expect(scene.rocket.position.z).toBeGreaterThan(scene.groundZ);
+    expect(scene.rocket.position.z).toBeLessThan(scene.groundZ + scene.rocketLength);
   });
 
   it('on the rail the nose points along the rail direction (0.05 rad from vertical towards azimuth 0.3 rad)', () => {

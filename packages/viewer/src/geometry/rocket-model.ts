@@ -29,6 +29,8 @@ import { buildMotors, mountWall, type MotorInputs } from './motor-model.js';
 export type OutlinePoint = readonly [number, number];
 
 export interface RevolvedPart {
+  /** A pod set's copy: the part moved off the rocket's axis by this (issue #96). */
+  readonly shift?: PartShift;
   readonly kind: 'revolved';
   readonly component: Component['kind'];
   readonly name: string;
@@ -41,6 +43,8 @@ export interface RevolvedPart {
 }
 
 export interface FinPart {
+  /** A pod set's copy: the part moved off the rocket's axis by this (issue #96). */
+  readonly shift?: PartShift;
   readonly kind: 'fin';
   readonly name: string;
   readonly finIndex: number;
@@ -57,6 +61,8 @@ export interface FinPart {
 }
 
 export interface ButtonPart {
+  /** A pod set's copy: the part moved off the rocket's axis by this (issue #96). */
+  readonly shift?: PartShift;
   readonly kind: 'button';
   readonly name: string;
   readonly buttonIndex: number;
@@ -117,6 +123,8 @@ export function rocketModelParts(
     readonly component: Component;
     readonly position: number;
     readonly name?: string;
+    /** A pod set's part (plan 0070): drawn `count` times round the axis, `radialOffset` out. */
+    readonly instances?: { readonly count: number; readonly radialOffset: number };
   }[],
 ): ModelPart[] {
   const out: ModelPart[] = [];
@@ -124,6 +132,7 @@ export function rocketModelParts(
     const c = placed.component;
     const x0 = placed.position;
     const name = placed.name ?? `${c.kind} ${String(i + 1)}`;
+    const before = out.length;
     try {
       switch (c.kind) {
         case 'noseCone': {
@@ -223,8 +232,32 @@ export function rocketModelParts(
     } catch {
       // Invalid geometry while editing: the editor and the stability panel report it.
     }
+    // Pod sets (issue #96): the part's drawing repeated round the rocket's axis, pod k's axis at
+    // 2πk/count from +y towards +z, radialOffset out (the first pod's angle is not in the
+    // design; the simulation is axisymmetric).
+    const pod = placed.instances;
+    if (pod !== undefined && pod.count >= 1) {
+      const drawn = out.splice(before);
+      const n = Math.round(pod.count);
+      for (let k = 0; k < n; k++) {
+        const a = (2 * Math.PI * k) / n;
+        const shift = { y: pod.radialOffset * Math.cos(a), z: pod.radialOffset * Math.sin(a) };
+        for (const part of drawn)
+          out.push({ ...part, name: `${part.name} (pod ${String(k + 1)})`, shift });
+      }
+    }
   });
   return out;
+}
+
+/** A pod part's displacement from the rocket axis (body y, z), metres. */
+export interface PartShift {
+  readonly y: number;
+  readonly z: number;
+}
+
+function shiftOf(p: ModelPart): number {
+  return p.shift === undefined ? 0 : Math.hypot(p.shift.y, p.shift.z);
 }
 
 /** The aft end and the largest radius of the drawn parts. */
@@ -236,18 +269,18 @@ export function rocketModelExtent(parts: readonly ModelPart[]): ModelExtent {
       case 'revolved':
         for (const [x, r] of p.outline) {
           length = Math.max(length, x);
-          maxRadius = Math.max(maxRadius, r + (p.offset?.distance ?? 0));
+          maxRadius = Math.max(maxRadius, r + (p.offset?.distance ?? 0) + shiftOf(p));
         }
         break;
       case 'fin':
         for (const [x, r] of p.corners) {
           length = Math.max(length, x);
-          maxRadius = Math.max(maxRadius, r);
+          maxRadius = Math.max(maxRadius, r + shiftOf(p));
         }
         break;
       case 'button':
         length = Math.max(length, p.x + p.outerDiameter / 2);
-        maxRadius = Math.max(maxRadius, p.bodyRadius + p.height);
+        maxRadius = Math.max(maxRadius, p.bodyRadius + p.height + shiftOf(p));
         break;
     }
   }
@@ -487,7 +520,7 @@ export function buildRocketObject(
   const button = finishMaterial({ kind: 'plastic', colour: 0x1d1d1f });
   const bodyRadius = parts.reduce(
     (r, p) =>
-      p.kind === 'revolved' && p.offset === undefined
+      p.kind === 'revolved' && p.offset === undefined && p.shift === undefined
         ? Math.max(r, ...p.outline.map(([, pr]) => pr))
         : r,
     0,
@@ -503,7 +536,9 @@ export function buildRocketObject(
   const aftX = Math.max(
     0,
     ...parts.flatMap((p) =>
-      p.kind === 'revolved' && p.offset === undefined ? p.outline.map(([x]) => x) : [],
+      p.kind === 'revolved' && p.offset === undefined && p.shift === undefined
+        ? p.outline.map(([x]) => x)
+        : [],
     ),
   );
   const mountRadius = motor === undefined ? 0 : 1.04 * (motor.diameter / 2);
@@ -516,6 +551,7 @@ export function buildRocketObject(
         const opens =
           onAxis !== undefined &&
           p.offset === undefined &&
+          p.shift === undefined &&
           last !== undefined &&
           Math.abs(last[0] - aftX) < 1e-9 &&
           last[1] === 0;
@@ -574,6 +610,10 @@ export function buildRocketObject(
     mesh.name = p.name;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    if (p.shift !== undefined) {
+      mesh.position.y += p.shift.y;
+      mesh.position.z += p.shift.z;
+    }
     group.add(mesh);
   }
   if (motor !== undefined) group.add(buildMotors(motor));

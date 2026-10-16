@@ -25,7 +25,7 @@ import {
   type SceneLabel,
 } from '../scene/flight-scene.js';
 import { frameStep } from '../replay/clock.js';
-import { mergeLabels } from '../scene/labels.js';
+import { labelShown, mergeLabels } from '../scene/labels.js';
 import { buildLightDome } from '../scene/sky.js';
 import { loadSceneAssets } from './assets.js';
 
@@ -158,6 +158,7 @@ export function mountViewer(
   const labelObjects: CSS2DObject[] = [];
   const labelText = new Map<CSS2DObject, string>();
   const labelKind = new Map<CSS2DObject, SceneLabel['kind']>();
+  const labelFrom = new Map<CSS2DObject, number | undefined>();
   // In priority order for merging (#29): events (in time order), then the pad, wind, compass, scale.
   const ordered = [...scene.labels].sort((a, b) => LABEL_PRIORITY[a.kind] - LABEL_PRIORITY[b.kind]);
   for (const label of ordered) {
@@ -170,12 +171,15 @@ export function mountViewer(
     labelObjects.push(obj);
     labelText.set(obj, label.text);
     labelKind.set(obj, label.kind);
+    labelFrom.set(obj, label.from);
   }
 
   // Labels that land on top of each other on screen are merged into the first (#29).
   const projected = new Vector3();
   const declutter = (camera: PerspectiveCamera, w: number, h: number): void => {
     const points = labelObjects.map((obj) => {
+      // Events not yet reached are not shown (D-3D-7).
+      if (!labelShown(labelFrom.get(obj), scene.time)) return undefined;
       projected.setFromMatrixPosition(obj.matrixWorld).project(camera);
       if (projected.z < -1 || projected.z > 1) return undefined;
       return { x: ((projected.x + 1) / 2) * w, y: ((1 - projected.y) / 2) * h };
@@ -197,7 +201,8 @@ export function mountViewer(
     });
     labelObjects.forEach((obj, i) => {
       const k = into[i] ?? i;
-      obj.element.style.visibility = k === i || k < 0 ? '' : 'hidden';
+      const shown = labelShown(labelFrom.get(obj), scene.time);
+      obj.element.style.visibility = shown && (k === i || k < 0) ? '' : 'hidden';
       const text = (texts[i] ?? []).join(' · ');
       if (k === i && obj.element.textContent !== text) obj.element.textContent = text;
     });

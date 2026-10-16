@@ -25,3 +25,13 @@ export function mergeLabels(points: readonly ScreenPoint[], dx: number, dy: numb
     return i;
   });
 }
+
+/**
+ * Whether a label is shown at replay time t: an event's label from the
+ * event's time on (so the pad does not carry the landing's label from the
+ * first frame), every other label always. 1e-9 s allows the stored event
+ * steps' float64 time sum (D-071).
+ */
+export function labelShown(from: number | undefined, t: number): boolean {
+  return from === undefined || t >= from - 1e-9;
+}

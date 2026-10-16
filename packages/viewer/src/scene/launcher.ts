@@ -150,8 +150,33 @@ function mat(hex: number, metal: number, rough: number): MeshStandardMaterial {
   });
 }
 
+/**
+ * Where the tripod stands on the ground: its legs meet at `anchor` (under the
+ * guide) and their feet are `spread` from it, at the angles `legAngles`
+ * (radians from +x about +z). The drawn launcher fits inside this circle.
+ */
+export interface LauncherFootprint {
+  readonly anchor: { readonly x: number; readonly y: number };
+  readonly spread: number;
+  readonly legAngles: readonly number[];
+}
+
+/** The tripod's footprint for a rocket `rocketLength` long, its guide `offset` along `side` (drawing choices). */
+export function launcherFootprint(
+  rocketLength: number,
+  side: Vector3,
+  offset: number,
+): LauncherFootprint {
+  return {
+    anchor: { x: side.x * offset, y: side.y * offset },
+    spread: Math.max(0.35, 0.45 * rocketLength),
+    legAngles: [0, 1, 2].map((k) => (2 * Math.PI * k) / 3 + 0.4),
+  };
+}
+
 export interface Launcher {
   readonly group: Group;
+  readonly footprint: LauncherFootprint;
   /** The igniter leads, hung from the nozzle at rest; the scene drops them after liftoff. */
   readonly leads: Group;
   readonly fallenLeads: Group;
@@ -206,11 +231,15 @@ export function buildLauncher(inputs: LauncherInputs): Launcher {
   group.add(plate);
 
   // Tripod: three legs from the launcher's base (the deflector's level) to the ground.
-  const anchor = new Vector3(0, 0, inputs.deflectorZ - 0.01).addScaledVector(inputs.side, g.offset);
-  const spread = Math.max(0.35, 0.45 * L);
+  const footprint = launcherFootprint(L, inputs.side, g.offset);
+  const anchor = new Vector3(
+    footprint.anchor.x,
+    footprint.anchor.y,
+    inputs.deflectorZ - 0.01 + inputs.side.z * g.offset,
+  );
+  const spread = footprint.spread;
   const legR = Math.max(0.004, 0.25 * g.size);
-  for (let k = 0; k < 3; k++) {
-    const a = (2 * Math.PI * k) / 3 + 0.4;
+  for (const a of footprint.legAngles) {
     const foot = new Vector3(
       anchor.x + spread * Math.cos(a),
       anchor.y + spread * Math.sin(a),
@@ -265,5 +294,5 @@ export function buildLauncher(inputs: LauncherInputs): Launcher {
     }
   });
   group.add(leads, fallen);
-  return { group, leads, fallenLeads: fallen };
+  return { group, footprint, leads, fallenLeads: fallen };
 }

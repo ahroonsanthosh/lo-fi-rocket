@@ -28,11 +28,12 @@ import {
   DirectionalLight,
   Float32BufferAttribute,
   FogExp2,
-  GridHelper,
   Group,
   HemisphereLight,
   Line,
   LineBasicMaterial,
+  LineLoop,
+  LineSegments,
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
@@ -46,8 +47,8 @@ import {
   type Texture,
 } from 'three';
 import {
-  bracket,
   buildCanopy,
+  StreamerRibbon,
   deployedCanopies,
   displayThrust,
   groundCloud,
@@ -69,6 +70,18 @@ import {
 } from './effects.js';
 import { GroundMaterial, type GroundTextures } from './ground.js';
 import { sceneryLayout, terrainGeometry, type SceneryLayout } from './scenery.js';
+import {
+  blend,
+  CANOPY_COLLAPSE_S,
+  HANG_BLEND_S,
+  hangingNose,
+  lyingAttitude,
+  lyingHeight,
+  noseAlong,
+  restingPlace,
+  TIP_OVER_S,
+  type RestPlace,
+} from './recovery-pose.js';
 import { SKY_HAZE, SkyDome, SUN_DIRECTION } from './sky.js';
 import { TreeBillboards, type TreeAtlas } from './trees.js';
 import type { PaintSchemeId } from '../geometry/finish.js';
@@ -144,6 +157,8 @@ export interface SceneLabel {
   readonly kind: LabelKind;
   readonly text: string;
   readonly position: Vec3;
+  /** For an event's label, the replay time from which it is shown (D-3D-7); always shown otherwise. */
+  readonly from?: number;
 }
 
 export type CameraMode = 'follow' | 'pad' | 'overview' | 'orbit';
@@ -274,15 +289,41 @@ function lineThrough(points: readonly Vec3[], colour: number, name: string): Lin
 /** On-screen diameter of an event marker, pixels (a drawing choice). */
 export const MARKER_PIXELS = 9;
 
-function materialsOf(o: { material: Material | Material[] }): Material[] {
-  return Array.isArray(o.material) ? o.material : [o.material];
+/** Rings of radius spacing, 2 spacing, … up to `half`, and the two axes, at height z. */
+export function rangeRings(half: number, spacing: number, z: number): Group {
+  const g = new Group();
+  const material = new LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.32,
+    depthWrite: false,
+    fog: false,
+  });
+  const segments = 128;
+  for (let r = spacing; r <= half + 1e-9; r += spacing) {
+    const pts: number[] = [];
+    for (let j = 0; j < segments; j++) {
+      const a = (2 * Math.PI * j) / segments;
+      pts.push(r * Math.cos(a), r * Math.sin(a), z);
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute('position', new Float32BufferAttribute(pts, 3));
+    g.add(new LineLoop(geo, material));
+  }
+  const cross = new BufferGeometry();
+  cross.setAttribute(
+    'position',
+    new Float32BufferAttribute([-half, 0, z, half, 0, z, 0, -half, z, 0, half, z], 3),
+  );
+  g.add(new LineSegments(cross, material));
+  return g;
 }
 
 /** The largest radius of the coaxial revolved parts (the body), metres. */
 function bodyRadiusOf(parts: readonly ModelPart[]): number {
   let r = 0;
   for (const p of parts) {
-    if (p.kind !== 'revolved' || p.offset !== undefined) continue;
+    if (p.kind !== 'revolved' || p.offset !== undefined || p.shift !== undefined) continue;
     for (const [, pr] of p.outline) r = Math.max(r, pr);
   }
   return r;
@@ -292,11 +333,11 @@ function bodyRadiusOf(parts: readonly ModelPart[]): number {
 function aftRadiusOf(parts: readonly ModelPart[]): number {
   let aft = 0;
   for (const p of parts)
-    if (p.kind === 'revolved' && p.offset === undefined)
+    if (p.kind === 'revolved' && p.offset === undefined && p.shift === undefined)
       for (const [x] of p.outline) aft = Math.max(aft, x);
   let r = 0;
   for (const p of parts) {
-    if (p.kind !== 'revolved' || p.offset !== undefined) continue;
+    if (p.kind !== 'revolved' || p.offset !== undefined || p.shift !== undefined) continue;
     for (const [x, pr] of p.outline) if (Math.abs(x - aft) < 1e-9) r = Math.max(r, pr);
   }
   return r;
@@ -320,6 +361,14 @@ export class FlightScene {
   /** The rocket's lowest point at rest (z), metres. */
   readonly restBottomZ: number;
   private readonly baseFar: number;
+  /** The first stored deployment and the stored landing, s (D-3D-7); undefined when absent. */
+  private readonly deployTime: number | undefined;
+  private readonly landTime: number | undefined;
+  /** The axis's height above the ground when the rocket lies on its side. */
+  private readonly lyingAxisHeight: number;
+  /** Where and how the landed rocket lies (undefined without a landing), and its attitude there. */
+  private readonly rest: RestPlace | undefined;
+  private readonly lyingQ: ThreeQuaternion;
   private readonly flown: Line;
   private readonly track: Line;
   private readonly drop: Line;
@@ -344,6 +393,7 @@ export class FlightScene {
   private readonly smoke: SmokeTrail;
   private readonly groundCloudOptions: GroundCloudOptions | undefined;
   private readonly cords: readonly Line[];
+  private readonly ribbons = new Map<number, StreamerRibbon>();
   private readonly canopyStates: readonly CanopyState[];
   private readonly canopies: readonly Group[];
   private readonly times: readonly number[];
@@ -433,15 +483,9 @@ export class FlightScene {
     this.spacing = gridSpacing(extent);
     const cells = Math.ceil(extent / this.spacing);
     this.gridHalfSize = cells * this.spacing;
-    const grid = new GridHelper(2 * this.gridHalfSize, 2 * cells, 0xffffff, 0xffffff);
-    grid.rotation.x = Math.PI / 2; // GridHelper lies in XZ (y up); the flight frame has z up.
-    grid.position.z = this.groundZ + 0.002 * L;
-    for (const m of materialsOf(grid)) {
-      m.transparent = true;
-      m.opacity = 0.14;
-      m.depthWrite = false;
-      if (m instanceof LineBasicMaterial) m.fog = false;
-    }
+    // Range rings at the grid spacing and a faint north-south / east-west cross (D-3D-7): a
+    // distance scale that reads like a range map rather than lines painted on the field.
+    const grid = rangeRings(this.gridHalfSize, this.spacing, this.groundZ + 0.002 * L);
     grid.name = 'ground-grid';
     this.scene.add(grid);
     // Marker size: a drawing choice, small next to a model rocket, bounded for long flights.
@@ -471,9 +515,12 @@ export class FlightScene {
     side.normalize();
     const bodyRadius = bodyRadiusOf(this.model.parts);
     const lugPart = this.model.parts.find(
-      (p): p is RevolvedPart => p.kind === 'revolved' && p.component === 'launchLug',
+      (p): p is RevolvedPart =>
+        p.kind === 'revolved' && p.component === 'launchLug' && p.shift === undefined,
     );
-    const buttonPart = this.model.parts.find((p): p is ButtonPart => p.kind === 'button');
+    const buttonPart = this.model.parts.find(
+      (p): p is ButtonPart => p.kind === 'button' && p.shift === undefined,
+    );
     const guide = launchGuide(
       bodyRadius,
       lugPart?.bore === undefined || lugPart.offset === undefined
@@ -548,13 +595,18 @@ export class FlightScene {
     for (const f of this.flames) this.flameHolder.add(f.group);
     this.rocket.add(this.flameHolder);
     this.wind = windVelocity(inputs.wind);
-    this.emissions = smokeEmissions(inputs.result, this.model.extent.length);
     const diameter = 2 * bodyRadius;
+    // Puffs a third of their starting size apart at most, so the trail stays continuous.
+    this.emissions = smokeEmissions(
+      inputs.result,
+      this.model.extent.length,
+      Math.max(0.12, 4 * diameter) / 3,
+    );
     this.smokeOptions = {
       startSize: Math.max(0.12, 4 * diameter),
       growth: Math.max(0.5, 5 * diameter),
       billow: Math.max(0.3, 8 * diameter),
-      fade: 22,
+      fade: 7,
       jitter: 0.5,
     };
     this.smoke = new SmokeTrail(SMOKE_MAX_PUFFS + GROUND_CLOUD_PUFFS, {
@@ -569,21 +621,58 @@ export class FlightScene {
             groundZ: this.groundZ,
             start: 0,
             end: (railExit?.time ?? 0.3) + 0.2,
-            reach: Math.max(1.5, 4 * L),
-            size: Math.max(0.6, 2.2 * L),
-            fade: 6,
+            reach: Math.max(2, 6 * L),
+            size: Math.max(0.6, 1.8 * L),
+            fade: 4,
           }
         : undefined;
     this.scene.add(this.smoke.points);
     this.canopyStates = deployedCanopies(inputs.result, inputs.recovery ?? []);
+    const deployments = inputs.result.events.filter((e) => e.kind === 'deployment');
+    this.deployTime =
+      deployments.length > 0 ? Math.min(...deployments.map((e) => e.time)) : undefined;
+    this.landTime = inputs.result.events.find((e) => e.kind === 'landing')?.time;
+    const fins = this.model.parts.filter((p) => p.kind === 'fin' && p.shift === undefined);
+    const firstSet = fins[0]?.name.replace(/ fin \d+$/, '');
+    const finCount = fins.filter((p) => p.name.replace(/ fin \d+$/, '') === firstSet).length;
+    const tip = Math.max(
+      0,
+      ...fins.flatMap((p) => (p.kind === 'fin' ? p.corners.map(([, r]) => r) : [])),
+    );
+    this.lyingAxisHeight = lyingHeight(bodyRadius, tip, finCount);
+    const last = inputs.result.samples[inputs.result.samples.length - 1] ?? first;
+    this.rest =
+      this.landTime === undefined
+        ? undefined
+        : restingPlace({
+            landing: last.position,
+            drift: last.velocity,
+            length: L,
+            footprint: launcher.footprint,
+            clearance: this.model.extent.maxRadius,
+          });
+    this.lyingQ = lyingAttitude(
+      new Vector3(this.rest?.fall.x ?? 1, this.rest?.fall.y ?? 0, 0),
+      finCount,
+    );
     const colours: readonly [number, number][] = [
       [0xff6a13, 0xf4f4f4],
       [0xd7263d, 0xffd23f],
       [0x1b998b, 0xf4f4f4],
     ];
     this.canopies = this.canopyStates.map((c, i) => {
-      const pair = colours[i % colours.length] ?? [0xff6a13, 0xf4f4f4];
-      const g = buildCanopy(c, this.lineLength(c), pair[0], pair[1]);
+      let g: Group;
+      if (c.streamer !== undefined) {
+        // A streamer (issue #102): its strip hangs from the cord's end.
+        g = new Group();
+        g.name = `streamer-${c.name}`;
+        const ribbon = new StreamerRibbon(c.name, c.streamer.length, c.streamer.width);
+        g.add(ribbon.mesh);
+        this.ribbons.set(i, ribbon);
+      } else {
+        const pair = colours[i % colours.length] ?? [0xff6a13, 0xf4f4f4];
+        g = buildCanopy(c, this.lineLength(c), pair[0], pair[1]);
+      }
       g.visible = false;
       this.scene.add(g);
       return g;
@@ -630,6 +719,7 @@ export class FlightScene {
         kind: 'event',
         text: `${names} ${inputs.format.format(first.time, 'time')}${group.every((m) => m.exact) ? '' : ' (nearest step)'}`,
         position: first.position,
+        from: first.time,
       });
     }
 
@@ -822,12 +912,38 @@ export class FlightScene {
     q: { readonly w: number; readonly x: number; readonly y: number; readonly z: number },
     cg: number,
   ): void {
-    this.place(position, q, cg);
+    const t = this.currentTime;
+    const samples = this.result.samples;
+    // The air-relative velocity's reverse: from the rocket towards a deployed canopy.
+    const v = displayVelocity(samples, t);
+    const air = new Vector3(v.x - this.wind.x, v.y - this.wind.y, v.z - this.wind.z);
+    const up = air.lengthSq() > 1e-6 ? air.negate().normalize() : new Vector3(0, 0, 1);
+    if (up.z < 0.2) up.z = 0.2;
+    up.normalize();
+    // Under the recovery device and after landing the attitude is drawn, not stored (D-3D-7).
+    const stored = new ThreeQuaternion(q.x, q.y, q.z, q.w);
+    const drawn = stored.clone();
+    if (this.deployTime !== undefined && t >= this.deployTime) {
+      drawn.slerp(noseAlong(hangingNose(up, t)), blend(t, this.deployTime, HANG_BLEND_S));
+    }
+    // After the landing the rocket falls over about its tail onto the ground: the tail moves
+    // from where it hangs to its resting place while the body turns to lie along the fall.
+    const at = new Vector3(position.x, position.y, position.z);
+    const lying = this.landTime === undefined ? 0 : blend(t, this.landTime, TIP_OVER_S);
+    if (lying > 0 && this.rest !== undefined) {
+      const tailToCg = new Vector3(cg - this.model.extent.length, 0, 0);
+      const tail = at.clone().sub(tailToCg.clone().applyQuaternion(drawn));
+      tail.lerp(
+        new Vector3(this.rest.tail.x, this.rest.tail.y, this.groundZ + this.lyingAxisHeight),
+        lying,
+      );
+      drawn.slerp(this.lyingQ, lying);
+      at.copy(tail).add(tailToCg.applyQuaternion(drawn));
+    }
+    this.place(at, drawn, cg);
     this.flown.geometry.setDrawRange(0, this.currentIndex + 1);
     this.flameHolder.position.set(-cg, 0, 0);
     this.track.geometry.setDrawRange(0, this.currentIndex + 1);
-    const t = this.currentTime;
-    const samples = this.result.samples;
     const fraction = this.thrustMax > 0 ? displayThrust(samples, t) / this.thrustMax : 0;
     for (const f of this.flames) f.setThrust(fraction, t);
     const onPad = t < this.liftoffTime;
@@ -844,42 +960,86 @@ export class FlightScene {
     dp.setXYZ(1, position.x, position.y, this.groundZ);
     dp.needsUpdate = true;
     this.drop.geometry.computeBoundingSphere();
+    // Within 2 m of the ground the drop line says nothing and runs through the pad.
+    this.drop.visible = position.z - this.groundZ > 2;
     // Canopies: above the rocket, against the air-relative velocity (blended stored velocity
     // minus the ground wind input), inflating over 0.6 s after the stored deployment.
-    const v = displayVelocity(samples, t);
-    const air = new Vector3(v.x - this.wind.x, v.y - this.wind.y, v.z - this.wind.z);
-    const up = air.lengthSq() > 1e-6 ? air.negate().normalize() : new Vector3(0, 0, 1);
-    if (up.z < 0.2) up.z = 0.2;
-    up.normalize();
     const along = new ThreeQuaternion().setFromUnitVectors(new Vector3(0, 1, 0), up);
+    // After the landing the canopy or streamer lies on the ground beyond the rocket's nose.
+    const flat = new Vector3(this.rest?.fall.x ?? 1, this.rest?.fall.y ?? 0, 0);
     this.canopies.forEach((g, i) => {
       const c = this.canopyStates[i];
       if (c === undefined) return;
       const s = inflation(t - c.deployedAt);
-      g.visible = s > 0 && bracket(samples, t).a.phase !== 'landed';
+      g.visible = s > 0;
       if (!g.visible) return;
+      const collapse = this.landTime === undefined ? 0 : blend(t, this.landTime, CANOPY_COLLAPSE_S);
+      const ribbon = this.ribbons.get(i);
+      if (ribbon !== undefined) {
+        // The strip from the cord's end, unfurling over 0.5 s; after the landing it lies flat
+        // on the ground beyond the rocket.
+        const cordEnd = at.clone().addScaledVector(up, 1.5 * this.rocketLength);
+        g.position.copy(cordEnd);
+        g.quaternion.copy(along);
+        if (collapse > 0) {
+          const ground = at.clone().addScaledVector(flat, 1.5 * this.rocketLength);
+          ground.z = this.groundZ + 0.01;
+          g.position.lerp(ground, collapse);
+          g.quaternion.slerp(
+            new ThreeQuaternion().setFromUnitVectors(new Vector3(0, 1, 0), flat),
+            collapse,
+          );
+        }
+        ribbon.update(t, (t - c.deployedAt) / 0.5, collapse);
+        const cord = this.cords[i];
+        if (cord !== undefined) {
+          const cp = cord.geometry.getAttribute('position');
+          cp.setXYZ(0, at.x, at.y, at.z);
+          cp.setXYZ(1, g.position.x, g.position.y, g.position.z);
+          cp.needsUpdate = true;
+          cord.geometry.computeBoundingSphere();
+        }
+        return;
+      }
       // The confluence hangs a shock cord's length (1.5 rocket lengths) above the rocket; the
       // canopy a line length above that.
       const cordLength = 1.5 * this.rocketLength;
       const lift = cordLength + this.lineLength(c);
       // Several canopies side by side.
       const offset = (i - (this.canopies.length - 1) / 2) * 0.6 * c.diameter;
-      g.position.set(position.x, position.y, position.z).addScaledVector(up, lift);
+      g.position.copy(at).addScaledVector(up, lift);
       g.position.x += offset;
       g.quaternion.copy(along);
       // Breathing: a full canopy pulses slightly (drawing only).
       const breathe = 1 + 0.025 * Math.sin((2 * Math.PI * t) / 1.4 + i);
       const dome = g.getObjectByName('canopy-dome');
       dome?.scale.set(s * breathe, 0.5 + 0.5 * s, s * breathe);
+      if (collapse > 0) {
+        // After the landing the canopy settles on the ground beyond the rocket, flattening.
+        const ground = at
+          .clone()
+          .addScaledVector(flat, cordLength + 0.6 * this.lineLength(c) + 0.5 * c.diameter);
+        ground.z = this.groundZ + 0.02;
+        g.position.lerp(ground, collapse);
+        g.quaternion.slerp(
+          new ThreeQuaternion().setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(0, 0, 1)),
+          collapse,
+        );
+        dome?.scale.set(1 + 0.3 * collapse, 1 - 0.92 * collapse, 1 + 0.3 * collapse);
+        const lines = g.getObjectByName('shroud-lines');
+        if (lines !== undefined) lines.visible = collapse < 0.5;
+      } else {
+        const lines = g.getObjectByName('shroud-lines');
+        if (lines !== undefined) lines.visible = true;
+      }
       const cord = this.cords[i];
       if (cord !== undefined) {
         const cp = cord.geometry.getAttribute('position');
-        cp.setXYZ(0, position.x, position.y, position.z);
-        const conf = new Vector3(position.x, position.y, position.z).addScaledVector(
-          up,
-          cordLength,
-        );
+        cp.setXYZ(0, at.x, at.y, at.z);
+        const conf = at.clone().addScaledVector(up, cordLength);
         conf.x += offset;
+        // After the landing the cord runs to the collapsed canopy on the ground.
+        if (collapse > 0) conf.lerp(g.position, collapse);
         cp.setXYZ(1, conf.x, conf.y, conf.z);
         cp.needsUpdate = true;
         cord.geometry.computeBoundingSphere();

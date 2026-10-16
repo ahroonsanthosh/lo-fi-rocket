@@ -15,6 +15,7 @@ import {
 import type { FlightResult } from '@lo-fi-rocket/physics';
 import {
   buildLandingObjects,
+  AFTER_LANDING_S,
   CAMERA_MODES,
   EVENT_LABELS,
   eventMarkers,
@@ -224,7 +225,12 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
   // A different result: reset the clock.
   useEffect(() => {
     const last = shown.result.samples[shown.result.samples.length - 1];
-    controllerRef.current = new ReplayController(last?.time ?? 0, speed);
+    // A landed flight runs a few seconds on, so the rocket can be seen settling (D-3D-7).
+    const landed = shown.result.events.some((e) => e.kind === 'landing');
+    controllerRef.current = new ReplayController(
+      (last?.time ?? 0) + (landed ? AFTER_LANDING_S : 0),
+      speed,
+    );
     setTime(0);
     setPlaying(false);
     setReadouts(readoutsNearest(shown.result, 0));
@@ -250,15 +256,18 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
           component: c.component,
           position: c.position,
           name: c.name,
+          // A pod set's part is drawn round the axis (issue #96).
+          ...(c.pod === undefined ? {} : { instances: c.pod }),
         })),
         rail: design.launch.rail,
         wind: { speed: wind.speed, from: wind.from },
         format: appFormatter(props.units),
         // A streamer has no canopy to draw yet (plan 0073): diameter 0 is not drawn.
-        recovery: design.recovery.map((r) => ({
-          name: r.name,
-          diameter: r.kind === 'streamer' ? 0 : r.diameter,
-        })),
+        recovery: design.recovery.map((r) =>
+          r.kind === 'streamer'
+            ? { name: r.name, diameter: 0, streamer: { length: r.length, width: r.width } }
+            : { name: r.name, diameter: r.diameter },
+        ),
         ...motorInputs(design),
         scheme: paint,
         extraGroundPoints:
@@ -440,7 +449,11 @@ export function FlightViewer(outer: FlightViewerProps): JSX.Element {
           <div className="viewer-hud" style={HUD} aria-hidden="true">
             <div>Altitude: {formatQuantity(r.sample.altitude, 'm', u)}</div>
             <div>Distance from pad: {formatQuantity(r.horizontalDistance, 'm', u)}</div>
-            <div>Velocity: {formatQuantity(r.sample.speed, 'velocity', u)}</div>
+            {/* The landed step stores the speed at touchdown, not the rocket lying still. */}
+            <div>
+              {r.sample.phase === 'landed' ? 'Landing speed' : 'Velocity'}:{' '}
+              {formatQuantity(r.sample.speed, 'velocity', u)}
+            </div>
             <div>
               t = {stepTime} ({r.sample.phase})
             </div>

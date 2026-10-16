@@ -1,7 +1,7 @@
 /** Label merging for issue #29, by hand and as a property. */
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { mergeLabels } from './labels.js';
+import { labelShown, mergeLabels } from './labels.js';
 
 describe('mergeLabels', () => {
   it('folds the stacked pad labels into the first and keeps a distant one', () => {
@@ -49,5 +49,15 @@ describe('mergeLabels', () => {
         },
       ),
     );
+  });
+});
+
+describe('labelShown', () => {
+  it('shows an event label from its event on, and other labels always', () => {
+    expect(labelShown(29.874, 0)).toBe(false);
+    expect(labelShown(29.874, 29.874)).toBe(true);
+    // The stored event step's float64 time sum: within 1e-9 s counts as reached.
+    expect(labelShown(1.65, 1.65 - 5e-10)).toBe(true);
+    expect(labelShown(undefined, 0)).toBe(true);
   });
 });
