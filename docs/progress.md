@@ -190,6 +190,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **What.** A "Build with Claude" button in the top bar: copy the prompt, ask Claude in any Claude app on your own plan, paste the answer back; the site builds the design and flies it. The box also takes a design file's text or a dropped file.
   - **Cost and security.** $0: no key, no server, nothing uploaded. The answer is size-checked, parsed and validated against the `build_and_fly` schema before anything is built; the MCP server and the box share that schema and builder (`packages/mcp/src/spec.ts`, `paste.ts`).
   - **Found.** zod 4 probes for eval, which the site's policy forbids; it now runs without (`jitless`).
+- Accuracy to the limit (plan 0083, D-123):
+  - **CP proven to 10⁻⁸.** Every component CP of R1 to R5 equals its closed form (eq. 3.34 fins; eq. 3.28 noses, ogives by an independent integration). The 0.016 to 0.034 % against OpenRocket is all OpenRocket's numerical fin and nose integration (probe in `reference/rockets/cp-probe/`; OpenRocket issue 7).
+  - **Base drag stays the DATCOM's (D-123).** The DATCOM says fins and low Reynolds numbers lower the base drag; Niskanen's higher value would fit the flights against the source.
+  - **Next:** part C (atmosphere, convergence, R2 to R5 masses to 0.01 %), then the flight residual (needs Hoerner chapter 8).
 
 ## In progress
 

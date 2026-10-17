@@ -1,0 +1,164 @@
+r1-three-fin-conical M=0.30 aoa=0.000000 refArea=0.001963495 refLen=0.050000000
+  Launch Lug(LaunchLug)        CNa=0.000000000 CPx=0.000000000
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.066666667
+  Stage(AxialStage)            CNa=17.450582104 CPx=0.487148730
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=15.450582104 CPx=0.541578014
+  Rocket(Rocket)               CNa=17.450582104 CPx=0.487148730
+  TOTAL CNa=17.450582104 CPx=0.487148730
+r1-three-fin-conical M=0.01 aoa=0.000000 refArea=0.001963495 refLen=0.050000000
+  Launch Lug(LaunchLug)        CNa=0.000000000 CPx=0.000000000
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.066666667
+  Stage(AxialStage)            CNa=17.216222264 CPx=0.486407799
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=15.216222264 CPx=0.541578014
+  Rocket(Rocket)               CNa=17.216222264 CPx=0.486407799
+  TOTAL CNa=17.216222264 CPx=0.486407799
+r1-three-fin-conical M=0.30 aoa=0.000001 refArea=0.001963495 refLen=0.050000000
+  Launch Lug(LaunchLug)        CNa=0.000000000 CPx=0.000000000
+  Nose Cone(NoseCone)          CNa=2.000001401 CPx=0.066666667
+  Stage(AxialStage)            CNa=17.450597510 CPx=0.487148586
+  Body Tube(BodyTube)          CNa=0.000014006 CPx=0.350000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=15.450582104 CPx=0.541578014
+  Rocket(Rocket)               CNa=17.450597510 CPx=0.487148586
+  TOTAL CNa=17.450597510 CPx=0.487148586
+r1-three-fin-conical M=0.30 aoa=0.017453 refArea=0.001963495 refLen=0.050000000
+  Launch Lug(LaunchLug)        CNa=0.000000000 CPx=0.000000000
+  Nose Cone(NoseCone)          CNa=2.024340425 CPx=0.066666667
+  Stage(AxialStage)            CNa=17.719342153 CPx=0.484679307
+  Body Tube(BodyTube)          CNa=0.244419625 CPx=0.350000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=15.450582104 CPx=0.541578014
+  Rocket(Rocket)               CNa=17.719342153 CPx=0.484679307
+  TOTAL CNa=17.719342153 CPx=0.484679307
+r2-ogive-boattail M=0.30 aoa=0.000000 refArea=0.002290221 refLen=0.054000000
+  Rocket(Rocket)               CNa=11.687249901 CPx=0.571036938
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Transition(Transition)       CNa=-1.111111111 CPx=0.773333333
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=10.798361012 CPx=0.684787234
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Stage(AxialStage)            CNa=11.687249901 CPx=0.571036938
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.069265443
+  TOTAL CNa=11.687249901 CPx=0.571036938
+r2-ogive-boattail M=0.01 aoa=0.000000 refArea=0.002290221 refLen=0.054000000
+  Rocket(Rocket)               CNa=11.542081794 CPx=0.569606267
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Transition(Transition)       CNa=-1.111111111 CPx=0.773333333
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=10.653192905 CPx=0.684787234
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Stage(AxialStage)            CNa=11.542081794 CPx=0.569606267
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.069265443
+  TOTAL CNa=11.542081794 CPx=0.569606267
+r2-ogive-boattail M=0.30 aoa=0.000001 refArea=0.002290221 refLen=0.054000000
+  Rocket(Rocket)               CNa=11.687269154 CPx=0.571036689
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Transition(Transition)       CNa=-1.111110030 CPx=0.773333333
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=10.798361012 CPx=0.684787234
+  Body Tube(BodyTube)          CNa=0.000015562 CPx=0.450000000
+  Stage(AxialStage)            CNa=11.687269154 CPx=0.571036689
+  Nose Cone(NoseCone)          CNa=2.000002610 CPx=0.069265474
+  TOTAL CNa=11.687269154 CPx=0.571036689
+r2-ogive-boattail M=0.30 aoa=0.017453 refArea=0.002290221 refLen=0.054000000
+  Rocket(Rocket)               CNa=12.023195813 CPx=0.566816199
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Transition(Transition)       CNa=-1.092195162 CPx=0.773333333
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=10.798361012 CPx=0.684787234
+  Body Tube(BodyTube)          CNa=0.271577361 CPx=0.450000000
+  Stage(AxialStage)            CNa=12.023195813 CPx=0.566816199
+  Nose Cone(NoseCone)          CNa=2.045452603 CPx=0.069805330
+  TOTAL CNa=12.023195813 CPx=0.566816199
+r3-minimum-diameter-24 M=0.30 aoa=0.000000 refArea=0.000506707 refLen=0.025400000
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Rocket(Rocket)               CNa=14.579137126 CPx=0.449111495
+  Stage(AxialStage)            CNa=14.579137126 CPx=0.449111495
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.050001378
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=12.579137126 CPx=0.512567376
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  TOTAL CNa=14.579137126 CPx=0.449111495
+r3-minimum-diameter-24 M=0.01 aoa=0.000000 refArea=0.000506707 refLen=0.025400000
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Rocket(Rocket)               CNa=14.441020314 CPx=0.448504590
+  Stage(AxialStage)            CNa=14.441020314 CPx=0.448504590
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.050001378
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=12.441020314 CPx=0.512567376
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  TOTAL CNa=14.441020314 CPx=0.448504590
+r3-minimum-diameter-24 M=0.30 aoa=0.000001 refArea=0.000506707 refLen=0.025400000
+  Body Tube(BodyTube)          CNa=0.000024813 CPx=0.325000000
+  Rocket(Rocket)               CNa=14.579165529 CPx=0.449111188
+  Stage(AxialStage)            CNa=14.579165529 CPx=0.449111188
+  Nose Cone(NoseCone)          CNa=2.000003591 CPx=0.050001400
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=12.579137126 CPx=0.512567376
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  TOTAL CNa=14.579165529 CPx=0.449111188
+r3-minimum-diameter-24 M=0.30 aoa=0.017453 refArea=0.000506707 refLen=0.025400000
+  Body Tube(BodyTube)          CNa=0.433026894 CPx=0.325000000
+  Rocket(Rocket)               CNa=15.074724672 CPx=0.443939780
+  Stage(AxialStage)            CNa=15.074724672 CPx=0.443939780
+  Nose Cone(NoseCone)          CNa=2.062560652 CPx=0.050365023
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=12.579137126 CPx=0.512567376
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  TOTAL CNa=15.074724672 CPx=0.443939780
+r4-scratch-38mm M=0.30 aoa=0.000000 refArea=0.003421194 refLen=0.066000000
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=13.193718355 CPx=0.916223404
+  Rocket(Rocket)               CNa=15.193718355 CPx=0.807795264
+  Stage(AxialStage)            CNa=15.193718355 CPx=0.807795264
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.092510090
+  TOTAL CNa=15.193718355 CPx=0.807795264
+r4-scratch-38mm M=0.01 aoa=0.000000 refArea=0.003421194 refLen=0.066000000
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=13.045705483 CPx=0.916223404
+  Rocket(Rocket)               CNa=15.045705483 CPx=0.806728597
+  Stage(AxialStage)            CNa=15.045705483 CPx=0.806728597
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.092510090
+  TOTAL CNa=15.045705483 CPx=0.806728597
+r4-scratch-38mm M=0.30 aoa=0.000001 refArea=0.003421194 refLen=0.066000000
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.000016977 CPx=0.600000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=13.193718355 CPx=0.916223404
+  Rocket(Rocket)               CNa=15.193738176 CPx=0.807794904
+  Stage(AxialStage)            CNa=15.193738176 CPx=0.807794904
+  Nose Cone(NoseCone)          CNa=2.000002845 CPx=0.092510136
+  TOTAL CNa=15.193738176 CPx=0.807794904
+r4-scratch-38mm M=0.30 aoa=0.017453 refArea=0.003421194 refLen=0.066000000
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.296266212 CPx=0.600000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=13.193718355 CPx=0.916223404
+  Rocket(Rocket)               CNa=15.539527782 CPx=0.801656030
+  Stage(AxialStage)            CNa=15.539527782 CPx=0.801656030
+  Nose Cone(NoseCone)          CNa=2.049543215 CPx=0.093290485
+  TOTAL CNa=15.539527782 CPx=0.801656030
+r5-transonic-min-dia-29 M=0.30 aoa=0.000000 refArea=0.000804248 refLen=0.032000000
+  Stage(AxialStage)            CNa=10.222509710 CPx=0.526893832
+  Rocket(Rocket)               CNa=10.222509710 CPx=0.526893832
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.065001792
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=8.222509710 CPx=0.639242021
+  TOTAL CNa=10.222509710 CPx=0.526893832
+r5-transonic-min-dia-29 M=0.01 aoa=0.000000 refArea=0.000804248 refLen=0.032000000
+  Stage(AxialStage)            CNa=10.132227936 CPx=0.525892769
+  Rocket(Rocket)               CNa=10.132227936 CPx=0.525892769
+  Nose Cone(NoseCone)          CNa=2.000000000 CPx=0.065001792
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.000000000 CPx=0.000000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=8.132227936 CPx=0.639242021
+  TOTAL CNa=10.132227936 CPx=0.525892769
+r5-transonic-min-dia-29 M=0.30 aoa=0.000001 refArea=0.000804248 refLen=0.032000000
+  Stage(AxialStage)            CNa=10.222537488 CPx=0.526893383
+  Rocket(Rocket)               CNa=10.222537488 CPx=0.526893383
+  Nose Cone(NoseCone)          CNa=2.000003705 CPx=0.065001820
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.000024072 CPx=0.405000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=8.222509710 CPx=0.639242021
+  TOTAL CNa=10.222537488 CPx=0.526893383
+r5-transonic-min-dia-29 M=0.30 aoa=0.017453 refArea=0.000804248 refLen=0.032000000
+  Stage(AxialStage)            CNa=10.707163950 CPx=0.519420346
+  Rocket(Rocket)               CNa=10.707163950 CPx=0.519420346
+  Nose Cone(NoseCone)          CNa=2.064558010 CPx=0.065489126
+  Rail Button(RailButton)      CNa=0.000000000 CPx=0.000000000
+  Body Tube(BodyTube)          CNa=0.420096230 CPx=0.405000000
+  Trapezoidal Fin Set(TrapezoidFinSet) CNa=8.222509710 CPx=0.639242021
+  TOTAL CNa=10.707163950 CPx=0.519420346

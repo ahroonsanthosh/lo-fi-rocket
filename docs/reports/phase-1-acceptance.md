@@ -34,7 +34,7 @@ The displayed figures are lower by design (D-016): Niskanen eq. (3.54) reduces t
 
 ### Explanation of the residual CP differences
 
-The 0.016 to 0.034 % residuals are consistent with OpenRocket evaluating the body terms by a numerical integration slightly different from the closed forms (hand-checks.md). They are two orders of magnitude inside the 2 % tolerance and were not investigated further; no constant was tuned (CLAUDE.md 7.4). R2, with the conical boat tail (C_Nα = −1.11), has the largest residual.
+The 0.016 to 0.034 % residuals are OpenRocket's (plan 0083, 2026-10-17). Its component analysis (`reference/rockets/cp-probe/`) gives every normal force slope exactly, but places each fin set's CP 0.09 to 0.21 mm forward of the trapezoid's exact value (Niskanen eq. 3.34) and each curved nose's 3 × 10⁻⁵ aft of its exact value: a numerical integration. lo-fi-rocket's component CPs equal the closed forms within 10⁻⁸ (`cp-closed-form.reference.test.ts`; the ogives by an independent integration). Substituting the exact fin CP into OpenRocket's own breakdown reproduces lo-fi-rocket's totals to six digits. Recorded as OpenRocket issue 7 (`docs/reports/openrocket-issues.md`). No constant was tuned.
 
 ## Verification against the sources
 

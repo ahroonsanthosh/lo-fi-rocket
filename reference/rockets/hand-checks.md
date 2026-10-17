@@ -48,11 +48,24 @@ Equations from Niskanen (2009), *Development of an Open Source model rocket simu
 | 0.85 (bracket at its minimum, the most forward CP) | 13.1330 | 15.1330 | 0.478890 | 1.8374 |
 | OpenRocket 24.12 design window (`values.csv`) | | | **0.487149** | 2.0025 |
 
-**Result.** OpenRocket's CP agrees with the hand calculation that uses the unreduced three-fin factor 1.50 to within 0.016 % (0.08 mm), far inside the 2 % reporting threshold. The 0.016 % residual is consistent with OpenRocket evaluating the cone and fin terms slightly differently from the closed forms above (for example a numerically integrated nose cone); it was not investigated further.
+**Result.** OpenRocket's CP agrees with the hand calculation that uses the unreduced three-fin factor 1.50 to within 0.016 % (0.08 mm), far inside the 2 % reporting threshold. The residual is all in the fin CP (plan 0083): OpenRocket's component analysis gives the cone's CP (0.066667 m) and the fin set's normal force (15.450582) exactly, and the fin CP as 0.541578 m against eq. (3.34)'s 0.541667 m. With 0.541667 m, OpenRocket's own breakdown gives 0.487227 m, the hand value. R2 to R5 below.
 
 **Finding for Phase 1 (decided).** Niskanen's eq. (3.54) makes the three-fin normal force depend on roll angle, dropping to 85 % of the Barrowman value at the worst roll angle. OpenRocket 24.12's CP is the unreduced value: the harness probe (`settings.md`) shows the same CP at every roll angle from 0° to 120° for all five rockets, so OpenRocket applies no roll-angle dependence at all. The reduced value puts R1's CP 1.7 % further forward and lowers its stability from 2.00 to 1.84 calibers. The owner's decision (Prompt 1, Part B2, item 2): the app displays the Niskanen worst-case (reduced) figure because overstating stability is the unsafe direction, and provides an OpenRocket-equivalent mode without the reduction for reference comparisons only; the Phase 1 CP acceptance test uses that mode. Recorded in `docs/decisions.md` and `docs/known-limitations.md`.
 
+## Centre of pressure of R2 to R5, component by component (plan 0083)
+
+The fin CP by eq. (3.34) and the nose CP by eq. (3.28) with the closed-form volume (cone 2L/3, Von Kármán L/2) or, for the tangent ogives, the volume by Simpson's rule on 200 000 intervals in a script independent of the simulator. OpenRocket from its component analysis at Mach 0.3 (`cp-probe/`).
+
+| Rocket | Fin: c_r, c_t, x_t, root LE (m) | Fin CP by hand | OpenRocket | Nose CP by hand | OpenRocket |
+| --- | --- | --- | --- | --- | --- |
+| R2 | 0.12, 0.04, 0.08, 0.63 | 0.685000 | 0.684787 | 0.069263381 (ogive, L 0.15, R 0.027) | 0.069265443 |
+| R3 | 0.07, 0.03, 0.045, 0.48 | 0.512667 | 0.512567 | 0.050000 (Von Kármán, L 0.1) | 0.050001 |
+| R4 | 0.15, 0.06, 0.09, 0.85 | 0.916429 | 0.916223 | 0.092507347 (ogive, L 0.2, R 0.033) | 0.092510090 |
+| R5 | 0.075, 0.025, 0.05, 0.605 | 0.639375 | 0.639242 | 0.065000 (Von Kármán, L 0.13) | 0.065002 |
+
+R2's boat tail: C_Nα −1.111111 and CP 0.773333 m in both. The simulator's component CPs equal the hand values within 10⁻⁸ (`packages/physics/src/stability/cp-closed-form.reference.test.ts`); its totals differ from OpenRocket's only by OpenRocket's fin and nose integration.
+
 ## Checks not done here
 
-- R2 to R5 were not hand-checked. Their component masses are in `components/`, computed by OpenRocket from the same densities, and can be checked the same way when needed; the ogive, Haack and transition volumes need the integrals in Niskanen's Appendix A rather than closed forms.
+- R2 to R5's masses were not hand-checked (their CPs are, above). Their component masses are in `components/`, computed by OpenRocket from the same densities, and can be checked the same way when needed; the ogive, Haack and transition volumes need the integrals in Niskanen's Appendix A rather than closed forms.
 - No flight values were hand-checked; Phase 2 compares them against the simulator.
