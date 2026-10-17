@@ -155,10 +155,7 @@ export function BuildWithClaude({ open, onClose, onBuilt }: BuildWithClaudeProps
           <p>
             <strong>Ask Claude.</strong> Paste the prompt into any Claude app (claude.ai, the
             desktop or phone app, Claude Code), then describe your rocket, or attach a photo, a
-            parts list or a kit page.{' '}
-            <a href="https://claude.ai/new" target="_blank" rel="noopener noreferrer">
-              Open claude.ai
-            </a>
+            parts list or a kit page.
           </p>
         </li>
         <li>
