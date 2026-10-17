@@ -80,6 +80,24 @@ Status: draft, growing as the validation campaign runs (2026-10-14).
 
 **Why it matters.** A predicted coast that is too long leads to an ejection delay that fires after the real apogee. The fin Reynolds number is a small change with a published basis. Measured rail button drag would settle the largest of the differences.
 
+## 7. Fin and nose CPs computed numerically, slightly off the closed forms
+
+**Reproduce.** The five reference rockets, OpenRocket's component analysis at Mach 0.3 and zero angle of attack (`CpProbe.java`, `FinCpProbe.java`, `reference/rockets/cp-probe/`).
+
+| Rocket | Fin CP, thesis eq. (3.34) | OpenRocket | Nose CP, closed form | OpenRocket |
+| ------ | ------------------------- | ---------- | -------------------- | ---------- |
+| R1     | 0.541667                  | 0.541578   | 0.066667 (cone)      | 0.066667   |
+| R2     | 0.685000                  | 0.684787   | 0.069263 (ogive)     | 0.069265   |
+| R3     | 0.512667                  | 0.512567   | 0.050000 (Haack)     | 0.050001   |
+| R4     | 0.916429                  | 0.916223   | 0.092507 (ogive)     | 0.092510   |
+| R5     | 0.639375                  | 0.639242   | 0.065000 (Haack)     | 0.065002   |
+
+**OpenRocket.** Every fin set's CP is 0.09 to 0.21 mm forward of the trapezoid's exact value, and every curved nose cone's 3 × 10⁻⁵ of its CP aft of the exact value; the cone's is exact. Every normal force slope is exact to nine digits. The pattern is that of a numerical integration over the fin planform and the nose profile.
+
+**Thesis.** Eq. (3.34) is exact for a trapezoid. Eq. (3.28) is exact for any profile, given its volume (a closed form for the cone and the Von Kármán, an integral for the ogive).
+
+**Why it matters.** Little: the rockets' CPs are 0.016 to 0.034 % forward, in the conservative direction. It is the whole of the difference between OpenRocket's CPs and lo-fi-rocket's, which use the closed forms (`packages/physics/src/stability/cp-closed-form.reference.test.ts`).
+
 ## Not issues, recorded for completeness
 
 - **Rail buttons.** OpenRocket 24.12's drag is that of a button partly sheltered by a turbulent boundary layer; Niskanen's rail pin gives 6 to 10 times more. OpenRocket's is a newer model, not a departure from physics. lo-fi-rocket reproduces it in its comparison mode (D-108).
