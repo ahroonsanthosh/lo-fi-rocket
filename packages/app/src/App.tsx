@@ -18,9 +18,11 @@ import {
 } from '@lo-fi-rocket/ui';
 import { ComponentEditor } from './components/ComponentEditor.js';
 import { AsBuiltEditor } from './components/AsBuiltEditor.js';
+import { BuildWithClaude } from './components/BuildWithClaude.js';
 import { Header } from './components/Header.js';
 import { FlightPanel, type FlightState } from './components/FlightPanel.js';
 import { FlightPlots } from './components/FlightPlots.js';
+import type { PasteResult } from '@lo-fi-rocket/mcp/paste';
 import type { DispersionState } from './components/FlightViewer.js';
 import type { FileNotice } from './components/FilesMenu.js';
 import { LaunchEditor } from './components/LaunchEditor.js';
@@ -51,7 +53,7 @@ import {
   splitMessage,
 } from './layout/warnings.js';
 import { stabilityProps } from './layout/stability.js';
-import { emptyStepOf } from './layout/steps.js';
+import { emptyStepOf, FLIGHT_TARGET } from './layout/steps.js';
 import { Home } from './layout/Home.js';
 import { pageOf } from './layout/pages.js';
 import { EmptyStep, InFlightChecks, Page } from './layout/panels.js';
@@ -92,6 +94,7 @@ export function App(props: AppProps): JSX.Element {
     storage === undefined ? 'auto' : loadTheme(storage),
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [claudeOpen, setClaudeOpen] = useState(false);
   const [stageMode, setStageMode] = useState<StageMode>('rocket');
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(new Set());
   // Loaded once, on mount: a design from a link (plan 0063), else the stored design (or the
@@ -356,6 +359,28 @@ export function App(props: AppProps): JSX.Element {
     }
   })();
 
+  // Plan 0082: a design built from Claude's answer (or a pasted file) replaces the current one and
+  // is flown at once; the same design object is flown and kept, so the flight is not stale.
+  const flyPasted = async (built: PasteResult): Promise<void> => {
+    dispatch({ type: 'replace-design', design: built.design });
+    dispatch({ type: 'select', id: FLIGHT_TARGET });
+    const notFlown = built.notFlown === undefined ? [] : [`Not flown yet: ${built.notFlown}.`];
+    setFileNotices((list) => [
+      ...list,
+      { kind: 'note', text: [...built.notices, ...notFlown].join(' '), id: list.length },
+    ]);
+    if (built.notFlown === undefined) {
+      const outcome = await services.runner.run(built.design);
+      if (outcome.ok) {
+        setFlight({ design: built.design, result: outcome.result, millis: outcome.millis });
+        setStageMode('replay');
+      } else {
+        setSimError(outcome.message);
+      }
+    }
+    setClaudeOpen(false);
+  };
+
   return (
     <StoreContext.Provider value={store}>
       <ServicesContext.Provider value={services}>
@@ -367,6 +392,9 @@ export function App(props: AppProps): JSX.Element {
               warnings={warnings}
               onSettings={() => {
                 setSettingsOpen(true);
+              }}
+              onClaude={() => {
+                setClaudeOpen(true);
               }}
               onNotice={(n) => {
                 setFileNotices((list) => [...list, { ...n, id: list.length }]);
@@ -397,6 +425,13 @@ export function App(props: AppProps): JSX.Element {
             )
           }
           main={content}
+        />
+        <BuildWithClaude
+          open={claudeOpen}
+          onClose={() => {
+            setClaudeOpen(false);
+          }}
+          onBuilt={flyPasted}
         />
         <Dialog
           open={settingsOpen}

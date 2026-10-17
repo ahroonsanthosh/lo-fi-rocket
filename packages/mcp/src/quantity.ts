@@ -112,6 +112,16 @@ export const UNITS: Readonly<Record<Dimension, Readonly<Record<string, (x: numbe
   number: {},
 };
 
+/** The units accepted for each dimension, the SI unit first (the about tool and the paste prompt). */
+export function acceptedUnits(): Record<string, string[]> {
+  return Object.fromEntries(
+    Object.entries(UNITS).map(([d, u]) => [
+      d,
+      [SI_UNIT[d as Dimension], ...Object.keys(u)].filter((x) => x !== ''),
+    ]),
+  );
+}
+
 /** A quantity input that cannot be read, with what to write instead. */
 export class QuantityError extends Error {
   constructor(field: string, message: string) {

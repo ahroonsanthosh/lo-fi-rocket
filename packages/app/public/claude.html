@@ -15,31 +15,55 @@
       <p><a href="./">← Back to the simulator</a></p>
       <h1>Use Lo-Fi Rocket with Claude</h1>
       <p>
-        Paste your rocket's specification, a kit's parts list, a photo, or an OpenRocket or RASAero
-        II file into the chat. Claude builds the design from what you gave and flies it at once,
-        without a questionnaire first. The simulator computes the stability, the flight, the landing
-        and the Monte Carlo spread with the same sourced physics as this site. Everything you did
-        not give, and every figure Claude had to estimate, is listed with the results, together with
-        a confidence rating, so you can correct the ones that matter.
+        Describe your rocket to Claude, with its specification, a kit's parts list, a photo, or an
+        OpenRocket or RASAero II file. Claude turns it into a design and the simulator flies it,
+        with the same sourced physics as the rest of this site. Everything you did not give, and
+        every figure Claude had to estimate, is listed with the results, together with a confidence
+        rating, so you can correct the ones that matter.
       </p>
+
+      <h2>On this site, with nothing to download</h2>
+      <ol>
+        <li>
+          In <a href="./">the simulator</a>, press <strong>Build with Claude</strong> in the top bar
+          and copy the prompt.
+        </li>
+        <li>
+          Paste it into any Claude app (claude.ai, the desktop or phone app, Claude Code), then
+          describe your rocket or attach a photo, a parts list or a file.
+        </li>
+        <li>
+          Paste Claude's answer back into the box. The site checks it, builds the design and flies
+          it at once. If something in the answer does not fit, the box says what, in a sentence you
+          can give back to Claude.
+        </li>
+      </ol>
 
       <h2>What it costs, and what it can reach</h2>
       <ul>
         <li>
-          It runs on your own computer and uses your own Claude plan. Nothing is hosted, and there
-          is no account and no charge from this project.
+          Claude runs on your own Claude plan, in your own Claude app. This project has no account,
+          no key and no server, and charges nothing.
         </li>
         <li>
-          The simulator reads and writes no files and runs no commands. Designs come in as content
-          you give Claude, and leave as a file Claude gives back to you.
+          Claude's answer, and any file you paste or drop, is read in your browser. Nothing is
+          uploaded.
         </li>
         <li>
-          Its only network use is the ThrustCurve.org motor catalogue, and only when you name or ask
-          for a motor that is not in the library. It only reads from it.
+          The only network use is the ThrustCurve.org motor catalogue, and only when the design
+          names a motor that is not in the library. It only reads from it.
         </li>
       </ul>
 
-      <h2>Claude Desktop</h2>
+      <h2>Or let Claude drive the simulator</h2>
+      <p>
+        With the download, Claude calls the simulator itself: it builds, changes one part, flies
+        again and runs the Monte Carlo spread, without copying and pasting. It runs on your own
+        computer, reads and writes no files, and runs no commands. Designs come in as content you
+        give Claude, and leave as a file or a link Claude gives back to you.
+      </p>
+
+      <h3>Claude Desktop</h3>
       <ol>
         <li>Download <a href="lo-fi-rocket.mcpb" download>lo-fi-rocket.mcpb</a>, the extension.</li>
         <li>
@@ -52,7 +76,7 @@
         </li>
       </ol>
 
-      <h2>Claude Code</h2>
+      <h3>Claude Code</h3>
       <ol>
         <li>You need Node.js 18 or later.</li>
         <li>
@@ -65,7 +89,7 @@
         </li>
       </ol>
 
-      <h2>Check the download</h2>
+      <h3>Check the download</h3>
       <p>
         The SHA-256 of each file is in <a href="SHA256SUMS">SHA256SUMS</a>. Compare it with
         <code>shasum -a 256 lo-fi-rocket-mcp.mjs</code> (macOS, Linux) or
@@ -90,9 +114,9 @@
           manufacturer's rules.
         </li>
         <li>
-          Designs last only while Claude is connected. Ask Claude for a link to the design: it opens
-          here with one click, and this site keeps it. Claude can also export the design as a file,
-          which this site opens with File &gt; Open.
+          With the download, designs last only while Claude is connected. Ask Claude for a link to
+          the design: it opens here with one click, and this site keeps it. Claude can also export
+          the design as a file, which this site opens with File &gt; Open.
         </li>
       </ul>
     </main>

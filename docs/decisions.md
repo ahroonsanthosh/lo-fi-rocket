@@ -1309,3 +1309,24 @@ Each entry: ID, date, decision, why, alternatives considered, consequences. Entr
 - **Consequences:**
   - The replay is 4 s longer when the flight lands.
   - No physics change; no golden output changes.
+
+## D-122 (2026-10-17): Build with Claude on the site: a paste box, with nothing to download and nothing to pay
+
+- **Decision (plan 0082, the owner's choice "Paste box now").**
+  - **The button.** "Build with Claude" sits in the top bar. Its dialog has three steps: copy the prompt, ask Claude in any Claude app, paste the answer back. The site checks the answer, builds the design, replaces the current one and flies it at once.
+  - **One schema, one builder.** The `build_and_fly` schema and its mapping moved from `server.ts` to `packages/mcp/src/spec.ts`. The server and the paste box (`packages/mcp/src/paste.ts`, exported as `@lo-fi-rocket/mcp/paste`) both call `toBuildSpec` and `Session.build`, so a pasted answer is built exactly as the tool call is. A test builds the same answer both ways and compares the designs.
+  - **The prompt** is generated from the same code: the rules of the tool, every field with its meaning and units (`fieldReference`, `acceptedUnits`), an example that the tests build, and the JSON Schema of the answer (`z.toJSONSchema` of the schema that checks it). It asks for the JSON alone, and for every estimate to be listed in `assumptions`.
+  - **The box also takes** a design file's text (`.lofi.json`, OpenRocket XML, RASAero II `.CDX1`) or a dropped file (`.ork` too), through the importers File > Open uses.
+  - **The user's own motors** (downloaded or imported) are offered to the build, each motor once, so a motor they already have is not looked up again.
+  - **The Claude page** (`claude.html`) leads with this route; the downloads stay, for Claude driving the simulator itself.
+- **Why.**
+  - The owner asked why the site had no Claude. A site can only run Claude itself with an API key (paid per use by whoever owns it) or a hosted server (which GitHub Pages cannot provide). The owner's rule is that nothing may cost anything beyond the user's own Claude plan. The paste box needs neither: Claude runs in the user's own Claude app.
+- **Security.**
+  - The answer is untrusted input. It is size-checked first (`MAX_CONTENT_CHARACTERS`, 8 MiB; a dropped file `MAX_INPUT_BYTES` before it is read), parsed as JSON or by the existing XML importers (which refuse DOCTYPE), and validated against the schema before anything is built. A bad paste gets a plain message naming where it is wrong, and changes nothing.
+  - Nothing is uploaded. The one network call is the read-only ThrustCurve.org lookup of a motor the library lacks, which the page policy already allows.
+  - **zod and the page policy.** zod 4 probes for `eval` (with `new Function`) when it creates an object schema, to compile its checks. The site's policy forbids eval, and the end-to-end test caught the violation. `spec.ts` sets `z.config({ jitless: true })` before creating its schemas: the checks are interpreted instead, with the same result. The MCP server shares the setting; its inputs are small, so the speed difference does not matter.
+  - The builder (zod and the session, 41 kB compressed) loads only when the box opens; the MCP SDK is not in the site's bundle.
+- **Alternatives rejected.**
+  - A Claude API key in the site: it would be paid by its owner and exposed to every visitor.
+  - A hosted MCP server: it needs hosting and would carry a cost.
+- **Unchanged:** the physics; every golden output; the MCP server's tools and their answers (52 tests and the 25-tool smoke test pass).
