@@ -12,6 +12,8 @@ pnpm check                              # typecheck, lint, format check and ever
 
 Node 22.12 or later and pnpm 10 are required.
 
+To design with Claude, press **Build with Claude** in the site's top bar: copy the prompt into any Claude app, describe your rocket, and paste Claude's answer back. The site builds and flies it in your browser, on your own Claude plan, at no cost. The Claude page (File > Use with Claude) also offers an MCP server, so Claude can drive the simulator itself.
+
 The code lives in three packages:
 
 - `packages/physics`: the simulation engine. It is pure TypeScript with SI branded units and no UI.

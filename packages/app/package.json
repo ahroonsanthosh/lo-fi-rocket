@@ -15,6 +15,7 @@
   "dependencies": {
     "@fontsource/lato": "5.2.7",
     "@lo-fi-rocket/formats": "workspace:*",
+    "@lo-fi-rocket/mcp": "workspace:*",
     "@lo-fi-rocket/physics": "workspace:*",
     "@lo-fi-rocket/ui": "workspace:*",
     "@lo-fi-rocket/viewer": "workspace:*",

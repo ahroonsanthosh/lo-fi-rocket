@@ -47,6 +47,9 @@ importers:
       '@lo-fi-rocket/formats':
         specifier: workspace:*
         version: link:../formats
+      '@lo-fi-rocket/mcp':
+        specifier: workspace:*
+        version: link:../mcp
       '@lo-fi-rocket/physics':
         specifier: workspace:*
         version: link:../physics

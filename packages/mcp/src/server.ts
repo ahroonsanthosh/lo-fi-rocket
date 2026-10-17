@@ -17,16 +17,9 @@ import {
 } from '@lo-fi-rocket/formats';
 import { PhysicsError } from '@lo-fi-rocket/physics';
 import * as z from 'zod';
-import {
-  addPart,
-  EditError,
-  removePart,
-  updatePart,
-  type AddPartInput,
-  type PositionInput,
-} from './edit.js';
+import { addPart, EditError, removePart, updatePart, type PositionInput } from './edit.js';
 import { PART_KINDS } from './fields.js';
-import { QuantityError, SI_UNIT, UNITS } from './quantity.js';
+import { acceptedUnits, QuantityError } from './quantity.js';
 import {
   designSummary,
   fieldReference,
@@ -35,7 +28,21 @@ import {
   simulateReport,
   stabilityReport,
 } from './report.js';
-import { MAX_RUNS, motorFacts, Session, type RecoveryInput } from './session.js';
+import { MAX_RUNS, motorFacts, Session } from './session.js';
+import {
+  buildAndFlyShape,
+  fields,
+  id,
+  kind,
+  launchFields,
+  MAX_CONTENT_CHARACTERS,
+  position,
+  quantity,
+  recoveryDevice,
+  recoveryInputs,
+  stageNumber,
+  toBuildSpec,
+} from './spec.js';
 import { SERVER_VERSION } from './version.js';
 
 export const SERVER_NAME = 'lo-fi-rocket';
@@ -44,8 +51,7 @@ export const SERVER_NAME = 'lo-fi-rocket';
 export const SITE_URL = 'https://ahroonsanthosh.github.io/lo-fi-rocket/';
 export { SERVER_VERSION };
 
-/** Longest text a tool accepts (a design or motor file's content): far above any real file. */
-export const MAX_CONTENT_CHARACTERS = 8 * 1024 * 1024;
+export { MAX_CONTENT_CHARACTERS };
 
 export const INSTRUCTIONS = `Lo-Fi Rocket models and simulates model and high-power rockets with sourced, tested physics (Barrowman and Niskanen aerodynamics, the 1976 Standard Atmosphere, a 6-degree-of-freedom flight). You turn what the user gives into a design; the engine computes every number. Work like this:
 1. When the user pastes a specification, a parts list, a kit description or a file, build and fly it at once, without asking questions first: build_and_fly for a specification (one call: the parts, the motor by name such as "D12-5" or "G80-7T", the recovery and the launch), import_design with simulate: true for a file's content (.ork, RASAero .CDX1, .lofi.json). Give exactly what the user gave, in their units ("38 mm", "1.5 in", "4 oz", "3 deg" are all accepted); leave out what they did not give. Call about once if you need the field names.
@@ -55,114 +61,6 @@ export const INSTRUCTIONS = `Lo-Fi Rocket models and simulates model and high-po
 5. Designs live only while this connection is open: design_link gives a link that opens the design in the web app, and export_design gives the .lofi.json file to save (the web app opens it with File > Open).
 6. To build step by step instead, use new_design, add_part, set_motor, set_recovery, set_launch, then stability and simulate.
 7. A multi-stage rocket: set_stages names the stages, top first, and when each lower stage separates. Give every part its stage (0 is the top stage), each stage's parachute its stage, and each stage's motor with set_motor in a tube of that stage, with its ignition (automatic: the bottom stage at launch, every other stage at the ejection charge of the stage directly below, as OpenRocket). A separated stage leaves the vehicle with every stage below it; its own flight is not simulated.`;
-
-const stageNumber = z
-  .number()
-  .int()
-  .min(0)
-  .max(20)
-  .describe('The stage, 0 being the top stage (set_stages lists them).');
-
-const quantity = z.union([z.number(), z.string().max(64)]);
-const id = z.string().min(1).max(200);
-const position = z.union([
-  quantity,
-  z.object({
-    relativeTo: id.describe('Id of the part to place this one against.'),
-    method: z
-      .enum(['top', 'bottom', 'middle', 'after'])
-      .describe(
-        'top: fore ends level; bottom: aft ends level; middle: centres level; after: this part starts at the other part’s aft end.',
-      ),
-    offset: quantity
-      .optional()
-      .describe('Moves the part aft (positive) or forward (negative) from that alignment.'),
-  }),
-]);
-const fields = z
-  .record(z.string().max(64), z.unknown())
-  .describe(
-    'The part’s fields by name (about lists them per kind). Quantities as numbers in SI or strings with units. null leaves an optional field out (for example wallThickness: null for a solid nose cone).',
-  );
-const kind = z.enum([
-  'noseCone',
-  'transition',
-  'bodyTube',
-  'innerTube',
-  'launchLug',
-  'centeringRing',
-  'bulkhead',
-  'massComponent',
-  'parachute',
-  'finSet',
-  'railButton',
-]);
-
-const part = z.object({
-  kind,
-  name: z.string().min(1).max(200).optional(),
-  position: position.optional(),
-  fields: fields.optional(),
-  stage: stageNumber.optional(),
-});
-const recoveryDevice = z.object({
-  name: z.string().min(1).max(200),
-  diameter: quantity.optional(),
-  streamer: z.object({ length: quantity, width: quantity, surfaceDensity: quantity }).optional(),
-  dragCoefficient: z.number().positive().max(10).optional(),
-  deploy: z.object({
-    event: z.enum(['apogee', 'ejection', 'altitude', 'launch', 'never']),
-    altitude: quantity.optional(),
-    delay: quantity.optional(),
-  }),
-  stage: stageNumber.optional(),
-});
-type RecoveryDeviceInput = z.infer<typeof recoveryDevice>;
-const launchFields = {
-  siteAltitude: quantity.optional(),
-  temperature: quantity.optional(),
-  pressure: quantity.optional(),
-  railLength: quantity.optional(),
-  railAngle: quantity.optional(),
-  railAzimuth: quantity.optional(),
-  windSpeed: quantity.optional(),
-  windFrom: quantity.optional(),
-  windProfile: z
-    .array(z.object({ altitude: quantity, speed: quantity, from: quantity }))
-    .max(100)
-    .optional(),
-  turbulence: z
-    .object({ intensity: z.number().min(0).max(1), seed: z.number().int() })
-    .nullable()
-    .optional(),
-};
-const impact = z.enum(['minor', 'moderate', 'major']);
-
-/** The recovery inputs without the keys left out (exactOptionalPropertyTypes). */
-function recoveryInputs(devices: readonly RecoveryDeviceInput[]): RecoveryInput[] {
-  return devices.map((d) => ({
-    name: d.name,
-    ...(d.diameter === undefined ? {} : { diameter: d.diameter }),
-    ...(d.streamer === undefined ? {} : { streamer: d.streamer }),
-    ...(d.dragCoefficient === undefined ? {} : { dragCoefficient: d.dragCoefficient }),
-    deploy: {
-      event: d.deploy.event,
-      ...(d.deploy.altitude === undefined ? {} : { altitude: d.deploy.altitude }),
-      ...(d.deploy.delay === undefined ? {} : { delay: d.deploy.delay }),
-    },
-    ...(d.stage === undefined ? {} : { stage: d.stage }),
-  }));
-}
-
-/** `T` with its optional keys typed as absent rather than undefined (exactOptionalPropertyTypes). */
-type Defined<T> = { [K in keyof T as undefined extends T[K] ? never : K]: T[K] } & {
-  [K in keyof T as undefined extends T[K] ? K : never]?: Exclude<T[K], undefined>;
-};
-
-/** An object without the keys whose value is undefined. */
-function defined<T extends Record<string, unknown>>(o: T): Defined<T> {
-  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Defined<T>;
-}
 
 /**
  * Plan 0079: what a one-call build or import reports, most important first: the must items, the
@@ -261,12 +159,7 @@ export function createServer(session: Session = new Session()): McpServer {
         workflow: INSTRUCTIONS,
         part_kinds: PART_KINDS,
         fields: fieldReference(),
-        units: Object.fromEntries(
-          Object.entries(UNITS).map(([d, u]) => [
-            d,
-            [SI_UNIT[d as keyof typeof SI_UNIT], ...Object.keys(u)].filter((x) => x !== ''),
-          ]),
-        ),
+        units: acceptedUnits(),
         coordinates:
           'Positions are the forward end of each part, in metres from the nose tip, positive aft. A fin set’s position is its root leading edge.',
         models: {
@@ -287,111 +180,12 @@ export function createServer(session: Session = new Session()): McpServer {
       title: 'Build and fly a pasted design in one call',
       description:
         'The whole design in one call, from what the user pasted: the parts (as add_part, in order nose to tail; outline parts without a position stack aft, fins sit flush with the aft end), the motor by its name ("D12-5", "Estes D12", "G80-7T", "AeroTech H128W": looked up in the library, then on ThrustCurve.org), the recovery (as set_recovery), the launch (as set_launch), the weighed mass and CG, and the estimates you made (assumptions). Give only what the user gave; everything left out takes the editing default and is listed. Returns the must items, the stability, the flight, the approximations with the confidence, a link to open the design in the web app, and its id for refining. A motor that cannot be found returns everything but the flight, with the reason.',
-      inputSchema: {
-        name: z.string().min(1).max(200),
-        stages: z
-          .array(
-            z.object({
-              name: z.string().min(1).max(200),
-              separation: z
-                .object({
-                  event: z.enum([
-                    'upper-ignition',
-                    'ignition',
-                    'burnout',
-                    'ejection',
-                    'launch',
-                    'apogee',
-                    'altitude-ascending',
-                    'altitude-descending',
-                    'never',
-                  ]),
-                  delay: quantity.optional(),
-                  altitude: quantity.optional(),
-                })
-                .optional(),
-            }),
-          )
-          .max(10)
-          .optional(),
-        parts: z.array(part).max(200),
-        motor: z
-          .object({
-            name: z.string().min(1).max(100),
-            mount: z
-              .union([z.number().int().min(0), z.string().min(1).max(200)])
-              .optional()
-              .describe(
-                'The tube that holds the motor: its index in parts (from 0) or its name. Left out: the aftmost inner tube, else the aftmost body tube.',
-              ),
-            overhang: quantity.optional(),
-            ejectionDelay: z.union([quantity, z.literal('plugged')]).optional(),
-            cluster: z
-              .array(z.object({ y: quantity, z: quantity }))
-              .max(64)
-              .optional(),
-          })
-          .optional(),
-        recovery: z.array(recoveryDevice).max(20).optional(),
-        launch: z.object(launchFields).optional(),
-        asBuilt: z.object({ mass: quantity.optional(), cg: quantity.optional() }).optional(),
-        assumptions: z
-          .array(
-            z.object({
-              part: z
-                .number()
-                .int()
-                .min(0)
-                .optional()
-                .describe('Index in parts (from 0); left out: the design as a whole.'),
-              what: z.string().min(1).max(2000),
-              method: z.string().min(1).max(2000),
-              effect: z.string().min(1).max(2000),
-              impact,
-            }),
-          )
-          .max(100)
-          .optional(),
-        samples: z.number().int().min(0).max(200).optional(),
-      },
+      inputSchema: buildAndFlyShape,
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     (input) =>
       respondAsync(async () => {
-        const built = await session.build({
-          name: input.name,
-          ...(input.stages === undefined
-            ? {}
-            : {
-                stages: input.stages.map((st) => ({
-                  name: st.name,
-                  ...(st.separation === undefined ? {} : { separation: defined(st.separation) }),
-                })),
-              }),
-          parts: input.parts.map((p) => defined(p) as AddPartInput),
-          ...(input.motor === undefined ? {} : { motor: defined(input.motor) }),
-          ...(input.recovery === undefined ? {} : { recovery: recoveryInputs(input.recovery) }),
-          ...(input.launch === undefined ? {} : { launch: defined(input.launch) }),
-          ...(input.asBuilt === undefined
-            ? {}
-            : {
-                asBuilt: {
-                  ...(input.asBuilt.mass === undefined ? {} : { mass: input.asBuilt.mass }),
-                  ...(input.asBuilt.cg === undefined ? {} : { cg: input.asBuilt.cg }),
-                },
-              }),
-          ...(input.assumptions === undefined
-            ? {}
-            : {
-                assumptions: input.assumptions.map((a) => ({
-                  what: a.what,
-                  method: a.method,
-                  effect: a.effect,
-                  impact: a.impact,
-                  ...(a.part === undefined ? {} : { part: a.part }),
-                })),
-              }),
-        });
+        const built = await session.build(toBuildSpec(input));
         return {
           ...(built.motor === undefined ? {} : { motor: built.motor }),
           ...flightReport(session, built.design, {

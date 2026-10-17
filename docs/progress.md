@@ -186,6 +186,10 @@ Version 1.0 completion prompt (autonomous): Part A (branches, DATCOM, TN 4197, W
   - **For users.** Every result says what a barometric altimeter will read on a non-standard day.
   - **RASAero II**, which also applies the launch temperature, is −5.4 % mean on the same basis (its apogees converted with this simulator's atmosphere): too much drag, where the displayed mode has too little.
   - **Found.** The base drag decides between the modes: Niskanen's eq. (3.94) alone takes the displayed mode to −3.4 % (one benchmark rerun, not committed), the DATCOM's gives +5.3 %. Next: trace why, from sources (D-069 chose the DATCOM's on the held-out data).
+- Build with Claude on the site (plan 0082, D-122):
+  - **What.** A "Build with Claude" button in the top bar: copy the prompt, ask Claude in any Claude app on your own plan, paste the answer back; the site builds the design and flies it. The box also takes a design file's text or a dropped file.
+  - **Cost and security.** $0: no key, no server, nothing uploaded. The answer is size-checked, parsed and validated against the `build_and_fly` schema before anything is built; the MCP server and the box share that schema and builder (`packages/mcp/src/spec.ts`, `paste.ts`).
+  - **Found.** zod 4 probes for eval, which the site's policy forbids; it now runs without (`jitless`).
 
 ## In progress
 

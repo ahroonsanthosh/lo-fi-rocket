@@ -9,6 +9,8 @@ export interface HeaderProps {
   readonly warnings: readonly WarningItem[];
   readonly onSettings: () => void;
   readonly onNotice: (notice: FileNotice) => void;
+  /** Opens the paste box (plan 0082). */
+  readonly onClaude: () => void;
 }
 
 /**
@@ -34,8 +36,14 @@ function WarningStatus({ warnings }: { readonly warnings: readonly WarningItem[]
   );
 }
 
-/** The top bar: the design name, the warning status, units, settings and the File menu. */
-export function Header({ storage, warnings, onSettings, onNotice }: HeaderProps): JSX.Element {
+/** The top bar: the design name, the warning status, units, settings, Build with Claude and the File menu. */
+export function Header({
+  storage,
+  warnings,
+  onSettings,
+  onNotice,
+  onClaude,
+}: HeaderProps): JSX.Element {
   const { state, dispatch } = useStore();
   return (
     <div className="app-header">
@@ -68,6 +76,9 @@ export function Header({ storage, warnings, onSettings, onNotice }: HeaderProps)
         />
         <button type="button" className="icon-button" aria-label="Settings" onClick={onSettings}>
           <Icon name="settings" size={20} />
+        </button>
+        <button type="button" className="toolbar-button" onClick={onClaude}>
+          Build with Claude
         </button>
         <FilesMenu storage={storage} onNotice={onNotice} />
       </div>
