@@ -85,7 +85,9 @@ test('Build with Claude: a pasted answer is built and flown in the browser, unde
     .getByLabel('Paste Claude’s answer here.')
     .fill(`Here is the specification:\n\`\`\`json\n${JSON.stringify(answer, null, 2)}\n\`\`\``);
   await dialog.getByRole('button', { name: 'Build and fly' }).click();
-  await expect(dialog).toBeHidden();
+  // The flight runs in the worker, then the replay builds its scenery (about 4 s on CI's software
+  // WebGL, playwright.config.ts) before the dialog closes.
+  await expect(dialog).toBeHidden({ timeout: 30_000 });
   await expect(page.getByRole('textbox', { name: 'Design name' })).toHaveValue('Sport rocket');
   await expect(page.getByRole('heading', { name: 'Simulate and results' })).toBeVisible();
   await expect(

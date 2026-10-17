@@ -32,6 +32,13 @@ export function BuildWithClaude({ open, onClose, onBuilt }: BuildWithClaudeProps
   const [copied, setCopied] = useState(false);
   const answerId = useId();
 
+  // Each opening starts clean: "Copied" and an old error belong to the last time.
+  useEffect(() => {
+    if (!open) return;
+    setCopied(false);
+    setError(undefined);
+  }, [open]);
+
   useEffect(() => {
     if (!open || paste !== undefined) return;
     let live = true;
