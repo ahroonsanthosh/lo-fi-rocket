@@ -32,6 +32,7 @@ export const MANIFEST = {
     url: 'https://github.com/ahroonsanthosh/lo-fi-rocket',
   },
   homepage: 'https://ahroonsanthosh.github.io/lo-fi-rocket/',
+  license: 'MIT',
   repository: { type: 'git', url: 'https://github.com/ahroonsanthosh/lo-fi-rocket' },
   server: {
     type: 'node',
