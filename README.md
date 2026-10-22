@@ -1,24 +1,24 @@
-# Lo-Fi Rocket
+# Vector
 
-[![CI](https://github.com/ahroonsanthosh/lo-fi-rocket/actions/workflows/ci.yml/badge.svg)](https://github.com/ahroonsanthosh/lo-fi-rocket/actions/workflows/ci.yml)
-[![Deploy](https://github.com/ahroonsanthosh/lo-fi-rocket/actions/workflows/deploy.yml/badge.svg)](https://github.com/ahroonsanthosh/lo-fi-rocket/actions/workflows/deploy.yml)
-[![CodeQL](https://github.com/ahroonsanthosh/lo-fi-rocket/actions/workflows/codeql.yml/badge.svg)](https://github.com/ahroonsanthosh/lo-fi-rocket/actions/workflows/codeql.yml)
+[![CI](https://github.com/ahroonsanthosh/vector/actions/workflows/ci.yml/badge.svg)](https://github.com/ahroonsanthosh/vector/actions/workflows/ci.yml)
+[![Deploy](https://github.com/ahroonsanthosh/vector/actions/workflows/deploy.yml/badge.svg)](https://github.com/ahroonsanthosh/vector/actions/workflows/deploy.yml)
+[![CodeQL](https://github.com/ahroonsanthosh/vector/actions/workflows/codeql.yml/badge.svg)](https://github.com/ahroonsanthosh/vector/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **A rocket design and flight simulator that tells you how far to trust
 every number.** Free, and it runs in your browser.
 
-**[Open the simulator](https://ahroonsanthosh.github.io/lo-fi-rocket/)**
+**[Open the simulator](https://ahroonsanthosh.github.io/vector/)**
 (no install, no account).
 
-![The Lo-Fi Rocket designer: a three-fin rocket with its CG and CP, live stability and the parts list](docs/images/designer.png)
+![The Vector designer: a three-fin rocket with its CG and CP, live stability and the parts list](docs/images/designer.png)
 
 ## Why it matters
 
 Hobby and student rocketeers use simulators to answer safety questions: is
 it stable, does it leave the rail fast enough, where will it land? The
 standard tools are hard to learn and rarely say how accurate they are.
-Lo-Fi Rocket is built the other way round:
+Vector is built the other way round:
 
 - **Accuracy you can check.** All 145 equations are cited to a page of a
   published source and tested against hand calculations. Results are
